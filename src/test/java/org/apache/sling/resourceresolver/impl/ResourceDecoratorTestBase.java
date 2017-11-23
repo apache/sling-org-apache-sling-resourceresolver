@@ -103,7 +103,7 @@ public abstract class ResourceDecoratorTestBase {
 
             @Override
             public Resource getResource(ResolveContext<Object> ctx, String path, final ResourceContext rCtx, Resource parent) {
-                if(path.equals("/") || path.startsWith("/tmp") || path.startsWith("/var")) {
+                if(!path.endsWith(".html") && (path.equals("/") || path.startsWith("/tmp") || path.startsWith("/var"))) {
                     return mockResource(path);
                 }
                 return null;

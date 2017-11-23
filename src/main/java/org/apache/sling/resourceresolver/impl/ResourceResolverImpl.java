@@ -449,9 +449,12 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         }
 
         ParsedParameters parsed = new ParsedParameters(mappedPath);
-        final Resource res = resolveInternal(parsed.getRawPath(), parsed.getParameters());
+        final Resource nonDecoratedResource = resolveInternal(parsed.getRawPath(), parsed.getParameters());
 
-        if (res != null) {
+        if (nonDecoratedResource != null) {
+
+            //Invoke the decorator for the resolved resource
+            Resource res=this.factory.getResourceDecoratorTracker().decorate(nonDecoratedResource);
 
             // keep, what we might have cut off in internal resolution
             final String resolutionPathInfo = res.getResourceMetadata().getResolutionPathInfo();

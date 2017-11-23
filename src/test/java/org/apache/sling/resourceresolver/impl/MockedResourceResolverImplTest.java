@@ -540,9 +540,11 @@ public class MockedResourceResolverImplTest {
         Mockito.when(request.getServerName()).thenReturn("localhost");
         String path = resourceResolver.map(request,"/single/test?q=123123");
         Assert.assertEquals("/single/test?q=123123", path);
+        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
         path = resourceResolver.map(request,"/single/test");
         Assert.assertEquals("/single/test", path);
 
+        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
         // test path mapping without a request.
         path = resourceResolver.map("/single/test");
         Assert.assertEquals("/single/test", path);

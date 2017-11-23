@@ -33,6 +33,7 @@ import org.junit.Test;
 public class ResourceDecorationTest extends ResourceDecoratorTestBase {
 
     private static final String DECORATED_NAME = "decorated";
+    private static final String DECORATED_PATH = "/decoratedPath";
     
     /** Wrap any resource so that its name is DECORATED_NAME */
     protected Resource wrapResourceForTest(Resource resource) {
@@ -40,6 +41,11 @@ public class ResourceDecorationTest extends ResourceDecoratorTestBase {
             @Override
             public String getName() {
                 return DECORATED_NAME;
+            }
+
+            @Override
+            public String getPath() {
+                return DECORATED_PATH;
             }
         };
     }
@@ -110,4 +116,14 @@ public class ResourceDecorationTest extends ResourceDecoratorTestBase {
     public void findDecorates() {
         assertDecorated(resolver.findResources("foo", QUERY_LANGUAGE), 4);
     }
+
+    @Test
+    public void testMapDecorated(){
+        String mappedPathWithExtension=resolver.map("/var/map_test.html");
+        assertEquals("Expecting " + mappedPathWithExtension + " to be decorated", DECORATED_PATH+".html", mappedPathWithExtension);
+
+        String mappedPathWithoutExtension=resolver.map("/var/map_test");
+        assertEquals("Expecting " + mappedPathWithoutExtension + " to be decorated", DECORATED_PATH, mappedPathWithoutExtension);
+    }
+
 }
