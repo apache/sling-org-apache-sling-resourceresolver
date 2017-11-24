@@ -36,15 +36,10 @@
     </description>
 
     <scm>
-        <connection>
-            scm:svn:http://svn.apache.org/repos/asf/sling/trunk/bundles/resourceresolver
-        </connection>
-        <developerConnection>
-            scm:svn:https://svn.apache.org/repos/asf/sling/trunk/bundles/resourceresolver
-        </developerConnection>
-        <url>
-            http://svn.apache.org/viewvc/sling/trunk/bundles/resourceresolver
-        </url>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-resourceresolver.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-resourceresolver.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-resourceresolver.git</url>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
