@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.sling.resourceresolver.impl.legacy.LegacyResourceProviderWhiteboard;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -56,7 +57,7 @@ public class FactoryPreconditions {
         synchronized ( this ) {
             this.tracker = tracker;
 
-            final List<RequiredProvider> rps = new ArrayList<RequiredProvider>();
+            final List<RequiredProvider> rps = new ArrayList<>();
             if ( legycyConfiguration != null ) {
                 final Logger logger = LoggerFactory.getLogger(getClass());
                 for(final String value : legycyConfiguration) {
@@ -103,17 +104,23 @@ public class FactoryPreconditions {
                 for (final RequiredProvider rp : localRequiredProviders) {
                     canRegister = false;
                     for (final ResourceProviderHandler h : localTracker.getResourceProviderStorage().getAllHandlers()) {
-                        final ServiceReference ref = h.getInfo().getServiceReference();
+                        final ResourceProviderInfo info = h.getInfo();
+                        if ( info == null ) {
+                            // provider has been deactivated in the meantime
+                            // ignore and continue
+                            continue;
+                        }
+                        final ServiceReference ref = info.getServiceReference();
                         final Object servicePid = ref.getProperty(Constants.SERVICE_PID);
                         if ( unavailableServicePid != null && unavailableServicePid.equals(servicePid) ) {
                             // ignore this service
                             continue;
                         }
-                        if ( unavailableName != null && unavailableName.equals(h.getInfo().getName()) ) {
+                        if ( unavailableName != null && unavailableName.equals(info.getName()) ) {
                             // ignore this service
                             continue;
                         }
-                        if ( rp.name != null && rp.name.equals(h.getInfo().getName()) ) {
+                        if ( rp.name != null && rp.name.equals(info.getName()) ) {
                             canRegister = true;
                             break;
                         } else if (rp.filter != null && rp.filter.match(ref)) {
