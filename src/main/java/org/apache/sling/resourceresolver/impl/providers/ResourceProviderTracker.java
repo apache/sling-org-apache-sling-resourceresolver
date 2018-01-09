@@ -481,9 +481,11 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
     private void updateProviderContext(final ResourceProviderHandler handler) {
         final Set<String> excludedPaths = new HashSet<>();
         final Path handlerPath = new Path(handler.getPath());
-        for(final String otherPath : handlers.keySet()) {
-            if ( !handler.getPath().equals(otherPath) && handlerPath.matches(otherPath) ) {
-                excludedPaths.add(otherPath);
+        synchronized (handlers) {
+            for(final String otherPath : handlers.keySet()) {
+                if ( !handler.getPath().equals(otherPath) && handlerPath.matches(otherPath) ) {
+                    excludedPaths.add(otherPath);
+                }
             }
         }
         final PathSet excludedPathSet = PathSet.fromStringCollection(excludedPaths);
