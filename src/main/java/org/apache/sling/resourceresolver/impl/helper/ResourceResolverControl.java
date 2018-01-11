@@ -148,11 +148,14 @@ public class ResourceResolverControl {
     }
 
     /**
-     * Refreshes all refreshable providers.
+     * Refreshes all refreshable providers as well as the resolver used for resource types.
      */
     public void refresh(@Nonnull final ResourceResolverContext context) {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllUsedRefreshable()) {
             p.refresh();
+        }
+        if (this.resourceTypeResourceResolver != null) {
+            this.resourceTypeResourceResolver.refresh();
         }
     }
 
