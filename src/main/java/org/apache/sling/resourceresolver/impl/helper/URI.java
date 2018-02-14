@@ -2029,8 +2029,14 @@ public class URI implements Cloneable, Comparable<URI>, Serializable {
                 idx++;
             }
             if (idx > 0) {
-                tmp = tmp.substring(idx);
-                length -= idx;
+                if (idx < length) {
+                    tmp = tmp.substring(idx);
+                    length -= idx;
+                }
+                else {
+                    tmp = "";
+                    length = 0;
+                }
             }
         }
 
