@@ -46,4 +46,10 @@ public class URI2Test {
         Assert.assertEquals(url.hashCode(),uriClone.hashCode());
     }
 
+    @Test
+    public void testTrim() {
+        URI url = new URI("http://localhost:8080/path / with /space ", false);
+        Assert.assertEquals("/path / with /space ", url.getPath());
+    }
+
 }
