@@ -2024,9 +2024,13 @@ public class URI implements Cloneable, Comparable<URI>, Serializable {
         else {
             tmp = original;
             length = original.length();
-            while (length > 0 && tmp.charAt(0) == ' ') {
-                tmp = tmp.substring(1);
-                length -= 1;
+            int idx = 0;
+            while (idx < length  && tmp.charAt(idx) <= ' ') {
+                idx++;
+            }
+            if (idx > 0) {
+                tmp = tmp.substring(idx);
+                length -= idx;
             }
         }
 
