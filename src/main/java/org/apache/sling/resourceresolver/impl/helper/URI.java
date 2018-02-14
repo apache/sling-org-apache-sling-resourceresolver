@@ -2005,15 +2005,37 @@ public class URI implements Cloneable, Comparable<URI>, Serializable {
         /*
          * Remove the delimiters like angle brackets around an URI.
          */
+        boolean delim = false;
         if (length > 0) {
             char[] firstDelimiter = { tmp.charAt(0) };
             if (validate(firstDelimiter, delims)) {
                 if (length >= 2) {
                     char[] lastDelimiter = { tmp.charAt(length - 1) };
                     if (validate(lastDelimiter, delims)) {
-                        tmp = tmp.substring(1, length - 1);
-                        length = length - 2;
+                        delim = true;
                     }
+                }
+            }
+        }
+        if (delim) {
+            tmp = tmp.substring(1, length - 1);
+            length = length - 2;
+        }
+        else {
+            tmp = original;
+            length = original.length();
+            int idx = 0;
+            while (idx < length  && tmp.charAt(idx) <= ' ') {
+                idx++;
+            }
+            if (idx > 0) {
+                if (idx < length) {
+                    tmp = tmp.substring(idx);
+                    length -= idx;
+                }
+                else {
+                    tmp = "";
+                    length = 0;
                 }
             }
         }
