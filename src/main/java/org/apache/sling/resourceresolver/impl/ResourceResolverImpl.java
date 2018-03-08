@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -355,10 +356,12 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
                 } else {
 
-                    final String[] searchPath = getSearchPath();
-                    for (int spi = 0; res == null && spi < searchPath.length; spi++) {
-                        logger.debug("resolve: Try relative mapped path with search path entry {}", searchPath[spi]);
-                        res = resolveInternal(searchPath[spi] + realPath, parsedPath.getParameters());
+                    for(final String path : factory.getSearchPath()) {
+                        logger.debug("resolve: Try relative mapped path with search path entry {}", path);
+                        res = resolveInternal(path + realPath, parsedPath.getParameters());
+                        if ( res != null ) {
+                            break;
+                        }
                     }
 
                 }
@@ -614,7 +617,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public String[] getSearchPath() {
         checkClosed();
-        return factory.getSearchPath().clone();
+        final List<String> searchPath = factory.getSearchPath();
+        return searchPath.toArray(new String[searchPath.size()]);
     }
 
     // ---------- direct resource access without resolution
@@ -679,13 +683,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
                 // otherwise we have to apply the search path
                 // (don't use this.getSearchPath() to save a few cycle for not cloning)
-                final String[] paths = factory.getSearchPath();
-                if (paths != null) {
-                    for (final String prefix : factory.getSearchPath()) {
-                        result = getResource(prefix + path);
-                        if (result != null) {
-                            break;
-                        }
+                for (final String prefix : factory.getSearchPath()) {
+                    result = getResource(prefix + path);
+                    if (result != null) {
+                        break;
                     }
                 }
             }
@@ -1094,7 +1095,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     private String ensureAbsPath(String path) {
         if (!path.startsWith("/")) {
-            path = getSearchPath()[0] + path;
+            path = factory.getSearchPath().get(0) + path;
         }
         return path;
     }
@@ -1229,13 +1230,13 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
              // Check if the resource is of the given type. This method first checks the
              // resource type of the resource, then its super resource type and continues
              //  to go up the resource super type hierarchy.
-             if (ResourceTypeUtil.areResourceTypesEqual(resourceType, resource.getResourceType(), getSearchPath())) {
+             if (ResourceTypeUtil.areResourceTypesEqual(resourceType, resource.getResourceType(), factory.getSearchPath())) {
                  result = true;
              } else {
                  Set<String> superTypesChecked = new HashSet<>();
                  String superType = this.getParentResourceType(resource);
                  while (!result && superType != null) {
-                     if (ResourceTypeUtil.areResourceTypesEqual(resourceType, superType, getSearchPath())) {
+                     if (ResourceTypeUtil.areResourceTypesEqual(resourceType, superType, factory.getSearchPath())) {
                          result = true;
                      } else {
                          superTypesChecked.add(superType);

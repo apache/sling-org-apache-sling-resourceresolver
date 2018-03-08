@@ -19,6 +19,7 @@
 package org.apache.sling.resourceresolver.impl;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.sling.api.resource.LoginException;
@@ -63,7 +64,7 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
     @Override
     public ResourceResolver getServiceResourceResolver(final Map<String, Object> passedAuthenticationInfo) throws LoginException {
         // create a copy of the passed authentication info as we modify the map
-        final Map<String, Object> authenticationInfo = new HashMap<String, Object>();
+        final Map<String, Object> authenticationInfo = new HashMap<>();
         final String subServiceName;
         if ( passedAuthenticationInfo != null ) {
             authenticationInfo.putAll(passedAuthenticationInfo);
@@ -112,11 +113,11 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
     public ResourceResolver getAdministrativeResourceResolver(
             Map<String, Object> authenticationInfo) throws LoginException {
         // usingBundle is required as bundles must now be whitelisted to use this method
-        if(usingBundle == null) {
+        if (usingBundle == null) {
             throw new LoginException("usingBundle is null");
         }
-        if(authenticationInfo == null) {
-            authenticationInfo = new HashMap<String, Object>();
+        if (authenticationInfo == null) {
+            authenticationInfo = new HashMap<>();
         }
         authenticationInfo.put(ResourceProvider.AUTH_SERVICE_BUNDLE, this.usingBundle);
         return commonFactory.getAdministrativeResourceResolver(authenticationInfo);
@@ -128,5 +129,13 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
     @Override
     public ResourceResolver getThreadResourceResolver() {
         return commonFactory.getThreadResourceResolver();
+    }
+
+    /**
+     * @see org.apache.sling.api.resource.ResourceResolverFactory#getSearchPath()
+     */
+    @Override
+    public List<String> getSearchPath() {
+        return commonFactory.getSearchPath();
     }
 }

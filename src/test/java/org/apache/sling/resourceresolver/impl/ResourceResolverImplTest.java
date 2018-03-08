@@ -31,6 +31,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -408,7 +409,7 @@ public class ResourceResolverImplTest {
         anon1.close();
 
         // same workspace but admin user
-        final Map<String, Object> admin0Cred = new HashMap<String, Object>();
+        final Map<String, Object> admin0Cred = new HashMap<>();
         admin0Cred.put(ResourceResolverFactory.USER, "admin");
         admin0Cred.put(ResourceResolverFactory.PASSWORD, "admin".toCharArray());
         final ResourceResolver admin0 = anon0.clone(admin0Cred);
@@ -429,7 +430,7 @@ public class ResourceResolverImplTest {
         admin1.close();
 
         // same workspace but anonymous user
-        final Map<String, Object> anon0Cred = new HashMap<String, Object>();
+        final Map<String, Object> anon0Cred = new HashMap<>();
         anon0Cred.put(ResourceResolverFactory.USER, "anonymous");
         final ResourceResolver anon0 = admin0.clone(anon0Cred);
         assertEquals("anonymous", anon0.getUserID());
@@ -439,7 +440,7 @@ public class ResourceResolverImplTest {
     }
 
     @Test public void test_attributes_from_authInfo() throws Exception {
-        final Map<String, Object> authInfo = new HashMap<String, Object>();
+        final Map<String, Object> authInfo = new HashMap<>();
         authInfo.put(ResourceResolverFactory.USER, "admin");
         authInfo.put(ResourceResolverFactory.PASSWORD, "admin".toCharArray());
         authInfo.put("testAttributeString", "AStringValue");
@@ -451,7 +452,7 @@ public class ResourceResolverImplTest {
         assertEquals("admin", rr.getAttribute(ResourceResolverFactory.USER));
         assertNull(rr.getAttribute(ResourceResolverFactory.PASSWORD));
 
-        final HashSet<String> validNames = new HashSet<String>();
+        final HashSet<String> validNames = new HashSet<>();
         validNames.add(ResourceResolverFactory.USER);
         validNames.add("testAttributeString");
         validNames.add("testAttributeNumber");
@@ -635,7 +636,7 @@ public class ResourceResolverImplTest {
 
     private PathBasedResourceResolverImpl getPathBasedResourceResolver(String[] searchPaths) {
         try {
-            final List<ResourceResolver> resolvers = new ArrayList<ResourceResolver>();
+            final List<ResourceResolver> resolvers = new ArrayList<>();
             final PathBasedResourceResolverImpl resolver = new PathBasedResourceResolverImpl(resolvers, resourceProviderTracker, searchPaths);
             resolvers.add(resolver);
             return resolver;
@@ -647,10 +648,9 @@ public class ResourceResolverImplTest {
 
     private static class PathBasedResourceResolverImpl extends ResourceResolverImpl {
 
-        private final Map<String, Resource> resources = new HashMap<String, Resource>();
-        private final String[] searchPaths;
+        private final Map<String, Resource> resources = new HashMap<>();
 
-        public PathBasedResourceResolverImpl(final List<ResourceResolver> resolvers, final ResourceProviderTracker resourceProviderTracker, String[] searchPaths) throws LoginException {
+        public PathBasedResourceResolverImpl(final List<ResourceResolver> resolvers, final ResourceProviderTracker resourceProviderTracker, final String[] searchPaths) throws LoginException {
             this(new CommonResourceResolverFactoryImpl(new ResourceResolverFactoryActivator()) {
                 @Override
                 public ResourceResolver getAdministrativeResourceResolver(
@@ -662,22 +662,22 @@ public class ResourceResolverImplTest {
                         Map<String, Object> authenticationInfo) throws LoginException {
                     return resolvers.get(0);
                 }
-            }, resourceProviderTracker, searchPaths);
+                @Override
+                public List<String> getSearchPath() {
+                    return Arrays.asList(searchPaths);
+                }
+
+
+            }, resourceProviderTracker);
         }
 
-        public PathBasedResourceResolverImpl(CommonResourceResolverFactoryImpl factory, ResourceProviderTracker resourceProviderTracker, String[] searchPaths) throws LoginException {
+        public PathBasedResourceResolverImpl(CommonResourceResolverFactoryImpl factory, ResourceProviderTracker resourceProviderTracker) throws LoginException {
             super(factory, false, null, resourceProviderTracker);
-            this.searchPaths = searchPaths;
         }
 
         public Resource add(final Resource r) {
             this.resources.put(r.getPath(), r);
             return r;
-        }
-
-        @Override
-        public String[] getSearchPath() {
-            return searchPaths;
         }
 
         @Override

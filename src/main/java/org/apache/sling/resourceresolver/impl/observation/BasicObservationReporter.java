@@ -46,7 +46,7 @@ public class BasicObservationReporter implements ObservationReporter {
     private final List<ObserverConfiguration> configs;
 
     /** The search path. */
-    private final String[] searchPath;
+    private final List<String> searchPath;
 
     /**
      * Create a reporter listening for resource provider changes
@@ -55,10 +55,10 @@ public class BasicObservationReporter implements ObservationReporter {
      * @param infos The listeners map
      */
     public BasicObservationReporter(
-            final String[] searchPath,
+            final List<String> searchPath,
             final Collection<ResourceChangeListenerInfo> infos) {
         this.searchPath = searchPath;
-        final Set<String> paths = new HashSet<String>();
+        final Set<String> paths = new HashSet<>();
         final List<ResourceChangeListenerInfo> result = new ArrayList<>();
         for(final ResourceChangeListenerInfo info : infos) {
             if ( !info.getProviderChangeTypes().isEmpty() ) {
@@ -84,7 +84,7 @@ public class BasicObservationReporter implements ObservationReporter {
      * @param excludePaths Excluded paths for that provider
      */
     public BasicObservationReporter(
-            final String[] searchPath,
+            final List<String> searchPath,
             final Collection<ResourceChangeListenerInfo> infos,
             final Path providerPath,
             final PathSet excludePaths) {

@@ -20,6 +20,8 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
@@ -28,11 +30,13 @@ import org.osgi.framework.ServiceReference;
 
 public class ResourceChangeListenerInfoTest {
 
+    private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] { "/apps/", "/libs/" });
+
     @Test
     public void testGetExpandedRelativePaths() {
         ServiceReference reference = mock(ServiceReference.class);
         when(reference.getProperty(ResourceChangeListener.PATHS)).thenReturn(new String[] {"project/components/page/page.html"});
-        final ResourceChangeListenerInfo rcli = new ResourceChangeListenerInfo(reference, new String[] {"/apps/", "/libs/"});
+        final ResourceChangeListenerInfo rcli = new ResourceChangeListenerInfo(reference, SEARCH_PATHS);
         Set<String> paths = rcli.getPaths().toStringSet();
         assertTrue("PathSet " + paths.toString() + " does not contain /apps/project/components/page/page.html.",
                 paths.contains("/apps/project/components/page/page.html"));
@@ -44,7 +48,7 @@ public class ResourceChangeListenerInfoTest {
     public void testDotPathConfig() {
         ServiceReference reference = mock(ServiceReference.class);
         when(reference.getProperty(ResourceChangeListener.PATHS)).thenReturn(new String[] {"."});
-        final ResourceChangeListenerInfo rcli = new ResourceChangeListenerInfo(reference, new String[] {"/apps/", "/libs/"});
+        final ResourceChangeListenerInfo rcli = new ResourceChangeListenerInfo(reference, SEARCH_PATHS);
         Set<String> paths = rcli.getPaths().toStringSet();
         assertTrue("PathSet " + paths.toString() + " does not contain /apps/", paths.contains("/apps"));
         assertTrue("PathSet " + paths.toString() + " does not contain /libs/.", paths.contains("/libs"));
@@ -54,7 +58,7 @@ public class ResourceChangeListenerInfoTest {
     public void testGlobPatternExpansion() {
         ServiceReference reference = mock(ServiceReference.class);
         when(reference.getProperty(ResourceChangeListener.PATHS)).thenReturn(new String[] {"glob:./**/*.html"});
-        final ResourceChangeListenerInfo rcli = new ResourceChangeListenerInfo(reference, new String[] {"/apps/", "/libs/"});
+        final ResourceChangeListenerInfo rcli = new ResourceChangeListenerInfo(reference, SEARCH_PATHS);
         Set<String> paths = rcli.getPaths().toStringSet();
         assertTrue("PathSet " + paths.toString() + " does not contain glob:/apps/**/*.html.", paths.contains("glob:/apps/**/*.html"));
         assertTrue("PathSet " + paths.toString() + " does not contain glob:/libs/**/*.html.", paths.contains("glob:/libs/**/*.html"));

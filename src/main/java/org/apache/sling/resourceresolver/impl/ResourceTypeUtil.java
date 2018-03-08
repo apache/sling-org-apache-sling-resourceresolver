@@ -18,7 +18,11 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
+import java.util.List;
+
 import javax.annotation.Nonnull;
+
+import org.apache.sling.api.resource.ResourceResolver;
 
 /**
  * Some helper methods for doing comparisons on resource types.
@@ -29,17 +33,17 @@ public class ResourceTypeUtil {
 
     /**
      * Returns <code>true</code> if the given resource type are equal.
-     * 
-     * In case the value of any of the given resource types 
+     *
+     * In case the value of any of the given resource types
      * starts with one of the resource resolver's search paths
-     * it is converted to a relative resource type by stripping off 
+     * it is converted to a relative resource type by stripping off
      * the resource resolver's search path before doing the comparison.
      *
      * @param resourceType A resource type
      * @param anotherResourceType Another resource type to compare with {@link resourceType}.
      * @return <code>true</code> if the resource type equals the given resource type.
      */
-    public static boolean areResourceTypesEqual(@Nonnull String resourceType, @Nonnull String anotherResourceType, @Nonnull String[] searchPath) {
+    public static boolean areResourceTypesEqual(@Nonnull String resourceType, @Nonnull String anotherResourceType, @Nonnull List<String> searchPath) {
         return relativizeResourceType(resourceType, searchPath).equals(relativizeResourceType(anotherResourceType, searchPath));
     }
 
@@ -50,7 +54,7 @@ public class ResourceTypeUtil {
      * @param searchPath the search paths to strip off from the given resource type.
      * @return the relative resource type
      */
-    public static String relativizeResourceType(@Nonnull String resourceType, @Nonnull String[] searchPath) {
+    public static String relativizeResourceType(@Nonnull String resourceType, @Nonnull List<String> searchPath) {
         if (resourceType.startsWith("/")) {
             for (String prefix : searchPath) {
                 if (resourceType.startsWith(prefix)) {

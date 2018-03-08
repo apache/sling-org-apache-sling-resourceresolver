@@ -22,24 +22,30 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.Test;
 
 public class ResourceTypeUtilTest {
 
+    private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] { "/apps/", "/libs/" });
+
     @Test public void testAreResourceTypesEqual() {
-        assertTrue(ResourceTypeUtil.areResourceTypesEqual("some/type", "/apps/some/type", new String[]{"/apps/", "/libs/"}));
-        assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "some/type", new String[]{"/apps/", "/libs/"}));
-        assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/apps/some/type", new String[]{"/apps/", "/libs/"}));
-        assertTrue(ResourceTypeUtil.areResourceTypesEqual("some/type", "some/type", new String[]{"/apps/", "/libs/"}));
-        assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/libs/some/type", new String[]{"/apps/", "/libs/"}));
-        assertFalse(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/libs/some/type", new String[]{}));
+        assertTrue(ResourceTypeUtil.areResourceTypesEqual("some/type", "/apps/some/type", SEARCH_PATHS));
+        assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "some/type", SEARCH_PATHS));
+        assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/apps/some/type", SEARCH_PATHS));
+        assertTrue(ResourceTypeUtil.areResourceTypesEqual("some/type", "some/type", SEARCH_PATHS));
+        assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/libs/some/type", SEARCH_PATHS));
+        assertFalse(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/libs/some/type", Collections.EMPTY_LIST));
     }
 
     @Test public void testRelativizeResourceType() {
-        assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("relative/type", new String[]{"/apps/", "/libs/"}));
-        assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("/apps/relative/type", new String[]{"/apps/", "/libs/"}));
-        assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("/libs/relative/type", new String[]{"/apps/", "/libs/"}));
-        assertEquals("", ResourceTypeUtil.relativizeResourceType("/apps/", new String[]{"/apps/", "/libs/"}));
-        assertEquals("/some/prefix/type", ResourceTypeUtil.relativizeResourceType("/some/prefix/type", new String[]{"/apps/", "/libs/"}));
+        assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("relative/type", SEARCH_PATHS));
+        assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("/apps/relative/type", SEARCH_PATHS));
+        assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("/libs/relative/type", SEARCH_PATHS));
+        assertEquals("", ResourceTypeUtil.relativizeResourceType("/apps/", SEARCH_PATHS));
+        assertEquals("/some/prefix/type", ResourceTypeUtil.relativizeResourceType("/some/prefix/type", SEARCH_PATHS));
     }
 }

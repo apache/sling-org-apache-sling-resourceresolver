@@ -51,11 +51,11 @@ public class ResourceChangeListenerWhiteboard implements ResourceProviderTracker
 
     private volatile ServiceTracker<ResourceChangeListener, ServiceReference<ResourceChangeListener>> tracker;
 
-    private volatile String[] searchPath;
+    private volatile List<String> searchPath;
 
     public void activate(final BundleContext bundleContext,
             final ResourceProviderTracker resourceProviderTracker,
-            final String[] searchPath) {
+            final List<String> searchPath) {
         this.searchPath = searchPath;
         this.resourceProviderTracker = resourceProviderTracker;
         this.resourceProviderTracker.setObservationReporterGenerator(this);

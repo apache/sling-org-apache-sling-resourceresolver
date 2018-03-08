@@ -343,7 +343,8 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         return this.activator.getResourceDecoratorTracker();
     }
 
-    public String[] getSearchPath() {
+    @Override
+    public List<String> getSearchPath() {
         return this.activator.getSearchPath();
     }
 

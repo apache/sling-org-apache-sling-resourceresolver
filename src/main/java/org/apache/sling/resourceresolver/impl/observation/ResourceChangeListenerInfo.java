@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -61,9 +62,9 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
 
     private volatile ResourceChangeListener listener;
 
-    public ResourceChangeListenerInfo(final ServiceReference<ResourceChangeListener> ref, final String[] searchPaths) {
+    public ResourceChangeListenerInfo(final ServiceReference<ResourceChangeListener> ref, final List<String> searchPaths) {
         boolean configValid = true;
-        final Set<String> pathsSet = new HashSet<String>();
+        final Set<String> pathsSet = new HashSet<>();
         final String paths[] = toStringArray(ref.getProperty(PATHS), null);
         if ( paths != null ) {
             for(final String p : paths) {
@@ -115,8 +116,8 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
         }
         this.paths = PathSet.fromStringCollection(pathsSet);
         if (ref.getProperty(CHANGES) != null ) {
-            final Set<ChangeType> rts = new HashSet<ChangeType>();
-            final Set<ChangeType> pts = new HashSet<ChangeType>();
+            final Set<ChangeType> rts = new HashSet<>();
+            final Set<ChangeType> pts = new HashSet<>();
             try {
                 for (final String changeName : toStringArray(ref.getProperty(CHANGES))) {
                     final ChangeType ct = ChangeType.valueOf(changeName);
@@ -151,7 +152,7 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
         }
 
         if ( ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT) != null ) {
-            this.propertyNamesHint = new HashSet<String>();
+            this.propertyNamesHint = new HashSet<>();
             for(final String val : PropertiesUtil.toStringArray(ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT)) ) {
                 this.propertyNamesHint.add(val);
             }

@@ -97,7 +97,7 @@ public class ResourceResolverFactoryActivator {
     private volatile BidiMap virtualURLMap;
 
     /** the search path for ResourceResolver.getResource(String) */
-    private volatile String[] searchPath;
+    private volatile List<String> searchPath = Collections.emptyList();
 
     /** the root location of the /etc/map entries */
     private volatile String mapRoot;
@@ -167,7 +167,7 @@ public class ResourceResolverFactoryActivator {
         return mappings;
     }
 
-    public String[] getSearchPath() {
+    public List<String> getSearchPath() {
         return searchPath;
     }
 
@@ -267,22 +267,25 @@ public class ResourceResolverFactoryActivator {
         }
 
         // from configuration if available
-        searchPath = config.resource_resolver_searchpath();
-        if (searchPath != null && searchPath.length > 0) {
-            for (int i = 0; i < searchPath.length; i++) {
+        final List<String> searchPathList = new ArrayList<>();
+        if (config.resource_resolver_searchpath() != null && config.resource_resolver_searchpath().length > 0) {
+            for(String path : config.resource_resolver_searchpath()) {
                 // ensure leading slash
-                if (!searchPath[i].startsWith("/")) {
-                    searchPath[i] = "/" + searchPath[i];
+                if (!path.startsWith("/")) {
+                    path = "/".concat(path);
                 }
                 // ensure trailing slash
-                if (!searchPath[i].endsWith("/")) {
-                    searchPath[i] += "/";
+                if (!path.endsWith("/")) {
+                    path = path.concat("/");
                 }
+                searchPathList.add(path);
             }
         }
-        if (searchPath == null) {
-            searchPath = new String[] { "/" };
+        if (searchPathList.isEmpty()) {
+            searchPathList.add("/");
         }
+        this.searchPath = Collections.unmodifiableList(searchPathList);
+
         // the root of the resolver mappings
         mapRoot = config.resource_resolver_map_location();
         mapRootPrefix = mapRoot + '/';

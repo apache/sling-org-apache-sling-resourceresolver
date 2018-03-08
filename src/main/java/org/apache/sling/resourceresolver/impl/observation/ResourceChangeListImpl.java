@@ -29,13 +29,13 @@ import org.apache.sling.api.resource.observation.ResourceChangeList;
 
 public class ResourceChangeListImpl implements ResourceChangeList {
 
-    private final String[] searchPath;
+    private final List<String> searchPath;
 
     private boolean locked = false;
 
     private final ArrayList<ResourceChange> list = new ArrayList<>();
 
-    public ResourceChangeListImpl(final String[] searchPath) {
+    public ResourceChangeListImpl(final List<String> searchPath) {
         this.searchPath = searchPath;
     }
 
@@ -163,7 +163,7 @@ public class ResourceChangeListImpl implements ResourceChangeList {
 
     @Override
     public String[] getSearchPath() {
-        return this.searchPath.clone();
+        return this.searchPath.toArray(new String[this.searchPath.size()]);
     }
 
     @Override

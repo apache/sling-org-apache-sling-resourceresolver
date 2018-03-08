@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,23 +45,23 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 public class BasicObservationReporterTest {
-    
-    private static final String[] SEARCH_PATHS = new String[] { "/apps", "/libs" };
-    
+
+    private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] { "/apps/", "/libs/" });
+
     @Test
     public void testRootProvider() {
         ResourceChangeListenerInfo allPathListener = resourceChangeListenerInfo("/");
         ResourceChangeListenerInfo appsPathListener = resourceChangeListenerInfo("/apps");
         ResourceChangeListenerInfo appsApp2PathListener = resourceChangeListenerInfo("/apps/app2");
         ResourceChangeListenerInfo globListener = resourceChangeListenerInfo("glob:/apps/**/*.html");
-        
+
         BasicObservationReporter underTest = new BasicObservationReporter(SEARCH_PATHS,
                 ImmutableList.of(allPathListener, appsPathListener, appsApp2PathListener, globListener),
                 new Path("/"), PathSet.EMPTY_SET);
-        
+
         underTest.reportChanges(changes("/apps/app1/path1.html"), false);
         underTest.reportChanges(changes("/content/path2/jcr:content"), false);
-        
+
         assertListener(allPathListener, "/apps/app1/path1.html", "/content/path2/jcr:content");
         assertListener(appsPathListener, "/apps/app1/path1.html");
         assertListener(appsApp2PathListener);
@@ -73,13 +74,13 @@ public class BasicObservationReporterTest {
         ResourceChangeListenerInfo appsPathListener = resourceChangeListenerInfo("/apps");
         ResourceChangeListenerInfo appsApp2PathListener = resourceChangeListenerInfo("/apps/app2");
         ResourceChangeListenerInfo globListener = resourceChangeListenerInfo("glob:/apps/**/*.html");
-        
+
         BasicObservationReporter underTest = new BasicObservationReporter(SEARCH_PATHS,
                 ImmutableList.of(allPathListener, appsPathListener, appsApp2PathListener, globListener),
                 new Path("/apps/app1"), PathSet.EMPTY_SET);
-        
+
         underTest.reportChanges(changes("/apps/app1/path1.html"), false);
-        
+
         assertListener(allPathListener, "/apps/app1/path1.html");
         assertListener(appsPathListener, "/apps/app1/path1.html");
         assertListener(appsApp2PathListener);
@@ -94,7 +95,7 @@ public class BasicObservationReporterTest {
         info.setListener(mock(ResourceChangeListener.class));
         return info;
     }
-    
+
     private static Iterable<ResourceChange> changes(String... paths) {
         List<ResourceChange> changes = new ArrayList<>();
         for (String path : paths) {
@@ -102,7 +103,7 @@ public class BasicObservationReporterTest {
         }
         return changes;
     }
-    
+
     @SuppressWarnings("unchecked")
     private static void assertListener(ResourceChangeListenerInfo info, String... paths) {
         Set<String> expectedPaths = ImmutableSet.copyOf(paths);
