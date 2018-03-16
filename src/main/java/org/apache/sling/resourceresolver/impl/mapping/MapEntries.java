@@ -127,7 +127,9 @@ public class MapEntries implements
 
     private Map <String,List <String>> vanityTargets;
 
-    private Map<String, Map<String, String>> aliasMap;
+    private volatile Map<String, Map<String, String>> aliasMap;
+    
+	private volatile boolean isAliasMapInitialized = false;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
@@ -191,13 +193,17 @@ public class MapEntries implements
 
             //optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
-                final Map<String, Map<String, String>> aliasMap = this.loadAliases(resolver);
-                this.aliasMap = aliasMap;
             }
 
             this.resolveMapsMap = newResolveMapsMap;
 
             doUpdateConfiguration();
+				new Thread(new Runnable(){
+					public void run() {
+						aliasMap= loadAliases(resolver);
+						isAliasMapInitialized = true;
+						}
+					}).start();
 
             sendChangeEvent();
         } catch (final Exception e) {
@@ -634,6 +640,11 @@ public class MapEntries implements
         return aliasMap.get(parentPath);
     }
 
+	@Override
+	public boolean isAliasMapInitialized() {
+		return isAliasMapInitialized;
+	}
+
     /**
      * get the MapEnty containing all the nodes having a specific vanityPath
      */
@@ -1027,11 +1038,24 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        final String queryString = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
-        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-        while (i.hasNext()) {
-            final Resource resource = i.next();
-            loadAlias(resource, map);
+        String queryString = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
+		if (this.factory.isForceNoAliasTraversal()) {
+			queryString += " option(traversal fail)";
+		}
+        try {
+	        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+	        while (i.hasNext()) {
+	            final Resource resource = i.next();
+	            loadAlias(resource, map);
+	        }
+        } catch (Exception e) {
+        	log.debug("Expected index not available and no traversal enforced", e);
+            try {
+                TimeUnit.SECONDS.sleep(30);
+            } catch (InterruptedException ex) {
+                log.warn("Interrupted while sleeping");
+                throw new RuntimeException(ex);
+            }
         }
         return map;
     }

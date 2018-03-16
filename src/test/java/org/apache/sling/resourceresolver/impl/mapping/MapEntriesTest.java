@@ -168,6 +168,8 @@ public class MapEntriesTest {
         });
 
         mapEntries.doInit();
+        
+        while(!mapEntries.isAliasMapInitialized()){}
 
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -205,6 +207,8 @@ public class MapEntriesTest {
         });
 
         mapEntries.doInit();
+        
+        while(!mapEntries.isAliasMapInitialized()){}
 
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
