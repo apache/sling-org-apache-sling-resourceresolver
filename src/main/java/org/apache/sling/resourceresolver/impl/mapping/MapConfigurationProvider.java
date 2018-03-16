@@ -54,6 +54,8 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
 
     boolean isOptimizeAliasResolutionEnabled();
 
+    boolean isAliasMapInitialized();
+
     boolean hasVanityPathPrecedence();
 
     Map<String, Object> getServiceUserAuthenticationInfo(final String subServiceName) throws LoginException;
@@ -78,4 +80,6 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      * If <code>null</code> is returned, all paths are allowed.
      */
     List<VanityPathConfig> getVanityPathConfig();
+
+	boolean isForceNoAliasTraversal();
 }
