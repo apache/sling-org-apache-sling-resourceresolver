@@ -53,6 +53,8 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
     int getVanityBloomFilterMaxBytes();
 
     boolean isOptimizeAliasResolutionEnabled();
+    
+    boolean isAliasMapInitialized();
 
     boolean hasVanityPathPrecedence();
 
@@ -78,4 +80,6 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      * If <code>null</code> is returned, all paths are allowed.
      */
     List<VanityPathConfig> getVanityPathConfig();
+
+	boolean isForceNoAliasTraversal();
 }
