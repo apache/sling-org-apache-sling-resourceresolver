@@ -233,6 +233,12 @@ public class MockedResourceResolverImplTest {
             public boolean resource_resolver_optimize_alias_resolution() {
                 return true;
             }
+            
+            @Override
+            public boolean force_no_alias_traversal() {
+                return true;
+            }
+
 
             @Override
             public String[] resource_resolver_mapping() {

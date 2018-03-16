@@ -148,6 +148,12 @@ public @interface ResourceResolverFactoryConfig {
                      " the alias resolution by creating an internal cache of aliases. This might have an impact on the startup time"+
                      " and on the alias update time if the number of aliases is huge (over 10000).")
     boolean resource_resolver_optimize_alias_resolution() default true;
+    
+
+    @AttributeDefinition(name = "Force no traversal for optimized alias lookup",
+        description = "When enabled the lookup of alias map for optimized resolution enforces retry until an index is present"+
+    				  "and does not traverse repository.")
+	boolean force_no_alias_traversal() default true;
 
     @AttributeDefinition(name = "Allowed Vanity Path Location",
         description ="This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +
