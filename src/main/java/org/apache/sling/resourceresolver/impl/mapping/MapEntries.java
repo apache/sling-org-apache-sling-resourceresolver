@@ -78,6 +78,7 @@ public class MapEntries implements
     ExternalResourceChangeListener {
 
     private static final String JCR_CONTENT = "jcr:content";
+    private static final int TRAVERSAL_RETRY_TIMER = 30000;
 
     private static final String JCR_CONTENT_PREFIX = "jcr:content/";
 
@@ -191,19 +192,20 @@ public class MapEntries implements
 
             final Map<String, List<MapEntry>> newResolveMapsMap = new ConcurrentHashMap<>();
 
+            isAliasMapInitialized = false;
             //optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
+    			new Thread(new Runnable(){
+    				public void run() {
+    					aliasMap = loadAliases(resolver);
+    					isAliasMapInitialized = true;
+    					}
+    				}).start();
             }
 
             this.resolveMapsMap = newResolveMapsMap;
-            isAliasMapInitialized = false;
+
             doUpdateConfiguration();
-				new Thread(new Runnable(){
-					public void run() {
-						aliasMap= loadAliases(resolver);
-						isAliasMapInitialized = true;
-						}
-					}).start();
 
             sendChangeEvent();
         } catch (final Exception e) {
@@ -266,6 +268,10 @@ public class MapEntries implements
             this.initializing.unlock();
         }
 
+    }
+    
+    protected int getTraversalTimer(){
+    	return TRAVERSAL_RETRY_TIMER;
     }
 
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
@@ -1042,21 +1048,24 @@ public class MapEntries implements
 		if (this.factory.isForceNoAliasTraversal()) {
 			queryString += " option(traversal fail)";
 		}
-        try {
-	        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-	        while (i.hasNext()) {
-	            final Resource resource = i.next();
-	            loadAlias(resource, map);
+		while (true){
+	        try {
+		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+		        while (i.hasNext()) {
+		            final Resource resource = i.next();
+		            loadAlias(resource, map);
+		        }
+		        break;
+	        } catch (Exception e) {
+	        	log.debug("Expected index not available and no traversal enforced", e);
+	            try {
+	                TimeUnit.MILLISECONDS.sleep(getTraversalTimer());
+	            } catch (InterruptedException ex) {
+	                log.warn("Interrupted while sleeping");
+	                throw new RuntimeException(ex);
+	            }
 	        }
-        } catch (Exception e) {
-        	log.debug("Expected index not available and no traversal enforced", e);
-            try {
-                TimeUnit.SECONDS.sleep(30);
-            } catch (InterruptedException ex) {
-                log.warn("Interrupted while sleeping");
-                throw new RuntimeException(ex);
-            }
-        }
+		}   
         return map;
     }
 
