@@ -1088,9 +1088,9 @@ public class MapEntries implements
     }
 
     /**
-     * ex
-     * @param e
-     * @return
+     * Extract root cause of exception
+     * @param e {@code Throwable} to be checked
+     * @return Root {@code Throwable} 
      */
     private Throwable unwrapThrowable(Throwable e) {
 		return e.getCause() == null ? e : unwrapThrowable(e.getCause());
