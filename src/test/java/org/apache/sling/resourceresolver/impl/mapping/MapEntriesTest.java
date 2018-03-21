@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -55,6 +56,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.sling.api.SlingException;
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -148,8 +151,8 @@ public class MapEntriesTest {
     }
 
 
-    @Test
-    public void test_simple_alias_support() {
+    @Test(timeout = 1000)
+    public void test_simple_alias_support() throws InterruptedException {
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
 
@@ -173,7 +176,10 @@ public class MapEntriesTest {
 
         mapEntries.doInit();
         
-        while(!mapEntries.isAliasMapInitialized()){}
+        // looping check for completion of aliasMap as it is calculated asynchronously
+		while (!mapEntries.isAliasMapInitialized()) {
+			Thread.sleep(10);
+		}
 
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -181,8 +187,8 @@ public class MapEntriesTest {
         assertEquals("child", aliasMap.get("alias"));
     }
 
-    @Test
-    public void test_that_duplicate_alias_doesnt_replace_first_alias() {
+	@Test(timeout = 1000)
+    public void test_that_duplicate_alias_doesnt_replace_first_alias() throws InterruptedException {
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
 
@@ -212,7 +218,10 @@ public class MapEntriesTest {
 
         mapEntries.doInit();
         
-        while(!mapEntries.isAliasMapInitialized()){}
+        // looping check for completion of aliasMap as it is calculated asynchronously
+		while (!mapEntries.isAliasMapInitialized()) {
+			Thread.sleep(10);
+		}
 
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -1643,7 +1652,7 @@ public class MapEntriesTest {
         assertNull(aliasMapEntry);
     }
     
-    @Test(timeout=1000)
+    @Test(timeout = 1000)
     public void test_delayed_optimized_aliaslookup() throws Exception {
     	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
@@ -1681,7 +1690,10 @@ public class MapEntriesTest {
 
         assertFalse(mapEntries.isAliasMapInitialized());
         latch.countDown();
-        while(!mapEntries.isAliasMapInitialized()){}
+        // looping check for completion of aliasMap as it is calculated asynchronously
+		while (!mapEntries.isAliasMapInitialized()) {
+			Thread.sleep(10);
+		}
         assertTrue(mapEntries.isAliasMapInitialized());
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertEquals(1, aliasMap.size());
@@ -1690,13 +1702,13 @@ public class MapEntriesTest {
         assertEquals("child", aliasMap.get("alias"));
     }
 
-    @Test
+    @Test(timeout = 1000)
     public void test_delayed_optimized_aliaslookup_traversalfail() throws Exception {
     	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
         
         mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin));
-        doReturn(100).when(mapEntries).getTraversalTimer();
+        doReturn(100).when(mapEntries).getTraversalRetryInterval();
         
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -1719,7 +1731,7 @@ public class MapEntriesTest {
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
             	if (latch.getCount() > 0){
             		latch.countDown();
-            		throw new IllegalArgumentException();
+            		throw new SlingException("Query couldn't be satified due to ", new IllegalArgumentException("Traversal") );
             	} else {
 		            if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
 		                return Arrays.asList(result, result).iterator();
@@ -1734,7 +1746,10 @@ public class MapEntriesTest {
 
         assertFalse(mapEntries.isAliasMapInitialized());
         latch.countDown();
-        while(!mapEntries.isAliasMapInitialized()){}
+        // looping check for completion of aliasMap as it is calculated asynchronously
+		while (!mapEntries.isAliasMapInitialized()) {
+			Thread.sleep(10);
+		}
         assertTrue(queryCaptor.getValue().contains("traversal fail"));
         assertTrue(mapEntries.isAliasMapInitialized());
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");

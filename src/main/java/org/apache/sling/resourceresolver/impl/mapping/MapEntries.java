@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -49,10 +50,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.jcr.query.InvalidQueryException;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.SlingConstants;
+import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -75,10 +79,11 @@ import org.slf4j.LoggerFactory;
 public class MapEntries implements
     MapEntriesHandler,
     ResourceChangeListener,
-    ExternalResourceChangeListener {
+    ExternalResourceChangeListener,
+    AutoCloseable {
 
     private static final String JCR_CONTENT = "jcr:content";
-    private static final int TRAVERSAL_RETRY_TIMER = 30000;
+    private static final int TRAVERSAL_RETRY_INTERVAL = 30000;
 
     private static final String JCR_CONTENT_PREFIX = "jcr:content/";
 
@@ -128,9 +133,9 @@ public class MapEntries implements
 
     private Map <String,List <String>> vanityTargets;
 
-    private volatile Map<String, Map<String, String>> aliasMap;
+    private Map<String, Map<String, String>> aliasMap;
     
-	private volatile boolean isAliasMapInitialized = false;
+	private boolean isAliasMapInitialized = false;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
@@ -143,6 +148,8 @@ public class MapEntries implements
     private Timer timer;
 
     private boolean updateBloomFilterFile = false;
+    
+    private Thread aliasTraversal = null;
 
     @SuppressWarnings({ "unchecked" })
     public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin)
@@ -195,12 +202,13 @@ public class MapEntries implements
             isAliasMapInitialized = false;
             //optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
-    			new Thread(new Runnable(){
+            	aliasTraversal = new Thread(new Runnable(){
     				public void run() {
     					aliasMap = loadAliases(resolver);
     					isAliasMapInitialized = true;
     					}
-    				}).start();
+    				});
+            	aliasTraversal.start();
             }
 
             this.resolveMapsMap = newResolveMapsMap;
@@ -270,8 +278,8 @@ public class MapEntries implements
 
     }
     
-    protected int getTraversalTimer(){
-    	return TRAVERSAL_RETRY_TIMER;
+    protected int getTraversalRetryInterval(){
+    	return TRAVERSAL_RETRY_INTERVAL;
     }
 
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
@@ -1056,20 +1064,39 @@ public class MapEntries implements
 		            loadAlias(resource, map);
 		        }
 		        break;
-	        } catch (Exception e) {
-	        	log.debug("Expected index not available and no traversal enforced", e);
-	            try {
-	                TimeUnit.MILLISECONDS.sleep(getTraversalTimer());
-	            } catch (InterruptedException ex) {
-	                log.warn("Interrupted while sleeping");
-	                throw new RuntimeException(ex);
-	            }
+	    	} catch (QuerySyntaxException e) {
+			Throwable cause = unwrapThrowable(e);
+			if (cause instanceof IllegalArgumentException) {
+				log.debug(
+						"Expected index not available or traversal fail option not known and traversal is prevented - will retry",
+						e);
+				try {
+					TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
+				} catch (InterruptedException ex) {
+					log.warn("Interrupted while sleeping", ex);
+				}
+			} else {
+				log.error("QueryEngine not able to process query {} ", queryString, e);
+				break;
+			}
+
+		} catch (SlingException ex) {
+	        	log.error("Loading of aliases via query failed.", ex);
 	        }
 		}   
         return map;
     }
 
     /**
+     * ex
+     * @param e
+     * @return
+     */
+    private Throwable unwrapThrowable(Throwable e) {
+		return e.getCause() == null ? e : unwrapThrowable(e.getCause());
+	}
+
+	/**
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
@@ -1584,5 +1611,12 @@ public class MapEntries implements
             }
         }
     }
+
+	@Override
+	public void close() throws Exception {
+		if (aliasTraversal != null) {
+			aliasTraversal.interrupt();
+		}
+	}
 
 }
