@@ -133,9 +133,9 @@ public class MapEntries implements
 
     private Map <String,List <String>> vanityTargets;
 
-    private Map<String, Map<String, String>> aliasMap;
+    private volatile Map<String, Map<String, String>> aliasMap;
     
-	private boolean isAliasMapInitialized = false;
+	private volatile boolean isAliasMapInitialized = false;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
