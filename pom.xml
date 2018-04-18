@@ -72,6 +72,13 @@
                             javax.jcr;resolution:=optional,
                             *
                         </Import-Package>
+                        <Provide-Capability>
+                            osgi.service;objectClass=javax.servlet.Servlet,
+                            osgi.service;objectClass=org.apache.sling.api.resource.ResourceResolverFactory,
+                            osgi.service;objectClass=org.apache.sling.api.resource.observation.ResourceChangeListener,
+                            osgi.service;objectClass=org.apache.sling.api.resource.runtime.RuntimeService,
+                            osgi.service;objectClass=org.apache.sling.spi.resource.provider.ResourceProvider
+                        </Provide-Capability>
                     </instructions>
                 </configuration>
             </plugin>
