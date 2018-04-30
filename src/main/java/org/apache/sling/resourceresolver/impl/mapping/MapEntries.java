@@ -25,7 +25,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,7 +49,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
-import javax.jcr.query.InvalidQueryException;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.SlingConstants;
@@ -135,8 +133,6 @@ public class MapEntries implements
 
     private volatile Map<String, Map<String, String>> aliasMap;
     
-	private volatile boolean isAliasMapInitialized = false;
-
     private final ReentrantLock initializing = new ReentrantLock();
 
     private final AtomicLong vanityCounter;
@@ -162,7 +158,7 @@ public class MapEntries implements
         this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, (List<MapEntry>)Collections.EMPTY_LIST);
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
-        this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
+        this.aliasMap = Collections.emptyMap();
 
         doInit();
 
@@ -199,13 +195,12 @@ public class MapEntries implements
 
             final Map<String, List<MapEntry>> newResolveMapsMap = new ConcurrentHashMap<>();
 
-            isAliasMapInitialized = false;
+            aliasMap = Collections.emptyMap();
             //optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
             	aliasTraversal = new Thread(new Runnable(){
     				public void run() {
     					aliasMap = loadAliases(resolver);
-    					isAliasMapInitialized = true;
     					}
     				});
             	aliasTraversal.start();
@@ -656,7 +651,12 @@ public class MapEntries implements
 
 	@Override
 	public boolean isAliasMapInitialized() {
-		return isAliasMapInitialized;
+		// since loading the aliases is equivalent to replacing the empty map
+		// with another instance, and the reference is volatile, it's safe
+		// to equate initialization being done with the empty map being replaced
+		// note that it's not provably safe to check the map size, as we might
+		// enter the scenario where there are no aliases
+		return aliasMap != Collections.<String,Map<String,String>> emptyMap();
 	}
 
     /**
