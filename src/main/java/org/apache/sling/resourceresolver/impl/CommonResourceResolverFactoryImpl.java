@@ -62,6 +62,8 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
 
     private static final Logger LOG = LoggerFactory.getLogger(CommonResourceResolverFactoryImpl.class);
 
+    private static final String[] FORBIDDEN_AUTH_INFO_KEYS = {ResourceProvider.AUTH_CLONE};
+
     /** Helper for the resource resolver. */
     private MapEntriesHandler mapEntries = MapEntriesHandler.EMPTY;
 
@@ -129,6 +131,32 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     // ---------- Resource Resolver Factory ------------------------------------
+    
+    /**
+     * Sanitize the authentication info passed from external code. This method will always make a defensive
+     * copy of the argument, also making sure that the copy is mutable. Nulls are turned into empty (mutable) maps.
+     * Keys that are used to communicate with resource providers are removed from the copy, and optionally
+     * other keys can be removed as well.
+     * @param authenticationInfo The authentication info to sanitize, may be null.
+     * @param extraForbiddenKeys Keys that should be removed from the returned copy.
+     * @return A sanitized mutable map.
+     */
+    @Nonnull
+    static Map<String, Object> sanitizeAuthenticationInfo(Map<String, Object> authenticationInfo, String... extraForbiddenKeys) {
+        if (authenticationInfo == null) {
+            // nothing to sanitize, just return an empty mutable map
+            return new HashMap<>();
+        } else {
+            Map<String, Object> sanitized = new HashMap<>(authenticationInfo);
+            for (String key : FORBIDDEN_AUTH_INFO_KEYS) {
+                sanitized.remove(key);
+            }
+            for (String key : extraForbiddenKeys) {
+                sanitized.remove(key);
+            }
+            return sanitized;
+        }
+    }
 
     /**
      * @see org.apache.sling.api.resource.ResourceResolverFactory#getAdministrativeResourceResolver(java.util.Map)
@@ -139,15 +167,10 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     throws LoginException {
         checkIsLive();
 
-        // create a copy of the passed authentication info as we modify the map
-        final Map<String, Object> authenticationInfo = new HashMap<>();
+        // make sure there is no leaking of service info props
+        // (but the bundle info is passed on as we need it downstream)
+        final Map<String, Object> authenticationInfo = sanitizeAuthenticationInfo(passedAuthenticationInfo, SUBSERVICE);
         authenticationInfo.put(ResourceProvider.AUTH_ADMIN, Boolean.TRUE);
-        if ( passedAuthenticationInfo != null ) {
-            authenticationInfo.putAll(passedAuthenticationInfo);
-            // make sure there is no leaking of service info props
-            // (but the bundle info is passed on as we need it downstream)
-            authenticationInfo.remove(SUBSERVICE);
-        }
 
         return getResourceResolverInternal(authenticationInfo, true);
     }
@@ -161,14 +184,8 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     throws LoginException {
         checkIsLive();
 
-        // create a copy of the passed authentication info as we modify the map
-        final Map<String, Object> authenticationInfo = new HashMap<>();
-        if ( passedAuthenticationInfo != null ) {
-            authenticationInfo.putAll(passedAuthenticationInfo);
-            // make sure there is no leaking of service bundle and info props
-            authenticationInfo.remove(ResourceProvider.AUTH_SERVICE_BUNDLE);
-            authenticationInfo.remove(SUBSERVICE);
-        }
+        // make sure there is no leaking of service bundle and info props
+        final Map<String, Object> authenticationInfo = sanitizeAuthenticationInfo(passedAuthenticationInfo, ResourceProvider.AUTH_SERVICE_BUNDLE, SUBSERVICE);
 
         final ResourceResolver result = getResourceResolverInternal(authenticationInfo, false);
         Stack<WeakReference<ResourceResolver>> resolverStack = resolverStackHolder.get();
@@ -391,9 +408,10 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     @Nonnull
     @Override
     public ResourceResolver getServiceResourceResolver(
-            final Map<String, Object> authenticationInfo) throws LoginException {
+            final Map<String, Object> passedAuthenticationInfo) throws LoginException {
         checkIsLive();
 
+        Map<String, Object> authenticationInfo = sanitizeAuthenticationInfo(passedAuthenticationInfo);
         return getResourceResolverInternal(authenticationInfo, false);
     }
 

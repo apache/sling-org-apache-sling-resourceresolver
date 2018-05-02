@@ -63,17 +63,9 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
      */
     @Override
     public ResourceResolver getServiceResourceResolver(final Map<String, Object> passedAuthenticationInfo) throws LoginException {
-        // create a copy of the passed authentication info as we modify the map
-        final Map<String, Object> authenticationInfo = new HashMap<>();
-        final String subServiceName;
-        if ( passedAuthenticationInfo != null ) {
-            authenticationInfo.putAll(passedAuthenticationInfo);
-            authenticationInfo.remove(PASSWORD);
-            final Object info = passedAuthenticationInfo.get(SUBSERVICE);
-            subServiceName = (info instanceof String) ? (String) info : null;
-        } else {
-            subServiceName = null;
-        }
+        final Map<String, Object> authenticationInfo = CommonResourceResolverFactoryImpl.sanitizeAuthenticationInfo(passedAuthenticationInfo, PASSWORD);
+        final Object info = authenticationInfo.get(SUBSERVICE);
+        final String subServiceName = (info instanceof String) ? (String) info : null;
 
         // Ensure a mapped user or principal name(s): If no user/principal names is/are
         // defined for a bundle acting as a service, the user may be null. We can decide whether
