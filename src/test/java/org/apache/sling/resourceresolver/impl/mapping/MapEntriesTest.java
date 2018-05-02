@@ -57,7 +57,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.sling.api.SlingException;
-import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -1751,6 +1750,59 @@ public class MapEntriesTest {
 			Thread.sleep(10);
 		}
         assertTrue(queryCaptor.getValue().contains("traversal fail"));
+        assertTrue(mapEntries.isAliasMapInitialized());
+        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
+        assertEquals(1, aliasMap.size());
+        assertNotNull(aliasMap);
+        assertEquals(1, aliasMap.size());
+        assertEquals("child", aliasMap.get("alias"));
+    }
+    
+    @Test
+    public void test_aliaslookup_traversalfail_not_supported() throws Exception {
+    	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
+        addResource.setAccessible(true);
+        
+        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin));
+        doReturn(100).when(mapEntries).getTraversalRetryInterval();
+        
+        Resource parent = mock(Resource.class);
+        when(parent.getPath()).thenReturn("/parent");
+
+        final Resource result = mock(Resource.class);
+        when(resourceResolver.getResource("/parent/child")).thenReturn(result);
+        when(result.getParent()).thenReturn(parent);
+        when(result.getPath()).thenReturn("/parent/child");
+        when(result.getName()).thenReturn("child");
+        when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+
+        addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
+  
+        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
+        when(resourceResolver.findResources(queryCaptor.capture(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+
+            @Override
+            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+            	if (invocation.getArguments()[0].toString().contains("traversal fail")){
+            		throw new SlingException("Query couldn't be satified due to ", new ParseException("Options not known", 0) );
+            	} else {
+		            if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+		                return Arrays.asList(result, result).iterator();
+		            } else {
+		                return Collections.<Resource> emptySet().iterator();
+		            }
+            	}
+            }
+        });
+
+        mapEntries.doInit();
+
+        assertFalse(mapEntries.isAliasMapInitialized());
+        // looping check for completion of aliasMap as it is calculated asynchronously
+		while (!mapEntries.isAliasMapInitialized()) {
+			Thread.sleep(10);
+		}
+        assertFalse(queryCaptor.getValue().contains("traversal fail"));
         assertTrue(mapEntries.isAliasMapInitialized());
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertEquals(1, aliasMap.size());

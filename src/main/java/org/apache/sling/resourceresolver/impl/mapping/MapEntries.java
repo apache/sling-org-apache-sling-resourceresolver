@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -111,6 +112,10 @@ public class MapEntries implements
     public static final int DEFAULT_DEFAULT_VANITY_PATH_REDIRECT_STATUS = HttpServletResponse.SC_FOUND;
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
+
+    final static String ALIAS_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
+
+    final static String ALIAS_QUERY_NO_TRAVERSAL = ALIAS_QUERY_DEFAULT + " option(traversal fail)";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -1052,10 +1057,7 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        String queryString = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
-		if (this.factory.isForceNoAliasTraversal()) {
-			queryString += " option(traversal fail)";
-		}
+		String queryString = this.factory.isForceNoAliasTraversal() ? ALIAS_QUERY_NO_TRAVERSAL : ALIAS_QUERY_DEFAULT;
 		while (true){
 	        try {
 		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
@@ -1064,26 +1066,37 @@ public class MapEntries implements
 		            loadAlias(resource, map);
 		        }
 		        break;
-	    	} catch (QuerySyntaxException e) {
-			Throwable cause = unwrapThrowable(e);
-			if (cause instanceof IllegalArgumentException) {
-				log.debug(
-						"Expected index not available or traversal fail option not known and traversal is prevented - will retry",
-						e);
-				try {
-					TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
-				} catch (InterruptedException ex) {
-					log.warn("Interrupted while sleeping", ex);
+	    	} catch (SlingException e) {
+	    		Throwable cause = unwrapThrowable(e);
+	    		if (cause instanceof IllegalArgumentException) {
+					log.debug(
+						"Expected index not available yet - will retry", e);
+					try {
+						TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
+					} catch (InterruptedException ex) {
+						log.warn("Interrupted while sleeping", ex);
+					}
+				} else if (cause instanceof ParseException) {
+	    			if (ALIAS_QUERY_NO_TRAVERSAL.equals(queryString)) {
+						log.warn("Traversal fail option set but query not accepted by queryengine, falling back to allowing traversal as queryengine might not support option", e);
+						queryString = ALIAS_QUERY_DEFAULT;
+					} else {
+						log.error("Queryengine couldn't parse query - interrupting loading of aliasmap",e);
+						break;
+					}
+					try {
+						TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
+					} catch (InterruptedException ex) {
+						log.warn("Interrupted while sleeping", ex);
+					}
+	    		
+					
+				} else {
+					log.error("QueryEngine not able to process query {} ", queryString, e);
+					break;
 				}
-			} else {
-				log.error("QueryEngine not able to process query {} ", queryString, e);
-				break;
-			}
-
-		} catch (SlingException ex) {
-	        	log.error("Loading of aliases via query failed.", ex);
-	        }
-		}   
+	    	}   
+		}
         return map;
     }
 
