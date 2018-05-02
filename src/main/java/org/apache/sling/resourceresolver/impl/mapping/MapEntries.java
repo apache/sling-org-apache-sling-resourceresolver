@@ -1068,7 +1068,7 @@ public class MapEntries implements
 		        break;
 	    	} catch (SlingException e) {
 	    		Throwable cause = unwrapThrowable(e);
-	    		if (cause instanceof IllegalArgumentException) {
+	    		if (cause instanceof IllegalArgumentException && ALIAS_QUERY_NO_TRAVERSAL.equals(queryString)) {
 					log.debug(
 						"Expected index not available yet - will retry", e);
 					try {
