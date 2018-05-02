@@ -565,7 +565,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
                 }
 
-                logger.debug("resolve: MapEntry {} matches, mapped path is {}", mapEntry, mappedPath);
+                logger.debug("map: MapEntry {} matches, mapped path is {}", mapEntry, mappedPath);
 
                 break;
             }
