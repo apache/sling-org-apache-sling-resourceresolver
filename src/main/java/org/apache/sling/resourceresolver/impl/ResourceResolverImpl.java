@@ -59,6 +59,7 @@ import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
+import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,6 +118,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if (authenticationInfo != null) {
             authInfo.putAll(authenticationInfo);
         }
+        authInfo.put(ResourceProvider.AUTH_CLONE, true);
         this.context = new ResourceResolverContext(this, factory.getResourceAccessSecurityTracker());
         this.control = createControl(factory.getResourceProviderTracker(), authInfo, resolver.control.isAdmin());
         this.factory.register(this, control);
