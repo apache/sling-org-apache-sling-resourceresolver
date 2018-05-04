@@ -137,8 +137,12 @@ public class MapEntries implements
     private Map <String,List <String>> vanityTargets;
 
     private volatile Map<String, Map<String, String>> aliasMap;
+    
+    private volatile Map<String, Map<String, String>> aliasQueueMap;
 
     private final ReentrantLock initializing = new ReentrantLock();
+    
+    private final ReentrantLock aliasMerging = new ReentrantLock();
 
     private final AtomicLong vanityCounter;
 
@@ -164,6 +168,7 @@ public class MapEntries implements
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMap = Collections.emptyMap();
+        this.aliasQueueMap = new HashMap<String, Map<String, String>>();
 
         doInit();
 
@@ -205,7 +210,16 @@ public class MapEntries implements
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
 		aliasTraversal = new Thread(new Runnable(){
 				public void run() {
-					aliasMap = loadAliases(resolver);
+					Map<String, Map<String,String>> tempMap = loadAliases(resolver);
+					aliasMerging.lock();
+					try {
+						aliasMap = tempMap;
+						// merge in changes queued up during initialization
+						aliasMap.putAll(aliasQueueMap);
+						aliasQueueMap.clear();	
+					} finally {
+						aliasMerging.unlock();
+					}
 					}
 				});
 		aliasTraversal.start();
@@ -507,7 +521,19 @@ public class MapEntries implements
     }
 
     private boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, this.aliasMap);
+    	aliasMerging.lock();
+    	try {
+			Map<String, Map<String, String>> activeMap =  this.isAliasMapInitialized() ? this.aliasMap : this.aliasQueueMap;
+		    boolean changed = loadAlias(resource, activeMap);
+		    // Merge queuemap into aliasmap if not empty and initialization finished in the meantime
+		    if (!aliasQueueMap.isEmpty() && this.isAliasMapInitialized()) {
+		      this.aliasMap.putAll(this.aliasQueueMap);
+		      this.aliasQueueMap.clear();
+		    }
+		    return changed;
+    	} finally {
+			aliasMerging.unlock();
+		}
     }
 
     /**
@@ -661,7 +687,7 @@ public class MapEntries implements
 		// to equate initialization being done with the empty map being replaced
 		// note that it's not provably safe to check the map size, as we might
 		// enter the scenario where there are no aliases
-		return aliasMap != Collections.<String,Map<String,String>> emptyMap();
+		return aliasMap != Collections.<String,Map<String,String>> emptyMap() && aliasQueueMap.isEmpty();
 	}
 
     /**

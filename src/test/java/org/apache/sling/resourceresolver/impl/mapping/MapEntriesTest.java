@@ -1168,6 +1168,63 @@ public class MapEntriesTest {
         assertEquals(1, aliasMap.size());
 
     }
+    
+    @Test
+    public void test_doAddAliasWhileInitializing() throws Exception {
+        final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
+        addResource.setAccessible(true);
+        
+        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin));
+        doReturn(100).when(mapEntries).getTraversalRetryInterval();
+
+        // check that alias map is empty
+        assertEquals(0, aliasMap.size());
+
+        final Resource parent = mock(Resource.class);
+        when(parent.getPath()).thenReturn("/parent");
+
+        final Resource child = mock(Resource.class);
+        when(resourceResolver.getResource("/parent/child")).thenReturn(child);
+        when(child.getParent()).thenReturn(parent);
+        when(child.getPath()).thenReturn("/parent/child");
+        when(child.getName()).thenReturn("child");
+        when(child.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+        
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
+        when(resourceResolver.findResources(queryCaptor.capture(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+
+            @Override
+            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+				if (latch.getCount() > 0){
+					latch.countDown();
+					throw new SlingException("Query couldn't be satified due to ", new IllegalArgumentException("Traversal") );
+				} else {
+					return Collections.<Resource> emptySet().iterator();
+				}
+            }
+        });
+
+        mapEntries.doInit();
+
+        assertFalse(mapEntries.isAliasMapInitialized());
+        addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
+        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent");
+        assertNull(aliasMapEntry);
+        
+        // looping check for completion of aliasMap as it is calculated asynchronously
+		while (!mapEntries.isAliasMapInitialized()) {
+			Thread.sleep(10);
+		}
+        
+		aliasMapEntry = mapEntries.getAliasMap("/parent");
+
+        assertNotNull(aliasMapEntry);
+        assertTrue(aliasMapEntry.containsKey("alias"));
+        assertEquals("child", aliasMapEntry.get("alias"));
+        assertEquals(1, aliasMapEntry.size());
+    }
 
     @Test
     public void test_doRemoveAlias() throws Exception {
