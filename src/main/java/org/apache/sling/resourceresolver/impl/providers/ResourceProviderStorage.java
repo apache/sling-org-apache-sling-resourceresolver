@@ -19,6 +19,8 @@
 package org.apache.sling.resourceresolver.impl.providers;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.sling.api.resource.runtime.dto.AuthType;
@@ -46,10 +48,10 @@ public class ResourceProviderStorage {
 
     public ResourceProviderStorage(List<ResourceProviderHandler> handlers) {
         this.allHandlers = handlers;
-        this.authRequiredHandlers = new ArrayList<ResourceProviderHandler>();
-        this.adaptableHandlers = new ArrayList<ResourceProviderHandler>();
-        this.attributableHandlers = new ArrayList<ResourceProviderHandler>();
-        this.languageQueryableHandlers = new ArrayList<ResourceProviderHandler>();
+        this.authRequiredHandlers = new ArrayList<>();
+        this.adaptableHandlers = new ArrayList<>();
+        this.attributableHandlers = new ArrayList<>();
+        this.languageQueryableHandlers = new ArrayList<>();
         for (ResourceProviderHandler h : allHandlers) {
             ResourceProviderInfo info = h.getInfo();
             if (info.getAuthType() == AuthType.required) {
@@ -66,7 +68,22 @@ public class ResourceProviderStorage {
                 this.languageQueryableHandlers.add(h);
             }
         }
-        this.handlersTree = new PathTree<ResourceProviderHandler>(handlers);
+        Collections.sort(this.adaptableHandlers, new Comparator<ResourceProviderHandler>() {
+
+            @Override
+            public int compare(final ResourceProviderHandler o1, final ResourceProviderHandler o2) {
+                final ResourceProviderInfo i1 = o1.getInfo();
+                final ResourceProviderInfo i2 = o2.getInfo();
+                if ( i1 == null ) {
+                    return i2 == null ? 0 : -1;
+                }
+                if ( i2 == null ) {
+                    return 1;
+                }
+                return i2.getServiceReference().compareTo(i1.getServiceReference());
+            }
+        });
+        this.handlersTree = new PathTree<>(handlers);
     }
 
     public List<ResourceProviderHandler> getAllHandlers() {

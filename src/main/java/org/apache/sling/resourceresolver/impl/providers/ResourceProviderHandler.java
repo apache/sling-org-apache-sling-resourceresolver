@@ -128,16 +128,18 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
 
     @Override
     public int compareTo(final ResourceProviderHandler o) {
-        if ( this.getInfo() == null ) {
-            if ( o.getInfo() == null ) {
+        final ResourceProviderInfo localInfo = this.info;
+        final ResourceProviderInfo otherInfo = o.info;
+        if ( localInfo == null ) {
+            if ( otherInfo == null ) {
                 return 0;
             }
             return 1;
         }
-        if ( o.getInfo() == null ) {
+        if ( otherInfo == null ) {
             return -1;
         }
-        return this.getInfo().compareTo(o.getInfo());
+        return localInfo.compareTo(otherInfo);
     }
 
     /**
