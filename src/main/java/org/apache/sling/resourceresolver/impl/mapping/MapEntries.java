@@ -45,17 +45,16 @@ import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -137,12 +136,11 @@ public class MapEntries implements
     private Map <String,List <String>> vanityTargets;
 
     private volatile Map<String, Map<String, String>> aliasMap;
-    
-    private volatile Map<String, Map<String, String>> aliasQueueMap;
 
-    private final ReentrantLock initializing = new ReentrantLock();
-    
-    private final ReentrantLock aliasMerging = new ReentrantLock();
+    // this sempahore is used instead of a more natural Lock since
+    // we need to signal that initialisation is complete from another
+    // thread 'optimizeAliasResolution' is enabled
+    private final Semaphore initLock = new Semaphore(1);
 
     private final AtomicLong vanityCounter;
 
@@ -168,7 +166,6 @@ public class MapEntries implements
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMap = Collections.emptyMap();
-        this.aliasQueueMap = new HashMap<String, Map<String, String>>();
 
         doInit();
 
@@ -195,7 +192,7 @@ public class MapEntries implements
      */
     protected void doInit() {
 
-        this.initializing.lock();
+        initLock.acquireUninterruptibly();
         try {
             final ResourceResolver resolver = this.resolver;
             final MapConfigurationProvider factory = this.factory;
@@ -210,16 +207,11 @@ public class MapEntries implements
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
 		aliasTraversal = new Thread(new Runnable(){
 				public void run() {
-					Map<String, Map<String,String>> tempMap = loadAliases(resolver);
-					aliasMerging.lock();
-					try {
-						aliasMap = tempMap;
-						// merge in changes queued up during initialization
-						aliasMap.putAll(aliasQueueMap);
-						aliasQueueMap.clear();	
-					} finally {
-						aliasMerging.unlock();
-					}
+				    try {
+				        aliasMap = loadAliases(resolver);
+				    } finally {
+				        initLock.release();
+				    }
 					}
 				});
 		aliasTraversal.start();
@@ -235,8 +227,8 @@ public class MapEntries implements
             log.warn("doInit: Unexpected problem during initialization", e);
 
         } finally {
-
-            this.initializing.unlock();
+            if ( !factory.isOptimizeAliasResolutionEnabled() )
+                initLock.release();
 
         }
     }
@@ -249,7 +241,7 @@ public class MapEntries implements
      * @throws IOException
      */
     protected void initializeVanityPaths() throws IOException {
-        this.initializing.lock();
+        initLock.acquireUninterruptibly();
         try {
             if (this.factory.isVanityPathEnabled()) {
 
@@ -287,7 +279,7 @@ public class MapEntries implements
                 this.vanityTargets = vanityTargets;
             }
         } finally {
-            this.initializing.unlock();
+            initLock.release();
         }
 
     }
@@ -297,8 +289,7 @@ public class MapEntries implements
     }
 
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
-        this.initializing.lock();
-
+        initLock.acquireUninterruptibly();
         try {
             this.refreshResolverIfNecessary(resolverRefreshed);
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
@@ -312,14 +303,14 @@ public class MapEntries implements
 
             return false;
         } finally {
-            this.initializing.unlock();
+            initLock.release();
         }
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
         final boolean isValidVanityPath =  this.isValidVanityPath(path);
         if ( this.factory.isOptimizeAliasResolutionEnabled() || isValidVanityPath) {
-            this.initializing.lock();
+            initLock.acquireUninterruptibly();
 
             try {
                 this.refreshResolverIfNecessary(resolverRefreshed);
@@ -345,7 +336,7 @@ public class MapEntries implements
                     return changed;
                 }
             } finally {
-                this.initializing.unlock();
+                initLock.release();
             }
         }
 
@@ -411,7 +402,7 @@ public class MapEntries implements
             return false;
         }
 
-        this.initializing.lock();
+        initLock.acquireUninterruptibly();
         try {
             final Map<String, String> aliasMapEntry = aliasMap.get(contentPath);
             if (aliasMapEntry != null) {
@@ -443,16 +434,16 @@ public class MapEntries implements
             }
             return aliasMapEntry != null;
         } finally {
-            this.initializing.unlock();
+            initLock.release();
         }
     }
 
     private boolean removeVanityPath(final String path) {
-        this.initializing.lock();
+        initLock.acquireUninterruptibly();
         try {
             return doRemoveVanity(path);
         } finally {
-            this.initializing.unlock();
+            initLock.release();
         }
     }
 
@@ -521,19 +512,7 @@ public class MapEntries implements
     }
 
     private boolean doAddAlias(final Resource resource) {
-    	aliasMerging.lock();
-    	try {
-			Map<String, Map<String, String>> activeMap =  this.isAliasMapInitialized() ? this.aliasMap : this.aliasQueueMap;
-		    boolean changed = loadAlias(resource, activeMap);
-		    // Merge queuemap into aliasmap if not empty and initialization finished in the meantime
-		    if (!aliasQueueMap.isEmpty() && this.isAliasMapInitialized()) {
-		      this.aliasMap.putAll(this.aliasQueueMap);
-		      this.aliasQueueMap.clear();
-		    }
-		    return changed;
-    	} finally {
-			aliasMerging.unlock();
-		}
+        return loadAlias(resource, this.aliasMap);
     }
 
     /**
@@ -609,7 +588,7 @@ public class MapEntries implements
         // wait at most 10 seconds for a notifcation during initialization
         boolean initLocked;
         try {
-            initLocked = this.initializing.tryLock(10, TimeUnit.SECONDS);
+            initLocked = initLock.tryAcquire(10, TimeUnit.SECONDS); 
         } catch (final InterruptedException ie) {
             initLocked = false;
         }
@@ -632,7 +611,7 @@ public class MapEntries implements
             }
         } finally {
             if (initLocked) {
-                this.initializing.unlock();
+                initLock.release();
             }
         }
 
@@ -687,7 +666,7 @@ public class MapEntries implements
 		// to equate initialization being done with the empty map being replaced
 		// note that it's not provably safe to check the map size, as we might
 		// enter the scenario where there are no aliases
-		return aliasMap != Collections.<String,Map<String,String>> emptyMap() && aliasQueueMap.isEmpty();
+		return aliasMap != Collections.<String,Map<String,String>> emptyMap();
 	}
 
     /**
@@ -737,7 +716,7 @@ public class MapEntries implements
         if ( this.factory.isMapConfiguration(path)
              || (isDelete && this.factory.getMapRoot().startsWith(path + "/")) ) {
             if ( hasReloadedConfig.compareAndSet(false, true) ) {
-                this.initializing.lock();
+                initLock.acquireUninterruptibly();
 
                 try {
                     if (this.resolver != null) {
@@ -745,7 +724,7 @@ public class MapEntries implements
                         doUpdateConfiguration();
                     }
                 } finally {
-                    this.initializing.unlock();
+                    initLock.release();
                 }
                 return true;
             }
