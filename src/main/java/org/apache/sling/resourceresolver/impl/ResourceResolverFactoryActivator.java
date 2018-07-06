@@ -39,6 +39,7 @@ import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
+import org.apache.sling.resourceresolver.impl.mapping.PlaceholderProvider;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.ChangeListener;
@@ -108,6 +109,10 @@ public class ResourceResolverFactoryActivator {
     @Reference
     EventAdmin eventAdmin;
 
+    /** Event admin. */
+    @Reference
+    PlaceholderProvider placeholderProvider;
+
     /** Service User Mapper */
     @Reference
     ServiceUserMapper serviceUserMapper;
@@ -151,6 +156,10 @@ public class ResourceResolverFactoryActivator {
 
     public EventAdmin getEventAdmin() {
         return this.eventAdmin;
+    }
+
+    public PlaceholderProvider getPlaceholderProvider() {
+        return placeholderProvider;
     }
 
     /**

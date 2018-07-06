@@ -69,6 +69,7 @@ import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
+import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -152,8 +153,10 @@ public class MapEntries implements
 
     private Thread aliasTraversal = null;
 
+    private PlaceholderProvider placeholderProvider;
+
     @SuppressWarnings({ "unchecked" })
-    public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin)
+    public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final PlaceholderProvider placeholderProvider)
         throws LoginException, IOException {
 
     	this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
@@ -164,6 +167,7 @@ public class MapEntries implements
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMap = Collections.emptyMap();
+        this.placeholderProvider = placeholderProvider;
 
         doInit();
 
@@ -985,6 +989,11 @@ public class MapEntries implements
             if (name == null) {
                 name = child.getName().concat("/");
                 trailingSlash = true;
+            }
+            // Check for placeholders and replace if needed
+            PlaceholderProvider.Check check = placeholderProvider.hasPlaceholder(name);
+            if(check.getStatus() == PlaceholderProvider.STATUS.found) {
+                name = placeholderProvider.resolve(check);
             }
 
             final String childPath = parentPath.concat(name);

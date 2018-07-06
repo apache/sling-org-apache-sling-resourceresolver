@@ -101,6 +101,9 @@ public class MapEntriesTest {
     @Mock
     private EventAdmin eventAdmin;
 
+    @Mock
+    private PlaceholderProvider placeholderProvider;
+
     private Map<String, Map<String, String>> aliasMap;
 
     @SuppressWarnings({ "unchecked" })
@@ -137,7 +140,7 @@ public class MapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.<Resource> emptySet().iterator());
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);
 
@@ -853,7 +856,7 @@ public class MapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -878,7 +881,7 @@ public class MapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -903,7 +906,7 @@ public class MapEntriesTest {
         removeAlias.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -1656,7 +1659,7 @@ public class MapEntriesTest {
 	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -1706,7 +1709,7 @@ public class MapEntriesTest {
 	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
 
-        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin));
+        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider));
         doReturn(100).when(mapEntries).getTraversalRetryInterval();
 
         Resource parent = mock(Resource.class);
@@ -1763,7 +1766,7 @@ public class MapEntriesTest {
 	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
 
-        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin));
+        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider));
         doReturn(100).when(mapEntries).getTraversalRetryInterval();
 
         Resource parent = mock(Resource.class);
