@@ -27,7 +27,7 @@ public @interface PlaceholderProviderConfiguration {
     @AttributeDefinition(
         name = "Placeholder Values",
         description = "A list of key / value pairs separated by a equal (=) sign. " +
-            "The key is not permitted to contain a '=' sign and the first occurrance of '=' " +
+            "The key is not permitted to contain a '=' sign and the first occurrence of '=' " +
             "separates the key from the value. If no '=' is found the entire key / value pair " +
             "is dropped.")
     String[] place_holder_key_value_pairs() default {"phv.default.host.name=localhost"};
