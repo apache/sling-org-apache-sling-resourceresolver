@@ -39,7 +39,7 @@ import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
-import org.apache.sling.resourceresolver.impl.mapping.PlaceholderProvider;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.ChangeListener;
@@ -111,7 +111,7 @@ public class ResourceResolverFactoryActivator {
 
     /** Event admin. */
     @Reference
-    PlaceholderProvider placeholderProvider;
+    StringInterpolationProvider stringInterpolationProvider;
 
     /** Service User Mapper */
     @Reference
@@ -158,8 +158,8 @@ public class ResourceResolverFactoryActivator {
         return this.eventAdmin;
     }
 
-    public PlaceholderProvider getPlaceholderProvider() {
-        return placeholderProvider;
+    public StringInterpolationProvider getStringInterpolationProvider() {
+        return stringInterpolationProvider;
     }
 
     /**

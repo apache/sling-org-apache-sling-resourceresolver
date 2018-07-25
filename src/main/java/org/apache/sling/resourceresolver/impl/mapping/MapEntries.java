@@ -55,7 +55,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -69,7 +68,6 @@ import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -153,10 +151,10 @@ public class MapEntries implements
 
     private Thread aliasTraversal = null;
 
-    private PlaceholderProvider placeholderProvider;
+    private StringInterpolationProvider stringInterpolationProvider;
 
     @SuppressWarnings({ "unchecked" })
-    public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final PlaceholderProvider placeholderProvider)
+    public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final StringInterpolationProvider stringInterpolationProvider)
         throws LoginException, IOException {
 
     	this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
@@ -167,7 +165,7 @@ public class MapEntries implements
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMap = Collections.emptyMap();
-        this.placeholderProvider = placeholderProvider;
+        this.stringInterpolationProvider = stringInterpolationProvider;
 
         doInit();
 
@@ -991,9 +989,9 @@ public class MapEntries implements
                 trailingSlash = true;
             }
             // Check for placeholders and replace if needed
-            PlaceholderProvider.Check check = placeholderProvider.hasPlaceholder(name);
-            if(check.getStatus() == PlaceholderProvider.STATUS.found) {
-                name = placeholderProvider.resolve(check);
+            StringInterpolationProvider.Check check = stringInterpolationProvider.hasPlaceholder(name);
+            if(check.getStatus() == StringInterpolationProvider.STATUS.found) {
+                name = stringInterpolationProvider.resolve(check);
             }
 
             final String childPath = parentPath.concat(name);

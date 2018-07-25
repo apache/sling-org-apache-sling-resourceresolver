@@ -25,16 +25,16 @@ import java.util.List;
  * that depend on the environment like host names / ports for dev, test,
  * qa, staging, prod systems
  *
- * Placeholders are enclosed in two opening/closing round brackets: {{replaceMe}}
+ * Placeholders are enclosed in Starting and Ending Delimiters (see PLACEHOLDER_START/END_TOKEN)
  * The name of the placeholder can contain any character except opening or closing
  * brackets (no nesting).
  */
-public interface PlaceholderProvider {
+public interface StringInterpolationProvider {
 
     enum STATUS {found, unknown, none};
 
-    public static final String PLACEHOLDER_START_TOKEN = "{{";
-    public static final String PLACEHOLDER_END_TOKEN = "}}";
+    public static final String PLACEHOLDER_START_TOKEN = "${";
+    public static final String PLACEHOLDER_END_TOKEN = "}";
     /**
      * Checks if the given values contains a placeholder and if that placeholder is known
      * @param value String to check

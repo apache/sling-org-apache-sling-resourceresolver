@@ -16,6 +16,7 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -32,10 +33,13 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -59,6 +63,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ResourceChange;
@@ -102,7 +107,7 @@ public class MapEntriesTest {
     private EventAdmin eventAdmin;
 
     @Mock
-    private PlaceholderProvider placeholderProvider;
+    private StringInterpolationProvider stringInterpolationProvider;
 
     private Map<String, Map<String, String>> aliasMap;
 
@@ -140,7 +145,7 @@ public class MapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.<Resource> emptySet().iterator());
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);
 
@@ -856,7 +861,7 @@ public class MapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -881,7 +886,7 @@ public class MapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -906,7 +911,7 @@ public class MapEntriesTest {
         removeAlias.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -1659,7 +1664,7 @@ public class MapEntriesTest {
 	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -1709,7 +1714,7 @@ public class MapEntriesTest {
 	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
 
-        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider));
+        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider));
         doReturn(100).when(mapEntries).getTraversalRetryInterval();
 
         Resource parent = mock(Resource.class);
@@ -1766,7 +1771,7 @@ public class MapEntriesTest {
 	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
         addResource.setAccessible(true);
 
-        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, placeholderProvider));
+        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider));
         doReturn(100).when(mapEntries).getTraversalRetryInterval();
 
         Resource parent = mock(Resource.class);

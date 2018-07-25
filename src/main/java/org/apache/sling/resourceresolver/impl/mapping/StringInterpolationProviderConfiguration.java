@@ -21,9 +21,9 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
-@ObjectClassDefinition(name = "Apache Sling Placeholder Provider",
-    description = "Configures the Placeholder Provider and the location of its key/value pairs")
-public @interface PlaceholderProviderConfiguration {
+@ObjectClassDefinition(name = "Apache Sling String Interpolation Provider",
+    description = "Configures the String Interpolation Provider and the location of its key/value pairs")
+public @interface StringInterpolationProviderConfiguration {
     @AttributeDefinition(
         name = "Placeholder Values",
         description = "A list of key / value pairs separated by a equal (=) sign. " +

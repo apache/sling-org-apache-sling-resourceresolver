@@ -73,6 +73,9 @@
                             javax.jcr;resolution:=optional,
                             *
                         </Import-Package>
+                        <Export-Package>
+                            org.apache.sling.resourceresolver.impl.mapping
+                        </Export-Package>
                         <Provide-Capability>
                             osgi.service;objectClass=javax.servlet.Servlet,
                             osgi.service;objectClass=org.apache.sling.api.resource.ResourceResolverFactory,

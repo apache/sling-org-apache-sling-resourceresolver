@@ -35,15 +35,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Designate(ocd = PlaceholderProviderConfiguration.class)
-@Component(name = "org.apache.sling.resourceresolver.impl.mapping.PlaceholderProvider")
-public class PlaceholderProviderImpl
-    implements PlaceholderProvider
+@Designate(ocd = StringInterpolationProviderConfiguration.class)
+@Component(name = "org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider")
+public class StringInterpolationProviderImpl
+    implements StringInterpolationProvider
 {
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public static PlaceholderProviderConfiguration DEFAULT_CONFIG;
+    public static StringInterpolationProviderConfiguration DEFAULT_CONFIG;
 
     static {
         final InvocationHandler handler = new InvocationHandler() {
@@ -51,12 +51,12 @@ public class PlaceholderProviderImpl
             @Override
             public Object invoke(final Object obj, final Method calledMethod, final Object[] args)
                 throws Throwable {
-                if ( calledMethod.getDeclaringClass().isAssignableFrom(PlaceholderProviderConfiguration.class) ) {
+                if ( calledMethod.getDeclaringClass().isAssignableFrom(StringInterpolationProviderConfiguration.class) ) {
                     return calledMethod.getDefaultValue();
                 }
                 if ( calledMethod.getDeclaringClass() == Object.class ) {
                     if ( calledMethod.getName().equals("toString") && (args == null || args.length == 0) ) {
-                        return "Generated @" + PlaceholderProviderConfiguration.class.getName() + " instance";
+                        return "Generated @" + StringInterpolationProviderConfiguration.class.getName() + " instance";
                     }
                     if ( calledMethod.getName().equals("hashCode") && (args == null || args.length == 0) ) {
                         return this.hashCode();
@@ -68,15 +68,15 @@ public class PlaceholderProviderImpl
                 throw new InternalError("unexpected method dispatched: " + calledMethod);
             }
         };
-        DEFAULT_CONFIG = (PlaceholderProviderConfiguration) Proxy.newProxyInstance(
-            PlaceholderProviderConfiguration.class.getClassLoader(),
-            new Class[] { PlaceholderProviderConfiguration.class },
+        DEFAULT_CONFIG = (StringInterpolationProviderConfiguration) Proxy.newProxyInstance(
+            StringInterpolationProviderConfiguration.class.getClassLoader(),
+            new Class[] { StringInterpolationProviderConfiguration.class },
             handler
         );
     }
 
     private BundleContext bundleContext;
-    private PlaceholderProviderConfiguration config = DEFAULT_CONFIG;
+    private StringInterpolationProviderConfiguration config = DEFAULT_CONFIG;
     private Map<String, String> placeholderEntries = new HashMap<>();
 
     // ---------- SCR Integration ---------------------------------------------
@@ -85,7 +85,7 @@ public class PlaceholderProviderImpl
      * Activates this component (called by SCR before)
      */
     @Activate
-    protected void activate(final BundleContext bundleContext, final PlaceholderProviderConfiguration config) {
+    protected void activate(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
         this.bundleContext = bundleContext;
         this.config = config;
         for(String line: this.config.place_holder_key_value_pairs()) {
@@ -110,7 +110,7 @@ public class PlaceholderProviderImpl
      * Modifies this component (called by SCR to update this component)
      */
     @Modified
-    protected void modified(final BundleContext bundleContext, final PlaceholderProviderConfiguration config) {
+    protected void modified(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
         this.deactivate();
         this.activate(bundleContext, config);
     }
@@ -169,7 +169,7 @@ public class PlaceholderProviderImpl
                 answer += value;
                 carret = carret + end - start + PLACEHOLDER_END_TOKEN.length();
             }
-            if(carret < line.length() - 1) {
+            if(carret < line.length()) {
                 // There is some text left after the last placeholder so copy this to the target line
                 answer += line.substring(carret);
             }
