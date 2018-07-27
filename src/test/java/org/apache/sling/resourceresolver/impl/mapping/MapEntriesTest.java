@@ -16,32 +16,26 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.apache.sling.api.SlingException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.observation.ResourceChange;
+import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -49,73 +43,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.sling.api.SlingException;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.ValueMap;
-import org.apache.sling.api.resource.observation.ResourceChange;
-import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
-import org.apache.sling.api.resource.path.Path;
-import org.apache.sling.api.wrappers.ValueMapDecorator;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
-import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.service.event.EventAdmin;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-public class MapEntriesTest {
+public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
-    private MapEntries mapEntries;
-
-    File vanityBloomFilterFile;
-
-    @Mock
-    private MapConfigurationProvider resourceResolverFactory;
-
-    @Mock
-    private BundleContext bundleContext;
-
-    @Mock
-    private Bundle bundle;
-
-    @Mock
-    private ResourceResolver resourceResolver;
-
-    @Mock
-    private EventAdmin eventAdmin;
-
-    @Mock
-    private StringInterpolationProvider stringInterpolationProvider;
-
-    private Map<String, Map<String, String>> aliasMap;
-
-    @SuppressWarnings({ "unchecked" })
-    @Before
-    public void setup() throws Exception {
-        MockitoAnnotations.initMocks(this);
-
+    List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {
         final List<VanityPathConfig> configs = new ArrayList<>();
         configs.add(new VanityPathConfig("/libs/", false));
         configs.add(new VanityPathConfig("/libs/denied", true));
@@ -129,34 +80,9 @@ public class MapEntriesTest {
         configs.add(new VanityPathConfig("/vanityPathOnJcrContent", false));
 
         Collections.sort(configs);
-        vanityBloomFilterFile = new File("src/main/resourcesvanityBloomFilter.txt");
-        when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
-        when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
-        when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
-        when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
-        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
-        when(resourceResolverFactory.isForceNoAliasTraversal()).thenReturn(true);
-        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
-        when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
-        when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
-        when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
-                Collections.<Resource> emptySet().iterator());
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
-        final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
-        aliasMapField.setAccessible(true);
-
-        this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
+        return configs;
     }
-
-    @After
-    public void tearDown() throws Exception {
-        vanityBloomFilterFile.delete();
-    }
-
 
     @Test(timeout = 1000)
     public void test_simple_alias_support() throws InterruptedException {
@@ -393,22 +319,6 @@ public class MapEntriesTest {
         when(resourceResolver.getResource(parent.getPath())).thenReturn(null);
         mapEntries.onChange(Arrays.asList(new ResourceChange(ChangeType.REMOVED, parent.getPath(), false)));
         assertTrue( mapEntries.getResolveMaps().isEmpty());
-    }
-
-    private ValueMap buildValueMap(Object... string) {
-        final Map<String, Object> data = new HashMap<>();
-        for (int i = 0; i < string.length; i = i + 2) {
-            data.put((String) string[i], string[i+1]);
-        }
-        return new ValueMapDecorator(data);
-    }
-
-    private Resource getVanityPathResource(final String path) {
-        Resource rsrc = mock(Resource.class);
-        when(rsrc.getPath()).thenReturn(path);
-        when(rsrc.getName()).thenReturn(ResourceUtil.getName(path));
-        when(rsrc.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/vanity" + path));
-        return rsrc;
     }
 
     @Test
@@ -2280,39 +2190,4 @@ public class MapEntriesTest {
             }
         }
     }
-
-    // -------------------------- private methods ----------
-    private DataFuture createDataFuture(ExecutorService pool, final MapEntries mapEntries) {
-
-        Future<Iterator<?>> future = pool.submit(new Callable<Iterator<?>>() {
-            @Override
-            public Iterator<MapEntry> call() throws Exception {
-                return mapEntries.getResolveMapsIterator("http/localhost.8080/target/justVanityPath");
-            }
-        });
-        return new DataFuture(future);
-    }
-
-    private void simulateSomewhatSlowSessionOperation(final Semaphore sessionLock) throws InterruptedException {
-        if (!sessionLock.tryAcquire()) {
-            fail("concurrent session access detected");
-        }
-        try{
-            Thread.sleep(1);
-        } finally {
-            sessionLock.release();
-        }
-    }
-
-    // -------------------------- inner classes ------------
-
-    private static class DataFuture {
-        public Future<Iterator<?>> future;
-
-        public DataFuture(Future<Iterator<?>> future) {
-            super();
-            this.future = future;
-        }
-    }
-
 }
