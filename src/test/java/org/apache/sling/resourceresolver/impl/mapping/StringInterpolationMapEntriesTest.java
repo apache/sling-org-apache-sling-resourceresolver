@@ -19,13 +19,8 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import org.apache.sling.api.resource.Resource;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static junit.framework.TestCase.fail;
 import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
-import static org.junit.Assert.assertEquals;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
 
 /**
  * These are tests that are testing the Sling Interpolation Feature (SLING-7768)

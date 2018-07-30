@@ -16,7 +16,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import junit.framework.TestCase;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -26,7 +25,6 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -38,7 +36,6 @@ import org.osgi.service.event.EventAdmin;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -49,8 +46,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
-import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMap;
@@ -219,78 +214,6 @@ public abstract class AbstractMappingMapEntriesTest {
             Thread.sleep(1);
         } finally {
             sessionLock.release();
-        }
-    }
-
-    static class ExpectedEtcMapping {
-        List<ExpectedEtcMapEntry> expectedEtcMapEntries = new ArrayList<>();
-
-        public ExpectedEtcMapping() {}
-
-        public ExpectedEtcMapping(String...expectedMapping) {
-            if(expectedMapping.length % 2 != 0) {
-                throw new IllegalArgumentException("Expect an even number of strings with pattern / redirect");
-            }
-            int size = expectedMapping.length / 2;
-            for(int i = 0; i < size; i++ ) {
-                expectedEtcMapEntries.add(new ExpectedEtcMapEntry(expectedMapping[2 * i], expectedMapping[2 * i + 1]));
-            }
-        }
-
-        public ExpectedEtcMapping addEtcMapEntry(String pattern, String redirect) {
-            addEtcMapEntry(pattern, false, redirect);
-            return this;
-        }
-        public ExpectedEtcMapping addEtcMapEntry(String pattern, boolean internal, String redirect) {
-            expectedEtcMapEntries.add(new ExpectedEtcMapEntry(pattern, internal, redirect));
-            return this;
-        }
-
-        public void assertEtcMap(String title, List<MapEntry> mapEntries) {
-            assertEquals("Wrong Number of Mappings for: " + title, expectedEtcMapEntries.size(), mapEntries.size());
-            ArrayList<MapEntry> actual = new ArrayList<>(mapEntries);
-            ArrayList<ExpectedEtcMapEntry> expected = new ArrayList<>(expectedEtcMapEntries);
-            for(MapEntry actualMapEntry: actual) {
-                ExpectedEtcMapEntry expectedFound = null;
-                for(ExpectedEtcMapEntry expectedEtcMapEntry: expected) {
-                    if(expectedEtcMapEntry.pattern.equals(actualMapEntry.getPattern())) {
-                        expectedFound = expectedEtcMapEntry;
-                        break;
-                    }
-                }
-                if(expectedFound == null) {
-                    TestCase.fail("This pattern (" + actualMapEntry.getPattern() + ") is not expected for: " + title);
-                }
-                expectedFound.assertEtcMap(title, actualMapEntry);
-                expected.remove(expectedFound);
-            }
-            for(ExpectedEtcMapEntry expectedEtcMapEntry: expected) {
-                TestCase.fail("Expected Map Entry (" + expectedEtcMapEntry.pattern + ") not provided for: " + title);
-            }
-        }
-    }
-
-    static class ExpectedEtcMapEntry {
-        private String pattern;
-        private boolean internal;
-        private String redirect;
-
-        public ExpectedEtcMapEntry(String pattern, String redirect) {
-            this(pattern, false, redirect);
-        }
-
-        public ExpectedEtcMapEntry(String pattern, boolean internal, String redirect) {
-            this.pattern = pattern;
-            this.internal = internal;
-            this.redirect = redirect;
-        }
-
-        public void assertEtcMap(String title, MapEntry mapEntry) {
-            assertEquals("Wrong Pattern for " + title, pattern, mapEntry.getPattern());
-            List<String> givenRedirects = new ArrayList<>(Arrays.asList(mapEntry.getRedirect()));
-            assertEquals("Wrong Number of Redirects for: " + title, 1, givenRedirects.size());
-            assertEquals("Wrong Redirect for: " + title, this.redirect, givenRedirects.get(0));
-            assertEquals("Wrong Redirect Type (ext/int) for: " + title, this.internal, mapEntry.isInternal());
         }
     }
 

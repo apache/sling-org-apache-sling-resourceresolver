@@ -84,7 +84,12 @@ public class SimpleValueMapImpl implements ValueMap {
     public <T> T get(String name, Class<T> type) {
         Object o = delegate.get(name);
         if ( type.equals(String[].class) && ! ( o instanceof String[])) {
-            o = new String[] { String.valueOf(o) };
+            //AS This works fine unless o is a 'null'. It should return an empty string instead
+            if(o == null) {
+                o = new String[] {};
+            } else {
+                o = new String[]{String.valueOf(o)};
+            }
         }
         return (T) o;
     }

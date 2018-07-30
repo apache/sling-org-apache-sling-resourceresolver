@@ -17,7 +17,6 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.CommonResourceResolverFactoryImpl;
@@ -39,23 +38,23 @@ import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import static java.util.Arrays.asList;
 import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
 import static org.apache.sling.resourceresolver.impl.ResourceResolverImpl.PROP_REDIRECT_INTERNAL;
 import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+/**
+ * These tests are for the /etc/map setup of the Map Entries when
+ * an /etc/map is present.
+ */
 public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
