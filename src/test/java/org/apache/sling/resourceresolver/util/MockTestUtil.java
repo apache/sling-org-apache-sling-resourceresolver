@@ -26,12 +26,15 @@ import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.SimpleValueMapImpl;
 import org.apache.sling.resourceresolver.impl.helper.RedirectResource;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.osgi.framework.BundleContext;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
@@ -186,10 +189,20 @@ public class MockTestUtil {
     }
 
     public static Object callInaccessibleMethod(String methodName, Object target, Class paramsType, Object param) throws NoSuchMethodException {
+        return callInaccessibleMethod(methodName, target, new Class[] {paramsType}, new Object[] {param});
+    }
+
+    public static Object callInaccessibleMethod(String methodName, Object target, Class[] paramsTypes, Object[] params) throws NoSuchMethodException {
+        if(paramsTypes != null && params != null) {
+            if(params.length != paramsTypes.length) { throw new IllegalArgumentException("Number of Parameter Types and Values were not the same"); }
+        } else {
+            paramsTypes = null;
+            params = null;
+        }
         try {
-            Method method = target.getClass().getDeclaredMethod(methodName, paramsType);
+            Method method = target.getClass().getDeclaredMethod(methodName, paramsTypes);
             method.setAccessible(true);
-            return method.invoke(target, param);
+            return method.invoke(target, params);
         } catch(NoSuchMethodException e) {
             throw new UnsupportedOperationException("Failed to find method: " + methodName, e);
         } catch (IllegalAccessException e) {
@@ -209,6 +222,16 @@ public class MockTestUtil {
         } catch (NoSuchFieldException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void setupStringInterpolationProvider(
+        StringInterpolationProvider provider, StringInterpolationProviderConfiguration configuration, BundleContext bundleContext, final String[] placeholderValues
+    ) throws NoSuchMethodException {
+        when(configuration.place_holder_key_value_pairs()).thenReturn(placeholderValues);
+        callInaccessibleMethod("activate", provider,
+            new Class[] {BundleContext.class, StringInterpolationProviderConfiguration.class},
+            new Object[] {bundleContext, configuration}
+        );
     }
 
     /**

@@ -46,6 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
+import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMap;
@@ -116,7 +117,7 @@ public abstract class AbstractMappingMapEntriesTest {
         map = setupEtcMapResource("/etc", "map");
         http = setupEtcMapResource("http", map);
 
-        setupStringInterpolationProvider(new String[] {});
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {});
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
@@ -188,11 +189,6 @@ public abstract class AbstractMappingMapEntriesTest {
         doNothing().when(resourceMetadata).setParameterMap(anyMap());
 
         return resource;
-    }
-
-    void setupStringInterpolationProvider(final String[] placeholderValues) {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(placeholderValues);
-        stringInterpolationProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
     }
 
     MapEntriesTest.DataFuture createDataFuture(ExecutorService pool, final MapEntries mapEntries) {

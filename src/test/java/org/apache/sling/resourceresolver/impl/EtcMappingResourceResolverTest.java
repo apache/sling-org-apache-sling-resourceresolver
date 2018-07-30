@@ -55,6 +55,7 @@ import static org.apache.sling.resourceresolver.util.MockTestUtil.checkInternalR
 import static org.apache.sling.resourceresolver.util.MockTestUtil.checkRedirectResource;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createRequestFromUrl;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -256,10 +257,7 @@ public class EtcMappingResourceResolverTest {
         Resource anecdotes = buildResource("/anecdotes", null, resourceResolver, resourceProvider);
         Resource stories = buildResource("/anecdotes/stories", anecdotes, resourceResolver, resourceProvider);
 
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getScheme()).thenReturn("http");
-        when(request.getServerName()).thenReturn("localhost");
-        when(request.getServerPort()).thenReturn(1234);
+        HttpServletRequest request = createRequestFromUrl("http://localhost:1234/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
         checkInternalResource(resolvedResource, "/content");
 
@@ -272,5 +270,41 @@ public class EtcMappingResourceResolverTest {
 //        checkRedirectResource(resolvedResource, "http://gbiv.com/", 302);
         resolvedResource = resourceResolver.resolve(request, "/stories/");
         checkInternalResource(resolvedResource, "/anecdotes/stories");
+    }
+
+    @Test
+    public void simple_node_string_interpolation() throws Exception {
+        buildResource("${siv.one}", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {"siv.one=test-simple-node.80"});
+
+        refreshMapEntries("/etc/map", true);
+
+        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-node.80/", "/content/simple-node/");
+        expectedEtcMapping.assertEtcMap("String Interpolation for simple match", commonFactory.getMapEntries().getResolveMaps());
+
+        Resource content = buildResource("/content", null, resourceResolver, resourceProvider);
+        Resource simpleNode = buildResource("/content/simple-node", content, resourceResolver, resourceProvider);
+
+        HttpServletRequest request = createRequestFromUrl("http://test-simple-node:80/");
+        Resource resolvedResource = resourceResolver.resolve(request, "/");
+        checkRedirectResource(resolvedResource, "/content/simple-node/", 302);
+    }
+
+    @Test
+    public void simple_match_string_interpolation() throws Exception {
+        buildResource("test-node", http, resourceResolver, resourceProvider,
+            PROP_REG_EXP, "${siv.one}/",
+            PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
+        );
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {"siv.one=test-simple-match.80"});
+
+        refreshMapEntries("/etc/map", true);
+
+        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-match.80/", "/content/simple-match/");
+        expectedEtcMapping.assertEtcMap("String Interpolation for simple match", commonFactory.getMapEntries().getResolveMaps());
+
+        HttpServletRequest request = createRequestFromUrl("http://test-simple-match:80/");
+        Resource resolvedResource = resourceResolver.resolve(request, "/");
+        checkRedirectResource(resolvedResource, "/content/simple-match/", 302);
     }
 }
