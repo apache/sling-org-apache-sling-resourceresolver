@@ -25,7 +25,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -53,9 +52,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.SlingConstants;
-import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -78,11 +75,9 @@ import org.slf4j.LoggerFactory;
 public class MapEntries implements
     MapEntriesHandler,
     ResourceChangeListener,
-    ExternalResourceChangeListener,
-    AutoCloseable {
+    ExternalResourceChangeListener {
 
     private static final String JCR_CONTENT = "jcr:content";
-    private static final int TRAVERSAL_RETRY_INTERVAL = 30000;
 
     private static final String JCR_CONTENT_PREFIX = "jcr:content/";
 
@@ -113,10 +108,6 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
-    final static String ALIAS_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
-
-    final static String ALIAS_QUERY_NO_TRAVERSAL = ALIAS_QUERY_DEFAULT + " option(traversal fail)";
-
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /** default log */
@@ -136,7 +127,7 @@ public class MapEntries implements
 
     private Map <String,List <String>> vanityTargets;
 
-    private volatile Map<String, Map<String, String>> aliasMap;
+    private Map<String, Map<String, String>> aliasMap;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
@@ -150,8 +141,6 @@ public class MapEntries implements
 
     private boolean updateBloomFilterFile = false;
 
-    private Thread aliasTraversal = null;
-
     @SuppressWarnings({ "unchecked" })
     public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin)
         throws LoginException, IOException {
@@ -163,7 +152,7 @@ public class MapEntries implements
         this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, (List<MapEntry>)Collections.EMPTY_LIST);
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
-        this.aliasMap = Collections.emptyMap();
+        this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
 
         doInit();
 
@@ -200,15 +189,10 @@ public class MapEntries implements
 
             final Map<String, List<MapEntry>> newResolveMapsMap = new ConcurrentHashMap<>();
 
-            aliasMap = Collections.emptyMap();
             //optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
-		aliasTraversal = new Thread(new Runnable(){
-				public void run() {
-					aliasMap = loadAliases(resolver);
-					}
-				});
-		aliasTraversal.start();
+                final Map<String, Map<String, String>> aliasMap = this.loadAliases(resolver);
+                this.aliasMap = aliasMap;
             }
 
             this.resolveMapsMap = newResolveMapsMap;
@@ -276,10 +260,6 @@ public class MapEntries implements
             this.initializing.unlock();
         }
 
-    }
-
-    protected int getTraversalRetryInterval(){
-	return TRAVERSAL_RETRY_INTERVAL;
     }
 
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
@@ -653,16 +633,6 @@ public class MapEntries implements
     public Map<String, String> getAliasMap(final String parentPath) {
         return aliasMap.get(parentPath);
     }
-
-	@Override
-	public boolean isAliasMapInitialized() {
-		// since loading the aliases is equivalent to replacing the empty map
-		// with another instance, and the reference is volatile, it's safe
-		// to equate initialization being done with the empty map being replaced
-		// note that it's not provably safe to check the map size, as we might
-		// enter the scenario where there are no aliases
-		return aliasMap != Collections.<String,Map<String,String>> emptyMap();
-	}
 
     /**
      * get the MapEnty containing all the nodes having a specific vanityPath
@@ -1057,59 +1027,16 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-		String queryString = this.factory.isForceNoAliasTraversal() ? ALIAS_QUERY_NO_TRAVERSAL : ALIAS_QUERY_DEFAULT;
-		while (true){
-	        try {
-		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-		        while (i.hasNext()) {
-		            final Resource resource = i.next();
-		            loadAlias(resource, map);
-		        }
-		        break;
-		} catch (SlingException e) {
-			Throwable cause = unwrapThrowable(e);
-			if (cause instanceof IllegalArgumentException && ALIAS_QUERY_NO_TRAVERSAL.equals(queryString)) {
-					log.debug(
-						"Expected index not available yet - will retry", e);
-					try {
-						TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
-					} catch (InterruptedException ex) {
-						log.warn("Interrupted while sleeping", ex);
-					}
-				} else if (cause instanceof ParseException) {
-				if (ALIAS_QUERY_NO_TRAVERSAL.equals(queryString)) {
-						log.warn("Traversal fail option set but query not accepted by queryengine, falling back to allowing traversal as queryengine might not support option", e);
-						queryString = ALIAS_QUERY_DEFAULT;
-					} else {
-						log.error("Queryengine couldn't parse query - interrupting loading of aliasmap",e);
-						break;
-					}
-					try {
-						TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
-					} catch (InterruptedException ex) {
-						log.warn("Interrupted while sleeping", ex);
-					}
-
-
-				} else {
-					log.error("QueryEngine not able to process query {} ", queryString, e);
-					break;
-				}
-		}
-		}
+        final String queryString = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
+        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+        while (i.hasNext()) {
+            final Resource resource = i.next();
+            loadAlias(resource, map);
+        }
         return map;
     }
 
     /**
-     * Extract root cause of exception
-     * @param e {@code Throwable} to be checked
-     * @return Root {@code Throwable}
-     */
-    private Throwable unwrapThrowable(Throwable e) {
-		return e.getCause() == null ? e : unwrapThrowable(e.getCause());
-	}
-
-	/**
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
@@ -1624,12 +1551,5 @@ public class MapEntries implements
             }
         }
     }
-
-	@Override
-	public void close() throws Exception {
-		if (aliasTraversal != null) {
-			aliasTraversal.interrupt();
-		}
-	}
 
 }

@@ -235,12 +235,6 @@ public class MockedResourceResolverImplTest {
             }
 
             @Override
-            public boolean force_no_alias_traversal() {
-                return true;
-            }
-
-
-            @Override
             public String[] resource_resolver_mapping() {
                 return new String[] { "/:/",
                         "/content/:/", "/system/docroot/:/", "/content.html-/$" };

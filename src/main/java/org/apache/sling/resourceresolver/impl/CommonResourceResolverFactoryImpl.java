@@ -555,14 +555,4 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
             }
         }
     }
-
-	@Override
-	public boolean isAliasMapInitialized() {
-		return mapEntries.isAliasMapInitialized();
-	}
-
-	@Override
-	public boolean isForceNoAliasTraversal() {
-		return this.activator.isForceNoAliasTraversal();
-	}
 }

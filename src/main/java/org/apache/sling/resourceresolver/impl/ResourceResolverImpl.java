@@ -476,7 +476,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             while (path != null) {
                 String alias = null;
                 if (current != null && !path.endsWith(JCR_CONTENT_LEAF)) {
-                    if (factory.isOptimizeAliasResolutionEnabled() && factory.isAliasMapInitialized()) {
+                    if (factory.isOptimizeAliasResolutionEnabled()) {
                         logger.debug("map: Optimize Alias Resolution is Enabled");
                         String parentPath = ResourceUtil.getParent(path);
                         if (parentPath != null) {
@@ -989,7 +989,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
         // we do not have a child with the exact name, so we look for
         // a child, whose alias matches the childName
-        if (factory.isOptimizeAliasResolutionEnabled() && factory.isAliasMapInitialized()){
+        if (factory.isOptimizeAliasResolutionEnabled()){
             logger.debug("getChildInternal: Optimize Alias Resolution is Enabled");
             //optimization made in SLING-2521
             final Map<String, String> aliases = factory.getMapEntries().getAliasMap(parent.getPath());

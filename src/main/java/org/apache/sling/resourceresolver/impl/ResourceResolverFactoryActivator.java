@@ -197,10 +197,6 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-	public boolean isForceNoAliasTraversal() {
-		return  this.config.force_no_alias_traversal();
-	}
-
     public boolean isLogUnclosedResourceResolvers() {
         return this.config.resource_resolver_log_unclosed();
     }
