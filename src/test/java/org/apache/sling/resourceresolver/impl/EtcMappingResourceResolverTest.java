@@ -272,4 +272,38 @@ public class EtcMappingResourceResolverTest {
         resolvedResource = resourceResolver.resolve(request, "/stories/");
         checkInternalResource(resolvedResource, "/anecdotes/stories");
     }
+
+    /**
+     * ATTENTION: this tests showcases an erroneous condition of an endless circular mapping in the /etc/map. When
+     * this test passes this condition is present. After a fix this test must be adjusted.
+     * 
+     * This confirms an issue with the Etc Mapping where a mapping from a node to a child node (here / to /content)
+     * ends up in a endless circular mapping.
+     * The only way to recover from this is to go to the OSGi console and change the /etc/map path in the Resource
+     * Resolver factory.
+     * Either the Etc Mapping discovers this condition and stops it or at least ignores mapping for Composum to allow
+     * the /etc/map to be edited.
+     */
+    @Test
+    public void endless_circular_mapping() throws Exception {
+        buildResource(http.getPath() + "/localhost.8080", http, resourceResolver, resourceProvider, PROP_REDIRECT_EXTERNAL, "/content");
+        refreshMapEntries("/etc/map", true);
+
+        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/localhost.8080/", "/content/");
+        expectedEtcMapping.assertEtcMap("Etc Mapping for root node to content", commonFactory.getMapEntries().getResolveMaps());
+
+        buildResource("/content/test", null, resourceResolver, resourceProvider);
+        buildResource("/content/content/test", null, resourceResolver, resourceProvider);
+        buildResource("/content/content/content/test", null, resourceResolver, resourceProvider);
+
+        HttpServletRequest request = createRequestFromUrl("http://localhost:8080/");
+        Resource resolvedResource = resourceResolver.resolve(request, "/test.html");
+        checkRedirectResource(resolvedResource, "/content/test.html", 302);
+
+        resolvedResource = resourceResolver.resolve(request, "/content/test.html");
+        checkRedirectResource(resolvedResource, "/content/content/test.html", 302);
+
+        resolvedResource = resourceResolver.resolve(request, "/content/content/test.html");
+        checkRedirectResource(resolvedResource, "/content/content/content/test.html", 302);
+    }
 }
