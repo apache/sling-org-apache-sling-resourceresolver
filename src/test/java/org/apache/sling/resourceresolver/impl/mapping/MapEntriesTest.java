@@ -63,6 +63,7 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -75,7 +76,7 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
 
-public class MapEntriesTest {
+public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private MapEntries mapEntries;
 
@@ -369,22 +370,6 @@ public class MapEntriesTest {
         when(resourceResolver.getResource(parent.getPath())).thenReturn(null);
         mapEntries.onChange(Arrays.asList(new ResourceChange(ChangeType.REMOVED, parent.getPath(), false)));
         assertTrue( mapEntries.getResolveMaps().isEmpty());
-    }
-
-    private ValueMap buildValueMap(Object... string) {
-        final Map<String, Object> data = new HashMap<>();
-        for (int i = 0; i < string.length; i = i + 2) {
-            data.put((String) string[i], string[i+1]);
-        }
-        return new ValueMapDecorator(data);
-    }
-
-    private Resource getVanityPathResource(final String path) {
-        Resource rsrc = mock(Resource.class);
-        when(rsrc.getPath()).thenReturn(path);
-        when(rsrc.getName()).thenReturn(ResourceUtil.getName(path));
-        when(rsrc.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/vanity" + path));
-        return rsrc;
     }
 
     @Test
@@ -2096,39 +2081,4 @@ public class MapEntriesTest {
             }
         }
     }
-
-    // -------------------------- private methods ----------
-    private DataFuture createDataFuture(ExecutorService pool, final MapEntries mapEntries) {
-
-        Future<Iterator<?>> future = pool.submit(new Callable<Iterator<?>>() {
-            @Override
-            public Iterator<MapEntry> call() throws Exception {
-                return mapEntries.getResolveMapsIterator("http/localhost.8080/target/justVanityPath");
-            }
-        });
-        return new DataFuture(future);
-    }
-
-    private void simulateSomewhatSlowSessionOperation(final Semaphore sessionLock) throws InterruptedException {
-        if (!sessionLock.tryAcquire()) {
-            fail("concurrent session access detected");
-        }
-        try{
-            Thread.sleep(1);
-        } finally {
-            sessionLock.release();
-        }
-    }
-
-    // -------------------------- inner classes ------------
-
-    private static class DataFuture {
-        public Future<Iterator<?>> future;
-
-        public DataFuture(Future<Iterator<?>> future) {
-            super();
-            this.future = future;
-        }
-    }
-
 }
