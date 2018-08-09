@@ -22,13 +22,12 @@
     <parent>
         <groupId>org.apache.sling</groupId>
         <artifactId>sling</artifactId>
-        <version>33</version>
+        <version>34</version>
         <relativePath />
     </parent>
 
     <artifactId>org.apache.sling.resourceresolver</artifactId>
     <version>1.6.5-SNAPSHOT</version>
-    <packaging>bundle</packaging>
 
     <name>Apache Sling Resource Resolver</name>
     <description>
@@ -64,24 +63,12 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Import-Package>
-                            javax.jcr;resolution:=optional,
-                            *
-                        </Import-Package>
-                        <Provide-Capability>
-                            osgi.service;objectClass=javax.servlet.Servlet,
-                            osgi.service;objectClass=org.apache.sling.api.resource.ResourceResolverFactory,
-                            osgi.service;objectClass=org.apache.sling.api.resource.observation.ResourceChangeListener,
-                            osgi.service;objectClass=org.apache.sling.api.resource.runtime.RuntimeService,
-                            osgi.service;objectClass=org.apache.sling.spi.resource.provider.ResourceProvider
-                        </Provide-Capability>
-                    </instructions>
-                </configuration>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-baseline-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

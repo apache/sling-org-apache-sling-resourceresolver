@@ -1,0 +1,17 @@
+Import-Package:\
+  javax.jcr;resolution:=optional,\
+  *
+
+Provide-Capability:\
+  osgi.service;objectClass=javax.servlet.Servlet,\
+  osgi.service;objectClass=org.apache.sling.api.resource.ResourceResolverFactory,\
+  osgi.service;objectClass=org.apache.sling.api.resource.observation.ResourceChangeListener,\
+  osgi.service;objectClass=org.apache.sling.api.resource.runtime.RuntimeService,\
+  osgi.service;objectClass=org.apache.sling.spi.resource.provider.ResourceProvider
+
+Require-Capability:\
+  osgi.service;filter:="(objectClass=org.osgi.service.event.EventHandler)";effective:=active;resolution:=optional
+
+-removeheaders:\
+  Include-Resource,\
+  Private-Package
