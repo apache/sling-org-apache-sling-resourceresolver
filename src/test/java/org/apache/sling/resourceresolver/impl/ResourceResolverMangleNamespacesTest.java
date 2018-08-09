@@ -23,8 +23,8 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
@@ -73,8 +73,8 @@ public class ResourceResolverMangleNamespacesTest {
 
             @SuppressWarnings("unchecked")
             @Override
-            public @CheckForNull <AdapterType> AdapterType adaptTo(final  @Nonnull ResolveContext<Object> ctx,
-                    final @Nonnull Class<AdapterType> type) {
+            public @Nullable <AdapterType> AdapterType adaptTo(final  @NotNull ResolveContext<Object> ctx,
+                    final @NotNull Class<AdapterType> type) {
                 if (type.equals(Session.class)) {
                     return (AdapterType) activeSession;
                 } else {

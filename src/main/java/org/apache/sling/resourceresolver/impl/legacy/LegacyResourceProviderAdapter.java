@@ -24,8 +24,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import org.apache.sling.api.adapter.Adaptable;
 import org.apache.sling.api.resource.AttributableResourceProvider;
@@ -105,14 +105,14 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public void refresh(final @Nonnull ResolveContext<Object> ctx) {
+    public void refresh(final @NotNull ResolveContext<Object> ctx) {
         if (rp instanceof RefreshableResourceProvider) {
             ((RefreshableResourceProvider) rp).refresh();
         }
     }
 
     @Override
-    public @CheckForNull QueryLanguageProvider<Object> getQueryLanguageProvider() {
+    public @Nullable QueryLanguageProvider<Object> getQueryLanguageProvider() {
         if (rp instanceof QueriableResourceProvider) {
             return new JCRQueryProviderAdapter((QueriableResourceProvider) rp, languages);
         } else {
@@ -121,7 +121,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public Collection<String> getAttributeNames(final @Nonnull ResolveContext<Object> ctx) {
+    public Collection<String> getAttributeNames(final @NotNull ResolveContext<Object> ctx) {
         if (rp instanceof AttributableResourceProvider) {
             return ((AttributableResourceProvider) rp).getAttributeNames(ctx.getResourceResolver());
         } else {
@@ -130,7 +130,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public Object getAttribute(final @Nonnull ResolveContext<Object> ctx, final @Nonnull String name) {
+    public Object getAttribute(final @NotNull ResolveContext<Object> ctx, final @NotNull String name) {
         if (rp instanceof AttributableResourceProvider) {
             return ((AttributableResourceProvider) rp).getAttribute(ctx.getResourceResolver(), name);
         } else {
@@ -139,7 +139,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public boolean isLive(final @Nonnull ResolveContext<Object> ctx) {
+    public boolean isLive(final @NotNull ResolveContext<Object> ctx) {
         if (rp instanceof DynamicResourceProvider) {
             return ((DynamicResourceProvider) rp).isLive();
         } else {
@@ -148,7 +148,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public void logout(final @Nonnull Object state) {
+    public void logout(final @NotNull Object state) {
         if (rp instanceof DynamicResourceProvider) {
             ((DynamicResourceProvider) rp).close();
         }
@@ -161,7 +161,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
-    public Resource create(final @Nonnull ResolveContext<Object> ctx, final String path,
+    public Resource create(final @NotNull ResolveContext<Object> ctx, final String path,
             final Map<String, Object> properties) throws PersistenceException {
         Resource createdResource = null;
         if (rp instanceof ModifyingResourceProvider) {
@@ -175,7 +175,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public void delete(final @Nonnull ResolveContext<Object> ctx, final @Nonnull Resource resource)
+    public void delete(final @NotNull ResolveContext<Object> ctx, final @NotNull Resource resource)
             throws PersistenceException {
         if (rp instanceof ModifyingResourceProvider) {
             ((ModifyingResourceProvider) rp).delete(ctx.getResourceResolver(), resource.getPath());
@@ -185,7 +185,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public void revert(final @Nonnull ResolveContext<Object> ctx) {
+    public void revert(final @NotNull ResolveContext<Object> ctx) {
         if (rp instanceof ModifyingResourceProvider) {
             ((ModifyingResourceProvider) rp).revert(ctx.getResourceResolver());
         } else {
@@ -194,7 +194,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public void commit(final @Nonnull ResolveContext<Object> ctx) throws PersistenceException {
+    public void commit(final @NotNull ResolveContext<Object> ctx) throws PersistenceException {
         if (rp instanceof ModifyingResourceProvider) {
             ((ModifyingResourceProvider) rp).commit(ctx.getResourceResolver());
         } else {
@@ -203,7 +203,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
     }
 
     @Override
-    public boolean hasChanges(final @Nonnull ResolveContext<Object> ctx) {
+    public boolean hasChanges(final @NotNull ResolveContext<Object> ctx) {
         if (rp instanceof ModifyingResourceProvider) {
             return ((ModifyingResourceProvider) rp).hasChanges(ctx.getResourceResolver());
         } else {
@@ -213,7 +213,7 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
 
     @SuppressWarnings("unchecked")
     @Override
-    public <AdapterType> AdapterType adaptTo(final @Nonnull ResolveContext<Object> ctx, final @Nonnull Class<AdapterType> type) {
+    public <AdapterType> AdapterType adaptTo(final @NotNull ResolveContext<Object> ctx, final @NotNull Class<AdapterType> type) {
         if ( rp instanceof Adaptable ) {
             final Object value = ((Adaptable)rp).adaptTo(type);
             if ( value != null ) {

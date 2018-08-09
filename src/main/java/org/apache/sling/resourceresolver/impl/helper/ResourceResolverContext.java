@@ -17,7 +17,7 @@
  */
 package org.apache.sling.resourceresolver.impl.helper;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
@@ -34,7 +34,7 @@ public class ResourceResolverContext {
 
     private final ProviderManager providerManager;
 
-    public ResourceResolverContext(@Nonnull final ResourceResolver resolver, @Nonnull final ResourceAccessSecurityTracker tracker) {
+    public ResourceResolverContext(@NotNull final ResourceResolver resolver, @NotNull final ResourceAccessSecurityTracker tracker) {
         this.resolver = resolver;
         this.providerManager = new ProviderManager(resolver, tracker);
     }

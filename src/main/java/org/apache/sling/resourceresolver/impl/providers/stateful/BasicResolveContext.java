@@ -18,8 +18,8 @@
  */
 package org.apache.sling.resourceresolver.impl.providers.stateful;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -47,11 +47,11 @@ public class BasicResolveContext<T> implements ResolveContext<T> {
 
     private final String parentPath;
 
-    public BasicResolveContext(@Nonnull final ResourceResolver resolver,
-            @Nonnull final ProviderManager resolveContextManager,
-            @Nonnull final ResourceResolverControl control,
-            @CheckForNull final T providerState,
-            @Nonnull final String parentPath) {
+    public BasicResolveContext(@NotNull final ResourceResolver resolver,
+            @NotNull final ProviderManager resolveContextManager,
+            @NotNull final ResourceResolverControl control,
+            @Nullable final T providerState,
+            @NotNull final String parentPath) {
         this.resolver = resolver;
         this.resolveContextManager = resolveContextManager;
         this.parentPath = parentPath;
