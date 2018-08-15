@@ -52,8 +52,7 @@ public class Fixture {
         
         ServiceRegistration registration = bc.registerService(ResourceProvider.class.getName(), rp, props);
         
-        ServiceReference sr = bc.getServiceReferences(ResourceProvider.class.getName(),
-                "(" + ResourceProvider.PROPERTY_ROOT + "=" + root + ")")[0];
+        ServiceReference sr = registration.getReference();
         
         ResourceProviderInfo providerInfo = new ResourceProviderInfo(sr);
 
