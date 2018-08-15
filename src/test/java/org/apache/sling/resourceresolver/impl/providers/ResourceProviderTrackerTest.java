@@ -41,26 +41,28 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.
 import org.apache.sling.spi.resource.provider.ObservationReporter;
 import org.apache.sling.spi.resource.provider.ObserverConfiguration;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
-import org.apache.sling.testing.mock.osgi.MockOsgi;
+import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
 
 public class ResourceProviderTrackerTest {
 
-    private ResourceProviderInfo rp2Info;
-    private ResourceProviderTracker tracker;
-    private Fixture fixture;
+    @Rule
+    public OsgiContext context = new OsgiContext();
 
+    private EventAdmin eventAdmin;
+    private ResourceProviderInfo rp2Info;
+    private Fixture fixture;
+    
     @Before
     public void prepare() throws Exception {
-        BundleContext bundleContext = MockOsgi.newBundleContext();
+        eventAdmin = context.getService(EventAdmin.class);
+        fixture = new Fixture(context.bundleContext());
+    }
 
-        fixture = new Fixture(bundleContext);
-
-        EventAdmin eventAdmin = mock(EventAdmin.class);
-
+    private ResourceProviderTracker registerDefaultResourceProviderTracker() throws Exception {
         @SuppressWarnings("unchecked")
         ResourceProvider<Object> rp = mock(ResourceProvider.class);
         @SuppressWarnings("unchecked")
@@ -72,14 +74,15 @@ public class ResourceProviderTrackerTest {
         rp2Info = fixture.registerResourceProvider(rp2, "/path", AuthType.lazy);
         fixture.registerResourceProvider(rp3, "invalid", AuthType.no);
 
-        tracker = new ResourceProviderTracker();
-
+        ResourceProviderTracker tracker = new ResourceProviderTracker();
         tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
-        tracker.activate(bundleContext, eventAdmin, new DoNothingChangeListener());
+        tracker.activate(context.bundleContext(), eventAdmin, new DoNothingChangeListener());
+        return tracker;
     }
 
     @Test
-    public void activate() {
+    public void activate() throws Exception {
+        ResourceProviderTracker tracker = registerDefaultResourceProviderTracker();
 
         // since the OSGi mocks are asynchronous we don't have to wait for the changes to propagate
 
@@ -91,7 +94,8 @@ public class ResourceProviderTrackerTest {
     }
 
     @Test
-    public void deactivate() {
+    public void deactivate() throws Exception {
+        ResourceProviderTracker tracker = registerDefaultResourceProviderTracker();
 
         tracker.deactivate();
 
@@ -100,10 +104,6 @@ public class ResourceProviderTrackerTest {
 
     @Test
     public void testActivationDeactivation() throws Exception {
-        final BundleContext bundleContext = MockOsgi.newBundleContext();
-        final EventAdmin eventAdmin = mock(EventAdmin.class);
-
-        final Fixture fixture = new Fixture(bundleContext);
         final ResourceProviderTracker tracker = new ResourceProviderTracker();
         tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
 
@@ -125,7 +125,7 @@ public class ResourceProviderTrackerTest {
 
         };
         // activate and check that no listener is called yet
-        tracker.activate(bundleContext, eventAdmin, listener);
+        tracker.activate(context.bundleContext(), eventAdmin, listener);
         assertFalse(addedCalled.get());
         assertFalse(removedCalled.get());
 
@@ -158,10 +158,6 @@ public class ResourceProviderTrackerTest {
 
     @Test
     public void testReactivation() throws Exception {
-        final BundleContext bundleContext = MockOsgi.newBundleContext();
-        final EventAdmin eventAdmin = mock(EventAdmin.class);
-
-        final Fixture fixture = new Fixture(bundleContext);
         final ResourceProviderTracker tracker = new ResourceProviderTracker();
         tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
 
@@ -183,7 +179,7 @@ public class ResourceProviderTrackerTest {
 
         };
         // activate and check that no listener is called yet
-        tracker.activate(bundleContext, eventAdmin, listener);
+        tracker.activate(context.bundleContext(), eventAdmin, listener);
         assertFalse(addedCalled.get());
         assertFalse(removedCalled.get());
 
@@ -244,6 +240,7 @@ public class ResourceProviderTrackerTest {
 
     @Test
     public void fillDto() throws Exception {
+        ResourceProviderTracker tracker = registerDefaultResourceProviderTracker();
 
         RuntimeDTO dto = new RuntimeDTO();
 
