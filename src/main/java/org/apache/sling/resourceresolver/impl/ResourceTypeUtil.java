@@ -22,8 +22,6 @@ import java.util.List;
 
 import org.jetbrains.annotations.NotNull;
 
-import org.apache.sling.api.resource.ResourceResolver;
-
 /**
  * Some helper methods for doing comparisons on resource types.
  * This class is private the resource resolver bundle.
