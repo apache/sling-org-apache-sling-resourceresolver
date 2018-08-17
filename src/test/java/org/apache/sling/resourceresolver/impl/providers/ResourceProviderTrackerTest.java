@@ -199,10 +199,10 @@ public class ResourceProviderTrackerTest {
         addedCalled.set(false);
         removedCalled.set(false);
 
-        // add overlay provider
+        // add overlay provider with higher service ranking
         @SuppressWarnings("unchecked")
         ResourceProvider<Object> rp2 = mock(ResourceProvider.class);
-        final ResourceProviderInfo infoOverlay = fixture.registerResourceProvider(rp2, "/", AuthType.no);
+        final ResourceProviderInfo infoOverlay = fixture.registerResourceProvider(rp2, "/", AuthType.no, 1000);
 
         // check added and removed is called
         assertTrue(addedCalled.get());
