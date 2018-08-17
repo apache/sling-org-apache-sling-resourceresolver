@@ -87,6 +87,7 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/here"); // regular page
         resourceProvider.putResource("/there", PROP_ALIAS, "alias-value"); // with alias
         resourceProvider.putResource("/somewhere", PROP_ALIAS, "alias-value-2"); // with alias and also /etc/map
+        resourceProvider.putResource("/there/that"); // parent has alias
         
         // build /etc/map structure
         resourceProvider.putResource("/etc");
@@ -179,11 +180,27 @@ public class ResourceMapperImplTest {
     public void mapResourceWithAliasAndEtcMap() {
         
         ExpectedMappings.existingResource("/somewhere")
-            .singleMapping("http://localhost:8080/everywhere")
-            .singleMappingWithRequest("/app/everywhere")
+            .singleMapping("/alias-value-2")
+            .singleMappingWithRequest("/app/alias-value-2")
             .allMappings("http://localhost:8080/everywhere", "/alias-value-2", "/somewhere")
             .allMappingsWithRequest("/app/everywhere","/app/alias-value-2", "/app/somewhere")
             .verify(resolver, req);
+    }
+    
+    /**
+     * Validates that a resource with an alias on parent has the parent path set
+     * to the alias value
+     * 
+     * @throws LoginException
+     */
+    @Test
+    public void mapResourceWithAliasOnParent() {
+        ExpectedMappings.existingResource("/there/that")
+            .singleMapping("/alias-value/that")
+            .singleMappingWithRequest("/app/alias-value/that")
+            .allMappings("/alias-value/that", "/there/that")
+            .allMappingsWithRequest("/app/alias-value/that","/app/there/that")
+            .verify(resolver, req);       
     }
 
     static class ExpectedMappings {

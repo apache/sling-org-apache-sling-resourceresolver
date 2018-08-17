@@ -87,6 +87,31 @@ public class ResourceMapperImpl implements ResourceMapper {
         
         resolver.checkClosed();
         
+        // A note on the usage of the 'mappings' variable and the order of the results
+        //
+        // The API contract of the ResourceMapper does not specify the order in which the elements are returned
+        // As an implementation detail however the getMapping method picks the first element of the return value
+        // as the 'winner'.
+        // 
+        // Therefore we take care to add the entries in a very particular order, which preserves backwards 
+        // compatibility with the existing implementation. Previously the order was
+        //
+        //   resource path → alias → mapping (with alias potentially being null)
+        //
+        // To ensure we keep the same behaviour but expose all possible mappings, we now have the following
+        // flow
+        // 
+        //  resource path → mapping
+        //  resource path → alias
+        //  alias → mapping
+        //
+        // After all are processed we reverse the order to preserve the logic of the old ResourceResolver.map() method (last
+        // found wins) and also make sure that no duplicates are added.
+        //
+        // There is some room for improvement here by using a data structure that does not need reversing ( ArrayList
+        // .add moves the elements every time ) or reversal of duplicates but since we will have a small number of 
+        // entries ( <= 4 ) the time spent here should be negligible.
+        
         List<String> mappings = new ArrayList<>();
         
         // 1. parse parameters
@@ -116,23 +141,25 @@ public class ResourceMapperImpl implements ResourceMapper {
         // 2. add the requested path itself
         mappings.add(mappedPath);
 
+        // 3. load mappings from the resource path
+        populateMappingsFromMapEntries(mappings, mappedPath, requestContext);
         
-        // 3. load aliases
+        
+        // 4. load aliases
         final Resource nonDecoratedResource = resolver.resolveInternal(parsed.getRawPath(), parsed.getParameters());
         if (nonDecoratedResource != null) {
-            loadAliasIfApplicable(mappings, nonDecoratedResource);
+            String alias = loadAliasIfApplicable(nonDecoratedResource);
+            
+            // 5. load mappings for alias
+            if ( alias != null )
+                mappings.add(alias);
+            populateMappingsFromMapEntries(mappings, alias, requestContext);
         }
 
-        // 4. load /etc/map entries
-        // populate entries from all entries, including original path and any found aliases
-        for ( String mapped : new ArrayList<>(mappings) )
-            populateMappingsFromMapEntries(mappings, mapped, requestContext);
-
-        
-        // 5. apply context path if needed
+        // 6. apply context path if needed
         mappings.replaceAll(new ApplyContextPath(request));
        
-        // 6. set back the fragment query if needed
+        // 7. set back the fragment query if needed
         if ( fragmentQuery != null ) {
             mappings.replaceAll(new UnaryOperator<String>() {
                 @Override
@@ -146,24 +173,12 @@ public class ResourceMapperImpl implements ResourceMapper {
             logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath);    
         });
         
-        
-        // The API contract of the ResourceMapper does not specify the order in which the elements are returned
-        // As an implementation detail however the getMapping method picks the first element of the return value
-        // as the 'winner'.
-        //
-        // Therefore we reverse the sorting to preserve the logic of the old ResourceResolver.map() method (last
-        // found wins) and also make sure that no duplicates are added
-        //
-        // There is some room for improvement here by using a data structure that does not need reversing ( ArrayList
-        // .add moves the elements every time ) or reversal of duplicates but the expectation is that we have a small
-        // number of mappings ( <= 10 ) so the time spent here should be negligible.
-        
         Collections.reverse(mappings);
         
         return new LinkedHashSet<>(mappings);
     }
 
-    private void loadAliasIfApplicable(List<String> mappings, final Resource nonDecoratedResource) {
+    private String loadAliasIfApplicable(final Resource nonDecoratedResource) {
         //Invoke the decorator for the resolved resource
         Resource res = resourceDecorator.decorate(nonDecoratedResource);
 
@@ -236,7 +251,7 @@ public class ResourceMapperImpl implements ResourceMapper {
 
         logger.debug("map: Alias mapping resolves to path {}", mappedPath);
         
-        mappings.add(mappedPath);
+        return mappedPath;
     }
 
     private void populateMappingsFromMapEntries(List<String> mappings, String mappedPath,
@@ -363,6 +378,5 @@ public class ResourceMapperImpl implements ResourceMapper {
 
             return mappedPath;
         }
-        
     }
 }
