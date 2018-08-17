@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Dictionary;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -40,6 +41,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.request.ResponseUtil;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.api.resource.runtime.dto.ResourceProviderDTO;
 import org.apache.sling.api.resource.runtime.dto.ResourceProviderFailureDTO;
@@ -153,7 +155,9 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                         + "current request into account, provide a full URL whose "
                         + "scheme/host/port prefix will then be used as the request "
                         + "information. The path passed to map will always be the path part "
-                        + "of the URL.");
+                        + "of the URL. In case multiple mapping candidates are found, the "
+                        + "primary one, which would be returned by ResourceResolver.map, is "
+                        + "clearly marked, and the others listed for completeness.");
 
         pw.println("<tr class='content'>");
         pw.println("<td class='content'>Test</td>");
@@ -222,10 +226,11 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                 // map or resolve as instructed
                 Object result;
                 if ("Map".equals(request.getParameter(ATTR_SUBMIT))) {
+                    ResourceMapper mapper = resolver.adaptTo(ResourceMapper.class);
                     if (helper.getServerName() == null) {
-                        result = resolver.map(helper.getPathInfo());
+                        result = mappingsToString(mapper.getAllMappings(helper.getPathInfo()));
                     } else {
-                        result = resolver.map(helper, helper.getPathInfo());
+                        result = mappingsToString(mapper.getAllMappings(helper.getPathInfo(), helper));
                     }
                 } else {
                     result = resolver.resolve(helper, helper.getPathInfo());
@@ -258,6 +263,29 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                     + PAR_TEST + '=' + encodeParam(test);
         }
         response.sendRedirect(redirectTo);
+    }
+
+    private static String mappingsToString(Collection<String> allMappings) {
+        if ( allMappings.size() == 0 )
+            return ""; // should not happen
+        if ( allMappings.size() == 1)
+            return allMappings.iterator().next();
+
+        StringBuilder out = new StringBuilder();
+        for ( Iterator<String> it = allMappings.iterator(); it.hasNext(); ) {
+            if ( out.length() == 0 ) {
+                out.append("Primary: ").append(it.next());
+                if ( it.hasNext() )
+                    out.append(". Other candidates:");
+            }
+            else
+                out.append(' ').append(it.next()).append(',');
+        }
+
+        out.setCharAt(out.length() - 1, '.');
+
+        return out.toString();
+
     }
 
     private String encodeParam(final String value) {
