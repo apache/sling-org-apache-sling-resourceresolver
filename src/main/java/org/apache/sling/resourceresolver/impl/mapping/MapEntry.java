@@ -275,8 +275,24 @@ public class MapEntry implements Comparable<MapEntry> {
             final String[] redirects = getRedirect();
             final String[] results = new String[redirects.length];
             for (int i = 0; i < redirects.length; i++) {
-            	try{
-            		 results[i] = m.replaceFirst(redirects[i]);
+            	try {
+            		String redirect = redirects[i];
+            		// SLING-7881 - if the value is a selector on the root resource then the
+            		// result will need to remove the trailing slash from the path
+            		if (redirect.length() > 1 && redirect.endsWith("/")) {
+            			if (value.length() > m.end()) {
+            				if ('.' == value.charAt(m.end())) {
+            					//the suffix starts with a dot and the redirect prefix ends with
+            					// a slash so we need to remove the trailing slash from the prefix
+            					// value to make a valid path when they are combined.
+            					// 
+            					// for example: http/localhost.8080/.2.json should become /content.2.json
+            					//   instead of /content/.2.json
+            					redirect = redirect.substring(0, redirect.length() - 1);
+            				}
+            			}
+            		}
+            		results[i] = m.replaceFirst(redirect);
             	} catch (final StringIndexOutOfBoundsException siob){
             		log.debug("Exception while replacing, ignoring entry {} ", redirects[i], siob);
                 } catch (final IllegalArgumentException iae){

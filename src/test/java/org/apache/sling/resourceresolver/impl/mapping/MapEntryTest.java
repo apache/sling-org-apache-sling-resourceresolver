@@ -20,6 +20,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -194,6 +195,65 @@ public class MapEntryTest {
         assertTrue(a.compareTo(a) == 0);
         assertTrue(b.compareTo(b) == 0);
     }
+
+    /**
+     * SLING-7881 - Test that an address for for root and no selectors resolves
+     */
+    @Test public void test_replace_for_root() {
+    	//no trailing slash, so no match to the pattern.
+    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+    	String[] redirects = mapEntry.replace("http/localhost.8080");
+    	assertNull(redirects);
+    }
+
+    /**
+     * SLING-7881 - Test that an address for a selector on the root resolves to valid replacement
+     * candidate paths.
+     */
+    @Test public void test_replace_for_root_selector() {
+    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+    	String[] redirects = mapEntry.replace("http/localhost.8080/.2.json");
+    	assertEquals(2, redirects.length);
+    	assertEquals("/.2.json", redirects[0]);
+    	assertEquals("/content.2.json", redirects[1]);
+
+    	// or no selectors and just the extension
+    	redirects = mapEntry.replace("http/localhost.8080/.json");
+    	assertEquals(2, redirects.length);
+    	assertEquals("/.json", redirects[0]);
+    	assertEquals("/content.json", redirects[1]);
+    }
+    
+    /**
+     * SLING-7881 - Test that an address for something other than root with no selectors resolves to 
+     * valid replacement candidate paths.
+     */
+    @Test public void test_replace_for_nonroot() {
+    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+    	String[] redirects = mapEntry.replace("http/localhost.8080/foo");
+    	assertEquals(2, redirects.length);
+    	assertEquals("/foo", redirects[0]);
+    	assertEquals("/content/foo", redirects[1]);
+    }
+
+    /**
+     * SLING-7881 - Test that an address for a selector on something other than root resolves to 
+     * valid replacement candidate paths.
+     */
+    @Test public void test_replace_for_nonroot_selector() {
+    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+    	String[] redirects = mapEntry.replace("http/localhost.8080/foo.2.json");
+    	assertEquals(2, redirects.length);
+    	assertEquals("/foo.2.json", redirects[0]);
+    	assertEquals("/content/foo.2.json", redirects[1]);
+
+    	// or no selectors and just the extension
+    	redirects = mapEntry.replace("http/localhost.8080/foo.json");
+    	assertEquals(2, redirects.length);
+    	assertEquals("/foo.json", redirects[0]);
+    	assertEquals("/content/foo.json", redirects[1]);
+    }
+
 
     private void assertEqualUri(String expected, String uriPath) {
         String uri = MapEntry.toURI(uriPath);
