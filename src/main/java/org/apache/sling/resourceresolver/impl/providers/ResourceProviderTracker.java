@@ -202,6 +202,9 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
                        final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
                        if ( matchingHandlers != null && !matchingHandlers.isEmpty() && matchingHandlers.remove(activate) ) {
                            storage = null;
+                           if ( matchingHandlers.isEmpty() ) {
+                               this.handlers.remove(info.getPath());
+                           }
                        }
                    }
                }
