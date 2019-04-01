@@ -689,6 +689,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     public Resource resolveInternal(final String absPath, final Map<String, String> parameters) {
         Resource resource = null;
+        if (absPath != null && !absPath.startsWith("/")) {
+            logger.debug("resolveInternal: absolute path expected {} ",absPath);
+            return resource; // resource is null at this point
+        }
         String curPath = absPath;
         try {
             final ResourcePathIterator it = new ResourcePathIterator(absPath);
