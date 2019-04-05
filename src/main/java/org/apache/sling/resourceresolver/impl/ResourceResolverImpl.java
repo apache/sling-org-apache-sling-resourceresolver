@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import javax.jcr.Session;
 import javax.servlet.http.HttpServletRequest;
@@ -731,6 +732,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
             final StringBuilder resolutionPath = new StringBuilder();
             final StringTokenizer tokener = new StringTokenizer(tokenizedPath, "/");
+            final int delimCount = StringUtils.countMatches(tokenizedPath,'/');
+            final int redundantDelimCount = delimCount - tokener.countTokens();
+
             while (resource != null && tokener.hasMoreTokens()) {
                 final String childNameRaw = tokener.nextToken();
 
@@ -767,7 +771,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             // uriPath = curPath + sling.resolutionPathInfo
             if (resource != null) {
                 final String path = resolutionPath.toString();
-                final String pathInfo = absPath.substring(path.length());
+                final String pathInfo = absPath.substring(path.length() + redundantDelimCount);
 
                 resource.getResourceMetadata().setResolutionPath(path);
                 resource.getResourceMetadata().setResolutionPathInfo(pathInfo);
