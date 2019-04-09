@@ -553,6 +553,9 @@ public class MockedResourceResolverImplTest {
         path = resourceResolver.map("/content.html");
         Assert.assertEquals("/content.html", path);
 
+        path = resourceResolver.map(request,"some/relative/path/test");
+        Assert.assertEquals("some/relative/path/test", path);
+      
         buildResource("/", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
         buildResource("/single", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
         buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
