@@ -150,7 +150,7 @@ public class MockedResourceResolverImplTest {
         activator.resourceProviderTracker = resourceProviderTracker;
         activator.changeListenerWhiteboard = resourceChangeListenerWhiteboard;
         activator.serviceUserMapper = Mockito.mock(ServiceUserMapper.class);
-        handlers.add(createRPHandler(resourceProvider, "org.apache.sling.resourceresolver.impl.DummyTestProvider", 10L, "/single"));
+        handlers.add(createRPHandler(resourceProvider, "org.apache.sling.resourceresolver.impl.DummyTestProvider", 10L, "/"));
 
         // setup mapping resources at /etc/map to exercise vanity etc.
         // hmm, can't provide the resolver since its not up and ready.
@@ -555,6 +555,12 @@ public class MockedResourceResolverImplTest {
 
         path = resourceResolver.map(request,"some/relative/path/test");
         Assert.assertEquals("some/relative/path/test", path);
+      
+        buildResource("/", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+        buildResource("/single", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+        path = resourceResolver.map("/single//test.html");
+        Assert.assertEquals("/single/test.html", path);
     }
 
 
