@@ -33,9 +33,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-
 import org.apache.commons.collections4.iterators.IteratorChain;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.sling.api.resource.LoginException;
@@ -48,12 +45,13 @@ import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.PathBuilder;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
-import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.resourceresolver.impl.providers.stateful.AuthenticatedResourceProvider;
 import org.apache.sling.resourceresolver.impl.providers.tree.Node;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
@@ -150,7 +148,7 @@ public class ResourceResolverControl {
     /**
      * Refreshes all refreshable providers as well as the resolver used for resource types.
      */
-    public void refresh(@Nonnull final ResourceResolverContext context) {
+    public void refresh(@NotNull final ResourceResolverContext context) {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllUsedRefreshable()) {
             p.refresh();
         }
@@ -162,7 +160,7 @@ public class ResourceResolverControl {
     /**
      * Returns {@code true} if all providers are live.
      */
-    public boolean isLive(@Nonnull final ResourceResolverContext context) {
+    public boolean isLive(@NotNull final ResourceResolverContext context) {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllAuthenticated()) {
             if (!p.isLive()) {
                 return false;
@@ -179,7 +177,7 @@ public class ResourceResolverControl {
      * resource provider returns parent for this child. See
      * {@link #getResource(String, Resource, Map, boolean)} for more details
      */
-    public Resource getParent(@Nonnull final ResourceResolverContext context, @Nonnull final String parentPath, @Nonnull final Resource child) {
+    public Resource getParent(@NotNull final ResourceResolverContext context, @NotNull final String parentPath, @NotNull final Resource child) {
         final AuthenticatedResourceProvider childProvider = getBestMatchingProvider(context, child.getPath());
         final AuthenticatedResourceProvider parentProvider = getBestMatchingProvider(context, parentPath);
         if ( parentProvider != null ) {
@@ -641,7 +639,7 @@ public class ResourceResolverControl {
      * @param path
      * @return
      */
-    private @CheckForNull AuthenticatedResourceProvider getBestMatchingProvider(final ResourceResolverContext context,
+    private @Nullable AuthenticatedResourceProvider getBestMatchingProvider(final ResourceResolverContext context,
             final String path) {
         try {
             final Node<ResourceProviderHandler> node = resourceProviderTracker.getResourceProviderStorage().getTree().getBestMatchingNode(path);
@@ -656,7 +654,7 @@ public class ResourceResolverControl {
      * @param path
      * @return The modifiable provider or {@code null}
      */
-    private @CheckForNull AuthenticatedResourceProvider getBestMatchingModifiableProvider(
+    private @Nullable AuthenticatedResourceProvider getBestMatchingModifiableProvider(
             final ResourceResolverContext context,
             final String path)  {
         final Node<ResourceProviderHandler> node = resourceProviderTracker.getResourceProviderStorage().getTree().getBestMatchingNode(path);
@@ -793,8 +791,8 @@ public class ResourceResolverControl {
         return null;
     }
 
-    public void registerAuthenticatedProvider(@Nonnull ResourceProviderHandler handler,
-            @CheckForNull Object providerState) {
+    public void registerAuthenticatedProvider(@NotNull ResourceProviderHandler handler,
+            @Nullable Object providerState) {
         this.authenticatedProviders.put(handler, providerState);
     }
 

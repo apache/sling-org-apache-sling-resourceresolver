@@ -55,6 +55,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -77,11 +78,9 @@ import org.slf4j.LoggerFactory;
 public class MapEntries implements
     MapEntriesHandler,
     ResourceChangeListener,
-    ExternalResourceChangeListener,
-    AutoCloseable {
+    ExternalResourceChangeListener {
 
     private static final String JCR_CONTENT = "jcr:content";
-    private static final int TRAVERSAL_RETRY_INTERVAL = 30000;
 
     private static final String JCR_CONTENT_PREFIX = "jcr:content/";
 
@@ -135,7 +134,7 @@ public class MapEntries implements
 
     private Map <String,List <String>> vanityTargets;
 
-    private volatile Map<String, Map<String, String>> aliasMap;
+    private Map<String, Map<String, String>> aliasMap;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
@@ -165,7 +164,6 @@ public class MapEntries implements
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMap = Collections.emptyMap();
-        this.stringInterpolationProvider = stringInterpolationProvider;
 
         doInit();
 
@@ -202,15 +200,10 @@ public class MapEntries implements
 
             final Map<String, List<MapEntry>> newResolveMapsMap = new ConcurrentHashMap<>();
 
-            aliasMap = Collections.emptyMap();
             //optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
-		aliasTraversal = new Thread(new Runnable(){
-				public void run() {
-					aliasMap = loadAliases(resolver);
-					}
-				});
-		aliasTraversal.start();
+                final Map<String, Map<String, String>> aliasMap = this.loadAliases(resolver);
+                this.aliasMap = aliasMap;
             }
 
             this.resolveMapsMap = newResolveMapsMap;
@@ -278,10 +271,6 @@ public class MapEntries implements
             this.initializing.unlock();
         }
 
-    }
-
-    protected int getTraversalRetryInterval(){
-	return TRAVERSAL_RETRY_INTERVAL;
     }
 
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
@@ -655,16 +644,6 @@ public class MapEntries implements
     public Map<String, String> getAliasMap(final String parentPath) {
         return aliasMap.get(parentPath);
     }
-
-	@Override
-	public boolean isAliasMapInitialized() {
-		// since loading the aliases is equivalent to replacing the empty map
-		// with another instance, and the reference is volatile, it's safe
-		// to equate initialization being done with the empty map being replaced
-		// note that it's not provably safe to check the map size, as we might
-		// enter the scenario where there are no aliases
-		return aliasMap != Collections.<String,Map<String,String>> emptyMap();
-	}
 
     /**
      * get the MapEnty containing all the nodes having a specific vanityPath
@@ -1631,12 +1610,5 @@ public class MapEntries implements
             }
         }
     }
-
-	@Override
-	public void close() throws Exception {
-		if (aliasTraversal != null) {
-			aliasTraversal.interrupt();
-		}
-	}
 
 }

@@ -152,10 +152,12 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
         synchronized ( this.handlers ) {
             this.reporterGenerator = generator;
             for (List<ResourceProviderHandler> list : handlers.values()) {
-                final ResourceProviderHandler h  = list.get(0);
-                if (h != null) {
-                    updateProviderContext(h);
-                    h.update();
+                if ( !list.isEmpty() ) {
+                    final ResourceProviderHandler h = list.get(0);
+                    if (h != null) {
+                        updateProviderContext(h);
+                        h.update();
+                    }
                 }
             }
         }
@@ -202,6 +204,9 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
                        final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
                        if ( matchingHandlers != null && !matchingHandlers.isEmpty() && matchingHandlers.remove(activate) ) {
                            storage = null;
+                           if ( matchingHandlers.isEmpty() ) {
+                               this.handlers.remove(info.getPath());
+                           }
                        }
                    }
                }

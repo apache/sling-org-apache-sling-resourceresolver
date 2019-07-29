@@ -27,6 +27,7 @@ import org.apache.sling.api.resource.runtime.dto.AuthType;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
@@ -43,17 +44,25 @@ public class Fixture {
         this.bc = bc;
     }
 
-    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, AuthType authType) throws InvalidSyntaxException {
+    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, 
+            AuthType authType) throws InvalidSyntaxException {
+        return registerResourceProvider(rp,  root, authType, 0);
+    }
+
+    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, 
+            AuthType authType, int serviceRanking) throws InvalidSyntaxException {
         
-        Dictionary<String, String> props = new Hashtable<String, String>();
+        Dictionary<String, Object> props = new Hashtable<>();
         props.put(ResourceProvider.PROPERTY_ROOT, root);
         props.put(ResourceProvider.PROPERTY_AUTHENTICATE, authType.name());
         props.put(ResourceProvider.PROPERTY_MODIFIABLE, Boolean.TRUE.toString());
+        if (serviceRanking != 0) {
+            props.put(Constants.SERVICE_RANKING, serviceRanking);
+        }
         
         ServiceRegistration registration = bc.registerService(ResourceProvider.class.getName(), rp, props);
         
-        ServiceReference sr = bc.getServiceReferences(ResourceProvider.class.getName(),
-                "(" + ResourceProvider.PROPERTY_ROOT + "=" + root + ")")[0];
+        ServiceReference sr = registration.getReference();
         
         ResourceProviderInfo providerInfo = new ResourceProviderInfo(sr);
 

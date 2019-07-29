@@ -31,7 +31,7 @@ import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.sling.api.resource.LoginException;
@@ -141,7 +141,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
      * @param extraForbiddenKeys Keys that should be removed from the returned copy.
      * @return A sanitized mutable map.
      */
-    @Nonnull
+    @NotNull
     static Map<String, Object> sanitizeAuthenticationInfo(Map<String, Object> authenticationInfo, String... extraForbiddenKeys) {
         if (authenticationInfo == null) {
             // nothing to sanitize, just return an empty mutable map
@@ -161,7 +161,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     /**
      * @see org.apache.sling.api.resource.ResourceResolverFactory#getAdministrativeResourceResolver(java.util.Map)
      */
-    @Nonnull
+    @NotNull
     @Override
     public ResourceResolver getAdministrativeResourceResolver(final Map<String, Object> passedAuthenticationInfo)
     throws LoginException {
@@ -178,7 +178,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     /**
      * @see org.apache.sling.api.resource.ResourceResolverFactory#getResourceResolver(java.util.Map)
      */
-    @Nonnull
+    @NotNull
     @Override
     public ResourceResolver getResourceResolver(final Map<String, Object> passedAuthenticationInfo)
     throws LoginException {
@@ -405,7 +405,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         return this.activator.getResourceAccessSecurityTracker();
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public ResourceResolver getServiceResourceResolver(
             final Map<String, Object> passedAuthenticationInfo) throws LoginException {
@@ -555,14 +555,4 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
             }
         }
     }
-
-	@Override
-	public boolean isAliasMapInitialized() {
-		return mapEntries.isAliasMapInitialized();
-	}
-
-	@Override
-	public boolean isForceNoAliasTraversal() {
-		return this.activator.isForceNoAliasTraversal();
-	}
 }

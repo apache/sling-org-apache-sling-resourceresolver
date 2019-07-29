@@ -26,15 +26,21 @@ import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.SimpleValueMapImpl;
 import org.apache.sling.resourceresolver.impl.helper.RedirectResource;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
+<<<<<<< HEAD
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
+=======
+>>>>>>> master
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+<<<<<<< HEAD
 import org.osgi.framework.BundleContext;
+=======
+>>>>>>> master
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
@@ -75,9 +81,12 @@ public class MockTestUtil {
     }
 
     public static void checkInternalResource(Resource internal, String path) {
+<<<<<<< HEAD
 //        assertThat("Not a Non Existing Resource", redirect, instanceOf(NonExistingResource.class));
 //        NonExistingResource nonExistingResource = (NonExistingResource) redirect;
 //        if(path != null) {
+=======
+>>>>>>> master
         assertEquals("Wrong Path for Resource", path, internal.getPath());
     }
 
@@ -132,7 +141,11 @@ public class MockTestUtil {
      * @param resourceResolver Resource Resolver of this resource
      * @param provider         Resource Provider Instance
      * @param properties       Key / Value pair for resource properties (the number of strings must be even)
+<<<<<<< HEAD
      * @return
+=======
+     * @return Mock Resource able to handle addition of children later on
+>>>>>>> master
      */
     @SuppressWarnings("unchecked")
     public static Resource buildResource(String fullPath, Resource parent, ResourceResolver resourceResolver, ResourceProvider<?> provider, String... properties) {
@@ -188,6 +201,7 @@ public class MockTestUtil {
         return resource;
     }
 
+<<<<<<< HEAD
     public static Object callInaccessibleMethod(String methodName, Object target, Class paramsType, Object param) throws NoSuchMethodException {
         return callInaccessibleMethod(methodName, target, new Class[] {paramsType}, new Object[] {param});
     }
@@ -205,6 +219,59 @@ public class MockTestUtil {
             return method.invoke(target, params);
         } catch(NoSuchMethodException e) {
             throw new UnsupportedOperationException("Failed to find method: " + methodName, e);
+=======
+    /**
+     * Calls a private method that has no parameter like a getter
+     *
+     * @param methodName Name of the method
+     * @param target Target instance
+     * @return Object that is returned from the method call
+     *
+     * @throws UnsupportedOperationException If the call failed because it method is not found, has no access or invocation failed
+     */
+    public static <T> T callInaccessibleMethod(String methodName, Class<T> returnType, Object target) {
+        return callInaccessibleMethod(methodName, returnType, target, new Class[] {}, new Object[] {});
+    }
+
+    /**
+     * Calls a private method that has one parameter like a setter method
+     *
+     * @param methodName Name of the method
+     * @param target Target instance
+     * @param paramsType Parameter Type which cannot be null
+     * @param param Parameter Value
+     * @return Object that is returned from the method call
+     *
+     * @throws UnsupportedOperationException If the call failed because it method is not found, has no access or invocation failed
+     */
+    public static <T> T callInaccessibleMethod(String methodName, Class<T> returnType, Object target, Class paramsType, Object param) {
+        return callInaccessibleMethod(methodName, returnType, target, new Class[] {paramsType}, new Object[] {param});
+    }
+
+    /**
+     * Calls a private method that has none or one parameter like a setter method
+     *
+     * ATTENTION: If parameter types of values is null then both are set to null. Also the length of the arrays must
+     * be the same
+     *
+     * @param methodName Name of the method
+     * @param target Target instance
+     * @param parameterTypes Parameter Types which must not be null
+     * @param parameters Parameter Values which must not be null
+     * @return Object that is returned from the method call
+     *
+     * @throws IllegalArgumentException If the parameter types and values do not match
+     * @throws UnsupportedOperationException If the call failed because it method is not found, has no access or invocation failed
+     */
+    public static <T> T callInaccessibleMethod(String methodName, Class<T> returnType, Object target, Class[] parameterTypes, Object[] parameters) {
+        if(parameterTypes != null && parameters != null) {
+            if(parameters.length != parameterTypes.length) { throw new IllegalArgumentException("Number of Parameter Types and Values were not the same"); }
+        } else {
+            throw new IllegalArgumentException("Parameter Type and Value Array cannot be null");
+        }
+        try {
+            return getInaccessibleMethod(methodName, returnType, target, parameterTypes).call(parameters);
+>>>>>>> master
         } catch (IllegalAccessException e) {
             throw new UnsupportedOperationException("Failed to access method: " + methodName, e);
         } catch (InvocationTargetException e) {
@@ -212,6 +279,7 @@ public class MockTestUtil {
         }
     }
 
+<<<<<<< HEAD
     public static void setInaccessibleField(String fieldName, Object target, Object fieldValue) throws NoSuchMethodException {
         try {
             Field field = target.getClass().getDeclaredField(fieldName);
@@ -232,6 +300,87 @@ public class MockTestUtil {
             new Class[] {BundleContext.class, StringInterpolationProviderConfiguration.class},
             new Object[] {bundleContext, configuration}
         );
+=======
+    public static <T> MethodWrapper<T> getInaccessibleMethod(String methodName, Class<T> returnType, Object target, Class...parameterTypes) {
+        return new MethodWrapper(methodName, returnType, target, parameterTypes);
+    }
+
+    public static class MethodWrapper<T> {
+        private Method method;
+        private Object target;
+
+        public MethodWrapper(String methodName, Class<T> returnType, Object target, Class[] parameterTypes) {
+            try {
+                this.method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
+                this.method.setAccessible(true);
+                this.target = target;
+                if(returnType == null && !this.method.getReturnType().equals(Void.TYPE)) {
+                    throw new IllegalArgumentException("Return Type is null but method does not return Void but: " + this.method.getReturnType());
+                }
+                if(returnType != null && !returnType.isAssignableFrom(this.method.getReturnType())) {
+                    throw new IllegalArgumentException("Return Type is not assignable to: " + returnType + ", it returns this: " + this.method.getReturnType());
+                }
+            } catch (NoSuchMethodException e) {
+                throw new UnsupportedOperationException("Failed to find method: " + methodName, e);
+            }
+        }
+
+        public T call(Object...parameters) throws InvocationTargetException, IllegalAccessException {
+            return (T) method.invoke(target, parameters);
+        }
+    }
+
+    /**
+     * Sets the value of a private field
+     *
+     * @param fieldName Name of the field to be set
+     * @param target Target instance
+     * @param fieldValue Value to be set
+     *
+     * @throws UnsupportedOperationException If the call failed because it field is not found or has no access
+     */
+    public static void setInaccessibleField(String fieldName, Object target, Object fieldValue) throws NoSuchMethodException {
+        try {
+            getInaccessibleFieldWrapper(fieldName, target, Object.class).set(fieldValue);
+        } catch (IllegalAccessException e) {
+            throw new UnsupportedOperationException("Failed to access field: " + fieldName, e);
+        }
+    }
+
+    public static <T> T getInaccessibleField(String fieldName, Object target, Class<T> type) {
+        try {
+            return getInaccessibleFieldWrapper(fieldName, target, type).get();
+        } catch (IllegalAccessException e) {
+            throw new UnsupportedOperationException("Failed to access field: " + fieldName, e);
+        }
+    }
+
+    public static <T> FieldWrapper<T> getInaccessibleFieldWrapper(String fieldName, Object target, Class<T> type) {
+        try {
+            return new FieldWrapper(fieldName, target, type);
+        } catch (NoSuchFieldException e) {
+            throw new UnsupportedOperationException("Failed to find field: " + fieldName, e);
+        }
+    }
+
+    public static class FieldWrapper<T> {
+        private Field field;
+        private Object target;
+
+        public FieldWrapper(String fieldName, Object target, Class<T> type) throws NoSuchFieldException {
+            this.field = target.getClass().getDeclaredField(fieldName);
+            this.field.setAccessible(true);
+            this.target = target;
+        }
+
+        public void set(T parameter) throws IllegalAccessException {
+            field.set(target, parameter);
+        }
+
+        public T get() throws IllegalAccessException {
+            return (T) field.get(target);
+        }
+>>>>>>> master
     }
 
     /**
@@ -243,6 +392,12 @@ public class MockTestUtil {
         public List<Resource> getChildrenList();
     }
 
+<<<<<<< HEAD
+=======
+    /**
+     * Defines the Result of the Etc Mapping for easy testing
+     */
+>>>>>>> master
     public static class ExpectedEtcMapping {
         List<ExpectedEtcMapEntry> expectedEtcMapEntries = new ArrayList<>();
 

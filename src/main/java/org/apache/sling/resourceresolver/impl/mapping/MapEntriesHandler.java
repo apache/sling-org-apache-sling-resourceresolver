@@ -51,11 +51,6 @@ public interface MapEntriesHandler {
         public Map<String, String> getAliasMap(String parentPath) {
             return Collections.emptyMap();
         }
-
-		@Override
-		public boolean isAliasMapInitialized() {
-			return false;
-		}
     };
 
     Map<String, String> getAliasMap(String parentPath);
@@ -72,6 +67,4 @@ public interface MapEntriesHandler {
      * This is for the web console plugin
      */
     List<MapEntry> getResolveMaps();
-
-	boolean isAliasMapInitialized();
 }

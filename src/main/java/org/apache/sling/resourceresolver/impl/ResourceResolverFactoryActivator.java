@@ -37,7 +37,6 @@ import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
-import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
@@ -205,10 +204,6 @@ public class ResourceResolverFactoryActivator {
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
-
-	public boolean isForceNoAliasTraversal() {
-		return  this.config.force_no_alias_traversal();
-	}
 
     public boolean isLogUnclosedResourceResolvers() {
         return this.config.resource_resolver_log_unclosed();

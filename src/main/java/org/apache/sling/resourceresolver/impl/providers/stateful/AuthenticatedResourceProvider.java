@@ -23,8 +23,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
@@ -62,10 +62,10 @@ public class AuthenticatedResourceProvider {
 
     private final boolean useRAS;
 
-    public AuthenticatedResourceProvider(@Nonnull final ResourceProviderHandler providerHandler,
+    public AuthenticatedResourceProvider(@NotNull final ResourceProviderHandler providerHandler,
             final boolean useRAS,
-            @Nonnull final ResolveContext<Object> resolveContext,
-            @Nonnull final ResourceAccessSecurityTracker tracker) {
+            @NotNull final ResolveContext<Object> resolveContext,
+            @NotNull final ResourceAccessSecurityTracker tracker) {
         this.providerHandler = providerHandler;
         this.resolveContext = resolveContext;
         this.tracker = tracker;
@@ -76,7 +76,7 @@ public class AuthenticatedResourceProvider {
      * Get the resolve context.
      * @return The resolve context
      */
-    public @Nonnull ResolveContext<Object> getResolveContext() {
+    public @NotNull ResolveContext<Object> getResolveContext() {
         return this.resolveContext;
     }
 
@@ -387,7 +387,7 @@ public class AuthenticatedResourceProvider {
      * @param rsrc The resource or {@code null}.
      * @return The wrapped resource or {@code null}
      */
-    private @CheckForNull Resource wrapResource(@CheckForNull Resource rsrc) {
+    private @Nullable Resource wrapResource(@Nullable Resource rsrc) {
         Resource returnValue = null;
 
         if (useRAS && rsrc != null) {

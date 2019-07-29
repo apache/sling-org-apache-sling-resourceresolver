@@ -16,47 +16,12 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.apache.sling.api.SlingException;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.observation.ResourceChange;
-import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
-import org.apache.sling.api.wrappers.ValueMapDecorator;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
-import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -64,9 +29,85 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class MapEntriesTest extends AbstractMappingMapEntriesTest {
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-    List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {
+import org.apache.sling.api.SlingException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.observation.ResourceChange;
+import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
+import org.apache.sling.api.resource.path.Path;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.event.EventAdmin;
+
+public class MapEntriesTest {
+
+    private MapEntries mapEntries;
+
+    File vanityBloomFilterFile;
+
+    @Mock
+    private MapConfigurationProvider resourceResolverFactory;
+
+    @Mock
+    private BundleContext bundleContext;
+
+    @Mock
+    private Bundle bundle;
+
+    @Mock
+    private ResourceResolver resourceResolver;
+
+    @Mock
+    private EventAdmin eventAdmin;
+
+    private Map<String, Map<String, String>> aliasMap;
+
+    @SuppressWarnings({ "unchecked" })
+    @Before
+    public void setup() throws Exception {
+        MockitoAnnotations.initMocks(this);
+
         final List<VanityPathConfig> configs = new ArrayList<>();
         configs.add(new VanityPathConfig("/libs/", false));
         configs.add(new VanityPathConfig("/libs/denied", true));
@@ -80,9 +121,34 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         configs.add(new VanityPathConfig("/vanityPathOnJcrContent", false));
 
         Collections.sort(configs);
+        vanityBloomFilterFile = new File("src/main/resourcesvanityBloomFilter.txt");
+        when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
+        when(bundleContext.getBundle()).thenReturn(bundle);
+        when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
+        when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
+        when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
+        when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
+        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
+        when(resourceResolverFactory.isForceNoAliasTraversal()).thenReturn(true);
+        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
+        when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
+        when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
+        when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
+                Collections.<Resource> emptySet().iterator());
 
-        return configs;
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
+        aliasMapField.setAccessible(true);
+
+        this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
     }
+
+    @After
+    public void tearDown() throws Exception {
+        vanityBloomFilterFile.delete();
+    }
+
 
     @Test(timeout = 1000)
     public void test_simple_alias_support() throws InterruptedException {
@@ -109,19 +175,14 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries.doInit();
 
-        // looping check for completion of aliasMap as it is calculated asynchronously
-		while (!mapEntries.isAliasMapInitialized()) {
-			Thread.sleep(10);
-		}
-
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
         assertTrue(aliasMap.containsKey("alias"));
         assertEquals("child", aliasMap.get("alias"));
     }
 
-	@Test(timeout = 1000)
-    public void test_that_duplicate_alias_doesnt_replace_first_alias() throws InterruptedException {
+    @Test
+    public void test_that_duplicate_alias_doesnt_replace_first_alias() {
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
 
@@ -150,11 +211,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         });
 
         mapEntries.doInit();
-
-        // looping check for completion of aliasMap as it is calculated asynchronously
-		while (!mapEntries.isAliasMapInitialized()) {
-			Thread.sleep(10);
-		}
 
         Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -1567,166 +1623,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNull(aliasMapEntry);
-    }
-
-    @Test(timeout = 1000)
-    public void test_delayed_optimized_aliaslookup() throws Exception {
-	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
-        addResource.setAccessible(true);
-
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
-
-        Resource parent = mock(Resource.class);
-        when(parent.getPath()).thenReturn("/parent");
-
-        final Resource result = mock(Resource.class);
-        when(resourceResolver.getResource("/parent/child")).thenReturn(result);
-        when(result.getParent()).thenReturn(parent);
-        when(result.getPath()).thenReturn("/parent/child");
-        when(result.getName()).thenReturn("child");
-        when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
-
-        addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
-
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
-
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-		latch.await();
-                if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-                    return Arrays.asList(result, result).iterator();
-                } else {
-                    return Collections.<Resource> emptySet().iterator();
-                }
-            }
-        });
-
-        mapEntries.doInit();
-
-        assertFalse(mapEntries.isAliasMapInitialized());
-        latch.countDown();
-        // looping check for completion of aliasMap as it is calculated asynchronously
-		while (!mapEntries.isAliasMapInitialized()) {
-			Thread.sleep(10);
-		}
-        assertTrue(mapEntries.isAliasMapInitialized());
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
-        assertEquals(1, aliasMap.size());
-        assertNotNull(aliasMap);
-        assertEquals(1, aliasMap.size());
-        assertEquals("child", aliasMap.get("alias"));
-    }
-
-    @Test(timeout = 1000)
-    public void test_delayed_optimized_aliaslookup_traversalfail() throws Exception {
-	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
-        addResource.setAccessible(true);
-
-        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider));
-        doReturn(100).when(mapEntries).getTraversalRetryInterval();
-
-        Resource parent = mock(Resource.class);
-        when(parent.getPath()).thenReturn("/parent");
-
-        final Resource result = mock(Resource.class);
-        when(resourceResolver.getResource("/parent/child")).thenReturn(result);
-        when(result.getParent()).thenReturn(parent);
-        when(result.getPath()).thenReturn("/parent/child");
-        when(result.getName()).thenReturn("child");
-        when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
-
-        addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
-
-        final CountDownLatch latch = new CountDownLatch(2);
-
-        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        when(resourceResolver.findResources(queryCaptor.capture(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
-
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-		if (latch.getCount() > 0){
-			latch.countDown();
-			throw new SlingException("Query couldn't be satified due to ", new IllegalArgumentException("Traversal") );
-		} else {
-		            if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-		                return Arrays.asList(result, result).iterator();
-		            } else {
-		                return Collections.<Resource> emptySet().iterator();
-		            }
-		}
-            }
-        });
-
-        mapEntries.doInit();
-
-        assertFalse(mapEntries.isAliasMapInitialized());
-        latch.countDown();
-        // looping check for completion of aliasMap as it is calculated asynchronously
-		while (!mapEntries.isAliasMapInitialized()) {
-			Thread.sleep(10);
-		}
-        assertTrue(queryCaptor.getValue().contains("traversal fail"));
-        assertTrue(mapEntries.isAliasMapInitialized());
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
-        assertEquals(1, aliasMap.size());
-        assertNotNull(aliasMap);
-        assertEquals(1, aliasMap.size());
-        assertEquals("child", aliasMap.get("alias"));
-    }
-
-    @Test
-    public void test_aliaslookup_traversalfail_not_supported() throws Exception {
-	final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
-        addResource.setAccessible(true);
-
-        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider));
-        doReturn(100).when(mapEntries).getTraversalRetryInterval();
-
-        Resource parent = mock(Resource.class);
-        when(parent.getPath()).thenReturn("/parent");
-
-        final Resource result = mock(Resource.class);
-        when(resourceResolver.getResource("/parent/child")).thenReturn(result);
-        when(result.getParent()).thenReturn(parent);
-        when(result.getPath()).thenReturn("/parent/child");
-        when(result.getName()).thenReturn("child");
-        when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
-
-        addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
-
-        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        when(resourceResolver.findResources(queryCaptor.capture(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
-
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-		if (invocation.getArguments()[0].toString().contains("traversal fail")){
-			throw new SlingException("Query couldn't be satified due to ", new ParseException("Options not known", 0) );
-		} else {
-		            if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-		                return Arrays.asList(result, result).iterator();
-		            } else {
-		                return Collections.<Resource> emptySet().iterator();
-		            }
-		}
-            }
-        });
-
-        mapEntries.doInit();
-
-        assertFalse(mapEntries.isAliasMapInitialized());
-        // looping check for completion of aliasMap as it is calculated asynchronously
-		while (!mapEntries.isAliasMapInitialized()) {
-			Thread.sleep(10);
-		}
-        assertFalse(queryCaptor.getValue().contains("traversal fail"));
-        assertTrue(mapEntries.isAliasMapInitialized());
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
-        assertEquals(1, aliasMap.size());
-        assertNotNull(aliasMap);
-        assertEquals(1, aliasMap.size());
-        assertEquals("child", aliasMap.get("alias"));
     }
 
     @Test

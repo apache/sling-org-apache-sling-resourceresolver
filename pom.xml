@@ -22,13 +22,12 @@
     <parent>
         <groupId>org.apache.sling</groupId>
         <artifactId>sling</artifactId>
-        <version>33</version>
+        <version>34</version>
         <relativePath />
     </parent>
 
     <artifactId>org.apache.sling.resourceresolver</artifactId>
-    <version>1.6.1-SNAPSHOT</version>
-    <packaging>bundle</packaging>
+    <version>1.6.13-SNAPSHOT</version>
 
     <name>Apache Sling Resource Resolver</name>
     <description>
@@ -52,7 +51,7 @@
             <plugin>
                 <groupId>org.apache.sling</groupId>
                 <artifactId>maven-sling-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>2.3.8</version>
                 <executions>
                     <execution>
                         <id>generate-adapter-metadata</id>
@@ -63,6 +62,7 @@
                     </execution>
                 </executions>
             </plugin>
+<!--
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
@@ -73,6 +73,7 @@
                             javax.jcr;resolution:=optional,
                             *
                         </Import-Package>
+                        <!- - Check if that is still needed - ->
                         <Export-Package>
                             org.apache.sling.resourceresolver.impl.mapping
                         </Export-Package>
@@ -85,6 +86,15 @@
                         </Provide-Capability>
                     </instructions>
                 </configuration>
+            </plugin>
+-->
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-baseline-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -114,7 +124,7 @@
         <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.api</artifactId>
-            <version>2.18.1-SNAPSHOT</version>
+            <version>2.18.4</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -151,9 +161,8 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-            <version>3.0.0</version>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -195,7 +204,7 @@
         <dependency>
         	<groupId>org.apache.sling</groupId>
         	<artifactId>org.apache.sling.testing.osgi-mock</artifactId>
-        	<version>1.4.0</version>
+        	<version>2.3.10</version>
         	<scope>test</scope>
         </dependency>
     </dependencies>

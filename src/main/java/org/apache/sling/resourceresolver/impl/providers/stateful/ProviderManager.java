@@ -24,8 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -65,7 +65,7 @@ public class ProviderManager {
 
     private final ResourceAccessSecurityTracker tracker;
 
-    public ProviderManager(@Nonnull final ResourceResolver resolver, @Nonnull final ResourceAccessSecurityTracker tracker) {
+    public ProviderManager(@NotNull final ResourceResolver resolver, @NotNull final ResourceAccessSecurityTracker tracker) {
         this.contextMap = new IdentityHashMap<ResourceProviderHandler, AuthenticatedResourceProvider>();
         this.resolver = resolver;
         this.tracker = tracker;
@@ -76,8 +76,8 @@ public class ProviderManager {
      * @param handler The resource handler
      * @return The resource context or {@code null} if authentication failed previously.
      */
-    public @CheckForNull AuthenticatedResourceProvider getOrCreateProvider(@Nonnull final ResourceProviderHandler handler,
-            @Nonnull final ResourceResolverControl control)
+    public @Nullable AuthenticatedResourceProvider getOrCreateProvider(@NotNull final ResourceProviderHandler handler,
+            @NotNull final ResourceResolverControl control)
     throws LoginException {
         AuthenticatedResourceProvider provider = this.contextMap.get(handler);
         if (provider == null) {
@@ -108,8 +108,8 @@ public class ProviderManager {
      * @param handler The resource handler
      * @return The resource context or {@code null}.
      */
-    public @CheckForNull ResolveContext<Object> getOrCreateResolveContext(@Nonnull final ResourceProviderHandler handler,
-            @Nonnull final ResourceResolverControl control)
+    public @Nullable ResolveContext<Object> getOrCreateResolveContext(@NotNull final ResourceProviderHandler handler,
+            @NotNull final ResourceResolverControl control)
     throws LoginException {
         AuthenticatedResourceProvider provider = this.getOrCreateProvider(handler, control);
         return provider == null ? null : provider.getResolveContext();
@@ -121,8 +121,8 @@ public class ProviderManager {
      * @param control the resource resolver control
      * @throws LoginException If authentication fails to one provider
      */
-    public void authenticateAll(@Nonnull final List<ResourceProviderHandler> handlers,
-            @Nonnull final ResourceResolverControl control)
+    public void authenticateAll(@NotNull final List<ResourceProviderHandler> handlers,
+            @NotNull final ResourceResolverControl control)
     throws LoginException {
         for (final ResourceProviderHandler h : handlers) {
             try {
@@ -151,9 +151,9 @@ public class ProviderManager {
      * @return The resolve context
      * @throws LoginException If authentication fails
      */
-    private @Nonnull AuthenticatedResourceProvider authenticate(@Nonnull final ResourceProviderHandler handler,
-            @Nonnull final ResourceProvider<Object> provider,
-            @Nonnull final ResourceResolverControl control) throws LoginException {
+    private @NotNull AuthenticatedResourceProvider authenticate(@NotNull final ResourceProviderHandler handler,
+            @NotNull final ResourceProvider<Object> provider,
+            @NotNull final ResourceResolverControl control) throws LoginException {
         boolean isAuthenticated = false;
         Object contextData = null;
         if ( (handler.getInfo().getAuthType() == AuthType.required || handler.getInfo().getAuthType() == AuthType.lazy) ) {
@@ -200,8 +200,8 @@ public class ProviderManager {
         return new ArrayList<AuthenticatedResourceProvider>(refreshable);
     }
 
-    public Iterable<AuthenticatedResourceProvider> getAllBestEffort(@Nonnull final List<ResourceProviderHandler> handlers,
-            @Nonnull final ResourceResolverControl control) {
+    public Iterable<AuthenticatedResourceProvider> getAllBestEffort(@NotNull final List<ResourceProviderHandler> handlers,
+            @NotNull final ResourceResolverControl control) {
         final Iterator<ResourceProviderHandler> handlerIter = handlers.iterator();
         return new Iterable<AuthenticatedResourceProvider>() {
 

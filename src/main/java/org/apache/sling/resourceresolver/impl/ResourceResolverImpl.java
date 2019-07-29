@@ -25,13 +25,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-import javax.annotation.CheckForNull;
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.Nullable;
 import javax.jcr.Session;
 import javax.servlet.http.HttpServletRequest;
 
@@ -48,6 +48,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ResourceWrapper;
+import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.helper.RedirectResource;
 import org.apache.sling.resourceresolver.impl.helper.ResourceIteratorDecorator;
 import org.apache.sling.resourceresolver.impl.helper.ResourcePathIterator;
@@ -57,13 +58,14 @@ import org.apache.sling.resourceresolver.impl.helper.StarResource;
 import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
+import org.apache.sling.resourceresolver.impl.mapping.ResourceMapperImpl;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(Session.class) })
+@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(Session.class), @Adapter(ResourceMapper.class) })
 public class ResourceResolverImpl extends SlingAdaptable implements ResourceResolver {
 
     /** Default logger */
@@ -79,7 +81,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     // such as nt:file. The slash is included to prevent false
     // positives for the String.endsWith check for names like
     // "xyzjcr:content"
-    private static final String JCR_CONTENT_LEAF = "/jcr:content";
+    public static final String JCR_CONTENT_LEAF = "/jcr:content";
 
     /** The factory which created this resource resolver. */
     private final CommonResourceResolverFactoryImpl factory;
@@ -181,7 +183,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      * @throws IllegalStateException
      *             If the resolver is already closed or the factory is no longer live.
      */
-    private void checkClosed() {
+    public void checkClosed() {
         if (this.control.isClosed()) {
             if (closedResolverException != null) {
                 logger.error("The ResourceResolver has already been closed.", closedResolverException);
@@ -415,200 +417,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public String map(final HttpServletRequest request, final String resourcePath) {
-        checkClosed();
-
-        // find a fragment or query
-        int fragmentQueryMark = resourcePath.indexOf('#');
-        if (fragmentQueryMark < 0) {
-            fragmentQueryMark = resourcePath.indexOf('?');
-        }
-
-        // cut fragment or query off the resource path
-        String mappedPath;
-        final String fragmentQuery;
-        if (fragmentQueryMark >= 0) {
-            fragmentQuery = resourcePath.substring(fragmentQueryMark);
-            mappedPath = resourcePath.substring(0, fragmentQueryMark);
-            logger.debug("map: Splitting resource path '{}' into '{}' and '{}'", new Object[] { resourcePath, mappedPath,
-                    fragmentQuery });
-        } else {
-            fragmentQuery = null;
-            mappedPath = resourcePath;
-        }
-
-        // cut off scheme and host, if the same as requested
-        final String schemehostport;
-        final String schemePrefix;
-        if (request != null) {
-            schemehostport = MapEntry.getURI(request.getScheme(), request.getServerName(), request.getServerPort(), "/");
-            schemePrefix = request.getScheme().concat("://");
-            logger.debug("map: Mapping path {} for {} (at least with scheme prefix {})", new Object[] { resourcePath,
-                    schemehostport, schemePrefix });
-
-        } else {
-
-            schemehostport = null;
-            schemePrefix = null;
-            logger.debug("map: Mapping path {} for default", resourcePath);
-
-        }
-
-        ParsedParameters parsed = new ParsedParameters(mappedPath);
-        final Resource nonDecoratedResource = resolveInternal(parsed.getRawPath(), parsed.getParameters());
-
-        if (nonDecoratedResource != null) {
-
-            //Invoke the decorator for the resolved resource
-            Resource res=this.factory.getResourceDecoratorTracker().decorate(nonDecoratedResource);
-
-            // keep, what we might have cut off in internal resolution
-            final String resolutionPathInfo = res.getResourceMetadata().getResolutionPathInfo();
-
-            logger.debug("map: Path maps to resource {} with path info {}", res, resolutionPathInfo);
-
-            // find aliases for segments. we can't walk the parent chain
-            // since the request session might not have permissions to
-            // read all parents SLING-2093
-            final LinkedList<String> names = new LinkedList<>();
-
-            Resource current = res;
-            String path = res.getPath();
-            while (path != null) {
-                String alias = null;
-                if (current != null && !path.endsWith(JCR_CONTENT_LEAF)) {
-                    if (factory.isOptimizeAliasResolutionEnabled() && factory.isAliasMapInitialized()) {
-                        logger.debug("map: Optimize Alias Resolution is Enabled");
-                        String parentPath = ResourceUtil.getParent(path);
-                        if (parentPath != null) {
-                            final Map<String, String> aliases = factory.getMapEntries().getAliasMap(parentPath);
-                            if (aliases!= null && aliases.containsValue(current.getName())) {
-                                for (String key:aliases.keySet()) {
-                                    if (current.getName().equals(aliases.get(key))) {
-                                        alias = key;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        logger.debug("map: Optimize Alias Resolution is Disabled");
-                        alias = ResourceResolverControl.getProperty(current, PROP_ALIAS);
-                    }
-                }
-                if (alias == null || alias.length() == 0) {
-                    alias = ResourceUtil.getName(path);
-                }
-                names.add(alias);
-                path = ResourceUtil.getParent(path);
-                if ("/".equals(path)) {
-                    path = null;
-                } else if (path != null) {
-                    current = res.getResourceResolver().resolve(path);
-                }
-            }
-
-            // build path from segment names
-            final StringBuilder buf = new StringBuilder();
-
-            // construct the path from the segments (or root if none)
-            if (names.isEmpty()) {
-                buf.append('/');
-            } else {
-                while (!names.isEmpty()) {
-                    buf.append('/');
-                    buf.append(names.removeLast());
-                }
-            }
-
-            // reappend the resolutionPathInfo
-            if (resolutionPathInfo != null) {
-                buf.append(resolutionPathInfo);
-            }
-
-            // and then we have the mapped path to work on
-            mappedPath = buf.toString();
-
-            logger.debug("map: Alias mapping resolves to path {}", mappedPath);
-
-        }
-
-        boolean mappedPathIsUrl = false;
-        for (final MapEntry mapEntry : this.factory.getMapEntries().getMapMaps()) {
-            final String[] mappedPaths = mapEntry.replace(mappedPath);
-            if (mappedPaths != null) {
-
-                logger.debug("map: Match for Entry {}", mapEntry);
-
-                mappedPathIsUrl = !mapEntry.isInternal();
-
-                if (mappedPathIsUrl && schemehostport != null) {
-
-                    mappedPath = null;
-
-                    for (final String candidate : mappedPaths) {
-                        if (candidate.startsWith(schemehostport)) {
-                            mappedPath = candidate.substring(schemehostport.length() - 1);
-                            mappedPathIsUrl = false;
-                            logger.debug("map: Found host specific mapping {} resolving to {}", candidate, mappedPath);
-                            break;
-                        } else if (candidate.startsWith(schemePrefix) && mappedPath == null) {
-                            mappedPath = candidate;
-                        }
-                    }
-
-                    if (mappedPath == null) {
-                        mappedPath = mappedPaths[0];
-                    }
-
-                } else {
-
-                    // we can only go with assumptions selecting the first entry
-                    mappedPath = mappedPaths[0];
-
-                }
-
-                logger.debug("map: MapEntry {} matches, mapped path is {}", mapEntry, mappedPath);
-
-                break;
-            }
-        }
-
-        // this should not be the case, since mappedPath is primed
-        if (mappedPath == null) {
-            mappedPath = resourcePath;
-        }
-
-        // [scheme:][//authority][path][?query][#fragment]
-        try {
-            // use commons-httpclient's URI instead of java.net.URI, as it can
-            // actually accept *unescaped* URIs, such as the "mappedPath" and
-            // return them in proper escaped form, including the path, via
-            // toString()
-            final URI uri = new URI(mappedPath, false);
-
-            // 1. mangle the namespaces in the path
-            String path = mangleNamespaces(uri.getPath());
-
-            // 2. prepend servlet context path if we have a request
-            if (request != null && request.getContextPath() != null && request.getContextPath().length() > 0) {
-                path = request.getContextPath().concat(path);
-            }
-            // update the path part of the URI
-            uri.setPath(path);
-
-            mappedPath = uri.toString();
-        } catch (final URIException e) {
-            logger.warn("map: Unable to mangle namespaces for " + mappedPath + " returning unmangled", e);
-        }
-
-        logger.debug("map: Returning URL {} as mapping for path {}", mappedPath, resourcePath);
-
-        // reappend fragment and/or query
-        if (fragmentQuery != null) {
-            mappedPath = mappedPath.concat(fragmentQuery);
-        }
-
-        return mappedPath;
+        return adaptTo(ResourceMapper.class).getMapping(resourcePath, request);
     }
 
     // ---------- search path for relative resoures
@@ -805,6 +614,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     /**
      * @see org.apache.sling.api.adapter.SlingAdaptable#adaptTo(java.lang.Class)
      */
+    @SuppressWarnings("unchecked")
     @Override
     public <AdapterType> AdapterType adaptTo(final Class<AdapterType> type) {
         checkClosed();
@@ -812,6 +622,11 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if (type.getName().equals("javax.jcr.Session")) {
             return getSession(type);
         }
+        
+        if ( type == ResourceMapper.class )
+            return (AdapterType) new ResourceMapperImpl(this, factory.getResourceDecoratorTracker(), factory.getMapEntries(), 
+                    factory.isOptimizeAliasResolutionEnabled(), factory.getNamespaceMangler());
+        
         final AdapterType result = this.control.adaptTo(this.context, type);
         if ( result != null ) {
             return result;
@@ -873,8 +688,12 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      *         the part of the <code>absPath</code> which has been cut off by
      *         the {@link ResourcePathIterator} to resolve the resource.
      */
-    private Resource resolveInternal(final String absPath, final Map<String, String> parameters) {
+    public Resource resolveInternal(final String absPath, final Map<String, String> parameters) {
         Resource resource = null;
+        if (absPath != null && !absPath.isEmpty() && !absPath.startsWith("/")) {
+            logger.debug("resolveInternal: absolute path expected {} ",absPath);
+            return resource; // resource is null at this point
+        }
         String curPath = absPath;
         try {
             final ResourcePathIterator it = new ResourcePathIterator(absPath);
@@ -917,6 +736,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
             final StringBuilder resolutionPath = new StringBuilder();
             final StringTokenizer tokener = new StringTokenizer(tokenizedPath, "/");
+            final int delimCount = StringUtils.countMatches(tokenizedPath,'/');
+            final int redundantDelimCount = delimCount - tokener.countTokens();
+
             while (resource != null && tokener.hasMoreTokens()) {
                 final String childNameRaw = tokener.nextToken();
 
@@ -953,7 +775,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             // uriPath = curPath + sling.resolutionPathInfo
             if (resource != null) {
                 final String path = resolutionPath.toString();
-                final String pathInfo = absPath.substring(path.length());
+                final String pathInfo = absPath.substring(path.length() + redundantDelimCount);
 
                 resource.getResourceMetadata().setResolutionPath(path);
                 resource.getResourceMetadata().setResolutionPathInfo(pathInfo);
@@ -989,7 +811,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
         // we do not have a child with the exact name, so we look for
         // a child, whose alias matches the childName
-        if (factory.isOptimizeAliasResolutionEnabled() && factory.isAliasMapInitialized()){
+        if (factory.isOptimizeAliasResolutionEnabled()){
             logger.debug("getChildInternal: Optimize Alias Resolution is Enabled");
             //optimization made in SLING-2521
             final Map<String, String> aliases = factory.getMapEntries().getAliasMap(parent.getPath());
@@ -1035,7 +857,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     /**
      * Creates a resource with the given path if existing
      */
-    private Resource getAbsoluteResourceInternal(@CheckForNull final Resource parent, @CheckForNull final String path, final Map<String, String> parameters, final boolean isResolve) {
+    private Resource getAbsoluteResourceInternal(@Nullable final Resource parent, @Nullable final String path, final Map<String, String> parameters, final boolean isResolve) {
         if (path == null || path.length() == 0 || path.charAt(0) != '/') {
             logger.debug("getResourceInternal: Path must be absolute {}", path);
             return null; // path must be absolute
@@ -1100,14 +922,6 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             path = factory.getSearchPath().get(0) + path;
         }
         return path;
-    }
-
-    private String mangleNamespaces(String absPath) {
-        if ( absPath != null && factory.getNamespaceMangler() != null ) {
-            absPath = ((JcrNamespaceMangler)factory.getNamespaceMangler()).mangleNamespaces(this, logger, absPath);
-        }
-
-        return absPath;
     }
 
     private String unmangleNamespaces(String absPath) {
