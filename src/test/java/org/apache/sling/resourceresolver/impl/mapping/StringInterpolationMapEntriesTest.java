@@ -33,7 +33,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
     public void simple_node_string_interpolation() throws Exception {
         // To avoid side effects the String Interpolation uses its own Resource Resolver
         Resource sivOne = setupEtcMapResource("${siv.one}", http,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {"siv.one=test-simple-node"});
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node"});
 
         mapEntries.doInit();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-node/", "/content/simple-node/");
@@ -47,7 +47,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
             PROP_REG_EXP, "${siv.one}/",
             PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
         );
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {"siv.one=test-simple-match"});
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match"});
 
         mapEntries.doInit();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-match/", "/content/simple-match/");

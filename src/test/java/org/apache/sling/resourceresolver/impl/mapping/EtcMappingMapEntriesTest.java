@@ -16,7 +16,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-<<<<<<< HEAD
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.path.Path;
@@ -51,14 +50,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-=======
-import static org.apache.sling.resourceresolver.impl.ResourceResolverImpl.PROP_REDIRECT_INTERNAL;
-import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
-
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
-import org.junit.Test;
->>>>>>> master
 
 /**
  * These tests are for the /etc/map setup of the Map Entries when
@@ -136,7 +127,6 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
             .addEtcMapEntry("^http/localhost\\.\\d*/gateway/", true, "http://gbiv.com/")
             .addEtcMapEntry("^http/localhost\\.\\d*/(stories)/", true, "/anecdotes/$1/");
         expectedEtcMapping.assertEtcMap("Etc Mapping for nested internal mixed mapping", mapEntries.getResolveMaps());
-<<<<<<< HEAD
 
         // Not really an etc-map resource but it is good for now
         final Resource test = setupEtcMapResource("/scripts", "test");
@@ -258,7 +248,4 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
 //        Resource mappedResource = resResolver.resolve(request, "/b.html");
 //        String path = mappedResource.getPath();
 //    }
-=======
-    }
->>>>>>> master
 }

@@ -163,7 +163,8 @@ public class MapEntries implements
         this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, (List<MapEntry>)Collections.EMPTY_LIST);
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
-        this.aliasMap = Collections.emptyMap();
+        this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
+        this.stringInterpolationProvider = stringInterpolationProvider;
 
         doInit();
 
@@ -355,7 +356,6 @@ public class MapEntries implements
      * Remove all aliases for the content path
      * @param contentPath The content path
      * @param path Optional sub path of the vanity path
-     * @param refreshed Flag if session needs refresh
      * @return {@code true} if a change happened
      */
     private boolean removeAlias(final String contentPath, final String path, final AtomicBoolean resolverRefreshed) {
@@ -713,7 +713,7 @@ public class MapEntries implements
 
     /**
      * Handles the change to any of the node properties relevant for vanity URL
-     * mappings. The {@link #MapEntries(ResourceResolverFactoryImpl, BundleContext, EventAdmin)}
+     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider)}
      * constructor makes sure the event listener is registered to only get
      * appropriate events.
      */
@@ -968,10 +968,7 @@ public class MapEntries implements
                 trailingSlash = true;
             }
             // Check for placeholders and replace if needed
-            StringInterpolationProvider.Check check = stringInterpolationProvider.hasPlaceholder(name);
-            if(check.getStatus() == StringInterpolationProvider.STATUS.found) {
-                name = stringInterpolationProvider.resolve(check);
-            }
+            name = stringInterpolationProvider.substitute(name);
 
             final String childPath = parentPath.concat(name);
 
@@ -1043,57 +1040,14 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-		String queryString = this.factory.isForceNoAliasTraversal() ? ALIAS_QUERY_NO_TRAVERSAL : ALIAS_QUERY_DEFAULT;
-		while (true){
-	        try {
+        final String queryString = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
 		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
 		        while (i.hasNext()) {
 		            final Resource resource = i.next();
 		            loadAlias(resource, map);
 		        }
-		        break;
-		} catch (SlingException e) {
-			Throwable cause = unwrapThrowable(e);
-			if (cause instanceof IllegalArgumentException && ALIAS_QUERY_NO_TRAVERSAL.equals(queryString)) {
-					log.debug(
-						"Expected index not available yet - will retry", e);
-					try {
-						TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
-					} catch (InterruptedException ex) {
-						log.warn("Interrupted while sleeping", ex);
-					}
-				} else if (cause instanceof ParseException) {
-				if (ALIAS_QUERY_NO_TRAVERSAL.equals(queryString)) {
-						log.warn("Traversal fail option set but query not accepted by queryengine, falling back to allowing traversal as queryengine might not support option", e);
-						queryString = ALIAS_QUERY_DEFAULT;
-					} else {
-						log.error("Queryengine couldn't parse query - interrupting loading of aliasmap",e);
-						break;
-					}
-					try {
-						TimeUnit.MILLISECONDS.sleep(getTraversalRetryInterval());
-					} catch (InterruptedException ex) {
-						log.warn("Interrupted while sleeping", ex);
-					}
-
-
-				} else {
-					log.error("QueryEngine not able to process query {} ", queryString, e);
-					break;
-				}
-		}
-		}
         return map;
     }
-
-    /**
-     * Extract root cause of exception
-     * @param e {@code Throwable} to be checked
-     * @return Root {@code Throwable}
-     */
-    private Throwable unwrapThrowable(Throwable e) {
-		return e.getCause() == null ? e : unwrapThrowable(e.getCause());
-	}
 
 	/**
      * Load alias given a resource

@@ -46,10 +46,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
-<<<<<<< HEAD
+import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
-=======
->>>>>>> master
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMap;
@@ -82,13 +80,9 @@ public abstract class AbstractMappingMapEntriesTest {
     @Mock
     ResourceResolver resourceResolver;
 
-<<<<<<< HEAD
-    @Mock
     StringInterpolationProviderConfiguration stringInterpolationProviderConfiguration;
 
     StringInterpolationProviderImpl stringInterpolationProvider = new StringInterpolationProviderImpl();
-=======
->>>>>>> master
     MapEntries mapEntries;
 
     File vanityBloomFilterFile;
@@ -112,10 +106,6 @@ public abstract class AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
-<<<<<<< HEAD
-        when(resourceResolverFactory.isForceNoAliasTraversal()).thenReturn(true);
-=======
->>>>>>> master
         when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
@@ -126,12 +116,9 @@ public abstract class AbstractMappingMapEntriesTest {
         map = setupEtcMapResource("/etc", "map");
         http = setupEtcMapResource("http", map);
 
-<<<<<<< HEAD
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {});
+        stringInterpolationProviderConfiguration = createStringInterpolationProviderConfiguration();
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {});
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
-=======
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
->>>>>>> master
 
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);
@@ -204,11 +191,7 @@ public abstract class AbstractMappingMapEntriesTest {
         return resource;
     }
 
-<<<<<<< HEAD
-    MapEntriesTest.DataFuture createDataFuture(ExecutorService pool, final MapEntries mapEntries) {
-=======
     DataFuture createDataFuture(ExecutorService pool, final MapEntries mapEntries) {
->>>>>>> master
 
         Future<Iterator<?>> future = pool.submit(new Callable<Iterator<?>>() {
             @Override
@@ -216,11 +199,7 @@ public abstract class AbstractMappingMapEntriesTest {
                 return mapEntries.getResolveMapsIterator("http/localhost.8080/target/justVanityPath");
             }
         });
-<<<<<<< HEAD
-        return new MapEntriesTest.DataFuture(future);
-=======
         return new DataFuture(future);
->>>>>>> master
     }
 
     void simulateSomewhatSlowSessionOperation(final Semaphore sessionLock) throws InterruptedException {

@@ -81,7 +81,8 @@ public class ResourceMapperImplTest {
 
         ctx.registerInjectActivateService(new ServiceUserMapperImpl());
         ctx.registerInjectActivateService(new ResourceAccessSecurityTracker());
-        
+        ctx.registerInjectActivateService(new StringInterpolationProviderImpl());
+
         InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider();
         resourceProvider.putResource("/"); // root
         resourceProvider.putResource("/here"); // regular page

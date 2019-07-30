@@ -23,11 +23,8 @@ import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
-<<<<<<< HEAD
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl;
-=======
->>>>>>> master
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
@@ -57,11 +54,9 @@ import static org.apache.sling.resourceresolver.util.MockTestUtil.callInaccessib
 import static org.apache.sling.resourceresolver.util.MockTestUtil.checkInternalResource;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.checkRedirectResource;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createRequestFromUrl;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
-<<<<<<< HEAD
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
-=======
->>>>>>> master
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -96,13 +91,9 @@ public class EtcMappingResourceResolverTest {
     @Mock
     ResourceProvider<?> resourceProvider;
 
-<<<<<<< HEAD
-    @Mock
     StringInterpolationProviderConfiguration stringInterpolationProviderConfiguration;
 
     StringInterpolationProviderImpl stringInterpolationProvider = new StringInterpolationProviderImpl();
-=======
->>>>>>> master
     MapEntries mapEntries;
 
     File vanityBloomFilterFile;
@@ -131,10 +122,8 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("resourceProviderTracker", activator, resourceProviderTracker);
         setInaccessibleField("resourceAccessSecurityTracker", activator, new ResourceAccessSecurityTracker());
         setInaccessibleField("bundleContext", activator, bundleContext);
-<<<<<<< HEAD
+        stringInterpolationProviderConfiguration = createStringInterpolationProviderConfiguration();
         setInaccessibleField("stringInterpolationProvider", activator, stringInterpolationProvider);
-=======
->>>>>>> master
         setInaccessibleField("mapRoot", activator, "/etc/map");
         setInaccessibleField("mapRootPrefix", activator, "/etc/map");
         setInaccessibleField("observationPaths", activator, new Path[] {new Path("/")});
@@ -145,11 +134,7 @@ public class EtcMappingResourceResolverTest {
         when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
         when(serviceUserMapper.getServiceUserID(any(Bundle.class),anyString())).thenReturn("mapping");
         // Activate method is package private so we use reflection to to call it
-<<<<<<< HEAD
-        callInaccessibleMethod("activate", commonFactory, BundleContext.class, bundleContext);
-=======
         callInaccessibleMethod("activate", null, commonFactory, BundleContext.class, bundleContext);
->>>>>>> master
         final Bundle usingBundle = mock(Bundle.class);
         resourceResolverFactory = new ResourceResolverFactoryImpl(commonFactory, usingBundle, null);
         resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(null);
@@ -163,8 +148,6 @@ public class EtcMappingResourceResolverTest {
         return new ArrayList<>();
     }
 
-<<<<<<< HEAD
-=======
     /**
      * Changes to the /etc/map in our tests are not taking effect until there is an Change Event issued
      *
@@ -174,7 +157,6 @@ public class EtcMappingResourceResolverTest {
      * @param path Path to the resource root to be refreshed
      * @param isExternal External flag of the ResourceChange event
      */
->>>>>>> master
     void refreshMapEntries(String path, boolean isExternal) {
         ((MapEntries) commonFactory.getMapEntries()).onChange(
             asList(
@@ -300,11 +282,10 @@ public class EtcMappingResourceResolverTest {
         checkInternalResource(resolvedResource, "/anecdotes/stories");
     }
 
-<<<<<<< HEAD
     @Test
     public void simple_node_string_interpolation() throws Exception {
         buildResource("${siv.one}", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {"siv.one=test-simple-node.80"});
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node.80"});
 
         refreshMapEntries("/etc/map", true);
 
@@ -325,7 +306,7 @@ public class EtcMappingResourceResolverTest {
             PROP_REG_EXP, "${siv.one}/",
             PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
         );
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, bundleContext, new String[] {"siv.one=test-simple-match.80"});
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match.80"});
 
         refreshMapEntries("/etc/map", true);
 
@@ -335,11 +316,12 @@ public class EtcMappingResourceResolverTest {
         HttpServletRequest request = createRequestFromUrl("http://test-simple-match:80/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
         checkRedirectResource(resolvedResource, "/content/simple-match/", 302);
-=======
+    }
+
     /**
      * ATTENTION: this tests showcases an erroneous condition of an endless circular mapping in the /etc/map. When
      * this test passes this condition is present. After a fix this test must be adjusted.
-     * 
+     *
      * This confirms an issue with the Etc Mapping where a mapping from a node to a child node (here / to /content)
      * ends up in a endless circular mapping.
      * The only way to recover from this is to go to the OSGi console and change the /etc/map path in the Resource
@@ -368,6 +350,5 @@ public class EtcMappingResourceResolverTest {
 
         resolvedResource = resourceResolver.resolve(request, "/content/content/test.html");
         checkRedirectResource(resolvedResource, "/content/content/content/test.html", 302);
->>>>>>> master
     }
 }

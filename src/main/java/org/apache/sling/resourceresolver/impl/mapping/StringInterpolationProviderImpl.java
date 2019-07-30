@@ -18,7 +18,7 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.osgi.framework.BundleContext;
+import org.apache.commons.lang3.text.StrSubstitutor;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -30,9 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Designate(ocd = StringInterpolationProviderConfiguration.class)
@@ -75,9 +73,9 @@ public class StringInterpolationProviderImpl
         );
     }
 
-    private BundleContext bundleContext;
-    private StringInterpolationProviderConfiguration config = DEFAULT_CONFIG;
+//    private StringInterpolationProviderConfiguration config = DEFAULT_CONFIG;
     private Map<String, String> placeholderEntries = new HashMap<>();
+    private StrSubstitutor substitutor = new StrSubstitutor();
 
     // ---------- SCR Integration ---------------------------------------------
 
@@ -85,10 +83,14 @@ public class StringInterpolationProviderImpl
      * Activates this component (called by SCR before)
      */
     @Activate
-    protected void activate(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
-        this.bundleContext = bundleContext;
-        this.config = config;
-        for(String line: this.config.place_holder_key_value_pairs()) {
+    protected void activate(final StringInterpolationProviderConfiguration config) {
+        String prefix = config.substitution_prefix();
+        String suffix = config.substitution_suffix();
+        char escapeCharacter = config.substitution_escape_character();
+        boolean substitudeInVariables = config.substitution_in_variables();
+
+        String[] valueMap = config.place_holder_key_value_pairs();
+        for(String line: valueMap) {
             // Ignore no or empty lines
             if(line == null || line.isEmpty()) { continue; }
             // Ignore comments
@@ -104,15 +106,22 @@ public class StringInterpolationProviderImpl
             }
             placeholderEntries.put(line.substring(0, index), line.substring(index + 1));
         }
+
+        substitutor = new StrSubstitutor(
+            placeholderEntries,
+            prefix,
+            suffix,
+            escapeCharacter
+        );
+        substitutor.setEnableSubstitutionInVariables(substitudeInVariables);
     }
 
     /**
      * Modifies this component (called by SCR to update this component)
      */
     @Modified
-    protected void modified(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
-        this.deactivate();
-        this.activate(bundleContext, config);
+    protected void modified(final StringInterpolationProviderConfiguration config) {
+        this.activate(config);
     }
 
     /**
@@ -120,86 +129,11 @@ public class StringInterpolationProviderImpl
      */
     @Deactivate
     protected void deactivate() {
-        this.bundleContext = null;
-        this.config = DEFAULT_CONFIG;
+        activate(DEFAULT_CONFIG);
     }
 
     @Override
-    public Check hasPlaceholder(String line) {
-        STATUS status = STATUS.none;
-        List<PlaceholderContext> placeholderContextList = parseLine(line);
-        for(PlaceholderContext placeholderContext: placeholderContextList) {
-            String name = placeholderContext.getName();
-            if(!placeholderEntries.containsKey(name)) {
-                logger.warn("Placeholder: '{}' not found in list of Placeholders: '{}'", name, placeholderEntries);
-                status = STATUS.unknown;
-            }
-            status = status == STATUS.none ? STATUS.found : status;
-        }
-        return new Check(status, line, placeholderContextList);
-    }
-
-    @Override
-    public String resolve(Check check) {
-        if(check.getStatus() == STATUS.unknown) {
-            logger.warn("Line: '{}' contains unknown placeholders -> ignored", check.getLine());
-            return check.getLine();
-        }
-        List<PlaceholderContext> placeholderContextList = check.getPlaceholderContextList();
-        String line = check.getLine();
-        String answer = "";
-        if(placeholderContextList.isEmpty()) {
-            answer = line;
-        } else {
-            // The carret is the position in the source line. It is used to copy regular text
-            int carret = 0;
-            for (PlaceholderContext context : check.getPlaceholderContextList()) {
-                int start = context.getStart();
-                if(start > carret) {
-                    // There is text between the current position in the source and the next placeholder
-                    // so copy this into the target line
-                    String text = line.substring(carret, start);
-                    answer += text;
-                    carret += text.length();
-                }
-                int end = context.getEnd();
-                String name = context.getName();
-                String value = placeholderEntries.get(name);
-                // Add placeholder value into the target line
-                answer += value;
-                carret = carret + end - start + PLACEHOLDER_END_TOKEN.length();
-            }
-            if(carret < line.length()) {
-                // There is some text left after the last placeholder so copy this to the target line
-                answer += line.substring(carret);
-            }
-        }
-        return answer;
-    }
-
-    private List<PlaceholderContext> parseLine(String line) {
-        List<PlaceholderContext> answer = new ArrayList<>();
-        int index = -2;
-        if(line != null && !line.isEmpty()) {
-            while(true) {
-                index = line.indexOf(PLACEHOLDER_START_TOKEN, index + 1);
-                if (index < 0) {
-                    break;
-                }
-                int index2 = line.indexOf(PLACEHOLDER_END_TOKEN, index);
-                if(index2 < 0) {
-                    logger.warn("Given Line: '{}' contains an unclosed placeholder -> ignored", line);
-                    continue;
-                }
-                answer.add(
-                    new PlaceholderContext(
-                        index,
-                        index2,
-                        line.substring(index + PLACEHOLDER_START_TOKEN.length(), index2)
-                    )
-                );
-            }
-        }
-        return answer;
+    public String substitute(String text) {
+        return substitutor.replace(text);
     }
 }

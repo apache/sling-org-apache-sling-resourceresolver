@@ -26,21 +26,15 @@ import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.SimpleValueMapImpl;
 import org.apache.sling.resourceresolver.impl.helper.RedirectResource;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
-<<<<<<< HEAD
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
-=======
->>>>>>> master
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-<<<<<<< HEAD
 import org.osgi.framework.BundleContext;
-=======
->>>>>>> master
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
@@ -48,10 +42,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
 import static java.util.Arrays.asList;
+import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider.DEFAULT_ESCAPE_CHARACTER;
+import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider.DEFAULT_IN_VARIABLE_SUBSTITUTION;
+import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider.DEFAULT_PREFIX;
+import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider.DEFAULT_SUFFIX;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -81,12 +80,6 @@ public class MockTestUtil {
     }
 
     public static void checkInternalResource(Resource internal, String path) {
-<<<<<<< HEAD
-//        assertThat("Not a Non Existing Resource", redirect, instanceOf(NonExistingResource.class));
-//        NonExistingResource nonExistingResource = (NonExistingResource) redirect;
-//        if(path != null) {
-=======
->>>>>>> master
         assertEquals("Wrong Path for Resource", path, internal.getPath());
     }
 
@@ -141,11 +134,7 @@ public class MockTestUtil {
      * @param resourceResolver Resource Resolver of this resource
      * @param provider         Resource Provider Instance
      * @param properties       Key / Value pair for resource properties (the number of strings must be even)
-<<<<<<< HEAD
-     * @return
-=======
      * @return Mock Resource able to handle addition of children later on
->>>>>>> master
      */
     @SuppressWarnings("unchecked")
     public static Resource buildResource(String fullPath, Resource parent, ResourceResolver resourceResolver, ResourceProvider<?> provider, String... properties) {
@@ -201,25 +190,6 @@ public class MockTestUtil {
         return resource;
     }
 
-<<<<<<< HEAD
-    public static Object callInaccessibleMethod(String methodName, Object target, Class paramsType, Object param) throws NoSuchMethodException {
-        return callInaccessibleMethod(methodName, target, new Class[] {paramsType}, new Object[] {param});
-    }
-
-    public static Object callInaccessibleMethod(String methodName, Object target, Class[] paramsTypes, Object[] params) throws NoSuchMethodException {
-        if(paramsTypes != null && params != null) {
-            if(params.length != paramsTypes.length) { throw new IllegalArgumentException("Number of Parameter Types and Values were not the same"); }
-        } else {
-            paramsTypes = null;
-            params = null;
-        }
-        try {
-            Method method = target.getClass().getDeclaredMethod(methodName, paramsTypes);
-            method.setAccessible(true);
-            return method.invoke(target, params);
-        } catch(NoSuchMethodException e) {
-            throw new UnsupportedOperationException("Failed to find method: " + methodName, e);
-=======
     /**
      * Calls a private method that has no parameter like a getter
      *
@@ -271,7 +241,6 @@ public class MockTestUtil {
         }
         try {
             return getInaccessibleMethod(methodName, returnType, target, parameterTypes).call(parameters);
->>>>>>> master
         } catch (IllegalAccessException e) {
             throw new UnsupportedOperationException("Failed to access method: " + methodName, e);
         } catch (InvocationTargetException e) {
@@ -279,28 +248,6 @@ public class MockTestUtil {
         }
     }
 
-<<<<<<< HEAD
-    public static void setInaccessibleField(String fieldName, Object target, Object fieldValue) throws NoSuchMethodException {
-        try {
-            Field field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(target, fieldValue);
-        } catch (IllegalAccessException e) {
-            throw new UnsupportedOperationException("Failed to access field: " + fieldName, e);
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void setupStringInterpolationProvider(
-        StringInterpolationProvider provider, StringInterpolationProviderConfiguration configuration, BundleContext bundleContext, final String[] placeholderValues
-    ) throws NoSuchMethodException {
-        when(configuration.place_holder_key_value_pairs()).thenReturn(placeholderValues);
-        callInaccessibleMethod("activate", provider,
-            new Class[] {BundleContext.class, StringInterpolationProviderConfiguration.class},
-            new Object[] {bundleContext, configuration}
-        );
-=======
     public static <T> MethodWrapper<T> getInaccessibleMethod(String methodName, Class<T> returnType, Object target, Class...parameterTypes) {
         return new MethodWrapper(methodName, returnType, target, parameterTypes);
     }
@@ -363,6 +310,26 @@ public class MockTestUtil {
         }
     }
 
+    public static StringInterpolationProviderConfiguration createStringInterpolationProviderConfiguration() {
+        StringInterpolationProviderConfiguration answer = mock(StringInterpolationProviderConfiguration.class);
+        when(answer.substitution_prefix()).thenReturn(DEFAULT_PREFIX);
+        when(answer.substitution_suffix()).thenReturn(DEFAULT_SUFFIX);
+        when(answer.substitution_escape_character()).thenReturn(DEFAULT_ESCAPE_CHARACTER);
+        when(answer.substitution_in_variables()).thenReturn(DEFAULT_IN_VARIABLE_SUBSTITUTION);
+        when(answer.place_holder_key_value_pairs()).thenReturn(new String[] {});
+        return answer;
+    }
+
+    public static void setupStringInterpolationProvider(
+        StringInterpolationProvider provider, StringInterpolationProviderConfiguration configuration, final String[] placeholderValues
+    ) {
+        when(configuration.place_holder_key_value_pairs()).thenReturn(placeholderValues);
+        callInaccessibleMethod("activate", Void.TYPE, provider,
+            new Class[] {StringInterpolationProviderConfiguration.class},
+            new Object[] {configuration}
+        );
+    }
+
     public static class FieldWrapper<T> {
         private Field field;
         private Object target;
@@ -380,7 +347,6 @@ public class MockTestUtil {
         public T get() throws IllegalAccessException {
             return (T) field.get(target);
         }
->>>>>>> master
     }
 
     /**
@@ -392,12 +358,9 @@ public class MockTestUtil {
         public List<Resource> getChildrenList();
     }
 
-<<<<<<< HEAD
-=======
     /**
      * Defines the Result of the Etc Mapping for easy testing
      */
->>>>>>> master
     public static class ExpectedEtcMapping {
         List<ExpectedEtcMapEntry> expectedEtcMapEntries = new ArrayList<>();
 
