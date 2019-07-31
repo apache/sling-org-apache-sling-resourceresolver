@@ -24,12 +24,11 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
+import java.lang.annotation.Annotation;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,39 +40,8 @@ public class StringInterpolationProviderImpl
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public static StringInterpolationProviderConfiguration DEFAULT_CONFIG;
+    public static final StringInterpolationProviderConfiguration DEFAULT_CONFIG = new StringInterpolationProviderConfigurationImpl();
 
-    static {
-        final InvocationHandler handler = new InvocationHandler() {
-
-            @Override
-            public Object invoke(final Object obj, final Method calledMethod, final Object[] args)
-                throws Throwable {
-                if ( calledMethod.getDeclaringClass().isAssignableFrom(StringInterpolationProviderConfiguration.class) ) {
-                    return calledMethod.getDefaultValue();
-                }
-                if ( calledMethod.getDeclaringClass() == Object.class ) {
-                    if ( calledMethod.getName().equals("toString") && (args == null || args.length == 0) ) {
-                        return "Generated @" + StringInterpolationProviderConfiguration.class.getName() + " instance";
-                    }
-                    if ( calledMethod.getName().equals("hashCode") && (args == null || args.length == 0) ) {
-                        return this.hashCode();
-                    }
-                    if ( calledMethod.getName().equals("equals") && args != null && args.length == 1 ) {
-                        return Boolean.FALSE;
-                    }
-                }
-                throw new InternalError("unexpected method dispatched: " + calledMethod);
-            }
-        };
-        DEFAULT_CONFIG = (StringInterpolationProviderConfiguration) Proxy.newProxyInstance(
-            StringInterpolationProviderConfiguration.class.getClassLoader(),
-            new Class[] { StringInterpolationProviderConfiguration.class },
-            handler
-        );
-    }
-
-//    private StringInterpolationProviderConfiguration config = DEFAULT_CONFIG;
     private Map<String, String> placeholderEntries = new HashMap<>();
     private StrSubstitutor substitutor = new StrSubstitutor();
 
@@ -84,12 +52,14 @@ public class StringInterpolationProviderImpl
      */
     @Activate
     protected void activate(final StringInterpolationProviderConfiguration config) {
-        String prefix = config.substitution_prefix();
-        String suffix = config.substitution_suffix();
-        char escapeCharacter = config.substitution_escape_character();
-        boolean substitudeInVariables = config.substitution_in_variables();
+        String prefix = config.substitutionPrefix();
+        String suffix = config.substitutionSuffix();
+        char escapeCharacter = config.substitutionEscapeCharacter();
+        boolean substitudeInVariables = config.substitutionInVariables();
 
-        String[] valueMap = config.place_holder_key_value_pairs();
+        String[] valueMap = config.placeHolderKeyValuePairs();
+        // Clear out any existing values
+        placeholderEntries.clear();
         for(String line: valueMap) {
             // Ignore no or empty lines
             if(line == null || line.isEmpty()) { continue; }
@@ -135,5 +105,39 @@ public class StringInterpolationProviderImpl
     @Override
     public String substitute(String text) {
         return substitutor.replace(text);
+    }
+
+    private static class StringInterpolationProviderConfigurationImpl
+        implements StringInterpolationProviderConfiguration
+    {
+        @Override
+        public String substitutionPrefix() {
+            return DEFAULT_PREFIX;
+        }
+
+        @Override
+        public String substitutionSuffix() {
+            return DEFAULT_SUFFIX;
+        }
+
+        @Override
+        public char substitutionEscapeCharacter() {
+            return DEFAULT_ESCAPE_CHARACTER;
+        }
+
+        @Override
+        public boolean substitutionInVariables() {
+            return DEFAULT_IN_VARIABLE_SUBSTITUTION;
+        }
+
+        @Override
+        public String[] placeHolderKeyValuePairs() {
+            return new String[0];
+        }
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+            return ObjectClassDefinition.class;
+        }
     }
 }

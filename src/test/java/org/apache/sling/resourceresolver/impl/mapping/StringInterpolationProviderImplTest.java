@@ -28,6 +28,7 @@ import org.osgi.framework.BundleContext;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl.DEFAULT_CONFIG;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
@@ -43,10 +44,10 @@ public class StringInterpolationProviderImplTest {
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
-        when(stringInterpolationProviderConfiguration.substitution_prefix()).thenReturn("${");
-        when(stringInterpolationProviderConfiguration.substitution_suffix()).thenReturn("}");
-        when(stringInterpolationProviderConfiguration.substitution_escape_character()).thenReturn('$');
-        when(stringInterpolationProviderConfiguration.substitution_in_variables()).thenReturn(false);
+        when(stringInterpolationProviderConfiguration.substitutionPrefix()).thenReturn("${");
+        when(stringInterpolationProviderConfiguration.substitutionSuffix()).thenReturn("}");
+        when(stringInterpolationProviderConfiguration.substitutionEscapeCharacter()).thenReturn('$');
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(false);
     }
 
     @Test
@@ -60,7 +61,7 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_simple_one_placeholder() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two"}
         );
 
@@ -74,7 +75,7 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_simple_text_one_placeholder() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two"}
         );
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
@@ -87,7 +88,7 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_two_placeholders() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two", "three=four"}
         );
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
@@ -100,7 +101,7 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_three_placeholders() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two", "three=four", "five=six"}
         );
 
@@ -114,7 +115,7 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_no_placeholders() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two", "three=four", "five=six"}
         );
 
@@ -128,7 +129,7 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_unkown_placeholders() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two", "three=four", "five=six"}
         );
 
@@ -142,7 +143,7 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_trailing_slash_placeholders() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "siv.one=test-value"}
         );
 
@@ -156,11 +157,11 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_different_suffix_prefix() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "test-me.one=hello"}
         );
-        when(stringInterpolationProviderConfiguration.substitution_prefix()).thenReturn("{{");
-        when(stringInterpolationProviderConfiguration.substitution_suffix()).thenReturn("}}");
+        when(stringInterpolationProviderConfiguration.substitutionPrefix()).thenReturn("{{");
+        when(stringInterpolationProviderConfiguration.substitutionSuffix()).thenReturn("}}");
 
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(stringInterpolationProviderConfiguration);
@@ -172,10 +173,10 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_escape_character() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two"}
         );
-        when(stringInterpolationProviderConfiguration.substitution_escape_character()).thenReturn('\\');
+        when(stringInterpolationProviderConfiguration.substitutionEscapeCharacter()).thenReturn('\\');
 
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(stringInterpolationProviderConfiguration);
@@ -187,10 +188,10 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_in_variables_substitution() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two", "two=three"}
         );
-        when(stringInterpolationProviderConfiguration.substitution_in_variables()).thenReturn(true);
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
 
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(stringInterpolationProviderConfiguration);
@@ -202,10 +203,10 @@ public class StringInterpolationProviderImplTest {
 
     @Test
     public void test_in_variables_substitution2() {
-        when(stringInterpolationProviderConfiguration.place_holder_key_value_pairs()).thenReturn(
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
             new String[] { "one=two", "onetwo=three"}
         );
-        when(stringInterpolationProviderConfiguration.substitution_in_variables()).thenReturn(true);
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
 
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(stringInterpolationProviderConfiguration);
@@ -213,5 +214,91 @@ public class StringInterpolationProviderImplTest {
         String line = "${one${one}}";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "three", substituted);
+    }
+
+    @Test
+    public void test_bad_placeholder_key_configuration() {
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
+            new String[] { "one=two", "two", "=two"}
+        );
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
+
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+        placeholderProvider.activate(stringInterpolationProviderConfiguration);
+
+        String line = "${one}${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", "two${two}", substituted);
+    }
+
+    @Test
+    public void test_bad_placeholder_value_configuration() {
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
+            new String[] { "one=two", "two="}
+        );
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
+
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+        placeholderProvider.activate(stringInterpolationProviderConfiguration);
+
+        String line = "${one}${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", "two${two}", substituted);
+    }
+
+    @Test
+    public void test_no_configuration() {
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+
+        String line = "${one}${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", line, substituted);
+    }
+
+    @Test
+    public void test_default_configuration() {
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+        placeholderProvider.activate(DEFAULT_CONFIG);
+
+        String line = "${one}${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", line, substituted);
+    }
+
+    @Test
+    public void test_modify_configuration() {
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
+            new String[] { "one=two", "two="}
+        );
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
+
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+        placeholderProvider.activate(stringInterpolationProviderConfiguration);
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
+            new String[] { "one=two", "two=three"}
+        );
+        placeholderProvider.modified(stringInterpolationProviderConfiguration);
+
+        String line = "${one}-${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", "two-three", substituted);
+    }
+
+    @Test
+    public void test_deactivate_configuration() {
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
+            new String[] { "one=two", "two=four"}
+        );
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
+
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+        placeholderProvider.activate(stringInterpolationProviderConfiguration);
+
+        String line = "${one}-${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", "two-four", substituted);
+        placeholderProvider.deactivate();
+        substituted = placeholderProvider.substitute(line);
+        assertEquals("Line should not be substituted because service was deactivated", line, substituted);
     }
 }

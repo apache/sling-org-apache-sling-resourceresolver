@@ -18,8 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import java.util.List;
-
 /**
  * This class provides placeholders for Sling configuration settings
  * that depend on the environment like host names / ports for dev, test,
@@ -30,11 +28,6 @@ import java.util.List;
  * brackets (no nesting).
  */
 public interface StringInterpolationProvider {
-
-    String DEFAULT_PREFIX = "${";
-    String DEFAULT_SUFFIX = "}";
-    char DEFAULT_ESCAPE_CHARACTER = '$';
-    boolean DEFAULT_IN_VARIABLE_SUBSTITUTION = false;
 
     /**
      * Replaces any placeholders with the replacement value
