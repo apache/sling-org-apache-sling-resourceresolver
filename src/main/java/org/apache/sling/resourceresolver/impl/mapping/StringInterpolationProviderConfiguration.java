@@ -55,10 +55,4 @@ public @interface StringInterpolationProviderConfiguration {
             "separates the key from the value. If no '=' is found the entire key / value pair " +
             "is dropped.")
     String[] placeHolderKeyValuePairs() default {"phv.default.host.name=localhost"};
-
-//AS TODO: Future Development
-//    @AttributeDefinition(
-//        name = "Placeholder Source URL",
-//        description = "A URL pointing to a source text file with key/value pairs (one value per line)")
-//    String[] placeHolderKeyValueSourceUrl();
 }

@@ -142,8 +142,6 @@ public class MapEntries implements
 
     private boolean updateBloomFilterFile = false;
 
-    private Thread aliasTraversal = null;
-
     private StringInterpolationProvider stringInterpolationProvider;
 
     @SuppressWarnings({ "unchecked" })

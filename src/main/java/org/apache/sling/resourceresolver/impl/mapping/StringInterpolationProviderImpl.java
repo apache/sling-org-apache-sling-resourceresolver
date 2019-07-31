@@ -62,19 +62,19 @@ public class StringInterpolationProviderImpl
         placeholderEntries.clear();
         for(String line: valueMap) {
             // Ignore no or empty lines
-            if(line == null || line.isEmpty()) { continue; }
-            // Ignore comments
-            if(line.charAt(0) == '#') { continue; }
-            int index = line.indexOf('=');
-            if(index <= 0) {
-                logger.warn("Placeholder Entry does not contain a key: '{}' -> ignored", line);
-                continue;
+            if(line != null && !line.isEmpty()) {
+                // Ignore comments
+                if(line.charAt(0) != '#') {
+                    int index = line.indexOf('=');
+                    if (index <= 0) {
+                        logger.warn("Placeholder Entry does not contain a key: '{}' -> ignored", line);
+                    } else if (index > line.length() - 2) {
+                        logger.warn("Placeholder Entry does not contain a value: '{}' -> ignored", line);
+                    } else {
+                        placeholderEntries.put(line.substring(0, index), line.substring(index + 1));
+                    }
+                }
             }
-            if(index > line.length() - 2) {
-                logger.warn("Placeholder Entry does not contain a value: '{}' -> ignored", line);
-                continue;
-            }
-            placeholderEntries.put(line.substring(0, index), line.substring(index + 1));
         }
 
         substitutor = new StrSubstitutor(

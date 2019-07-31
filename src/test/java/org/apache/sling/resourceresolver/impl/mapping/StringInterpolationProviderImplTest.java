@@ -247,6 +247,36 @@ public class StringInterpolationProviderImplTest {
     }
 
     @Test
+    public void test_comment_in_configuration() {
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
+            new String[] { "one=two", "# Next One", "two=four"}
+        );
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
+
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+        placeholderProvider.activate(stringInterpolationProviderConfiguration);
+
+        String line = "${one}-${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", "two-four", substituted);
+    }
+
+    @Test
+    public void test_empty_line_in_configuration() {
+        when(stringInterpolationProviderConfiguration.placeHolderKeyValuePairs()).thenReturn(
+            new String[] { "one=two", "", "two=four"}
+        );
+        when(stringInterpolationProviderConfiguration.substitutionInVariables()).thenReturn(true);
+
+        StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
+        placeholderProvider.activate(stringInterpolationProviderConfiguration);
+
+        String line = "${one}-${two}";
+        String substituted = placeholderProvider.substitute(line);
+        assertEquals("Wrong resolved line", "two-four", substituted);
+    }
+
+    @Test
     public void test_no_configuration() {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
 
