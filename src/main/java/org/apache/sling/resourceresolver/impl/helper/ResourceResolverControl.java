@@ -45,10 +45,12 @@ import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.PathBuilder;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.resourceresolver.impl.providers.stateful.AuthenticatedResourceProvider;
 import org.apache.sling.resourceresolver.impl.providers.tree.Node;
+import org.apache.sling.resourceresolver.impl.providers.tree.PathTree;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -499,71 +501,66 @@ public class ResourceResolverControl {
         return null;
     }
 
-    private AuthenticatedResourceProvider checkSourceAndDest(final ResourceResolverContext context,
+    private AuthenticatedResourceProvider checkExistence(final ResourceResolverContext context, final String path,
+            final String type) throws PersistenceException {
+        final Node<ResourceProviderHandler> node = getResourceProviderStorage().getTree().getBestMatchingNode(path);
+        if (node == null) {
+            throw new PersistenceException(type.concat(" resource does not exist."), null, path, null);
+        }
+        AuthenticatedResourceProvider provider = null;
+        try {
+            provider = context.getProviderManager().getOrCreateProvider(node.getValue(), this);
+        } catch (LoginException e) {
+            // ignore
+        }
+        if (provider == null) {
+            throw new PersistenceException(type.concat(" resource does not exist."), null, path, null);
+        }
+        final Resource rsrc = provider.getResource(path, null, null);
+        if (rsrc == null) {
+            throw new PersistenceException(type.concat(" resource does not exist."), null, path, null);
+        }
+        return provider;
+    }
+
+    public AuthenticatedResourceProvider checkSourceAndDest(final ResourceResolverContext context,
             final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         // check source
-        final Node<ResourceProviderHandler> srcNode = getResourceProviderStorage().getTree().getBestMatchingNode(srcAbsPath);
-        if ( srcNode == null ) {
-            throw new PersistenceException("Source resource does not exist.", null, srcAbsPath, null);
-        }
-        AuthenticatedResourceProvider srcProvider = null;
-        try {
-            srcProvider = context.getProviderManager().getOrCreateProvider(srcNode.getValue(), this);
-        } catch (LoginException e) {
-            // ignore
-        }
-        if ( srcProvider == null ) {
-            throw new PersistenceException("Source resource does not exist.", null, srcAbsPath, null);
-        }
-        final Resource srcResource = srcProvider.getResource(srcAbsPath, null, null);
-        if ( srcResource == null ) {
-            throw new PersistenceException("Source resource does not exist.", null, srcAbsPath, null);
-        }
-
+        final AuthenticatedResourceProvider srcProvider = checkExistence(context, srcAbsPath, "Source");
         // check destination
-        final Node<ResourceProviderHandler> destNode = getResourceProviderStorage().getTree().getBestMatchingNode(destAbsPath);
-        if ( destNode == null ) {
-            throw new PersistenceException("Destination resource does not exist.", null, destAbsPath, null);
-        }
-        AuthenticatedResourceProvider destProvider = null;
-        try {
-            destProvider = context.getProviderManager().getOrCreateProvider(destNode.getValue(), this);
-        } catch (LoginException e) {
-            // ignore
-        }
-        if ( destProvider == null ) {
-            throw new PersistenceException("Destination resource does not exist.", null, destAbsPath, null);
-        }
-        final Resource destResource = destProvider.getResource(destAbsPath, null, null);
-        if ( destResource == null ) {
-            throw new PersistenceException("Destination resource does not exist.", null, destAbsPath, null);
-        }
+        final AuthenticatedResourceProvider destProvider = checkExistence(context, destAbsPath, "Destination");
 
         // check for sub providers of src and dest
-        if ( srcProvider == destProvider && !collectProviders(context, srcNode) && !collectProviders(context, destNode) ) {
-            return srcProvider;
+        if (srcProvider == destProvider) {
+            final PathTree<ResourceProviderHandler> providerTree = getResourceProviderStorage().getTree();
+            final boolean sourceHasProvider = hasSubProvider(context, providerTree.getNode(srcAbsPath));
+            final boolean destHasProvider = hasSubProvider(context, providerTree.getNode(destAbsPath));
+            if (!(sourceHasProvider || destHasProvider)) {
+                return srcProvider;
+            }
         }
         return null;
     }
 
-    private boolean collectProviders(final ResourceResolverContext context,
-            final Node<ResourceProviderHandler> parent) {
-        boolean hasMoreProviders = false;
-        for (final Entry<String, Node<ResourceProviderHandler>> entry : parent.getChildren().entrySet()) {
-            if ( entry.getValue().getValue() != null ) {
-                try {
-                    context.getProviderManager().getOrCreateProvider(entry.getValue().getValue(), this);
-                    hasMoreProviders = true;
-                } catch ( final LoginException ignore) {
-                    // ignore
+    private boolean hasSubProvider(ResourceResolverContext context, Node<ResourceProviderHandler> node) {
+        if (node != null) {
+            for (final Node<ResourceProviderHandler> childNode : node.getChildren().values()) {
+                final ResourceProviderHandler handler = childNode.getValue();
+                if (handler != null) {
+                    try {
+                        context.getProviderManager().getOrCreateProvider(handler, this);
+                        return true;
+                    } catch (final LoginException ignore) {
+                        // ignore
+                    }
                 }
-            }
-            if ( collectProviders(context, entry.getValue())) {
-                hasMoreProviders = true;
+                if (hasSubProvider(context, childNode)) {
+                    return true;
+                }
             }
         }
 
-        return hasMoreProviders;
+        return false;
     }
 
     private void copy(final ResourceResolverContext context, final Resource src, final String dstPath, final List<Resource> newNodes) throws PersistenceException {

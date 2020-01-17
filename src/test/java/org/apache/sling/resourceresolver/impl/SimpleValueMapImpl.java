@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.sling.api.resource.ValueMap;
+import org.jetbrains.annotations.NotNull;
 
 public class SimpleValueMapImpl implements ValueMap {
 
@@ -81,7 +82,7 @@ public class SimpleValueMapImpl implements ValueMap {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T get(String name, Class<T> type) {
+    public <T> T get(@NotNull String name, @NotNull Class<T> type) {
         Object o = delegate.get(name);
         if ( type.equals(String[].class) && ! ( o instanceof String[])) {
             // According to ValueMap if the value cannot be converted it should return null
@@ -93,8 +94,9 @@ public class SimpleValueMapImpl implements ValueMap {
         return (T) o;
     }
 
+    @NotNull
     @SuppressWarnings("unchecked")
-    public <T> T get(String name, T defaultValue) {
+    public <T> T get(@NotNull String name, @NotNull T defaultValue) {
         if ( delegate.containsKey(name)) {
             return (T) delegate.get(name);
         } 

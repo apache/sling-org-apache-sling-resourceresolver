@@ -12,6 +12,10 @@ Provide-Capability:\
 Require-Capability:\
   osgi.service;filter:="(objectClass=org.osgi.service.event.EventHandler)";effective:=active;resolution:=optional
 
+-plugin:\
+  org.apache.sling.bnd.plugin.headers.parameters.remove.Plugin;\
+    'Require-Capability'='osgi.service;filter:="(objectClass=org.osgi.service.event.EventHandler)";effective:=active;cardinality:=multiple'
+
 -removeheaders:\
   Include-Resource,\
   Private-Package

@@ -340,6 +340,23 @@ public class ResourceResolverControlTest {
     }
 
     /**
+     * Checks that its correctly calculated whether a copy/move can be done with the
+     * same provider
+     *
+     * @throws PersistenceException
+     */
+    @Test
+    public void checkProvidersForCopyMove() throws PersistenceException {
+        // first check same provider at root
+        configureResourceAt(rootProvider, "/a");
+        configureResourceAt(rootProvider, "/b");
+        assertNotNull(crp.checkSourceAndDest(context, "/a", "/b"));
+
+        // second check different providers
+        assertNull(crp.checkSourceAndDest(context, "/some/path/object", "/"));
+    }
+
+    /**
      * Verifies copying resources between the same ResourceProvider
      *
      * @throws PersistenceException persistence exception
