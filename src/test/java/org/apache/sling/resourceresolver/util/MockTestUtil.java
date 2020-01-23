@@ -34,6 +34,7 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.osgi.framework.BundleContext;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
@@ -45,10 +46,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration.DEFAULT_ESCAPE_CHARACTER;
-import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration.DEFAULT_IN_VARIABLE_SUBSTITUTION;
-import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration.DEFAULT_PREFIX;
-import static org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration.DEFAULT_SUFFIX;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -310,10 +307,6 @@ public class MockTestUtil {
 
     public static StringInterpolationProviderConfiguration createStringInterpolationProviderConfiguration() {
         StringInterpolationProviderConfiguration answer = mock(StringInterpolationProviderConfiguration.class);
-        when(answer.substitutionPrefix()).thenReturn(DEFAULT_PREFIX);
-        when(answer.substitutionSuffix()).thenReturn(DEFAULT_SUFFIX);
-        when(answer.substitutionEscapeCharacter()).thenReturn(DEFAULT_ESCAPE_CHARACTER);
-        when(answer.substitutionInVariables()).thenReturn(DEFAULT_IN_VARIABLE_SUBSTITUTION);
         when(answer.placeHolderKeyValuePairs()).thenReturn(new String[] {});
         return answer;
     }
@@ -322,9 +315,10 @@ public class MockTestUtil {
         StringInterpolationProvider provider, StringInterpolationProviderConfiguration configuration, final String[] placeholderValues
     ) {
         when(configuration.placeHolderKeyValuePairs()).thenReturn(placeholderValues);
+        BundleContext context = mock(BundleContext.class);
         callInaccessibleMethod("activate", Void.TYPE, provider,
-            new Class[] {StringInterpolationProviderConfiguration.class},
-            new Object[] {configuration}
+            new Class[] {BundleContext.class, StringInterpolationProviderConfiguration.class},
+            new Object[] {context, configuration}
         );
     }
 

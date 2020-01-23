@@ -32,7 +32,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
     @Test
     public void simple_node_string_interpolation() throws Exception {
         // To avoid side effects the String Interpolation uses its own Resource Resolver
-        Resource sivOne = setupEtcMapResource("${siv.one}", http,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
+        Resource sivOne = setupEtcMapResource("$[siv.one]", http,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node"});
 
         mapEntries.doInit();
@@ -44,7 +44,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
     public void simple_match_string_interpolation() throws Exception {
         // To avoid side effects the String Interpolation uses its own Resource Resolver
         Resource sivOne = setupEtcMapResource("test-node", http,
-            PROP_REG_EXP, "${siv.one}/",
+            PROP_REG_EXP, "$[siv.one]/",
             PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
         );
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match"});
@@ -53,18 +53,4 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-match/", "/content/simple-match/");
         expectedEtcMapping.assertEtcMap("String Interpolation for simple match", mapEntries.getResolveMaps());
     }
-
-//    @Test
-//    public void simple_nested_match_string_interpolation() throws Exception {
-//        // To avoid side effects the String Interpolation uses its own Resource Resolver
-//        Resource sivOne = setupEtcMapResource("test-node", http,
-//            PROP_REG_EXP, "${siv.one}/",
-//            PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
-//        );
-//        setupStringInterpolationProvider(new String[] {"siv.one=test-simple-match"});
-//
-//        mapEntries.doInit();
-//        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-match/", "/content/simple-match/");
-//        expectedEtcMapping.assertEtcMap("String Interpolation for simple match", mapEntries.getResolveMaps());
-//    }
 }

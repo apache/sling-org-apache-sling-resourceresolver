@@ -21,32 +21,11 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
-@ObjectClassDefinition(name = "Apache Sling String Interpolation Provider",
-    description = "Configures the String Interpolation Provider and the location of its key/value pairs")
+@ObjectClassDefinition(
+    name = "Apache Sling String Interpolation Provider",
+    description = "Configures the String Interpolation Provider and the location of its key/value pairs"
+)
 public @interface StringInterpolationProviderConfiguration {
-
-    String DEFAULT_PREFIX = "${";
-    String DEFAULT_SUFFIX = "}";
-    char DEFAULT_ESCAPE_CHARACTER = '$';
-    boolean DEFAULT_IN_VARIABLE_SUBSTITUTION = false;
-
-    // Setup for the String Substitution
-    @AttributeDefinition(
-        name = "Substitution Prefix",
-        description = "The Prefix of the Variable to be replaced (default = '${')")
-    String substitutionPrefix() default DEFAULT_PREFIX;
-    @AttributeDefinition(
-        name = "Substitution Suffix",
-        description = "The Suffix of the Variable to be replaced (deault = '}'")
-    String substitutionSuffix() default DEFAULT_SUFFIX;
-    @AttributeDefinition(
-        name = "Substitution Escape Character",
-        description = "The Escape Character for Prefix or Suffix (default = '$'")
-    char substitutionEscapeCharacter() default DEFAULT_ESCAPE_CHARACTER;
-    @AttributeDefinition(
-        name = "Enable Substitution in Variables",
-        description = "Flag that indicates if substitution is allowed in Variables (default = false")
-    boolean substitutionInVariables() default DEFAULT_IN_VARIABLE_SUBSTITUTION;
 
     @AttributeDefinition(
         name = "Placeholder Values",

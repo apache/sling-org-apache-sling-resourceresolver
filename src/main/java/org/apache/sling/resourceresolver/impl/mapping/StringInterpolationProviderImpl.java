@@ -18,32 +18,34 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.apache.commons.lang3.text.StrSubstitutor;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.metatype.annotations.Designate;
-import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.annotation.Annotation;
 import java.util.HashMap;
 import java.util.Map;
 
 @Designate(ocd = StringInterpolationProviderConfiguration.class)
-@Component(name = "org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider")
+@Component(name = "org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl")
 public class StringInterpolationProviderImpl
     implements StringInterpolationProvider
 {
+    private static final String TYPE_ENV = "env";
+
+    private static final String TYPE_PROP = "prop";
+
+    private static final String DIRECTIVE_DEFAULT = "default";
+
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public static final StringInterpolationProviderConfiguration DEFAULT_CONFIG = new StringInterpolationProviderConfigurationImpl();
-
     private Map<String, String> placeholderEntries = new HashMap<>();
-    private StrSubstitutor substitutor = new StrSubstitutor();
+    private BundleContext context;
 
     // ---------- SCR Integration ---------------------------------------------
 
@@ -51,11 +53,8 @@ public class StringInterpolationProviderImpl
      * Activates this component (called by SCR before)
      */
     @Activate
-    protected void activate(final StringInterpolationProviderConfiguration config) {
-        String prefix = config.substitutionPrefix();
-        String suffix = config.substitutionSuffix();
-        char escapeCharacter = config.substitutionEscapeCharacter();
-        boolean substitudeInVariables = config.substitutionInVariables();
+    protected void activate(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
+        this.context = bundleContext;
 
         String[] valueMap = config.placeHolderKeyValuePairs();
         // Clear out any existing values
@@ -76,68 +75,58 @@ public class StringInterpolationProviderImpl
                 }
             }
         }
-
-        substitutor = new StrSubstitutor(
-            placeholderEntries,
-            prefix,
-            suffix,
-            escapeCharacter
-        );
-        substitutor.setEnableSubstitutionInVariables(substitudeInVariables);
     }
 
     /**
      * Modifies this component (called by SCR to update this component)
      */
     @Modified
-    protected void modified(final StringInterpolationProviderConfiguration config) {
-        this.activate(config);
+    protected void modified(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
+        this.activate(bundleContext, config);
     }
 
     /**
      * Deactivates this component (called by SCR to take out of service)
      */
     @Deactivate
-    protected void deactivate() {
-        activate(DEFAULT_CONFIG);
+    protected void deactivate(final BundleContext bundleContext) {
+        this.context = null;
+        this.placeholderEntries = new HashMap<>();
     }
 
+    /**
+     * This is the method that is used by the Map Entries service to substitute values with
+     * the proper format
+     * @param text Text to be converted
+     * @return Should be either the substituted text or the original given text
+     */
     @Override
     public String substitute(String text) {
-        return substitutor.replace(text);
+        logger.trace("Substitute: '{}'", text);
+        Object result = Interpolator.replace(text, (type, name, dir) -> {
+            String v = null;
+            if (TYPE_ENV.equals(type)) {
+                v = getVariableFromEnvironment(name);
+            } else if (TYPE_PROP.equals(type)) {
+                v = getVariableFromProperty(name);
+            } else {
+                v = getVariableFromBundleConfiguration(name);
+            }
+            if (v == null) {
+                v = dir.get(DIRECTIVE_DEFAULT);
+            }
+            logger.trace("Return substitution value: '{}'", v);
+            return v;
+        });
+        logger.trace("Substitute result: '{}'", result);
+        return result == null ? null : result.toString();
     }
 
-    private static class StringInterpolationProviderConfigurationImpl
-        implements StringInterpolationProviderConfiguration
-    {
-        @Override
-        public String substitutionPrefix() {
-            return DEFAULT_PREFIX;
-        }
-
-        @Override
-        public String substitutionSuffix() {
-            return DEFAULT_SUFFIX;
-        }
-
-        @Override
-        public char substitutionEscapeCharacter() {
-            return DEFAULT_ESCAPE_CHARACTER;
-        }
-
-        @Override
-        public boolean substitutionInVariables() {
-            return DEFAULT_IN_VARIABLE_SUBSTITUTION;
-        }
-
-        @Override
-        public String[] placeHolderKeyValuePairs() {
-            return new String[0];
-        }
-
-        @Override
-        public Class<? extends Annotation> annotationType() {
-            return ObjectClassDefinition.class;
-        }
+    String getVariableFromEnvironment(final String name) {
+        return System.getenv(name);
     }
+
+    String getVariableFromProperty(final String name) { return context == null ? null : context.getProperty(name); }
+
+    String getVariableFromBundleConfiguration(final String name) { return placeholderEntries.get(name); }
 }

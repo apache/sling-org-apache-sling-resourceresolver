@@ -24,6 +24,7 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
@@ -93,7 +94,7 @@ public class EtcMappingResourceResolverTest {
 
     StringInterpolationProviderConfiguration stringInterpolationProviderConfiguration;
 
-    StringInterpolationProviderImpl stringInterpolationProvider = new StringInterpolationProviderImpl();
+    StringInterpolationProvider stringInterpolationProvider = new StringInterpolationProviderImpl();
     MapEntries mapEntries;
 
     File vanityBloomFilterFile;
@@ -284,7 +285,7 @@ public class EtcMappingResourceResolverTest {
 
     @Test
     public void simple_node_string_interpolation() throws Exception {
-        buildResource("${siv.one}", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
+        buildResource("$[siv.one]", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node.80"});
 
         refreshMapEntries("/etc/map", true);
@@ -303,7 +304,7 @@ public class EtcMappingResourceResolverTest {
     @Test
     public void simple_match_string_interpolation() throws Exception {
         buildResource("test-node", http, resourceResolver, resourceProvider,
-            PROP_REG_EXP, "${siv.one}/",
+            PROP_REG_EXP, "$[siv.one]/",
             PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
         );
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match.80"});

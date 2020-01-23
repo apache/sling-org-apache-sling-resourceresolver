@@ -14,11 +14,20 @@ Setting up ETC Mappings (/etc/map) for different instances like dev, stage,
 qa and production was time consuming and error prone due to copy-n-paste
 errors. 
 As a new feature Sling now supports String Interpolation in the /etc/map.
+With this it is possible to add placeholders to **sling:match** entries
+to make it possible to have them work for different environments.
+The values are either provides by System, Bundle Context or String
+Interpolation Configuration values.
+The placeholders have this format: **$['type':'name';default='default value']**.
+The type is can be:
+* **env**: take from the System Properties
+* **prop**: taken from the Bundle Context Properties
+* otherwise: taken from the String Interpolation Configuration
+
 With it it is possible to create a single set of etc-mapping and then adjust
 the actual values of an instance by an OSGi configuration.
-By default a variable name is enclosed in **${}** with a **$** as escape
-character and no in-variable-substitution. All of that is configurable
-together with the actual value map.
+**Note**: the placeholder **must be placed** into a **sling:match** entry
+and cannot be the JCR Node Name as some of the characters are not allowed.
 
 ### Setup
 
@@ -35,10 +44,17 @@ one. The mapping should look like this:
 * etc
     * map
         * http
-            * ${phv.fq.host.name}.8080
+            * my-mapping
+                * sling:match=$\[phv.fq.host.name\].8080
             
 Opening the page **http://localhost:8080/starter/index.html** should
 work just fine.
+This is a mapping from System Properties with a default:
+* etc
+    * map
+        * http
+            * my-mapping
+                * sling:match=$\[env:phv.fq.host.name;default=localhost\].8080
 
 ### Testing
 
