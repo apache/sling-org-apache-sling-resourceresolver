@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Designate(ocd = StringInterpolationProviderConfiguration.class)
-@Component(name = "org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl")
+@Component
 public class StringInterpolationProviderImpl
     implements StringInterpolationProvider
 {
@@ -39,9 +39,10 @@ public class StringInterpolationProviderImpl
 
     private static final String TYPE_PROP = "prop";
 
+    private static final String TYPE_CONFIG = "config";
+
     private static final String DIRECTIVE_DEFAULT = "default";
 
-    /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private Map<String, String> placeholderEntries = new HashMap<>();
@@ -57,8 +58,7 @@ public class StringInterpolationProviderImpl
         this.context = bundleContext;
 
         String[] valueMap = config.placeHolderKeyValuePairs();
-        // Clear out any existing values
-        placeholderEntries.clear();
+        Map<String, String> newMap = new HashMap<>();
         for(String line: valueMap) {
             // Ignore no or empty lines
             if(line != null && !line.isEmpty()) {
@@ -70,11 +70,12 @@ public class StringInterpolationProviderImpl
                     } else if (index > line.length() - 2) {
                         logger.warn("Placeholder Entry does not contain a value: '{}' -> ignored", line);
                     } else {
-                        placeholderEntries.put(line.substring(0, index), line.substring(index + 1));
+                        newMap.put(line.substring(0, index), line.substring(index + 1));
                     }
                 }
             }
         }
+        this.placeholderEntries = newMap;
     }
 
     /**
@@ -109,7 +110,7 @@ public class StringInterpolationProviderImpl
                 v = getVariableFromEnvironment(name);
             } else if (TYPE_PROP.equals(type)) {
                 v = getVariableFromProperty(name);
-            } else {
+            } else if(TYPE_CONFIG.equals(type)){
                 v = getVariableFromBundleConfiguration(name);
             }
             if (v == null) {

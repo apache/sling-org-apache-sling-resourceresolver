@@ -34,6 +34,7 @@ public class Interpolator {
 
     public static final String START = "$[";
 
+    public static final char NAME_SEPARATOR = ':';
     public static final char DIRECTIVES_SEPARATOR = ';';
     public static final char DIRECTIVES_VALUE_SEPARATOR = '=';
 
@@ -100,13 +101,15 @@ public class Interpolator {
                 continue;
             }
 
-            String key = result.substring(start + START.length(), index - 1);
-            int sep = key.indexOf(':');
+            final String key = result.substring(start + START.length(), index - 1);
+            final int sep = key.indexOf(NAME_SEPARATOR);
             if (sep == -1) {
-                LOGGER.trace("No ':' found, set it to: '{}'", key);
+                // invalid key
+                start = index;
+                continue;
             }
 
-            final String type = key.substring(0, sep < 0 ? 0 : sep);
+            final String type = key.substring(0, sep);
             final String postfix = key.substring(sep + 1);
             LOGGER.trace("Type: '{}', postfix: '{}'", type, postfix);
 
@@ -116,7 +119,7 @@ public class Interpolator {
             if (dirPos == -1) {
                 name = postfix;
                 directives = Collections.emptyMap();
-                LOGGER.trace("No Default");
+                LOGGER.trace("No Directives");
             } else {
                 name = postfix.substring(0, dirPos);
                 directives = new HashMap<>();

@@ -49,7 +49,7 @@ public class StringInterpolationProviderImplTest {
     public void test_interpolator_simple() {
         Map<String,String> values = new HashMap<>();
         values.put("one", "two");
-        String substitute = interpolate("$[one]", values);
+        String substitute = interpolate("$[config:one]", values);
         assertEquals("Wrong Replacement", "two", substitute);
     }
 
@@ -57,7 +57,7 @@ public class StringInterpolationProviderImplTest {
     public void test_interpolator_with_type() {
         Map<String,String> values = new HashMap<>();
         values.put("one", "two");
-        String substitute = interpolate("$[value:one]", values);
+        String substitute = interpolate("$[config:one]", values);
         assertEquals("Wrong Replacement (with type)", "two", substitute);
     }
 
@@ -65,15 +65,15 @@ public class StringInterpolationProviderImplTest {
     public void test_interpolator_no_match() {
         Map<String,String> values = new HashMap<>();
         values.put("one", "two");
-        String substitute = interpolate("$[two]", values);
-        assertEquals("Should not been replaced", "$[two]", substitute);
+        String substitute = interpolate("$[config:two]", values);
+        assertEquals("Should not been replaced", "$[config:two]", substitute);
     }
 
     @Test
     public void test_interpolator_no_match_with_default() {
         Map<String,String> values = new HashMap<>();
         values.put("one", "two");
-        String substitute = interpolate("$[two;default=three]", values);
+        String substitute = interpolate("$[config:two;default=three]", values);
         assertEquals("Should have been default for no match", "three", substitute);
     }
 
@@ -81,7 +81,7 @@ public class StringInterpolationProviderImplTest {
     public void test_interpolator_full_with_match() {
         Map<String,String> values = new HashMap<>();
         values.put("one", "two");
-        String substitute = interpolate("$[value:one;default=three]", values);
+        String substitute = interpolate("$[config:one;default=three]", values);
         assertEquals("Wrong Replacement", "two", substitute);
     }
 
@@ -89,7 +89,7 @@ public class StringInterpolationProviderImplTest {
     public void test_interpolator_full_with_default() {
         Map<String,String> values = new HashMap<>();
         values.put("one", "two");
-        String substitute = interpolate("$[value:two;default=three]", values);
+        String substitute = interpolate("$[config:two;default=three]", values);
         assertEquals("Should have been default for no match", "three", substitute);
     }
 
@@ -113,7 +113,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one]";
+        String line = "$[config:one]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "two", substituted);
     }
@@ -126,7 +126,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "Here is $[one], too";
+        String line = "Here is $[config:one], too";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "Here is two, too", substituted);
     }
@@ -139,7 +139,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one] with another $[three]";
+        String line = "$[config:one] with another $[config:three]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "two with another four", substituted);
     }
@@ -153,7 +153,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "Here comes $[one] with another $[three] equals $[five], horray!";
+        String line = "Here comes $[config:one] with another $[config:three] equals $[config:five], horray!";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "Here comes two with another four equals six, horray!", substituted);
     }
@@ -181,9 +181,9 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "Here comes $[unkown] placeholders!";
+        String line = "Here comes $[config:unkown] placeholders!";
         String substituted = placeholderProvider.substitute(line);
-        assertEquals("Wrong resolved line", "Here comes $[unkown] placeholders!", substituted);
+        assertEquals("Wrong resolved line", "Here comes $[config:unkown] placeholders!", substituted);
     }
 
     @Test
@@ -195,7 +195,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[siv.one]/";
+        String line = "$[config:siv.one]/";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "test-value/", substituted);
     }
@@ -209,9 +209,9 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "\\$[one]=$[one]";
+        String line = "\\$[config:one]=$[config:one]";
         String substituted = placeholderProvider.substitute(line);
-        assertEquals("Wrong resolved line", "$[one]=two", substituted);
+        assertEquals("Wrong resolved line", "$[config:one]=two", substituted);
     }
 
     @Test
@@ -223,7 +223,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[$[one]]";
+        String line = "$[config:$[config:one]]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "three", substituted);
     }
@@ -237,7 +237,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one$[one]]";
+        String line = "$[config:one$[config:one]]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "three", substituted);
     }
@@ -251,9 +251,9 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one]$[two]";
+        String line = "$[config:one]$[config:two]";
         String substituted = placeholderProvider.substitute(line);
-        assertEquals("Wrong resolved line", "two$[two]", substituted);
+        assertEquals("Wrong resolved line", "two$[config:two]", substituted);
     }
 
     @Test
@@ -265,9 +265,9 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one]$[two]";
+        String line = "$[config:one]$[config:two]";
         String substituted = placeholderProvider.substitute(line);
-        assertEquals("Wrong resolved line", "two$[two]", substituted);
+        assertEquals("Wrong resolved line", "two$[config:two]", substituted);
     }
 
     @Test
@@ -279,7 +279,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one]-$[two]";
+        String line = "$[config:one]-$[config:two]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "two-four", substituted);
     }
@@ -293,7 +293,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one]-$[two]";
+        String line = "$[config:one]-$[config:two]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "two-four", substituted);
     }
@@ -302,7 +302,7 @@ public class StringInterpolationProviderImplTest {
     public void test_no_configuration() {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
 
-        String line = "$[one]$[two]";
+        String line = "$[config:one]$[config:two]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", line, substituted);
     }
@@ -320,7 +320,7 @@ public class StringInterpolationProviderImplTest {
         );
         placeholderProvider.modified(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one]-$[two]";
+        String line = "$[config:one]-$[config:two]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "two-three", substituted);
     }
@@ -334,7 +334,7 @@ public class StringInterpolationProviderImplTest {
         StringInterpolationProviderImpl placeholderProvider = new StringInterpolationProviderImpl();
         placeholderProvider.activate(bundleContext, stringInterpolationProviderConfiguration);
 
-        String line = "$[one]-$[two]";
+        String line = "$[config:one]-$[config:two]";
         String substituted = placeholderProvider.substitute(line);
         assertEquals("Wrong resolved line", "two-four", substituted);
         placeholderProvider.deactivate(bundleContext);

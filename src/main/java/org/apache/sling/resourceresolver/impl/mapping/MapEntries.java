@@ -142,7 +142,7 @@ public class MapEntries implements
 
     private boolean updateBloomFilterFile = false;
 
-    private StringInterpolationProvider stringInterpolationProvider;
+    private final StringInterpolationProvider stringInterpolationProvider;
 
     @SuppressWarnings({ "unchecked" })
     public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final StringInterpolationProvider stringInterpolationProvider)

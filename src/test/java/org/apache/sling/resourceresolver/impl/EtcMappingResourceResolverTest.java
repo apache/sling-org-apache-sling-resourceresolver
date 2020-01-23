@@ -285,7 +285,7 @@ public class EtcMappingResourceResolverTest {
 
     @Test
     public void simple_node_string_interpolation() throws Exception {
-        buildResource("$[siv.one]", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
+        buildResource("$[config:siv.one]", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node.80"});
 
         refreshMapEntries("/etc/map", true);
@@ -304,7 +304,7 @@ public class EtcMappingResourceResolverTest {
     @Test
     public void simple_match_string_interpolation() throws Exception {
         buildResource("test-node", http, resourceResolver, resourceProvider,
-            PROP_REG_EXP, "$[siv.one]/",
+            PROP_REG_EXP, "$[config:siv.one]/",
             PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
         );
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match.80"});

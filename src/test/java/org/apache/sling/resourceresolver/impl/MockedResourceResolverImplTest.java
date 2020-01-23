@@ -428,17 +428,6 @@ public class MockedResourceResolverImplTest {
         return resource;
     }
 
-
-//    /**
-//     * extract the name from a path.
-//     * @param fullpath
-//     * @return
-//     */
-//    private String getName(String fullpath) {
-//        int n = fullpath.lastIndexOf("/");
-//        return fullpath.substring(n+1);
-//    }
-
     /**
      * Test getting a resolver.
      * @throws LoginException

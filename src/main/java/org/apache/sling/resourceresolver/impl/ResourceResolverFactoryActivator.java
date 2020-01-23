@@ -109,18 +109,9 @@ public class ResourceResolverFactoryActivator {
     @Reference
     EventAdmin eventAdmin;
 
-    /** Event admin. */
+    /** String Interpolation Provider. */
     @Reference
     StringInterpolationProvider stringInterpolationProvider;
-//    public void bindStringInterpolationProviderImpl(StringInterpolationProviderImpl stringInterpolationProviderImpl) {
-//        logger.info("Bind StringInterpolationProviderImpl: '{}'", stringInterpolationProviderImpl);
-//        this.stringInterpolationProviderImpl = stringInterpolationProviderImpl;
-//    }
-//
-//    public void unbindStringInterpolationProviderImpl(StringInterpolationProviderImpl stringInterpolationProviderImpl) {
-//        this.stringInterpolationProviderImpl = null;
-//    }
-
 
     /** Service User Mapper */
     @Reference
