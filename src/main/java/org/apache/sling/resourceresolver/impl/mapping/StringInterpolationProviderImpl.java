@@ -60,18 +60,15 @@ public class StringInterpolationProviderImpl
         String[] valueMap = config.placeHolderKeyValuePairs();
         Map<String, String> newMap = new HashMap<>();
         for(String line: valueMap) {
-            // Ignore no or empty lines
-            if(line != null && !line.isEmpty()) {
-                // Ignore comments
-                if(line.charAt(0) != '#') {
-                    int index = line.indexOf('=');
-                    if (index <= 0) {
-                        logger.warn("Placeholder Entry does not contain a key: '{}' -> ignored", line);
-                    } else if (index > line.length() - 2) {
-                        logger.warn("Placeholder Entry does not contain a value: '{}' -> ignored", line);
-                    } else {
-                        newMap.put(line.substring(0, index), line.substring(index + 1));
-                    }
+            // Ignore no lines, empty lines and comments
+            if(line != null && !line.isEmpty() && line.charAt(0) != '#') {
+                int index = line.indexOf('=');
+                if (index <= 0) {
+                    logger.warn("Placeholder Entry does not contain a key: '{}' -> ignored", line);
+                } else if (index > line.length() - 2) {
+                    logger.warn("Placeholder Entry does not contain a value: '{}' -> ignored", line);
+                } else {
+                    newMap.put(line.substring(0, index), line.substring(index + 1));
                 }
             }
         }
