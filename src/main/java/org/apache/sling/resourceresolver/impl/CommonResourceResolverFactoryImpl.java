@@ -322,7 +322,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         }
         // set up the map entries from configuration
         try {
-            mapEntries = new MapEntries(this, bundleContext, this.activator.getEventAdmin());
+            mapEntries = new MapEntries(this, bundleContext, this.activator.getEventAdmin(), this.activator.getStringInterpolationProvider());
         } catch (final Exception e) {
             logger.error("activate: Cannot access repository, failed setting up Mapping Support", e);
         }

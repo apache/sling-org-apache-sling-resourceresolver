@@ -17,6 +17,7 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
+import static org.apache.sling.resourceresolver.util.MockTestUtil.getResourceName;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -399,7 +400,7 @@ public class MockedResourceResolverImplTest {
     @SuppressWarnings("unchecked")
     private Resource buildResource(String fullpath, Iterable<Resource> children, ResourceResolver resourceResolver, ResourceProvider<?> provider, String ... properties) {
         Resource resource = Mockito.mock(Resource.class);
-        Mockito.when(resource.getName()).thenReturn(getName(fullpath));
+        Mockito.when(resource.getName()).thenReturn(getResourceName(fullpath));
         Mockito.when(resource.getPath()).thenReturn(fullpath);
         ResourceMetadata resourceMetadata = new ResourceMetadata();
         Mockito.when(resource.getResourceMetadata()).thenReturn(resourceMetadata);
@@ -425,17 +426,6 @@ public class MockedResourceResolverImplTest {
         }
 
         return resource;
-    }
-
-
-    /**
-     * extract the name from a path.
-     * @param fullpath
-     * @return
-     */
-    private String getName(String fullpath) {
-        int n = fullpath.lastIndexOf("/");
-        return fullpath.substring(n+1);
     }
 
     /**

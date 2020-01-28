@@ -23,6 +23,9 @@ import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
@@ -52,7 +55,9 @@ import static org.apache.sling.resourceresolver.util.MockTestUtil.callInaccessib
 import static org.apache.sling.resourceresolver.util.MockTestUtil.checkInternalResource;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.checkRedirectResource;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createRequestFromUrl;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -87,6 +92,9 @@ public class EtcMappingResourceResolverTest {
     @Mock
     ResourceProvider<?> resourceProvider;
 
+    StringInterpolationProviderConfiguration stringInterpolationProviderConfiguration;
+
+    StringInterpolationProvider stringInterpolationProvider = new StringInterpolationProviderImpl();
     MapEntries mapEntries;
 
     File vanityBloomFilterFile;
@@ -115,6 +123,8 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("resourceProviderTracker", activator, resourceProviderTracker);
         setInaccessibleField("resourceAccessSecurityTracker", activator, new ResourceAccessSecurityTracker());
         setInaccessibleField("bundleContext", activator, bundleContext);
+        stringInterpolationProviderConfiguration = createStringInterpolationProviderConfiguration();
+        setInaccessibleField("stringInterpolationProvider", activator, stringInterpolationProvider);
         setInaccessibleField("mapRoot", activator, "/etc/map");
         setInaccessibleField("mapRootPrefix", activator, "/etc/map");
         setInaccessibleField("observationPaths", activator, new Path[] {new Path("/")});
@@ -273,10 +283,46 @@ public class EtcMappingResourceResolverTest {
         checkInternalResource(resolvedResource, "/anecdotes/stories");
     }
 
+    @Test
+    public void simple_node_string_interpolation() throws Exception {
+        buildResource("$[config:siv.one]", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node.80"});
+
+        refreshMapEntries("/etc/map", true);
+
+        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-node.80/", "/content/simple-node/");
+        expectedEtcMapping.assertEtcMap("String Interpolation for simple match", commonFactory.getMapEntries().getResolveMaps());
+
+        Resource content = buildResource("/content", null, resourceResolver, resourceProvider);
+        Resource simpleNode = buildResource("/content/simple-node", content, resourceResolver, resourceProvider);
+
+        HttpServletRequest request = createRequestFromUrl("http://test-simple-node:80/");
+        Resource resolvedResource = resourceResolver.resolve(request, "/");
+        checkRedirectResource(resolvedResource, "/content/simple-node/", 302);
+    }
+
+    @Test
+    public void simple_match_string_interpolation() throws Exception {
+        buildResource("test-node", http, resourceResolver, resourceProvider,
+            PROP_REG_EXP, "$[config:siv.one]/",
+            PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
+        );
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match.80"});
+
+        refreshMapEntries("/etc/map", true);
+
+        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-match.80/", "/content/simple-match/");
+        expectedEtcMapping.assertEtcMap("String Interpolation for simple match", commonFactory.getMapEntries().getResolveMaps());
+
+        HttpServletRequest request = createRequestFromUrl("http://test-simple-match:80/");
+        Resource resolvedResource = resourceResolver.resolve(request, "/");
+        checkRedirectResource(resolvedResource, "/content/simple-match/", 302);
+    }
+
     /**
      * ATTENTION: this tests showcases an erroneous condition of an endless circular mapping in the /etc/map. When
      * this test passes this condition is present. After a fix this test must be adjusted.
-     * 
+     *
      * This confirms an issue with the Etc Mapping where a mapping from a node to a child node (here / to /content)
      * ends up in a endless circular mapping.
      * The only way to recover from this is to go to the OSGi console and change the /etc/map path in the Resource

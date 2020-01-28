@@ -26,12 +26,15 @@ import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.SimpleValueMapImpl;
 import org.apache.sling.resourceresolver.impl.helper.RedirectResource;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.osgi.framework.BundleContext;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
@@ -300,6 +303,23 @@ public class MockTestUtil {
         } catch (NoSuchFieldException e) {
             throw new UnsupportedOperationException("Failed to find field: " + fieldName, e);
         }
+    }
+
+    public static StringInterpolationProviderConfiguration createStringInterpolationProviderConfiguration() {
+        StringInterpolationProviderConfiguration answer = mock(StringInterpolationProviderConfiguration.class);
+        when(answer.placeHolderKeyValuePairs()).thenReturn(new String[] {});
+        return answer;
+    }
+
+    public static void setupStringInterpolationProvider(
+        StringInterpolationProvider provider, StringInterpolationProviderConfiguration configuration, final String[] placeholderValues
+    ) {
+        when(configuration.placeHolderKeyValuePairs()).thenReturn(placeholderValues);
+        BundleContext context = mock(BundleContext.class);
+        callInaccessibleMethod("activate", Void.TYPE, provider,
+            new Class[] {BundleContext.class, StringInterpolationProviderConfiguration.class},
+            new Object[] {context, configuration}
+        );
     }
 
     public static class FieldWrapper<T> {

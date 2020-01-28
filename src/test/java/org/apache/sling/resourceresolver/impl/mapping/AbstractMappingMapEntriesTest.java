@@ -46,6 +46,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
+import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMap;
@@ -78,6 +80,9 @@ public abstract class AbstractMappingMapEntriesTest {
     @Mock
     ResourceResolver resourceResolver;
 
+    StringInterpolationProviderConfiguration stringInterpolationProviderConfiguration;
+
+    StringInterpolationProviderImpl stringInterpolationProvider = new StringInterpolationProviderImpl();
     MapEntries mapEntries;
 
     File vanityBloomFilterFile;
@@ -111,7 +116,9 @@ public abstract class AbstractMappingMapEntriesTest {
         map = setupEtcMapResource("/etc", "map");
         http = setupEtcMapResource("http", map);
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        stringInterpolationProviderConfiguration = createStringInterpolationProviderConfiguration();
+        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {});
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);

@@ -107,6 +107,8 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
+    static final String ALIAS_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
+
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /** default log */
@@ -140,8 +142,10 @@ public class MapEntries implements
 
     private boolean updateBloomFilterFile = false;
 
+    private final StringInterpolationProvider stringInterpolationProvider;
+
     @SuppressWarnings({ "unchecked" })
-    public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin)
+    public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final StringInterpolationProvider stringInterpolationProvider)
         throws LoginException, IOException {
 
     	this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
@@ -152,6 +156,7 @@ public class MapEntries implements
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
+        this.stringInterpolationProvider = stringInterpolationProvider;
 
         doInit();
 
@@ -343,7 +348,6 @@ public class MapEntries implements
      * Remove all aliases for the content path
      * @param contentPath The content path
      * @param path Optional sub path of the vanity path
-     * @param refreshed Flag if session needs refresh
      * @return {@code true} if a change happened
      */
     private boolean removeAlias(final String contentPath, final String path, final AtomicBoolean resolverRefreshed) {
@@ -701,7 +705,7 @@ public class MapEntries implements
 
     /**
      * Handles the change to any of the node properties relevant for vanity URL
-     * mappings. The {@link #MapEntries(ResourceResolverFactoryImpl, BundleContext, EventAdmin)}
+     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider)}
      * constructor makes sure the event listener is registered to only get
      * appropriate events.
      */
@@ -955,6 +959,8 @@ public class MapEntries implements
                 name = child.getName().concat("/");
                 trailingSlash = true;
             }
+            // Check for placeholders and replace if needed
+            name = stringInterpolationProvider.substitute(name);
 
             final String childPath = parentPath.concat(name);
 
@@ -1026,16 +1032,16 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        final String queryString = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
-        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-        while (i.hasNext()) {
-            final Resource resource = i.next();
-            loadAlias(resource, map);
-        }
+        final String queryString = ALIAS_QUERY_DEFAULT;
+		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+		        while (i.hasNext()) {
+		            final Resource resource = i.next();
+		            loadAlias(resource, map);
+		        }
         return map;
     }
 
-    /**
+	/**
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {

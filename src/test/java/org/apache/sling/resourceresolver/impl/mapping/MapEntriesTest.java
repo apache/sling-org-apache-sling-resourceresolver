@@ -125,7 +125,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.<Resource> emptySet().iterator());
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);
 
@@ -815,7 +815,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -840,7 +840,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -865,7 +865,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
