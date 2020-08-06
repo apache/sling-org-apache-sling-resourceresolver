@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
@@ -128,8 +127,8 @@ public class ResourceMapperImpl implements ResourceMapper {
         if (fragmentQueryMark >= 0) {
             fragmentQuery = resourcePath.substring(fragmentQueryMark);
             mappedPath = resourcePath.substring(0, fragmentQueryMark);
-            logger.debug("map: Splitting resource path '{}' into '{}' and '{}'", new Object[] { resourcePath, mappedPath,
-                    fragmentQuery });
+            logger.debug("map: Splitting resource path '{}' into '{}' and '{}'", resourcePath, mappedPath,
+                    fragmentQuery);
         } else {
             fragmentQuery = null;
             mappedPath = resourcePath;
@@ -161,17 +160,12 @@ public class ResourceMapperImpl implements ResourceMapper {
        
         // 7. set back the fragment query if needed
         if ( fragmentQuery != null ) {
-            mappings.replaceAll(new UnaryOperator<String>() {
-                @Override
-                public String apply(String mappedPath) {
-                        return mappedPath.concat(fragmentQuery);
-                }
-            });
+            mappings.replaceAll(path -> path.concat(fragmentQuery));
         }
 
-        mappings.forEach( path -> {
-            logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath);    
-        });
+        mappings.forEach( path ->
+            logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath)    
+        );
         
         Collections.reverse(mappings);
         
@@ -180,7 +174,7 @@ public class ResourceMapperImpl implements ResourceMapper {
 
     private String loadAliasIfApplicable(final Resource nonDecoratedResource) {
         //Invoke the decorator for the resolved resource
-        Resource res = resourceDecorator.decorate(nonDecoratedResource);
+        Resource res = resourceDecorator.decorate(nonDecoratedResource); 
 
         // keep, what we might have cut off in internal resolution
         final String resolutionPathInfo = res.getResourceMetadata().getResolutionPathInfo();
@@ -190,36 +184,21 @@ public class ResourceMapperImpl implements ResourceMapper {
         // find aliases for segments. we can't walk the parent chain
         // since the request session might not have permissions to
         // read all parents SLING-2093
-        final LinkedList<String> names = new LinkedList<>();
+        PathBuilder pathBuilder = new PathBuilder();
 
+        // make sure to append resolutionPathInfo, if present
+        pathBuilder.setResolutionPathInfo(resolutionPathInfo);
+        
         Resource current = res;
         String path = res.getPath();
         while (path != null) {
             String alias = null;
+            // read alias only if we can read the resources and it's not a jcr:content leaf
             if (current != null && !path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
-                if (optimizedAliasResolutionEnabled) {
-                    logger.debug("map: Optimize Alias Resolution is Enabled");
-                    String parentPath = ResourceUtil.getParent(path);
-                    if (parentPath != null) {
-                        final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
-                        if (aliases!= null && aliases.containsValue(current.getName())) {
-                            for (String key:aliases.keySet()) {
-                                if (current.getName().equals(aliases.get(key))) {
-                                    alias = key;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    logger.debug("map: Optimize Alias Resolution is Disabled");
-                    alias = ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS);
-                }
+                alias = readAlias(path, current);
             }
-            if (alias == null || alias.length() == 0) {
-                alias = ResourceUtil.getName(path);
-            }
-            names.add(alias);
+            // build the path from the name segments or aliases
+            pathBuilder.insertSegment(alias, ResourceUtil.getName(path));
             path = ResourceUtil.getParent(path);
             if ("/".equals(path)) {
                 path = null;
@@ -227,31 +206,40 @@ public class ResourceMapperImpl implements ResourceMapper {
                 current = res.getResourceResolver().resolve(path);
             }
         }
-
-        // build path from segment names
-        final StringBuilder buf = new StringBuilder();
-
-        // construct the path from the segments (or root if none)
-        if (names.isEmpty()) {
-            buf.append('/');
-        } else {
-            while (!names.isEmpty()) {
-                buf.append('/');
-                buf.append(names.removeLast());
-            }
-        }
-
-        // reappend the resolutionPathInfo
-        if (resolutionPathInfo != null) {
-            buf.append(resolutionPathInfo);
-        }
-
+        
         // and then we have the mapped path to work on
-        String mappedPath = buf.toString();
+        String mappedPath = pathBuilder.toPath();
 
         logger.debug("map: Alias mapping resolves to path {}", mappedPath);
         
         return mappedPath;
+    }
+    
+    private String readAlias(String path, Resource current) {
+        if (optimizedAliasResolutionEnabled) {
+            logger.debug("map: Optimize Alias Resolution is Enabled");
+            String parentPath = ResourceUtil.getParent(path);
+            
+            if ( parentPath == null )
+                return null;
+            
+            final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
+            
+            if ( aliases == null ) 
+                return null;
+            
+            if ( aliases.containsValue(current.getName()) ) {
+                for ( Map.Entry<String,String> entry : aliases.entrySet() ) {
+                    if (current.getName().equals(entry.getValue())) {
+                        return entry.getKey();
+                    }
+                }
+            }
+            return null;
+        } else {
+            logger.debug("map: Optimize Alias Resolution is Disabled");
+            return ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS);
+        }        
     }
 
     private void populateMappingsFromMapEntries(List<String> mappings, String mappedPath,
@@ -300,14 +288,6 @@ public class ResourceMapperImpl implements ResourceMapper {
         }
     }
     
-    private String mangleNamespaces(String absPath) {
-        if ( absPath != null && namespaceMangler != null && namespaceMangler instanceof JcrNamespaceMangler ) {
-            absPath = ((JcrNamespaceMangler) namespaceMangler).mangleNamespaces(resolver, logger, absPath);
-        }
-
-        return absPath;
-    }
-    
     private class RequestContext {
         
         private final String uri;
@@ -317,8 +297,8 @@ public class ResourceMapperImpl implements ResourceMapper {
             if ( request != null ) {
                 this.uri = MapEntry.getURI(request.getScheme(), request.getServerName(), request.getServerPort(), "/");
                 this.schemeWithPrefix = request.getScheme().concat("://");
-                logger.debug("map: Mapping path {} for {} (at least with scheme prefix {})", new Object[] { resourcePath,
-                        uri, schemeWithPrefix });
+                logger.debug("map: Mapping path {} for {} (at least with scheme prefix {})",  resourcePath,
+                        uri, schemeWithPrefix );
             } else {
                 this.uri = null;
                 this.schemeWithPrefix = null;
@@ -377,6 +357,14 @@ public class ResourceMapperImpl implements ResourceMapper {
             }
 
             return mappedPath;
+        }
+
+        private String mangleNamespaces(String absPath) {
+            if ( absPath != null && namespaceMangler != null && namespaceMangler instanceof JcrNamespaceMangler ) {
+                absPath = ((JcrNamespaceMangler) namespaceMangler).mangleNamespaces(resolver, logger, absPath);
+            }
+
+            return absPath;
         }
     }
 }
