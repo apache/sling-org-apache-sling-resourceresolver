@@ -49,6 +49,7 @@ import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -104,6 +105,7 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/"); // root
         resourceProvider.putResource("/here"); // regular page
         resourceProvider.putResource("/there", PROP_ALIAS, "alias-value"); // with alias
+        resourceProvider.putResource("/there-multiple", PROP_ALIAS, "alias-value-3", "alias-value-4"); // with multivalued alias
         resourceProvider.putResource("/somewhere", PROP_ALIAS, "alias-value-2"); // with alias and also /etc/map
         resourceProvider.putResource("/there/that"); // parent has alias
         resourceProvider.putResource("/content");
@@ -191,6 +193,23 @@ public class ResourceMapperImplTest {
             .allMappings("/alias-value", "/there")
             .allMappingsWithRequest("/app/alias-value", "/app/there")
             .verify(resolver, req);
+    }
+
+    /**
+     * Validates that mappings for a existing resource with multiple alias contain the alias and the resource's path
+     *
+     * @throws LoginException
+     */
+    @Test
+    @Ignore("SLING-9620")
+    public void mapResourceWithMultivaluedAlias() {
+
+        ExpectedMappings.existingResource("/there-multiple")
+                .singleMapping("/alias-value-3")
+                .singleMappingWithRequest("/app/alias-value-3")
+                .allMappings("/alias-value-3", "/alias-value-4", "/there-multiple")
+                .allMappingsWithRequest("/app/alias-value-3", "/app/alias-value-4", "/app/there-multiple")
+                .verify(resolver, req);
     }
 
     /**

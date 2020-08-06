@@ -70,6 +70,10 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
         putResource(path, Collections.singletonMap(key, value));
     }
 
+    public void putResource(String path, String key, Object... values) {
+        putResource(path, Collections.singletonMap(key, values));
+    }
+
     public void putResource(String path, String key, Object value, String key2, Object value2) {
         Map<String, Object> props = new HashMap<>();
         props.put(key, value);
