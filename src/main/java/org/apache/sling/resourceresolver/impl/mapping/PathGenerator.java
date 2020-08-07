@@ -40,27 +40,23 @@ public class PathGenerator {
     
     private static List<String> cartesianJoin(List<List<String>> segments, String toAppend) {
         
-        return cartesianJoin0(0, segments).stream()
-                .map ( sb -> {
-                    if ( toAppend != null )
-                        sb.append(toAppend);
-                    
-                    return sb;
-                })
+        return cartesianJoin0(0, segments, toAppend).stream()
                 .map( StringBuilder::toString )
                 .collect( Collectors.toList() );
     }
     
-    private static List<StringBuilder> cartesianJoin0(int index, List<List<String>> segments) {
+    private static List<StringBuilder> cartesianJoin0(int index, List<List<String>> segments, String toAppend) {
         List<StringBuilder> out = new ArrayList<>();
         if ( index == segments.size() ) {
             out.add(new StringBuilder("/"));
         } else {
             for ( String segment : segments.get(index) ) {
-                for (StringBuilder sb : cartesianJoin0(index + 1, segments) ) {
+                for (StringBuilder sb : cartesianJoin0(index + 1, segments, toAppend) ) {
                     sb.append(segment);
                     if ( index != 0 )
                         sb.append('/');
+                    else if ( toAppend != null )
+                        sb.append(toAppend);
                     out.add(sb);
                 }
             }
