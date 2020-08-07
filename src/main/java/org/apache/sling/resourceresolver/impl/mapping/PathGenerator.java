@@ -27,10 +27,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Utility to construct paths from segments, starting with the leaf-most ones
+ * Utility to generate all possible paths from segments (names)
+ * 
+ * <p>This class expects to be supplied segments starting with the top-most ones (leaves)
+ * up until, but excluding, the root.</p>
+ * 
+ * <p>It generates all possible path combinations using a cartesian product that accummulates
+ * using a {@link StringBuilder} instead of a set, to prevent intermediate object creation.</p>
  *
  */
-public class PathBuilder {
+public class PathGenerator {
     
     private static List<String> cartesianJoin(List<List<String>> segments, String toAppend) {
         
@@ -69,7 +75,7 @@ public class PathBuilder {
     /**
      * Inserts a new segment as the parent of the existing ones
      * 
-     * @param alias the alias, ignored if null or empty
+     * @param alias the list of aliases
      * @param name the name
      */
     public void insertSegment(@NotNull List<String> alias, @NotNull String name) {
@@ -83,20 +89,20 @@ public class PathBuilder {
     }
     
     /**
-     * Sets a new value to append, typically the resolution info
+     * Sets the resolution info, to be appended at the end
      * 
-     * @param toAppend the parameters to append, ignored if null or empty
+     * @param resolutionInfo the resolution info to append, ignored if null or empty
      */
-    public void setResolutionPathInfo(@Nullable String toAppend) {
-        this.toAppend = toAppend;
+    public void setResolutionPathInfo(@Nullable String resolutionInfo) {
+        this.toAppend = resolutionInfo;
     }
     
     /**
-     * Constructs a new path from the provided information
+     * Generates all possible paths
      * 
-     * @return a path in string form
+     * @return a list of paths containing at least one entry
      */
-    public List<String> toPaths() {
+    public List<String> generatePaths() {
         return cartesianJoin(segments, toAppend);
     }
 }
