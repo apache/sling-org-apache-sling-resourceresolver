@@ -18,9 +18,11 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
 import java.util.List;
 
 import org.hamcrest.Matchers;
@@ -30,51 +32,75 @@ public class PathBuilderTest {
 
     @Test
     public void buildRootPath() {
-        assertThat(new PathBuilder().toPath(), Matchers.equalTo("/"));
+        
+        List<String> paths = new PathBuilder().toPaths();
+        
+        assertThat(paths, Matchers.hasSize(1));
+        assertThat(paths, Matchers.hasItem("/"));
     }
 
     @Test
     public void buildSubPathWithMissingAliases() {
+        
         PathBuilder builder = new PathBuilder();
-        builder.insertSegment(null, "bar");
-        builder.insertSegment("", "foo");
-        assertThat(builder.toPath(), Matchers.equalTo("/foo/bar"));
+        builder.insertSegment(singletonList(null), "bar");
+        builder.insertSegment(singletonList(""), "foo");
+        List<String> paths = builder.toPaths();
+        
+        assertThat(paths, Matchers.hasSize(1));
+        assertThat(paths, Matchers.hasItem("/foo/bar"));
     }
 
     @Test
     public void buildSubPathWithMixedAliases() {
+        
         PathBuilder builder = new PathBuilder();
-        builder.insertSegment(null, "bar");
-        builder.insertSegment("super", "foo");
-        assertThat(builder.toPath(), Matchers.equalTo("/super/bar"));
+        builder.insertSegment(emptyList(), "bar");
+        builder.insertSegment(singletonList("super"), "foo");
+        List<String> paths = builder.toPaths();
+        
+        assertThat(paths, Matchers.hasSize(1));
+        assertThat(paths, Matchers.hasItem("/super/bar"));
     }
     
     @Test
     public void buildSubPathWithResolutionInfo() {
+        
         PathBuilder builder = new PathBuilder();
-        builder.insertSegment(null, "bar");
-        builder.insertSegment(null, "foo");
+        builder.insertSegment(emptyList(), "bar");
+        builder.insertSegment(emptyList(), "foo");
         builder.setResolutionPathInfo("/baz");
-        assertThat(builder.toPath(), Matchers.equalTo("/foo/bar/baz"));
+        
+        List<String> paths = builder.toPaths();
+        
+        assertThat(paths, Matchers.hasSize(1));
+        assertThat(paths, Matchers.hasItem("/foo/bar/baz"));        
     }
     
     @Test
-    public void cartesianJoin_simple() {
-        List<String> paths = PathBuilder.cartesianJoin(Arrays.asList( Arrays.asList("1"), Arrays.asList("2") ));
-        assertThat(paths, Matchers.hasSize(1));
-        assertThat(paths, Matchers.hasItem("/1/2"));
+    public void buildSubPathWithMultipleAliases() {
+        
+        PathBuilder builder = new PathBuilder();
+        builder.insertSegment(emptyList(), "bar");
+        builder.insertSegment(asList("alias1", "alias2"), "foo");
+        
+        List<String> paths = builder.toPaths();
+        
+        assertThat(paths, Matchers.hasSize(2));
+        assertThat(paths, Matchers.hasItems("/alias1/bar", "/alias2/bar"));
     }
 
     @Test
-    public void cartesianJoin_multiple() {
-        List<String> paths = PathBuilder.cartesianJoin(Arrays.asList( Arrays.asList("1a", "1b"), Arrays.asList("2") ));
-        assertThat(paths, Matchers.hasSize(2));
-        assertThat(paths, Matchers.hasItems("/1a/2", "/1b/2"));
-    }
-    
-    @Test
-    public void cartesianJoin_complex() {
-        List<String> paths = PathBuilder.cartesianJoin(Arrays.asList( Arrays.asList("1a", "1b"), Arrays.asList("2a", "2b"), Arrays.asList("3"), Arrays.asList("4a", "4b", "4c") ));
+    public void buildSubPathWithComplexAliasesSetup() {
+        
+        PathBuilder builder = new PathBuilder();
+        builder.insertSegment(asList("4a", "4b", "4c"), "4");
+        builder.insertSegment(emptyList(), "3");
+        builder.insertSegment(asList("2a", "2b"), "2");
+        builder.insertSegment(asList("1a", "1b"), "1");
+        
+        List<String> paths = builder.toPaths();
+        
         assertThat(paths, Matchers.hasSize(12));
         assertThat(paths, Matchers.hasItems(
                 "/1a/2a/3/4a",

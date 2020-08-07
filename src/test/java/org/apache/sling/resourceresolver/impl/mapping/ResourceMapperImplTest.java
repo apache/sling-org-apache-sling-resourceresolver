@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -205,8 +206,9 @@ public class ResourceMapperImplTest {
      * @throws LoginException
      */
     @Test
-    @Ignore("SLING-9620")
     public void mapResourceWithMultivaluedAlias() {
+        
+        assumeFalse(optimiseAliasResolution);
 
         ExpectedMappings.existingResource("/there-multiple")
                 .singleMapping("/alias-value-3")
