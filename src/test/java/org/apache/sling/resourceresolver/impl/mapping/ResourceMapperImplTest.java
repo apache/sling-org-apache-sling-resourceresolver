@@ -49,6 +49,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Validates that the {@link ResourceMapperImpl} correctly queries all sources of mappings
@@ -68,13 +71,25 @@ import org.junit.Test;
  * module and the Sling ITs cover that.</p>
  *
  */
+@RunWith(Parameterized.class)
 public class ResourceMapperImplTest {
     
+    @Parameters(name="optimized alias resolution → {0}")
+    public static Object[] data() {
+        return new Object[] { false, true};
+    }
+    
+
     @Rule
     public final OsgiContext ctx = new OsgiContext();
 
+    private final boolean optimiseAliasResolution;
     private HttpServletRequest req;
     private ResourceResolver resolver;
+
+    public ResourceMapperImplTest(boolean optimiseAliasResolution) {
+        this.optimiseAliasResolution = optimiseAliasResolution;
+    }
 
     @Before
     public void prepare() throws LoginException {
@@ -102,7 +117,7 @@ public class ResourceMapperImplTest {
         ctx.registerService(ResourceProvider.class, resourceProvider, PROPERTY_ROOT, "/", PROPERTY_NAME, "JCR");
         // disable optimised alias resolution as it relies on JCR queries
         ctx.registerInjectActivateService(new ResourceResolverFactoryActivator(),
-                "resource.resolver.optimize.alias.resolution", false);
+                "resource.resolver.optimize.alias.resolution", optimiseAliasResolution);
         
         ResourceResolverFactory factory = ctx.getService(ResourceResolverFactory.class);
         

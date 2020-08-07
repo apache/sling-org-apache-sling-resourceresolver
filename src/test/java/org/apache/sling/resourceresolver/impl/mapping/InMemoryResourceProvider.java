@@ -22,17 +22,22 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.spi.resource.provider.QueryLanguageProvider;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
 import org.osgi.service.component.annotations.Component;
 
 @Component(service = ResourceProvider.class)
-public class InMemoryResourceProvider extends ResourceProvider<Void> {
+public class InMemoryResourceProvider extends ResourceProvider<Void>{
     
     private final Map<String, Map<String, Object>> resources = new HashMap<>();
 
@@ -76,4 +81,42 @@ public class InMemoryResourceProvider extends ResourceProvider<Void> {
         resources.put(path, props);
     }
     
+    @Override
+    public QueryLanguageProvider<Void> getQueryLanguageProvider() {
+        return new QueryLanguageProvider<Void>() {
+
+            @Override
+            public String[] getSupportedLanguages(@NotNull ResolveContext<Void> ctx) {
+                return new String[] { "sql" };
+            }
+
+            @Override
+            public Iterator<Resource> findResources(@NotNull ResolveContext<Void> ctx, String query, String language) {
+                
+                if  ( "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL".equals(query) ) {
+                    return resourcesWithProperty(ctx, "sling:alias")
+                        .iterator();
+                }
+                
+                if ( "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath IS NOT NULL".equals(query) ) {
+                    return resourcesWithProperty(ctx, "sling:vanityPath")
+                        .iterator();                  
+                }
+
+                throw new UnsupportedOperationException("Unsupported query: '" + query + "'");
+            }
+
+            private List<Resource> resourcesWithProperty(ResolveContext<Void> ctx, String propertyName) {
+                return resources.entrySet().stream()
+                    .filter( e -> e.getValue().containsKey(propertyName) )
+                    .map( e -> getResource(ctx, e.getKey(), null, null))
+                    .collect(Collectors.toList());
+            }
+
+            @Override
+            public Iterator<ValueMap> queryResources(@NotNull ResolveContext<Void> ctx, String query, String language) {
+                throw new UnsupportedOperationException("stub");
+            }
+        };
+    }
 }
