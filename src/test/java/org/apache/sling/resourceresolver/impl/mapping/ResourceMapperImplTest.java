@@ -29,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -45,6 +46,7 @@ import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -104,6 +106,9 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/there", PROP_ALIAS, "alias-value"); // with alias
         resourceProvider.putResource("/somewhere", PROP_ALIAS, "alias-value-2"); // with alias and also /etc/map
         resourceProvider.putResource("/there/that"); // parent has alias
+        resourceProvider.putResource("/content");
+        resourceProvider.putResource("/content/virtual");
+        resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
         
         // build /etc/map structure
         resourceProvider.putResource("/etc");
@@ -112,6 +117,8 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/etc/map/http/localhost_any",
                 "sling:internalRedirect", "/somewhere",
                 "sling:match", "localhost.8080/everywhere");
+        resourceProvider.putResource("/etc/map/http/virtual.host.com.80",
+                "sling:internalRedirect", "/content/virtual");
         
         // we fake the fact that we are the JCR resource provider since it's the required one
         ctx.registerService(ResourceProvider.class, resourceProvider, PROPERTY_ROOT, "/", PROPERTY_NAME, "JCR");
@@ -219,6 +226,24 @@ public class ResourceMapperImplTest {
             .verify(resolver, req);       
     }
 
+    @Test
+    public void priorityForVHostMappings() {
+        // override the default request
+        req = mock(HttpServletRequest.class);
+        when(req.getScheme()).thenReturn("http");
+        when(req.getServerName()).thenReturn("virtual.host.com");
+        when(req.getServerPort()).thenReturn(-1);
+        when(req.getContextPath()).thenReturn("");
+        when(req.getPathInfo()).thenReturn(null);
+        
+        ExpectedMappings.existingResource("/content/virtual/foo")
+            .singleMapping("http://virtual.host.com/foo")
+            .singleMappingWithRequest("/foo")
+            .allMappings("http://virtual.host.com/foo", "/content/virtual/foo")
+            .allMappingsWithRequest("/foo", "/content/virtual/foo")
+            .verify(resolver, req);    
+        
+    }
     static class ExpectedMappings {
         
         public static ExpectedMappings existingResource(String path) {
