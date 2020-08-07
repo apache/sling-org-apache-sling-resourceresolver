@@ -28,78 +28,78 @@ import java.util.List;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
-public class PathBuilderTest {
+public class PathGeneratorTest {
 
     @Test
-    public void buildRootPath() {
+    public void rootPath() {
         
-        List<String> paths = new PathBuilder().toPaths();
+        List<String> paths = new PathGenerator().generatePaths();
         
         assertThat(paths, Matchers.hasSize(1));
         assertThat(paths, Matchers.hasItem("/"));
     }
 
     @Test
-    public void buildSubPathWithMissingAliases() {
+    public void subPathWithMissingAliases() {
         
-        PathBuilder builder = new PathBuilder();
+        PathGenerator builder = new PathGenerator();
         builder.insertSegment(singletonList(null), "bar");
         builder.insertSegment(singletonList(""), "foo");
-        List<String> paths = builder.toPaths();
+        List<String> paths = builder.generatePaths();
         
         assertThat(paths, Matchers.hasSize(1));
         assertThat(paths, Matchers.hasItem("/foo/bar"));
     }
 
     @Test
-    public void buildSubPathWithMixedAliases() {
+    public void subPathWithMixedAliases() {
         
-        PathBuilder builder = new PathBuilder();
+        PathGenerator builder = new PathGenerator();
         builder.insertSegment(emptyList(), "bar");
         builder.insertSegment(singletonList("super"), "foo");
-        List<String> paths = builder.toPaths();
+        List<String> paths = builder.generatePaths();
         
         assertThat(paths, Matchers.hasSize(1));
         assertThat(paths, Matchers.hasItem("/super/bar"));
     }
     
     @Test
-    public void buildSubPathWithResolutionInfo() {
+    public void subPathWithResolutionInfo() {
         
-        PathBuilder builder = new PathBuilder();
+        PathGenerator builder = new PathGenerator();
         builder.insertSegment(emptyList(), "bar");
         builder.insertSegment(emptyList(), "foo");
         builder.setResolutionPathInfo("/baz");
         
-        List<String> paths = builder.toPaths();
+        List<String> paths = builder.generatePaths();
         
         assertThat(paths, Matchers.hasSize(1));
         assertThat(paths, Matchers.hasItem("/foo/bar/baz"));        
     }
     
     @Test
-    public void buildSubPathWithMultipleAliases() {
+    public void subPathWithMultipleAliases() {
         
-        PathBuilder builder = new PathBuilder();
+        PathGenerator builder = new PathGenerator();
         builder.insertSegment(emptyList(), "bar");
         builder.insertSegment(asList("alias1", "alias2"), "foo");
         
-        List<String> paths = builder.toPaths();
+        List<String> paths = builder.generatePaths();
         
         assertThat(paths, Matchers.hasSize(2));
         assertThat(paths, Matchers.hasItems("/alias1/bar", "/alias2/bar"));
     }
 
     @Test
-    public void buildSubPathWithComplexAliasesSetup() {
+    public void subPathWithComplexAliasesSetup() {
         
-        PathBuilder builder = new PathBuilder();
+        PathGenerator builder = new PathGenerator();
         builder.insertSegment(asList("4a", "4b", "4c"), "4");
         builder.insertSegment(emptyList(), "3");
         builder.insertSegment(asList("2a", "2b"), "2");
         builder.insertSegment(asList("1a", "1b"), "1");
         
-        List<String> paths = builder.toPaths();
+        List<String> paths = builder.generatePaths();
         
         assertThat(paths, Matchers.hasSize(12));
         assertThat(paths, Matchers.hasItems(

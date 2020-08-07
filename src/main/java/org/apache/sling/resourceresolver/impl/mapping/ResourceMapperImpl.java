@@ -185,7 +185,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         // find aliases for segments. we can't walk the parent chain
         // since the request session might not have permissions to
         // read all parents SLING-2093
-        PathBuilder pathBuilder = new PathBuilder();
+        PathGenerator pathBuilder = new PathGenerator();
 
         // make sure to append resolutionPathInfo, if present
         pathBuilder.setResolutionPathInfo(resolutionPathInfo);
@@ -209,7 +209,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         }
         
         // and then we have the mapped path to work on
-        List<String> mappedPaths = pathBuilder.toPaths();
+        List<String> mappedPaths = pathBuilder.generatePaths();
 
         logger.debug("map: Alias mapping resolves to paths {}", mappedPaths);
         
