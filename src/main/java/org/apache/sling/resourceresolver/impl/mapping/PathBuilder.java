@@ -19,6 +19,7 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,10 +32,15 @@ import org.jetbrains.annotations.Nullable;
  */
 public class PathBuilder {
     
-    // visible for testing
-    static List<String> cartesianJoin(List<List<String>> segments) {
+    private static List<String> cartesianJoin(List<List<String>> segments, String toAppend) {
         
         return cartesianJoin0(0, segments).stream()
+                .map ( sb -> {
+                    if ( toAppend != null )
+                        sb.append(toAppend);
+                    
+                    return sb;
+                })
                 .map( StringBuilder::toString )
                 .collect( Collectors.toList() );
     }
@@ -42,12 +48,13 @@ public class PathBuilder {
     private static List<StringBuilder> cartesianJoin0(int index, List<List<String>> segments) {
         List<StringBuilder> out = new ArrayList<>();
         if ( index == segments.size() ) {
-            out.add(new StringBuilder());
+            out.add(new StringBuilder("/"));
         } else {
             for ( String segment : segments.get(index) ) {
                 for (StringBuilder sb : cartesianJoin0(index + 1, segments) ) {
-                    // TODO - this is sub-optimal, as we are copying the array for each move
-                    sb.insert(0, '/' + segment);
+                    sb.append(segment);
+                    if ( index != 0 )
+                        sb.append('/');
                     out.add(sb);
                 }
             }
@@ -56,7 +63,7 @@ public class PathBuilder {
         return out;
     }
 
-    private List<String> segments = new ArrayList<>();
+    private List<List<String>> segments = new ArrayList<>();
     private String toAppend;
     
     /**
@@ -65,8 +72,14 @@ public class PathBuilder {
      * @param alias the alias, ignored if null or empty
      * @param name the name
      */
-    public void insertSegment(@Nullable String alias, @NotNull String name) {
-        segments.add(alias != null && alias.length() != 0 ? alias : name);
+    public void insertSegment(@NotNull List<String> alias, @NotNull String name) {
+        
+        // TODO - can we avoid filtering here?
+        List<String> filtered = alias.stream()
+            .filter( e -> e != null && ! e.isEmpty() )
+            .collect(Collectors.toList());
+        
+        segments.add(!filtered.isEmpty() ? alias : Collections.singletonList(name));
     }
     
     /**
@@ -83,18 +96,7 @@ public class PathBuilder {
      * 
      * @return a path in string form
      */
-    public String toPath() {
-        StringBuilder sb = new StringBuilder();
-        sb.append('/');
-        for ( int i = segments.size() - 1 ; i >= 0 ; i-- ) {
-            sb.append(segments.get(i));
-            if ( i == 1 )
-                sb.append('/');
-        }
-        
-        if ( toAppend != null )
-            sb.append(toAppend);
-        
-        return sb.toString();
+    public List<String> toPaths() {
+        return cartesianJoin(segments, toAppend);
     }
 }

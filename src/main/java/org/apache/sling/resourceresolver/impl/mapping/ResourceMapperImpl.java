@@ -19,6 +19,7 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -95,21 +96,21 @@ public class ResourceMapperImpl implements ResourceMapper {
         // Therefore we take care to add the entries in a very particular order, which preserves backwards 
         // compatibility with the existing implementation. Previously the order was
         //
-        //   resource path → alias → mapping (with alias potentially being null)
+        //   resource path → aliases → mapping (with aliases potentially being empty)
         //
         // To ensure we keep the same behaviour but expose all possible mappings, we now have the following
         // flow
         // 
         //  resource path → mapping
-        //  resource path → alias
-        //  alias → mapping
+        //  resource path → aliases
+        //  aliases → mappings
         //
         // After all are processed we reverse the order to preserve the logic of the old ResourceResolver.map() method (last
         // found wins) and also make sure that no duplicates are added.
         //
         // There is some room for improvement here by using a data structure that does not need reversing ( ArrayList
         // .add moves the elements every time ) or reversal of duplicates but since we will have a small number of 
-        // entries ( <= 4 ) the time spent here should be negligible.
+        // entries ( <= 4 in case of single aliases) the time spent here should be negligible.
         
         List<String> mappings = new ArrayList<>();
         
@@ -141,18 +142,18 @@ public class ResourceMapperImpl implements ResourceMapper {
         mappings.add(mappedPath);
 
         // 3. load mappings from the resource path
-        populateMappingsFromMapEntries(mappings, mappedPath, requestContext);
-        
+        populateMappingsFromMapEntries(mappings, Collections.singletonList(mappedPath), requestContext);
         
         // 4. load aliases
         final Resource nonDecoratedResource = resolver.resolveInternal(parsed.getRawPath(), parsed.getParameters());
         if (nonDecoratedResource != null) {
-            String alias = loadAliasIfApplicable(nonDecoratedResource);
+            List<String> aliases = loadAliasesIfApplicable(nonDecoratedResource);
+            // ensure that the first declared alias will be returned first
+            Collections.reverse(aliases);
             
             // 5. load mappings for alias
-            if ( alias != null )
-                mappings.add(alias);
-            populateMappingsFromMapEntries(mappings, alias, requestContext);
+            mappings.addAll(aliases);
+            populateMappingsFromMapEntries(mappings, aliases, requestContext);
         }
 
         // 6. apply context path if needed
@@ -172,7 +173,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         return new LinkedHashSet<>(mappings);
     }
 
-    private String loadAliasIfApplicable(final Resource nonDecoratedResource) {
+    private List<String> loadAliasesIfApplicable(final Resource nonDecoratedResource) {
         //Invoke the decorator for the resolved resource
         Resource res = resourceDecorator.decorate(nonDecoratedResource); 
 
@@ -192,13 +193,13 @@ public class ResourceMapperImpl implements ResourceMapper {
         Resource current = res;
         String path = res.getPath();
         while (path != null) {
-            String alias = null;
+            List<String> aliases = Collections.emptyList();
             // read alias only if we can read the resources and it's not a jcr:content leaf
             if (current != null && !path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
-                alias = readAlias(path, current);
+                aliases = readAliases(path, current);
             }
             // build the path from the name segments or aliases
-            pathBuilder.insertSegment(alias, ResourceUtil.getName(path));
+            pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
             path = ResourceUtil.getParent(path);
             if ("/".equals(path)) {
                 path = null;
@@ -208,82 +209,90 @@ public class ResourceMapperImpl implements ResourceMapper {
         }
         
         // and then we have the mapped path to work on
-        String mappedPath = pathBuilder.toPath();
+        List<String> mappedPaths = pathBuilder.toPaths();
 
-        logger.debug("map: Alias mapping resolves to path {}", mappedPath);
+        logger.debug("map: Alias mapping resolves to paths {}", mappedPaths);
         
-        return mappedPath;
+        return mappedPaths;
     }
     
-    private String readAlias(String path, Resource current) {
+    private List<String> readAliases(String path, Resource current) {
         if (optimizedAliasResolutionEnabled) {
             logger.debug("map: Optimize Alias Resolution is Enabled");
             String parentPath = ResourceUtil.getParent(path);
             
             if ( parentPath == null )
-                return null;
+                return Collections.emptyList();
             
             final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
             
             if ( aliases == null ) 
-                return null;
+                return Collections.emptyList();
             
             if ( aliases.containsValue(current.getName()) ) {
                 for ( Map.Entry<String,String> entry : aliases.entrySet() ) {
                     if (current.getName().equals(entry.getValue())) {
-                        return entry.getKey();
+                        // TODO - support multi-valued entries
+                        return Collections.singletonList(entry.getKey());
                     }
                 }
             }
-            return null;
+            return Collections.emptyList();
         } else {
             logger.debug("map: Optimize Alias Resolution is Disabled");
-            return ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS);
+            String[] aliases = ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS, String[].class);
+            if ( aliases == null || aliases.length == 0 )
+                return Collections.emptyList();
+            if ( aliases.length == 1 )
+                return Collections.singletonList(aliases[0]);
+            return Arrays.asList(aliases);
         }        
     }
 
-    private void populateMappingsFromMapEntries(List<String> mappings, String mappedPath,
+    private void populateMappingsFromMapEntries(List<String> mappings, List<String> mappedPathList,
             final RequestContext requestContext) {
         boolean mappedPathIsUrl = false;
-        for (final MapEntry mapEntry : mapEntries.getMapMaps()) {
-            final String[] mappedPaths = mapEntry.replace(mappedPath);
-            if (mappedPaths != null) {
-
-                logger.debug("map: Match for Entry {}", mapEntry);
-
-                mappedPathIsUrl = !mapEntry.isInternal();
-
-                if (mappedPathIsUrl && requestContext.hasUri() ) {
-
-                    mappedPath = null;
-
-                    for (final String candidate : mappedPaths) {
-                        if (candidate.startsWith(requestContext.getUri())) {
-                            mappedPath = candidate.substring(requestContext.getUri().length() - 1);
-                            mappedPathIsUrl = false;
-                            logger.debug("map: Found host specific mapping {} resolving to {}", candidate, mappedPath);
-                            break;
-                        } else if (candidate.startsWith(requestContext.getSchemeWithPrefix()) && mappedPath == null) {
-                            mappedPath = candidate;
+        for ( String mappedPath : mappedPathList ) {
+            for (final MapEntry mapEntry : mapEntries.getMapMaps()) {
+                final String[] mappedPaths = mapEntry.replace(mappedPath);
+                if (mappedPaths != null) {
+    
+                    logger.debug("map: Match for Entry {}", mapEntry);
+    
+                    mappedPathIsUrl = !mapEntry.isInternal();
+    
+                    if (mappedPathIsUrl && requestContext.hasUri() ) {
+    
+                        mappedPath = null;
+    
+                        for (final String candidate : mappedPaths) {
+                            if (candidate.startsWith(requestContext.getUri())) {
+                                mappedPath = candidate.substring(requestContext.getUri().length() - 1);
+                                mappedPathIsUrl = false;
+                                logger.debug("map: Found host specific mapping {} resolving to {}", candidate, mappedPath);
+                                break;
+                            } else if (candidate.startsWith(requestContext.getSchemeWithPrefix()) && mappedPath == null) {
+                                mappedPath = candidate;
+                            }
                         }
-                    }
-
-                    if (mappedPath == null) {
+    
+                        if (mappedPath == null) {
+                            mappedPath = mappedPaths[0];
+                        }
+    
+                    } else {
+    
+                        // we can only go with assumptions selecting the first entry
                         mappedPath = mappedPaths[0];
+    
                     }
-
-                } else {
-
-                    // we can only go with assumptions selecting the first entry
-                    mappedPath = mappedPaths[0];
-
+    
+                    logger.debug("map: MapEntry {} matches, mapped path is {}", mapEntry, mappedPath);
+                    
+                    mappings.add(mappedPath);
+    
+                    break;
                 }
-
-                logger.debug("map: MapEntry {} matches, mapped path is {}", mapEntry, mappedPath);
-                
-                mappings.add(mappedPath);
-
-                break;
             }
         }
     }
