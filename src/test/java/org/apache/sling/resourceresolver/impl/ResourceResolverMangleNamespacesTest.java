@@ -23,19 +23,21 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.NotNull;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -64,6 +66,11 @@ public class ResourceResolverMangleNamespacesTest {
             @Override
             public boolean isMangleNamespacePrefixes() {
                 return true;
+            }
+
+            @Override
+            public PathToUriMappingService getPathToUriMappingService() {
+                return MockTestUtil.createPathToUriMappingServiceMock(rr);
             }
         };
 

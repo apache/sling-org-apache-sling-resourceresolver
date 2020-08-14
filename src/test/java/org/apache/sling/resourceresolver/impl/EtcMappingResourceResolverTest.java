@@ -16,40 +16,10 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.observation.ResourceChange;
-import org.apache.sling.api.resource.path.Path;
-import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider;
-import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
-import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
-import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
-import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl;
-import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
-import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
-import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
-import org.apache.sling.serviceusermapping.ServiceUserMapper;
-import org.apache.sling.spi.resource.provider.ResourceProvider;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.service.event.EventAdmin;
-
-import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import static java.util.Arrays.asList;
 import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
 import static org.apache.sling.resourceresolver.impl.ResourceResolverImpl.PROP_REDIRECT_INTERNAL;
 import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
-import static org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.buildResource;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.callInaccessibleMethod;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.checkInternalResource;
@@ -63,6 +33,38 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.api.resource.observation.ResourceChange;
+import org.apache.sling.api.resource.path.Path;
+import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
+import org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
+import org.apache.sling.serviceusermapping.ServiceUserMapper;
+import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.event.EventAdmin;
 
 /**
  * These are the same tests as in the EtcMappingMapEntriesTest but in this
@@ -130,6 +132,8 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("observationPaths", activator, new Path[] {new Path("/")});
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);
         setInaccessibleField("serviceUserMapper", activator, serviceUserMapper);
+        setInaccessibleField("pathToUriMappingService", activator, MockTestUtil.createPathToUriMappingServiceMock(resourceResolver));
+
         commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
         when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);

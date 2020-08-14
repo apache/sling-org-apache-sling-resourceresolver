@@ -34,6 +34,7 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
@@ -67,6 +68,7 @@ public class ProviderHandlerTest {
                     return new ResourceProviderStorage(Arrays.asList(h));
                 }
             });
+        activator.pathToUriMappingService = MockTestUtil.createPathToUriMappingServiceMock(resolver);
 
         final Resource parent = resolver.getResource(ResourceUtil.getParent(servletpath));
         assertNotNull("Parent must be available", parent);

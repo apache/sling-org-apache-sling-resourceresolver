@@ -52,6 +52,7 @@ import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
@@ -91,6 +92,7 @@ public class ResourceResolverImplTest {
         ResourceResolverFactoryActivator activator = new ResourceResolverFactoryActivator();
         activator.resourceProviderTracker = resourceProviderTracker;
         activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
+        activator.pathToUriMappingService = MockTestUtil.createPathToUriMappingServiceMock(null);
         commonFactory = new CommonResourceResolverFactoryImpl(activator);
         final Bundle usingBundle = mock(Bundle.class);
         resFac = new ResourceResolverFactoryImpl(commonFactory, usingBundle, null);
