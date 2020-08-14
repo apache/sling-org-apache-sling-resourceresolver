@@ -16,12 +16,35 @@
  */
 package org.apache.sling.resourceresolver.util;
 
-import junit.framework.TestCase;
+import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.sling.api.resource.NonExistingResource;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService.ContextHint;
+import org.apache.sling.api.resource.uri.ResourceUri;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.SimpleValueMapImpl;
 import org.apache.sling.resourceresolver.impl.helper.RedirectResource;
@@ -31,27 +54,13 @@ import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvide
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 
-import javax.servlet.http.HttpServletRequest;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import static java.util.Arrays.asList;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
+import junit.framework.TestCase;
 
 public class MockTestUtil {
 
@@ -424,4 +433,9 @@ public class MockTestUtil {
             assertEquals("Wrong Redirect Type (ext/int) for: " + title, this.internal, mapEntry.isInternal());
         }
     }
+
+    public static PathToUriMappingService createPathToUriMappingServiceMock(final ResourceResolver rr) {
+        return new TestPathToUriMappingService();
+    }
+
 }

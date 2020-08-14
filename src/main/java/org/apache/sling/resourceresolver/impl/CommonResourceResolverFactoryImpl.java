@@ -31,12 +31,11 @@ import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.jetbrains.annotations.NotNull;
-
 import org.apache.commons.collections4.BidiMap;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.console.ResourceResolverWebConsolePlugin;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
@@ -48,6 +47,7 @@ import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -403,6 +403,11 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
      */
     public ResourceAccessSecurityTracker getResourceAccessSecurityTracker () {
         return this.activator.getResourceAccessSecurityTracker();
+    }
+
+    /** gets PathToUriMappingServiceImpl */
+    public PathToUriMappingService getPathToUriMappingService() {
+        return this.activator.getPathToUriMappingService();
     }
 
     @NotNull

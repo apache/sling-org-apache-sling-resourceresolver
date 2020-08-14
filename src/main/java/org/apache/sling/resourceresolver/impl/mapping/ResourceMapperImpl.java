@@ -33,7 +33,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
+import org.apache.sling.api.resource.uri.ResourceUri;
 import org.apache.sling.resourceresolver.impl.JcrNamespaceMangler;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
@@ -53,15 +55,17 @@ public class ResourceMapperImpl implements ResourceMapper {
     private final MapEntriesHandler mapEntries;
     private final boolean optimizedAliasResolutionEnabled;
     private final Object namespaceMangler;
-    
+    private final PathToUriMappingService pathToUriMappingService;
 
     public ResourceMapperImpl(ResourceResolverImpl resolver, ResourceDecoratorTracker resourceDecorator, 
-            MapEntriesHandler mapEntries, boolean optimizedAliasResolutionEnabled, Object namespaceMangler) {
+            MapEntriesHandler mapEntries, boolean optimizedAliasResolutionEnabled, Object namespaceMangler,
+            PathToUriMappingService pathToUriMappingService) {
         this.resolver = resolver;
         this.resourceDecorator = resourceDecorator;
         this.mapEntries = mapEntries;
         this.optimizedAliasResolutionEnabled = optimizedAliasResolutionEnabled;
         this.namespaceMangler = namespaceMangler;
+        this.pathToUriMappingService = pathToUriMappingService;
     }
 
     @Override
@@ -166,6 +170,13 @@ public class ResourceMapperImpl implements ResourceMapper {
         // vanity paths are prepended to make sure they get returned last
         mappings.addAll(0, vanityPaths);
 
+
+        // Apply mappings from Resource Mappers
+        PathToUriMappingService.Result mappingResult = pathToUriMappingService.map(request, mappings.get(mappings.size() - 1));
+        for (Map.Entry<String, ResourceUri> mappingFromChain : mappingResult.getIntermediateMappings().entrySet()) {
+            mappings.add(mappingFromChain.getValue().toString());
+        }
+
         // 7. apply context path if needed
         mappings.replaceAll(new ApplyContextPath(request));
        
@@ -174,10 +185,10 @@ public class ResourceMapperImpl implements ResourceMapper {
             mappings.replaceAll(path -> path.concat(fragmentQuery));
         }
 
-        mappings.forEach( path ->
-            logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath)    
-        );
-        
+        mappings.forEach( path -> {
+            logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath);
+        });
+
         Collections.reverse(mappings);
         
         return new LinkedHashSet<>(mappings);

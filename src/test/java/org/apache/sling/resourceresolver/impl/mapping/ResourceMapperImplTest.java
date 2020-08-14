@@ -39,9 +39,11 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -97,6 +99,7 @@ public class ResourceMapperImplTest {
         ctx.registerInjectActivateService(new ServiceUserMapperImpl());
         ctx.registerInjectActivateService(new ResourceAccessSecurityTracker());
         ctx.registerInjectActivateService(new StringInterpolationProviderImpl());
+        ctx.registerService(PathToUriMappingService.class, MockTestUtil.createPathToUriMappingServiceMock(resolver));
 
         InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider();
         resourceProvider.putResource("/"); // root

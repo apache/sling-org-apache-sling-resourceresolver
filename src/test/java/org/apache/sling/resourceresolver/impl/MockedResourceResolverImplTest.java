@@ -42,6 +42,7 @@ import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
@@ -49,6 +50,7 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.spi.resource.provider.QueryLanguageProvider;
 import org.apache.sling.spi.resource.provider.ResolveContext;
@@ -141,7 +143,12 @@ public class MockedResourceResolverImplTest {
     @SuppressWarnings("unchecked")
     @Before
     public void before() throws LoginException {
-        activator = new ResourceResolverFactoryActivator();
+        activator = new ResourceResolverFactoryActivator() {
+            @Override
+            public PathToUriMappingService getPathToUriMappingService() {
+                return MockTestUtil.createPathToUriMappingServiceMock(null);
+            }
+        };
 
         // system bundle access
         final Bundle systemBundle = Mockito.mock(Bundle.class);
