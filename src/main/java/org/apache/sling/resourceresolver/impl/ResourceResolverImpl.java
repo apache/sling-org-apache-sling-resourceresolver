@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.jcr.Session;
 import javax.servlet.http.HttpServletRequest;
@@ -59,6 +60,7 @@ import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
 import org.apache.sling.resourceresolver.impl.mapping.ResourceMapperImpl;
+import org.apache.sling.resourceresolver.impl.mappingchain.MappingChainResult;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
@@ -263,6 +265,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         } else if (!absPath.startsWith("/")) {
             absPath = "/" + absPath;
         }
+
+        // Apply resolutions from Resource Mappers
+        MappingChainResult mappingResult = factory.getResourceUriMappingChain().resolveToUri(this, request, absPath);
+        absPath = mappingResult.getResourceUri().toString();
 
         // check for special namespace prefix treatment
         absPath = unmangleNamespaces(absPath);
@@ -625,7 +631,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         
         if ( type == ResourceMapper.class )
             return (AdapterType) new ResourceMapperImpl(this, factory.getResourceDecoratorTracker(), factory.getMapEntries(), 
-                    factory.isOptimizeAliasResolutionEnabled(), factory.getNamespaceMangler());
+                    factory.isOptimizeAliasResolutionEnabled(), factory.getNamespaceMangler(), factory.getResourceUriMappingChain());
         
         final AdapterType result = this.control.adaptTo(this.context, type);
         if ( result != null ) {

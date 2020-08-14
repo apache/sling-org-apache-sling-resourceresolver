@@ -44,6 +44,7 @@ import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
+import org.apache.sling.resourceresolver.impl.mappingchain.ResourceUriMappingChain;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
@@ -141,7 +142,12 @@ public class MockedResourceResolverImplTest {
     @SuppressWarnings("unchecked")
     @Before
     public void before() throws LoginException {
-        activator = new ResourceResolverFactoryActivator();
+        activator = new ResourceResolverFactoryActivator() {
+            @Override
+            public ResourceUriMappingChain getResourceUriMappingChain() {
+                return new ResourceUriMappingChain();
+            }
+        };
 
         // system bundle access
         final Bundle systemBundle = Mockito.mock(Bundle.class);

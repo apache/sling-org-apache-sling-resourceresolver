@@ -32,12 +32,15 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
+import org.apache.sling.api.resource.uri.ResourceUri;
 import org.apache.sling.resourceresolver.impl.JcrNamespaceMangler;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.helper.ResourceResolverControl;
 import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
+import org.apache.sling.resourceresolver.impl.mappingchain.MappingChainResult;
+import org.apache.sling.resourceresolver.impl.mappingchain.ResourceUriMappingChain;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,15 +54,17 @@ public class ResourceMapperImpl implements ResourceMapper {
     private final MapEntriesHandler mapEntries;
     private final boolean optimizedAliasResolutionEnabled;
     private final Object namespaceMangler;
-    
+    private final ResourceUriMappingChain resourceUriMappingChain;
 
     public ResourceMapperImpl(ResourceResolverImpl resolver, ResourceDecoratorTracker resourceDecorator, 
-            MapEntriesHandler mapEntries, boolean optimizedAliasResolutionEnabled, Object namespaceMangler) {
+            MapEntriesHandler mapEntries, boolean optimizedAliasResolutionEnabled, Object namespaceMangler,
+            ResourceUriMappingChain resourceUriMappingChain) {
         this.resolver = resolver;
         this.resourceDecorator = resourceDecorator;
         this.mapEntries = mapEntries;
         this.optimizedAliasResolutionEnabled = optimizedAliasResolutionEnabled;
         this.namespaceMangler = namespaceMangler;
+        this.resourceUriMappingChain = resourceUriMappingChain;
     }
 
     @Override
@@ -156,6 +161,13 @@ public class ResourceMapperImpl implements ResourceMapper {
             populateMappingsFromMapEntries(mappings, alias, requestContext);
         }
 
+        // Apply mappings from Resource Mappers
+        MappingChainResult mappingChainResult = resourceUriMappingChain.mapToUri(resolver, request,
+                mappings.get(mappings.size() - 1));
+        for (Map.Entry<String, ResourceUri> mappingFromChain : mappingChainResult.getIntermediateMappings().entrySet()) {
+            mappings.add(mappingFromChain.getValue().toString());
+        }
+
         // 6. apply context path if needed
         mappings.replaceAll(new ApplyContextPath(request));
        
@@ -170,7 +182,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         }
 
         mappings.forEach( path -> {
-            logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath);    
+            logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath);
         });
         
         Collections.reverse(mappings);

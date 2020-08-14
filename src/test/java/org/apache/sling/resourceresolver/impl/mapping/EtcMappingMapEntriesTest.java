@@ -23,9 +23,11 @@ import org.apache.sling.resourceresolver.impl.CommonResourceResolverFactoryImpl;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryImpl;
+import org.apache.sling.resourceresolver.impl.mappingchain.ResourceUriMappingChain;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
@@ -180,6 +182,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(activator.getStringInterpolationProvider()).thenReturn(stringInterpolationProvider);
         when(activator.getMapRoot()).thenReturn("/etc/map");
         when(activator.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
+        when(activator.getResourceUriMappingChain()).thenReturn(new ResourceUriMappingChain());
         CommonResourceResolverFactoryImpl commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);
@@ -191,7 +194,6 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
         final Bundle usingBundle = mock(Bundle.class);
         ResourceResolverFactoryImpl resFac = new ResourceResolverFactoryImpl(commonFactory, usingBundle, null);
         ResourceResolver resResolver = resFac.getAdministrativeResourceResolver(null);
-
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getScheme()).thenReturn("http");
         when(request.getServerName()).thenReturn("localhost");

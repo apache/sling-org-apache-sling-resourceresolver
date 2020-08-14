@@ -31,6 +31,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.resourceresolver.impl.mappingchain.ResourceUriMappingChain;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
@@ -60,6 +61,7 @@ public class ProviderHandlerTest {
         final ResourceProviderHandler h = createRPHandler(leaveProvider, "my-pid", 0, servletpath);
         ResourceResolverFactoryActivator activator = new ResourceResolverFactoryActivator();
         activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
+        activator.resourceUriMappingChain = new ResourceUriMappingChain();
         ResourceResolver resolver = new ResourceResolverImpl(new CommonResourceResolverFactoryImpl(activator), false, null, new ResourceProviderStorageProvider() {
                 
                 @Override

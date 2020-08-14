@@ -37,8 +37,10 @@ import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
+import org.apache.sling.resourceresolver.impl.mappingchain.ResourceUriMappingChain;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.ChangeListener;
@@ -119,6 +121,9 @@ public class ResourceResolverFactoryActivator {
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
 
+    @Reference
+    ResourceUriMappingChain resourceUriMappingChain;
+
     volatile ResourceProviderTracker resourceProviderTracker;
 
     volatile ResourceChangeListenerWhiteboard changeListenerWhiteboard;
@@ -151,6 +156,10 @@ public class ResourceResolverFactoryActivator {
 
     public ResourceAccessSecurityTracker getResourceAccessSecurityTracker() {
         return this.resourceAccessSecurityTracker;
+    }
+
+    public ResourceUriMappingChain getResourceUriMappingChain() {
+        return this.resourceUriMappingChain;
     }
 
     public EventAdmin getEventAdmin() {

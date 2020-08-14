@@ -26,6 +26,7 @@ import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl;
+import org.apache.sling.resourceresolver.impl.mappingchain.ResourceUriMappingChain;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
@@ -130,6 +131,8 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("observationPaths", activator, new Path[] {new Path("/")});
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);
         setInaccessibleField("serviceUserMapper", activator, serviceUserMapper);
+        setInaccessibleField("resourceUriMappingChain", activator, new ResourceUriMappingChain());
+
         commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
         when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);

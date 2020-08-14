@@ -31,6 +31,7 @@ import javax.jcr.Session;
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.resourceresolver.impl.mappingchain.ResourceUriMappingChain;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.spi.resource.provider.ResolveContext;
@@ -64,6 +65,11 @@ public class ResourceResolverMangleNamespacesTest {
             @Override
             public boolean isMangleNamespacePrefixes() {
                 return true;
+            }
+
+            @Override
+            public ResourceUriMappingChain getResourceUriMappingChain() {
+                return new ResourceUriMappingChain();
             }
         };
 
