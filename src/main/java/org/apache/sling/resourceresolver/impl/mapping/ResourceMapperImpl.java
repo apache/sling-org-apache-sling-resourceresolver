@@ -25,7 +25,9 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -226,18 +228,14 @@ public class ResourceMapperImpl implements ResourceMapper {
             
             final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
             
-            if ( aliases == null ) 
+            if ( aliases == null || !aliases.containsValue(current.getName()) ) 
                 return Collections.emptyList();
             
-            if ( aliases.containsValue(current.getName()) ) {
-                for ( Map.Entry<String,String> entry : aliases.entrySet() ) {
-                    if (current.getName().equals(entry.getValue())) {
-                        // TODO - support multi-valued entries
-                        return Collections.singletonList(entry.getKey());
-                    }
-                }
-            }
-            return Collections.emptyList();
+            return aliases.entrySet().stream()
+                .filter( e -> current.getName().contentEquals(e.getValue()) )
+                .map( Entry::getKey )
+                .collect(Collectors.toList());
+            
         } else {
             logger.debug("map: Optimize Alias Resolution is Disabled");
             String[] aliases = ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS, String[].class);

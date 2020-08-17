@@ -25,12 +25,10 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -47,7 +45,6 @@ import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
-import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -208,8 +205,6 @@ public class ResourceMapperImplTest {
     @Test
     public void mapResourceWithMultivaluedAlias() {
         
-        assumeFalse(optimiseAliasResolution);
-
         ExpectedMappings.existingResource("/there-multiple")
                 .singleMapping("/alias-value-3")
                 .singleMappingWithRequest("/app/alias-value-3")
