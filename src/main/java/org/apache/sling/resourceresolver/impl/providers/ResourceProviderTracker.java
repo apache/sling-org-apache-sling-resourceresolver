@@ -151,7 +151,15 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
         this.providerReporter = generator.createProviderReporter();
         synchronized ( this.handlers ) {
             this.reporterGenerator = generator;
-            this.updateHandlers();
+            for (List<ResourceProviderHandler> list : handlers.values()) {
+                if ( !list.isEmpty() ) {
+                    final ResourceProviderHandler h = list.get(0);
+                    if (h != null) {
+                        updateProviderContext(h);
+                        h.update();
+                    }
+                }
+            }
         }
     }
 
@@ -347,7 +355,7 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      */
     private boolean activate(final ResourceProviderHandler handler) {
         synchronized (this.handlers) {
-            updateHandlers();
+            updateProviderContext(handler);
         }
         if ( !handler.activate() ) {
             logger.warn("Activating resource provider {} failed", handler.getInfo());
@@ -365,9 +373,6 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      */
     private void deactivate(final ResourceProviderHandler handler) {
         handler.deactivate();
-        synchronized (this.handlers) {
-            updateHandlers();
-        }
         logger.debug("Deactivated resource provider {}", handler.getInfo());
     }
 
@@ -477,18 +482,6 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
         final ResourceProvider<?> provider = handler.getResourceProvider();
         if ( provider != null ) {
             d.supportsQueryLanguage = provider.getQueryLanguageProvider() != null;
-        }
-    }
-
-    private void updateHandlers() {
-        for (List<ResourceProviderHandler> list : handlers.values()) {
-            if ( !list.isEmpty() ) {
-                final ResourceProviderHandler h = list.get(0);
-                if (h != null) {
-                    updateProviderContext(h);
-                    h.update();
-                }
-            }
         }
     }
 

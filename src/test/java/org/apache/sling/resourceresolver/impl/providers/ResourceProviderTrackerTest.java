@@ -19,21 +19,15 @@
 package org.apache.sling.resourceresolver.impl.providers;
 
 import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.sling.api.resource.observation.ResourceChange;
@@ -51,8 +45,6 @@ import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.service.event.EventAdmin;
 
 public class ResourceProviderTrackerTest {
@@ -63,7 +55,7 @@ public class ResourceProviderTrackerTest {
     private EventAdmin eventAdmin;
     private ResourceProviderInfo rp2Info;
     private Fixture fixture;
-
+    
     @Before
     public void prepare() throws Exception {
         eventAdmin = context.getService(EventAdmin.class);
@@ -83,7 +75,7 @@ public class ResourceProviderTrackerTest {
         fixture.registerResourceProvider(rp3, "invalid", AuthType.no);
 
         ResourceProviderTracker tracker = new ResourceProviderTracker();
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new DoNothingObservationReporter()));
+        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
         tracker.activate(context.bundleContext(), eventAdmin, new DoNothingChangeListener());
         return tracker;
     }
@@ -113,7 +105,7 @@ public class ResourceProviderTrackerTest {
     @Test
     public void testActivationDeactivation() throws Exception {
         final ResourceProviderTracker tracker = new ResourceProviderTracker();
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new DoNothingObservationReporter()));
+        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
 
         // create boolean markers for the listener
         final AtomicBoolean addedCalled = new AtomicBoolean(false);
@@ -167,7 +159,7 @@ public class ResourceProviderTrackerTest {
     @Test
     public void testReactivation() throws Exception {
         final ResourceProviderTracker tracker = new ResourceProviderTracker();
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new DoNothingObservationReporter()));
+        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
 
         // create boolean markers for the listener
         final AtomicBoolean addedCalled = new AtomicBoolean(false);
@@ -248,62 +240,6 @@ public class ResourceProviderTrackerTest {
         assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(0));
     }
 
-    /**
-     * This test verifies that shadowing of Resource observation is deterministic when ResourceProviders get registered and unregistered,
-     * meaning it is independent of the order in which those events happen.
-     * <p>
-     * It does so by
-     * 1) registering a ResourceProvider A on a deeper path then root (shadowing root)
-     * 2) registering a ResourceProvider B on root
-     * 3) unregistering the ResourceProvider A
-     * 4) and registering the ResoucreProvider A
-     * <p>
-     * This guarantees in both cases (A before B and B before A) the same excludes are applied in the ObservationReporter.
-     *
-     * @throws InvalidSyntaxException
-     */
-    @Test
-    public void testDeterministicObservationShadowing() throws InvalidSyntaxException {
-        final ResourceProviderTracker tracker = new ResourceProviderTracker();
-        final Map<String, List<String>> excludeSets = new HashMap<>();
-
-        tracker.activate(context.bundleContext(), eventAdmin, null);
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new DoNothingObservationReporter()) {
-            @Override
-            public ObservationReporter create(Path path, PathSet excludes) {
-                List<String> excludeSetsPerPath = excludeSets.get(path.getPath());
-                if (excludeSetsPerPath == null) {
-                    excludeSetsPerPath = new ArrayList<>(1);
-                    excludeSets.put(path.getPath(), excludeSetsPerPath);
-                }
-
-                excludeSetsPerPath.clear();
-                for (Path exclude : excludes) {
-                    excludeSetsPerPath.add(exclude.getPath());
-                }
-
-                return super.create(path, excludes);
-            }
-        });
-
-        ResourceProvider<?> rp = mock(ResourceProvider.class);
-        ResourceProviderInfo info;
-        // register RP on /path, empty exclude set expected
-        info = fixture.registerResourceProvider(rp, "/path", AuthType.no);
-        assertNull(excludeSets.get("/"));
-        // register RP on /, expect /path excluded
-        fixture.registerResourceProvider(rp, "/", AuthType.no);
-        assertThat(excludeSets.get("/"), hasSize(1));
-        assertThat(excludeSets.get("/"), contains("/path"));
-        // unregister RP on /path,  empty exclude set expected
-        fixture.unregisterResourceProvider(info);
-        assertThat(excludeSets.get("/"), hasSize(0));
-        // register RP on /path again, expect /path excluded
-        fixture.registerResourceProvider(rp, "/path", AuthType.no);
-        assertThat(excludeSets.get("/"), hasSize(1));
-        assertThat(excludeSets.get("/"), contains("/path"));
-    }
-
     @Test
     public void fillDto() throws Exception {
         ResourceProviderTracker tracker = registerDefaultResourceProviderTracker();
@@ -316,7 +252,7 @@ public class ResourceProviderTrackerTest {
         assertThat( dto.failedProviders, arrayWithSize(1));
     }
 
-    static class DoNothingObservationReporter implements ObservationReporter {
+    static final class NoDothingObservationReporter implements ObservationReporter {
         @Override
         public void reportChanges(Iterable<ResourceChange> changes, boolean distribute) {
         }
@@ -331,7 +267,7 @@ public class ResourceProviderTrackerTest {
         }
     }
 
-    static class SimpleObservationReporterGenerator implements ObservationReporterGenerator {
+    static final class SimpleObservationReporterGenerator implements ObservationReporterGenerator {
         private final ObservationReporter reporter;
 
         SimpleObservationReporterGenerator(ObservationReporter reporter) {
