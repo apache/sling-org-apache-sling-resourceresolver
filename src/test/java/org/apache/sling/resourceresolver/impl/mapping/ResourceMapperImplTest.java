@@ -288,7 +288,6 @@ public class ResourceMapperImplTest {
      * @throws LoginException
      */
     @Test
-    @Ignore
     public void mapResourceWithNestedAlias() {
         ExpectedMappings.existingResource("/parent/child")
                 .singleMapping("/alias-parent/alias-child")
@@ -304,7 +303,6 @@ public class ResourceMapperImplTest {
      * @throws LoginException
      */
     @Test
-    @Ignore
     public void mapResourceWithNestedMultipleAlias() {
         ExpectedMappings.existingResource("/parent/child-multiple")
                 .singleMapping("/alias-parent/alias-child-1")

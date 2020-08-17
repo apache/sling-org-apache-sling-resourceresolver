@@ -23,6 +23,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.*;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.hamcrest.Matchers;
@@ -34,6 +35,17 @@ public class PathGeneratorTest {
     public void rootPath() {
         
         List<String> paths = new PathGenerator().generatePaths();
+        
+        assertThat(paths, Matchers.hasSize(1));
+        assertThat(paths, Matchers.hasItem("/"));
+    }
+    
+    @Test
+    public void emptyRootSegment() {
+        
+        PathGenerator builder = new PathGenerator();
+        builder.insertSegment(Collections.emptyList(), "");
+        List<String> paths = builder.generatePaths();
         
         assertThat(paths, Matchers.hasSize(1));
         assertThat(paths, Matchers.hasItem("/"));
@@ -59,8 +71,9 @@ public class PathGeneratorTest {
         builder.insertSegment(singletonList("super"), "foo");
         List<String> paths = builder.generatePaths();
         
-        assertThat(paths, Matchers.hasSize(1));
+        assertThat(paths, Matchers.hasSize(2));
         assertThat(paths, Matchers.hasItem("/super/bar"));
+        assertThat(paths, Matchers.hasItem("/foo/bar"));
     }
     
     @Test
@@ -86,35 +99,35 @@ public class PathGeneratorTest {
         
         List<String> paths = builder.generatePaths();
         
-        assertThat(paths, Matchers.hasSize(2));
-        assertThat(paths, Matchers.hasItems("/alias1/bar", "/alias2/bar"));
+        assertThat(paths, Matchers.hasSize(3));
+        assertThat(paths, Matchers.hasItems("/alias1/bar", "/alias2/bar", "/foo/bar"));
     }
 
     @Test
     public void subPathWithComplexAliasesSetup() {
         
         PathGenerator builder = new PathGenerator();
-        builder.insertSegment(asList("4a", "4b", "4c"), "4");
+        builder.insertSegment(asList("4a", "4b"), "4");
         builder.insertSegment(emptyList(), "3");
-        builder.insertSegment(asList("2a", "2b"), "2");
-        builder.insertSegment(asList("1a", "1b"), "1");
+        builder.insertSegment(asList("2a"), "2");
+        builder.insertSegment(asList("1a"), "1");
         
         List<String> paths = builder.generatePaths();
         
         assertThat(paths, Matchers.hasSize(12));
         assertThat(paths, Matchers.hasItems(
+                "/1/2/3/4a",
+                "/1/2/3/4b",
+                "/1/2/3/4",
+                "/1/2a/3/4",
+                "/1/2a/3/4a",
+                "/1/2a/3/4b",
+                "/1a/2/3/4",
+                "/1a/2/3/4a",
+                "/1a/2/3/4b",
+                "/1a/2a/3/4",
                 "/1a/2a/3/4a",
-                "/1a/2a/3/4b",
-                "/1a/2a/3/4c",
-                "/1a/2b/3/4a",
-                "/1a/2b/3/4b",
-                "/1a/2b/3/4c",
-                "/1b/2a/3/4a",
-                "/1b/2a/3/4b",
-                "/1b/2a/3/4c",
-                "/1b/2b/3/4a",
-                "/1b/2b/3/4b",
-                "/1b/2b/3/4c"
+                "/1a/2a/3/4b"
         ));
     }
 }
