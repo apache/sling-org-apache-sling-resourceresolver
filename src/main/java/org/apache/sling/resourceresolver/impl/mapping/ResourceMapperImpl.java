@@ -141,7 +141,8 @@ public class ResourceMapperImpl implements ResourceMapper {
         ParsedParameters parsed = new ParsedParameters(mappedPath);
         
         // 2. add the requested path itself
-        mappings.add(mappedPath);
+        if ( !mappedPath.isEmpty() )
+            mappings.add(mappedPath);
 
         // 3. load mappings from the resource path
         populateMappingsFromMapEntries(mappings, Collections.singletonList(mappedPath), requestContext);

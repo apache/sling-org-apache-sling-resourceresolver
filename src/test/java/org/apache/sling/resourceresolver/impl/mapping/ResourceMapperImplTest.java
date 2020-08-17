@@ -150,6 +150,22 @@ public class ResourceMapperImplTest {
     }
     
     /**
+     * Validates that mappings for an empty return the root path
+     * 
+     * @throws LoginException
+     */
+    @Test
+    public void mapNonExistingEmptyPath() throws LoginException {
+        
+        ExpectedMappings.nonExistingResource("")
+            .singleMapping("/")
+            .singleMappingWithRequest("/app/")
+            .allMappings("/")
+            .allMappingsWithRequest("/app/")
+            .verify(resolver, req);
+    }
+    
+    /**
      * Validates that mappings for a non-existing resource only contain that resource's path
      * 
      * @throws LoginException
@@ -371,9 +387,11 @@ public class ResourceMapperImplTest {
             ResourceMapperImpl mapper = (ResourceMapperImpl) resolver.adaptTo(ResourceMapper.class);
             
             assertThat("Single mapping without request", mapper.getMapping(path), is(singleMapping));
-            assertThat("Single mapping with request", mapper.getMapping(path, request), is(singleMappingWithRequest));
+            if ( !path.isEmpty() ) // an empty path is invalid, hence not testing with a request
+                assertThat("Single mapping with request", mapper.getMapping(path, request), is(singleMappingWithRequest));
             assertThat("All mappings without request", mapper.getAllMappings(path), is(allMappings));
-            assertThat("All mappings with request", mapper.getAllMappings(path, request), is(allMappingsWithRequest));
+            if ( !path.isEmpty() ) // an empty path is invalid, hence not testing with a request
+                assertThat("All mappings with request", mapper.getAllMappings(path, request), is(allMappingsWithRequest));
         }
 
         private void checkConfigured() {
