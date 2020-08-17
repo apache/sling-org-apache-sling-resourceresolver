@@ -111,7 +111,10 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/content");
         resourceProvider.putResource("/content/virtual");
         resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
-        
+        resourceProvider.putResource("/parent", PROP_ALIAS, "alias-parent"); // parent has alias
+        resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
+        resourceProvider.putResource("/parent/child-multiple", PROP_ALIAS, "alias-child-1", "alias-child-2"); // child has multiple alias
+
         // build /etc/map structure
         resourceProvider.putResource("/etc");
         resourceProvider.putResource("/etc/map");
@@ -263,6 +266,40 @@ public class ResourceMapperImplTest {
             .verify(resolver, req);    
         
     }
+
+
+    /**
+     * Validates that a resource with an alias on parent and on child
+     *
+     * @throws LoginException
+     */
+    @Test
+    @Ignore
+    public void mapResourceWithNestedAlias() {
+        ExpectedMappings.existingResource("/parent/child")
+                .singleMapping("/alias-parent/alias-child")
+                .singleMappingWithRequest("/app/alias-parent/alias-child")
+                .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child", "/parent/child")
+                .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child", "/app/parent/child")
+                .verify(resolver, req);
+    }
+
+    /**
+     * Validates that a resource with an alias on parent and multiple alias on child
+     *
+     * @throws LoginException
+     */
+    @Test
+    @Ignore
+    public void mapResourceWithNestedMultipleAlias() {
+        ExpectedMappings.existingResource("/parent/child-multiple")
+                .singleMapping("/alias-parent/alias-child-1")
+                .singleMappingWithRequest("/app/alias-parent/alias-child-1")
+                .allMappings("/alias-parent/alias-child-1", "/alias-parent/alias-child-2", "/alias-parent/child-multiple", "/parent/alias-child-1", "/parent/alias-child-2", "/parent/child-multiple")
+                .allMappingsWithRequest("/app/alias-parent/alias-child-1", "/app/alias-parent/alias-child-2", "/app/alias-parent/child-multiple", "/app/parent/alias-child-1", "/app/parent/alias-child-2", "/app/parent/child-multiple")
+                .verify(resolver, req);
+    }
+
     static class ExpectedMappings {
         
         public static ExpectedMappings existingResource(String path) {
