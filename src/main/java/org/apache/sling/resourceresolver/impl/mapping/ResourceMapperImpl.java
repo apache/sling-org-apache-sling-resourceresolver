@@ -151,6 +151,8 @@ public class ResourceMapperImpl implements ResourceMapper {
         final Resource nonDecoratedResource = resolver.resolveInternal(parsed.getRawPath(), parsed.getParameters());
         if (nonDecoratedResource != null) {
             List<String> aliases = loadAliasesIfApplicable(nonDecoratedResource);
+            // avoid duplicating the originally requested path
+            aliases.remove(mappedPath);
             // ensure that the first declared alias will be returned first
             Collections.reverse(aliases);
             
@@ -213,7 +215,6 @@ public class ResourceMapperImpl implements ResourceMapper {
         
         // and then we have the mapped path to work on
         List<String> mappedPaths = pathBuilder.generatePaths();
-
         logger.debug("map: Alias mapping resolves to paths {}", mappedPaths);
         
         return mappedPaths;

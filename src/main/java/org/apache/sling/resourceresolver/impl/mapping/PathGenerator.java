@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,7 +35,6 @@ import org.jetbrains.annotations.Nullable;
  * 
  * <p>It generates all possible path combinations using a cartesian product that accummulates
  * using a {@link StringBuilder} instead of a set, to prevent intermediate object creation.</p>
- *
  */
 public class PathGenerator {
     
@@ -76,12 +76,14 @@ public class PathGenerator {
      */
     public void insertSegment(@NotNull List<String> alias, @NotNull String name) {
         
-        // TODO - can we avoid filtering here?
-        List<String> filtered = alias.stream()
+        List<String> filtered = Stream.concat(alias.stream(), Stream.of(name) )
             .filter( e -> e != null && ! e.isEmpty() )
             .collect(Collectors.toList());
         
-        segments.add(!filtered.isEmpty() ? alias : Collections.singletonList(name));
+        if ( filtered.isEmpty() )
+            filtered = Collections.singletonList("");
+        
+        segments.add(filtered);
     }
     
     /**
