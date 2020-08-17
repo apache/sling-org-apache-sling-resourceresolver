@@ -241,8 +241,8 @@ public class ResourceMapperImplTest {
         ExpectedMappings.existingResource("/somewhere")
             .singleMapping("/alias-value-2")
             .singleMappingWithRequest("/app/alias-value-2")
-            .allMappings("http://localhost:8080/everywhere", "/alias-value-2", "/somewhere")
-            .allMappingsWithRequest("/app/everywhere","/app/alias-value-2", "/app/somewhere")
+            .allMappings("/alias-value-2", "http://localhost:8080/everywhere", "/somewhere")
+            .allMappingsWithRequest("/app/alias-value-2", "/app/everywhere", "/app/somewhere")
             .verify(resolver, req);
     }
     
