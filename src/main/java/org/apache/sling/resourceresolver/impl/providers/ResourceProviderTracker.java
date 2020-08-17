@@ -19,7 +19,6 @@
 package org.apache.sling.resourceresolver.impl.providers;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -32,7 +31,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.sling.api.SlingConstants;
-import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
 import org.apache.sling.api.resource.path.Path;
@@ -349,7 +347,7 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      */
     private boolean activate(final ResourceProviderHandler handler) {
         synchronized (this.handlers) {
-            updateHandlers(findShadowedHandlers(handler));
+            updateHandlers();
         }
         if ( !handler.activate() ) {
             logger.warn("Activating resource provider {} failed", handler.getInfo());
@@ -368,7 +366,7 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
     private void deactivate(final ResourceProviderHandler handler) {
         handler.deactivate();
         synchronized (this.handlers) {
-            updateHandlers(findShadowedHandlers(handler));
+            updateHandlers();
         }
         logger.debug("Deactivated resource provider {}", handler.getInfo());
     }
@@ -482,33 +480,8 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
         }
     }
 
-    /**
-     * Returns a {@link Collection} of registered {@link ResourceProviderHandler}s that are shadowed by the given {@link ResourceProviderHandler}.
-     * This means that the path of each of the returned {@link ResourceProviderHandler}s is a parent of the path of the given {@link ResourceProviderHandler}
-     *
-     * @param handler
-     * @return
-     */
-    private Collection<List<ResourceProviderHandler>> findShadowedHandlers(ResourceProviderHandler handler) {
-        Collection<List<ResourceProviderHandler>> shadowedHandlers = new ArrayList<>(2);
-        String path = handler.getPath();
-        while(path != null) {
-            List<ResourceProviderHandler> list = handlers.get(path);
-            if (list != null && !list.isEmpty()) {
-                shadowedHandlers.add(list);
-            }
-            path = ResourceUtil.getParent(path);
-        }
-
-        return shadowedHandlers;
-    }
-
     private void updateHandlers() {
-        this.updateHandlers(this.handlers.values());
-    }
-
-    private void updateHandlers(Collection<List<ResourceProviderHandler>> givenHandlers) {
-        for (List<ResourceProviderHandler> list : givenHandlers) {
+        for (List<ResourceProviderHandler> list : handlers.values()) {
             if ( !list.isEmpty() ) {
                 final ResourceProviderHandler h = list.get(0);
                 if (h != null) {

@@ -26,15 +26,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -294,56 +291,17 @@ public class ResourceProviderTrackerTest {
         // register RP on /path, empty exclude set expected
         info = fixture.registerResourceProvider(rp, "/path", AuthType.no);
         assertNull(excludeSets.get("/"));
-        assertThat(excludeSets.get("/path"), hasSize(0));
         // register RP on /, expect /path excluded
         fixture.registerResourceProvider(rp, "/", AuthType.no);
         assertThat(excludeSets.get("/"), hasSize(1));
         assertThat(excludeSets.get("/"), contains("/path"));
-        assertThat(excludeSets.get("/path"), hasSize(0));
         // unregister RP on /path,  empty exclude set expected
         fixture.unregisterResourceProvider(info);
         assertThat(excludeSets.get("/"), hasSize(0));
-        assertThat(excludeSets.get("/path"), hasSize(0));
         // register RP on /path again, expect /path excluded
         fixture.registerResourceProvider(rp, "/path", AuthType.no);
         assertThat(excludeSets.get("/"), hasSize(1));
         assertThat(excludeSets.get("/"), contains("/path"));
-        assertThat(excludeSets.get("/path"), hasSize(0));
-    }
-
-    @Test
-    public void testUpdateOnlyOnIntersectingProviders() throws InvalidSyntaxException {
-        final ResourceProviderTracker tracker = new ResourceProviderTracker();
-
-        tracker.activate(context.bundleContext(), eventAdmin, null);
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new DoNothingObservationReporter()));
-
-        ResourceProvider<?> rootRp = mock(ResourceProvider.class);
-        ResourceProvider<?> fooRp = mock(ResourceProvider.class);
-        ResourceProvider<?> barRp = mock(ResourceProvider.class);
-        ResourceProvider<?> foobarRp = mock(ResourceProvider.class);
-
-        ResourceProviderInfo info;
-
-        // register RPs and verify how often update() gets called
-        fixture.registerResourceProvider(rootRp, "/", AuthType.no);
-        verify(rootRp, never()).update(anyLong());
-        fixture.registerResourceProvider(fooRp, "/foo", AuthType.no);
-        verify(rootRp, times(1)).update(anyLong());
-        verify(fooRp, never()).update(anyLong());
-        info = fixture.registerResourceProvider(barRp, "/bar", AuthType.no);
-        verify(rootRp, times(2)).update(anyLong());
-        verify(fooRp, never()).update(anyLong());
-        verify(barRp, never()).update(anyLong());
-        fixture.unregisterResourceProvider(info);
-        verify(rootRp, times(3)).update(anyLong());
-        verify(fooRp, never()).update(anyLong());
-        verify(barRp, never()).update(anyLong());
-        fixture.registerResourceProvider(foobarRp, "/foo/bar", AuthType.no);
-        verify(rootRp, times(4)).update(anyLong());
-        verify(fooRp, times(1)).update(anyLong());
-        verify(barRp, never()).update(anyLong());
-        verify(foobarRp, never()).update(anyLong());
     }
 
     @Test
