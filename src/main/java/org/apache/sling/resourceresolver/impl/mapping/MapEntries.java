@@ -636,6 +636,11 @@ public class MapEntries implements
     public Map<String, String> getAliasMap(final String parentPath) {
         return aliasMap.get(parentPath);
     }
+    
+    @Override
+    public Map<String, List<String>> getVanityPathMappings() {
+        return Collections.unmodifiableMap(vanityTargets);
+    }
 
     /**
      * get the MapEnty containing all the nodes having a specific vanityPath

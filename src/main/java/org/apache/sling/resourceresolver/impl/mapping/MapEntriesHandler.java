@@ -51,6 +51,11 @@ public interface MapEntriesHandler {
         public Map<String, String> getAliasMap(String parentPath) {
             return Collections.emptyMap();
         }
+        
+        @Override
+        public Map<String, List<String>> getVanityPathMappings() {
+            return Collections.emptyMap();
+        }
     };
 
     Map<String, String> getAliasMap(String parentPath);
@@ -67,4 +72,13 @@ public interface MapEntriesHandler {
      * This is for the web console plugin
      */
     List<MapEntry> getResolveMaps();
+    
+    /*
+     * Returns vanity path information
+     * 
+     * <p>Maps resources paths to a list of vanity paths.</p>
+     * 
+     * @return an unmodifiable list of vanity path mappings
+     */
+    Map<String, List<String>> getVanityPathMappings();
 }
