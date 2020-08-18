@@ -160,11 +160,16 @@ public class ResourceMapperImpl implements ResourceMapper {
             mappings.addAll(aliases);
             populateMappingsFromMapEntries(mappings, aliases, requestContext);
         }
+        
+        // 6. add vanity paths
+        List<String> vanityPaths = mapEntries.getVanityPathMappings().getOrDefault(mappedPath, Collections.emptyList());
+        // vanity paths are prepended to make sure they get returned last
+        mappings.addAll(0, vanityPaths);
 
-        // 6. apply context path if needed
+        // 7. apply context path if needed
         mappings.replaceAll(new ApplyContextPath(request));
        
-        // 7. set back the fragment query if needed
+        // 8. set back the fragment query if needed
         if ( fragmentQuery != null ) {
             mappings.replaceAll(path -> path.concat(fragmentQuery));
         }

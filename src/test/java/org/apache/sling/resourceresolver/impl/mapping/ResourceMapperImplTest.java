@@ -47,7 +47,6 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -112,7 +111,7 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/parent", PROP_ALIAS, "alias-parent"); // parent has alias
         resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
         resourceProvider.putResource("/parent/child-multiple", PROP_ALIAS, "alias-child-1", "alias-child-2"); // child has multiple alias
-        resourceProvider.putResource("/vain", "sling:vanityPath", "/vanity-a", "/vanity-b");
+        resourceProvider.putResource("/vain", "sling:vanityPath", "/vanity-a", "/vanity-b"); // vanity path
 
         // build /etc/map structure
         resourceProvider.putResource("/etc");
@@ -312,13 +311,18 @@ public class ResourceMapperImplTest {
                 .verify(resolver, req);
     }
     
+    /**
+     * Validates that vanity paths are returned as mappings
+     * 
+     * <p>As vanity paths are alternate paths rather than variations so they will not be returned
+     * from the singleMapping() methods.</p>
+     */
     @Test
-    @Ignore
     public void mapResourceWithVanityPaths() {
         ExpectedMappings.existingResource("/vain")
-            .singleMapping("/vanity-a")
-            .singleMappingWithRequest("/app/vanity-a")
-            .allMappings("/vanity-a", "/vanity-b", "/vani")
+            .singleMapping("/vain")
+            .singleMappingWithRequest("/app/vain")
+            .allMappings("/vanity-a", "/vanity-b", "/vain")
             .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
             .verify(resolver, req);
     }
