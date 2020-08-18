@@ -144,7 +144,6 @@ public class MapEntries implements
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
-    @SuppressWarnings({ "unchecked" })
     public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final StringInterpolationProvider stringInterpolationProvider)
         throws LoginException, IOException {
 
@@ -152,7 +151,7 @@ public class MapEntries implements
         this.factory = factory;
         this.eventAdmin = eventAdmin;
 
-        this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, (List<MapEntry>)Collections.EMPTY_LIST);
+        this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, Collections.emptyList());
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
@@ -160,7 +159,7 @@ public class MapEntries implements
 
         doInit();
 
-        final Dictionary<String, Object> props = new Hashtable<>();
+        final Dictionary<String, Object> props = new Hashtable<>(); // NOSONAR - required by OSGi APIs
         final String[] paths = new String[factory.getObservationPaths().length];
         for(int i=0 ; i < paths.length; i++) {
             paths[i] = factory.getObservationPaths()[i].getPath();
@@ -240,25 +239,18 @@ public class MapEntries implements
                     createVanityBloomFilter = true;
                 } else {
                     // initialize bloom filter from disk
-                    vanityBloomFilter = new byte[(int) vanityBloomFilterFile
-                            .length()];
-                    DataInputStream dis = new DataInputStream(
-                            new FileInputStream(vanityBloomFilterFile));
-                    try {
+                    vanityBloomFilter = new byte[(int) vanityBloomFilterFile.length()];
+                    try ( DataInputStream dis = new DataInputStream(
+                            new FileInputStream(vanityBloomFilterFile)) ) {
                         dis.readFully(vanityBloomFilter);
-                    } finally {
-                        dis.close();
                     }
                 }
 
-                // task for persisting the bloom filter every minute (if changes
-                // exist)
+                // task for persisting the bloom filter every minute (if changes exist)
                 timer = new Timer();
-                timer.schedule(new BloomFilterTask(), 60 * 1000);
+                timer.schedule(new BloomFilterTask(), 60_000);
 
-                final Map<String, List<String>> vanityTargets = this
-                        .loadVanityPaths(createVanityBloomFilter);
-                this.vanityTargets = vanityTargets;
+                this.vanityTargets = loadVanityPaths(createVanityBloomFilter);
             }
         } finally {
             this.initializing.unlock();
@@ -334,9 +326,8 @@ public class MapEntries implements
         }
         if (this.factory.isOptimizeAliasResolutionEnabled()) {
             for (final String contentPath : this.aliasMap.keySet()) {
-                if (path.startsWith(contentPath + "/") || path.equals(contentPath)) {
-                    changed |= removeAlias(contentPath, path, resolverRefreshed);
-                } else if ( contentPath.startsWith(actualContentPathPrefix) ) {
+                if (path.startsWith(contentPath + "/") || path.equals(contentPath)
+                        || contentPath.startsWith(actualContentPathPrefix)) {
                     changed |= removeAlias(contentPath, path, resolverRefreshed);
                 }
             }
