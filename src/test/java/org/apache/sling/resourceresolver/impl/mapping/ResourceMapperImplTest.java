@@ -114,6 +114,7 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/parent", PROP_ALIAS, "alias-parent"); // parent has alias
         resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
         resourceProvider.putResource("/parent/child-multiple", PROP_ALIAS, "alias-child-1", "alias-child-2"); // child has multiple alias
+        resourceProvider.putResource("/vain", "sling:vanityPath", "/vanity-a", "/vanity-b");
 
         // build /etc/map structure
         resourceProvider.putResource("/etc");
@@ -298,6 +299,17 @@ public class ResourceMapperImplTest {
                 .allMappings("/alias-parent/alias-child-1", "/alias-parent/alias-child-2", "/alias-parent/child-multiple", "/parent/alias-child-1", "/parent/alias-child-2", "/parent/child-multiple")
                 .allMappingsWithRequest("/app/alias-parent/alias-child-1", "/app/alias-parent/alias-child-2", "/app/alias-parent/child-multiple", "/app/parent/alias-child-1", "/app/parent/alias-child-2", "/app/parent/child-multiple")
                 .verify(resolver, req);
+    }
+    
+    @Test
+    @Ignore
+    public void mapResourceWithVanityPaths() {
+        ExpectedMappings.existingResource("/vain")
+            .singleMapping("/vanity-a")
+            .singleMappingWithRequest("/app/vanity-a")
+            .allMappings("/vanity-a", "/vanity-b", "/vani")
+            .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
+            .verify(resolver, req);
     }
 
     static class ExpectedMappings {
