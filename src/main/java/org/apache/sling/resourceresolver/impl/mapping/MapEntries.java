@@ -589,9 +589,6 @@ public class MapEntries implements
         this.eventAdmin = null;
     }
 
-    /**
-     * This is for the web console plugin
-     */
     @Override
     public List<MapEntry> getResolveMaps() {
         final List<MapEntry> entries = new ArrayList<>();
@@ -602,10 +599,6 @@ public class MapEntries implements
         return Collections.unmodifiableList(entries);
     }
 
-    /**
-     * Calculate the resolve maps. As the entries have to be sorted by pattern
-     * length, we have to create a new list containing all relevant entries.
-     */
     @Override
     public Iterator<MapEntry> getResolveMapsIterator(final String requestPath) {
         String key = null;
