@@ -33,9 +33,8 @@ import org.slf4j.LoggerFactory;
 /**
  * The <code>MapEntry</code> class represents a mapping entry in the mapping
  * configuration tree at <code>/etc/map</code>.
- * <p>
  *
- * @see "http://cwiki.apache.org/SLING/flexible-resource-resolution.html"
+ * @see <a href="https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html">Mappings for Resource Resolution</a>
  */
 public class MapEntry implements Comparable<MapEntry> {
 
@@ -268,7 +267,12 @@ public class MapEntry implements Comparable<MapEntry> {
         this.order = order;
     }
 
-    // Returns the replacement or null if the value does not match
+    /**
+     * Replaces the specified value according to the rules of this entry
+     * 
+     * @param value the value to replace
+     * @return a replaced value of <code>null</code> if the value does not match
+     */
     public String[] replace(final String value) {
         final Matcher m = urlPattern.matcher(value);
         if (m.find()) {
