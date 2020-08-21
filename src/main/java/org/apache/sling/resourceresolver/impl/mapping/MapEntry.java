@@ -27,6 +27,8 @@ import java.util.regex.Pattern;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -273,7 +275,7 @@ public class MapEntry implements Comparable<MapEntry> {
      * @param value the value to replace
      * @return a replaced value of <code>null</code> if the value does not match
      */
-    public String[] replace(final String value) {
+    public @Nullable String[] replace(final @NotNull String value) {
         final Matcher m = urlPattern.matcher(value);
         if (m.find()) {
             final String[] redirects = getRedirect();
