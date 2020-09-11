@@ -108,7 +108,11 @@ public class PathToUriMappingServiceImpl implements PathToUriMappingService {
     }
 
     @NotNull
-    public MappingChainResult resolve(@Nullable HttpServletRequest request, @NotNull String path) {
+    public MappingChainResult resolve(@Nullable HttpServletRequest request, @Nullable String path) {
+
+        if (path == null || path.isEmpty()) {
+            path = "/";
+        }
 
         try (ResourceResolver rr = getResourceResolver()) {
             MappingChainContextInternal mappingContext = new MappingChainContextInternal(rr);
