@@ -48,6 +48,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -140,7 +142,7 @@ public class MapEntries implements
 
     private Timer timer;
 
-    private boolean updateBloomFilterFile = false;
+    private final AtomicBoolean updateBloomFilterFile = new AtomicBoolean(false);
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
@@ -235,6 +237,7 @@ public class MapEntries implements
                     log.debug("creating bloom filter file {}",
                             vanityBloomFilterFile.getAbsolutePath());
                     vanityBloomFilter = createVanityBloomFilter();
+                    updateBloomFilterFile.set(true);
                     persistBloomFilter();
                     createVanityBloomFilter = true;
                 } else {
@@ -247,8 +250,8 @@ public class MapEntries implements
                 }
 
                 // task for persisting the bloom filter every minute (if changes exist)
-                timer = new Timer();
-                timer.schedule(new BloomFilterTask(), 60_000);
+                timer = new Timer("VanityPathBloomFilterUpdater", true);
+                timer.schedule(new BloomFilterTask(), 60_000, 60_000);
 
                 this.vanityTargets = loadVanityPaths(createVanityBloomFilter);
             }
@@ -447,7 +450,7 @@ public class MapEntries implements
             needsUpdate = loadVanityPath(resource, resolveMapsMap, vanityTargets, false, true);
         }
         if ( needsUpdate ) {
-            updateBloomFilterFile = true;
+            updateBloomFilterFile.set(true);
             return true;
         }
         return false;
@@ -534,11 +537,10 @@ public class MapEntries implements
      * Cleans up this class.
      */
     public void dispose() {
-        try {
-            persistBloomFilter();
-        } catch (IOException e) {
-           log.error("Error while saving bloom filter to disk", e);
-        }
+
+        timer.cancel();
+
+        persistBloomFilter();
 
         if (this.registration != null) {
             this.registration.unregister();
@@ -620,7 +622,7 @@ public class MapEntries implements
     public Map<String, String> getAliasMap(final String parentPath) {
         return aliasMap.get(parentPath);
     }
-    
+
     @Override
     public Map<String, List<String>> getVanityPathMappings() {
         return Collections.unmodifiableMap(vanityTargets);
@@ -768,13 +770,14 @@ public class MapEntries implements
         return bloomFilter;
     }
 
-    private void persistBloomFilter() throws IOException {
-        if (vanityBloomFilterFile != null && vanityBloomFilter != null) {
-            FileOutputStream out = new FileOutputStream(vanityBloomFilterFile);
-            try {
+    private void persistBloomFilter() {
+        if (vanityBloomFilterFile != null && vanityBloomFilter != null
+                && updateBloomFilterFile.getAndSet(false)) {
+            try (FileOutputStream out = new FileOutputStream(vanityBloomFilterFile)) {
                 out.write(this.vanityBloomFilter);
-            } finally {
-                out.close();
+            } catch (IOException e) {
+                throw new RuntimeException(
+                        "Error while saving bloom filter to disk", e);
             }
         }
     }
@@ -1123,29 +1126,14 @@ public class MapEntries implements
         final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath IS NOT NULL";
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
 
-        while (i.hasNext() && (createVanityBloomFilter || isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
+        Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+        while (i.hasNext() && (createVanityBloomFilter || isCacheComplete.get())) {
             final Resource resource = i.next();
-            boolean isValid = false;
-            for(final Path sPath : this.factory.getObservationPaths()) {
-                if ( sPath.matches(resource.getPath())) {
-                    isValid = true;
-                    break;
-                }
+            final String resourcePath = resource.getPath();
+            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
+                loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get(), createVanityBloomFilter);
             }
-            if ( isValid ) {
-                if (isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
-                    // fill up the cache and the bloom filter
-                    loadVanityPath(resource, resolveMapsMap, targetPaths, true,
-                            createVanityBloomFilter);
-                } else {
-                    // fill up the bloom filter
-                    loadVanityPath(resource, resolveMapsMap, targetPaths, false,
-                            createVanityBloomFilter);
-                }
-            }
-
         }
-
 
         return targetPaths;
     }
@@ -1160,10 +1148,7 @@ public class MapEntries implements
         }
 
         final ValueMap props = resource.getValueMap();
-        long vanityOrder = 0;
-        if (props.containsKey(PROP_VANITY_ORDER)) {
-            vanityOrder = props.get(PROP_VANITY_ORDER, Long.class);
-        }
+        long vanityOrder = props.get(PROP_VANITY_ORDER, 0L);
 
         // url is ignoring scheme and host.port and the path is
         // what is stored in the sling:vanityPath property
@@ -1534,15 +1519,7 @@ public class MapEntries implements
     final class BloomFilterTask extends TimerTask {
         @Override
         public void run() {
-            try {
-                if (updateBloomFilterFile) {
-                    persistBloomFilter();
-                    updateBloomFilterFile = false;
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(
-                        "Error while saving bloom filter to disk", e);
-            }
+            persistBloomFilter();
         }
     }
 
