@@ -36,10 +36,12 @@ import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
 import org.apache.sling.spi.resource.provider.QueryLanguageProvider;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
@@ -140,6 +142,11 @@ public abstract class ResourceDecoratorTestBase {
             @Override
             public ResourceAccessSecurityTracker getResourceAccessSecurityTracker() {
                 return new ResourceAccessSecurityTracker();
+            }
+
+            @Override
+            public PathToUriMappingService getPathToUriMappingService() {
+                return MockTestUtil.createPathToUriMappingServiceMock(null);
             }
         };
 

@@ -30,11 +30,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.Nullable;
 import javax.jcr.Session;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.adapter.annotations.Adaptable;
 import org.apache.sling.adapter.annotations.Adapter;
 import org.apache.sling.api.SlingException;
@@ -48,6 +47,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ResourceWrapper;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.helper.RedirectResource;
 import org.apache.sling.resourceresolver.impl.helper.ResourceIteratorDecorator;
@@ -62,6 +62,7 @@ import org.apache.sling.resourceresolver.impl.mapping.ResourceMapperImpl;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -625,7 +626,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         
         if ( type == ResourceMapper.class )
             return (AdapterType) new ResourceMapperImpl(this, factory.getResourceDecoratorTracker(), factory.getMapEntries(), 
-                    factory.isOptimizeAliasResolutionEnabled(), factory.getNamespaceMangler());
+                    factory.isOptimizeAliasResolutionEnabled(), factory.getNamespaceMangler(), factory.getPathToUriMappingService());
         
         final AdapterType result = this.control.adaptTo(this.context, type);
         if ( result != null ) {

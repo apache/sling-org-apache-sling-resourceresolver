@@ -34,9 +34,11 @@ import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.sling.api.resource.ResourceDecorator;
 import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.api.resource.mapping.PathToUriMappingService;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
@@ -119,6 +121,9 @@ public class ResourceResolverFactoryActivator {
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
 
+    @Reference
+    PathToUriMappingService pathToUriMappingService;
+
     volatile ResourceProviderTracker resourceProviderTracker;
 
     volatile ResourceChangeListenerWhiteboard changeListenerWhiteboard;
@@ -151,6 +156,10 @@ public class ResourceResolverFactoryActivator {
 
     public ResourceAccessSecurityTracker getResourceAccessSecurityTracker() {
         return this.resourceAccessSecurityTracker;
+    }
+
+    public PathToUriMappingService getPathToUriMappingService() {
+        return this.pathToUriMappingService;
     }
 
     public EventAdmin getEventAdmin() {

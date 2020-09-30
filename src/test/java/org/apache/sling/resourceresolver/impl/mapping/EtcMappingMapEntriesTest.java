@@ -16,6 +16,23 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import static java.util.Arrays.asList;
+import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
+import static org.apache.sling.resourceresolver.impl.ResourceResolverImpl.PROP_REDIRECT_INTERNAL;
+import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+
+import java.lang.reflect.Method;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.path.Path;
@@ -26,6 +43,8 @@ import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryImpl;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
+import org.apache.sling.resourceresolver.util.MockTestUtil;
+import org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
@@ -33,23 +52,6 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-
-import javax.servlet.http.HttpServletRequest;
-import java.lang.reflect.Method;
-import java.util.Iterator;
-import java.util.List;
-
-import static java.util.Arrays.asList;
-import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
-import static org.apache.sling.resourceresolver.impl.ResourceResolverImpl.PROP_REDIRECT_INTERNAL;
-import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
-import static org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 /**
  * These tests are for the /etc/map setup of the Map Entries when
@@ -191,7 +193,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
         final Bundle usingBundle = mock(Bundle.class);
         ResourceResolverFactoryImpl resFac = new ResourceResolverFactoryImpl(commonFactory, usingBundle, null);
         ResourceResolver resResolver = resFac.getAdministrativeResourceResolver(null);
-
+        when(activator.getPathToUriMappingService()).thenReturn(MockTestUtil.createPathToUriMappingServiceMock(resResolver));
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getScheme()).thenReturn("http");
         when(request.getServerName()).thenReturn("localhost");
