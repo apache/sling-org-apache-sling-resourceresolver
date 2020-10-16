@@ -51,16 +51,14 @@ public class ResourceMapperImpl implements ResourceMapper {
     private final ResourceResolverImpl resolver;
     private final ResourceDecoratorTracker resourceDecorator;
     private final MapEntriesHandler mapEntries;
-    private final boolean optimizedAliasResolutionEnabled;
     private final Object namespaceMangler;
     
 
     public ResourceMapperImpl(ResourceResolverImpl resolver, ResourceDecoratorTracker resourceDecorator, 
-            MapEntriesHandler mapEntries, boolean optimizedAliasResolutionEnabled, Object namespaceMangler) {
+            MapEntriesHandler mapEntries, Object namespaceMangler) {
         this.resolver = resolver;
         this.resourceDecorator = resourceDecorator;
         this.mapEntries = mapEntries;
-        this.optimizedAliasResolutionEnabled = optimizedAliasResolutionEnabled;
         this.namespaceMangler = namespaceMangler;
     }
 
@@ -226,7 +224,7 @@ public class ResourceMapperImpl implements ResourceMapper {
     }
     
     private List<String> readAliases(String path, Resource current) {
-        if (optimizedAliasResolutionEnabled) {
+        if (this.mapEntries.isOptimizeAliasResolutionEnabled()) {
             logger.debug("map: Optimize Alias Resolution is Enabled");
             String parentPath = ResourceUtil.getParent(path);
             

@@ -625,7 +625,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         
         if ( type == ResourceMapper.class )
             return (AdapterType) new ResourceMapperImpl(this, factory.getResourceDecoratorTracker(), factory.getMapEntries(), 
-                    factory.isOptimizeAliasResolutionEnabled(), factory.getNamespaceMangler());
+                    factory.getNamespaceMangler());
         
         final AdapterType result = this.control.adaptTo(this.context, type);
         if ( result != null ) {
@@ -811,7 +811,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
         // we do not have a child with the exact name, so we look for
         // a child, whose alias matches the childName
-        if (factory.isOptimizeAliasResolutionEnabled()){
+        if (factory.getMapEntries().isOptimizeAliasResolutionEnabled()){
             logger.debug("getChildInternal: Optimize Alias Resolution is Enabled");
             //optimization made in SLING-2521
             final Map<String, String> aliases = factory.getMapEntries().getAliasMap(parent.getPath());
@@ -830,6 +830,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                 }
             }
         } else {
+            if ( this.factory.isOptimizeAliasResolutionEnabled() ) {
+                this.factory.getMapEntries().logDisableAliasOptimization();
+            } 
             logger.debug("getChildInternal: Optimize Alias Resolution is Disabled");
             final Iterator<Resource> children = listChildren(parent);
             while (children.hasNext()) {

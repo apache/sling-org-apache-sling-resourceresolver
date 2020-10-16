@@ -146,6 +146,8 @@ public class MapEntries implements
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
+    private final boolean useOptimizeAliasResolution;
+
     public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final StringInterpolationProvider stringInterpolationProvider)
         throws LoginException, IOException {
 
@@ -159,7 +161,7 @@ public class MapEntries implements
         this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
-        doInit();
+        this.useOptimizeAliasResolution = doInit();
 
         final Dictionary<String, Object> props = new Hashtable<>(); // NOSONAR - required by OSGi APIs
         final String[] paths = new String[factory.getObservationPaths().length];
@@ -182,32 +184,40 @@ public class MapEntries implements
      * ReentrantLock. Does nothing if the resource resolver has already been
      * null-ed.
      */
-    protected void doInit() {
+    protected boolean doInit() {
 
         this.initializing.lock();
         try {
             final ResourceResolver resolver = this.resolver;
             final MapConfigurationProvider factory = this.factory;
             if (resolver == null || factory == null) {
-                return;
+                return this.factory.isOptimizeAliasResolutionEnabled();
             }
 
-            final Map<String, List<MapEntry>> newResolveMapsMap = new ConcurrentHashMap<>();
+            boolean result = this.factory.isOptimizeAliasResolutionEnabled();
 
             //optimization made in SLING-2521
-            if (this.factory.isOptimizeAliasResolutionEnabled()) {
-                final Map<String, Map<String, String>> aliasMap = this.loadAliases(resolver);
-                this.aliasMap = aliasMap;
+            if (result) {
+                try {
+                    final Map<String, Map<String, String>> loadedMap = this.loadAliases(resolver);
+                    this.aliasMap = loadedMap;
+    
+                } catch (final Exception e) {
+
+                    logDisableAliasOptimization(e);
+
+                    // disable optimize alias resolution
+                    result = false;
+                }
             }
 
-            this.resolveMapsMap = newResolveMapsMap;
+            this.resolveMapsMap = new ConcurrentHashMap<>();
 
             doUpdateConfiguration();
 
             sendChangeEvent();
-        } catch (final Exception e) {
 
-            log.warn("doInit: Unexpected problem during initialization", e);
+            return result;
 
         } finally {
 
@@ -269,7 +279,7 @@ public class MapEntries implements
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
                 boolean changed = doAddVanity(resource);
-                if (this.factory.isOptimizeAliasResolutionEnabled() && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                if (this.useOptimizeAliasResolution && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                     changed |= doAddAlias(resource);
                 }
                 return changed;
@@ -283,7 +293,7 @@ public class MapEntries implements
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
         final boolean isValidVanityPath =  this.isValidVanityPath(path);
-        if ( this.factory.isOptimizeAliasResolutionEnabled() || isValidVanityPath) {
+        if ( this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
             try {
@@ -303,7 +313,7 @@ public class MapEntries implements
                         }
                         changed |= doAddVanity(contentRsrc != null ? contentRsrc : resource);
                     }
-                    if (this.factory.isOptimizeAliasResolutionEnabled()) {
+                    if (this.useOptimizeAliasResolution) {
                         changed |= doUpdateAlias(resource);
                     }
 
@@ -327,7 +337,7 @@ public class MapEntries implements
                 changed |= removeVanityPath(target);
             }
         }
-        if (this.factory.isOptimizeAliasResolutionEnabled()) {
+        if (this.useOptimizeAliasResolution) {
             for (final String contentPath : this.aliasMap.keySet()) {
                 if (path.startsWith(contentPath + "/") || path.equals(contentPath)
                         || contentPath.startsWith(actualContentPathPrefix)) {
@@ -618,6 +628,10 @@ public class MapEntries implements
         return mapMaps;
     }
 
+    public boolean isOptimizeAliasResolutionEnabled() {
+        return this.useOptimizeAliasResolution;
+    }
+    
     @Override
     public Map<String, String> getAliasMap(final String parentPath) {
         return aliasMap.get(parentPath);
@@ -1374,6 +1388,23 @@ public class MapEntries implements
         }
     }
 
+    private final AtomicLong logCounter = new AtomicLong(0);
+
+    @Override
+    public void logDisableAliasOptimization() {
+        this.logDisableAliasOptimization(null);
+    }
+
+    private void logDisableAliasOptimization(final Exception e) {
+        if ( e != null ) {
+            log.error("Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.", e);
+        } else {
+            if ( logCounter.incrementAndGet() % 1000 == 0 ) {
+                log.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
+            }
+        }
+
+    }
     private final class MapEntryIterator implements Iterator<MapEntry> {
 
         private final Map<String, List<MapEntry>> resolveMapsMap;
