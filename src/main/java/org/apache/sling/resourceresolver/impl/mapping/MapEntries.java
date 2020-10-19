@@ -194,10 +194,10 @@ public class MapEntries implements
                 return this.factory.isOptimizeAliasResolutionEnabled();
             }
 
-            boolean result = this.factory.isOptimizeAliasResolutionEnabled();
+            boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
 
             //optimization made in SLING-2521
-            if (result) {
+            if (isOptimizeAliasResolutionEnabled) {
                 try {
                     final Map<String, Map<String, String>> loadedMap = this.loadAliases(resolver);
                     this.aliasMap = loadedMap;
@@ -207,7 +207,7 @@ public class MapEntries implements
                     logDisableAliasOptimization(e);
 
                     // disable optimize alias resolution
-                    result = false;
+                    isOptimizeAliasResolutionEnabled = false;
                 }
             }
 
@@ -217,7 +217,7 @@ public class MapEntries implements
 
             sendChangeEvent();
 
-            return result;
+            return isOptimizeAliasResolutionEnabled;
 
         } finally {
 
@@ -1388,7 +1388,9 @@ public class MapEntries implements
         }
     }
 
-    private final AtomicLong logCounter = new AtomicLong(0);
+    private final AtomicLong lastTimeLogged = new AtomicLong(-1);
+
+    private final long LOGGING_ERROR_PERIOD = 1000 * 60 * 5;
 
     @Override
     public void logDisableAliasOptimization() {
@@ -1399,7 +1401,8 @@ public class MapEntries implements
         if ( e != null ) {
             log.error("Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.", e);
         } else {
-            if ( logCounter.incrementAndGet() % 1000 == 0 ) {
+            final long now = System.currentTimeMillis();
+            if ( now - lastTimeLogged.getAndSet(now) > LOGGING_ERROR_PERIOD) {
                 log.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
             }
         }
