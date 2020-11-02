@@ -78,4 +78,6 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      * If <code>null</code> is returned, all paths are allowed.
      */
     List<VanityPathConfig> getVanityPathConfig();
+
+    List<String> getAliasPath();
 }

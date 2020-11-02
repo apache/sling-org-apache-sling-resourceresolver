@@ -128,6 +128,9 @@ public class ResourceResolverFactoryActivator {
 
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
+    /** Alias path whitelist */
+    private volatile String[] aliasPathAllowList;
+
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
 
@@ -203,6 +206,10 @@ public class ResourceResolverFactoryActivator {
 
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.config.resource_resolver_optimize_alias_resolution();
+    }
+
+    public String[] getOptimizedAliasResolutionAllowList(){
+        return this.aliasPathAllowList;
     }
 
     public boolean isLogUnclosedResourceResolvers() {
@@ -302,6 +309,25 @@ public class ResourceResolverFactoryActivator {
         this.observationPaths = new Path[paths.length];
         for(int i=0;i<paths.length;i++) {
             this.observationPaths[i] = new Path(paths[i]);
+        }
+
+        // optimize alias path allow list
+        this.aliasPathAllowList = null;
+        String[] aliasPathPrefix = config.resource_resolver_optimize_alias_allowedlist();
+        if ( aliasPathPrefix != null ) {
+            final List<String> prefixList = new ArrayList<>();
+            for(final String value : aliasPathPrefix) {
+                if ( value.trim().length() > 0 ) {
+                    if ( value.trim().endsWith("/") ) {
+                        prefixList.add(value.trim());
+                    } else {
+                        prefixList.add(value.trim() + "/");
+                    }
+                }
+            }
+            if ( prefixList.size() > 0 ) {
+                this.aliasPathAllowList = prefixList.toArray(new String[prefixList.size()]);
+            }
         }
 
         // vanity path white list

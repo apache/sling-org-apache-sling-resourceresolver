@@ -1047,13 +1047,41 @@ public class MapEntries implements
         return map;
     }
 
-	/**
+    private boolean isValidAliasPath(final String path){
+            if (path == null) {
+                throw new IllegalArgumentException("Unexpected null path");
+            }
+
+          // ignore system tree
+          if (path.startsWith(JCR_SYSTEM_PREFIX)) {
+            log.debug("loadAliases: Ignoring {}", path);
+            return false;
+          }
+
+            // check white list
+            if ( this.factory.getAliasPath() != null ) {
+                boolean allowed = false;
+                for(final String prefix : this.factory.getAliasPath()) {
+                    log.debug("akanksha path: {}, prefix: {}", path, prefix);
+                    if ( path.startsWith(prefix) ) {
+                        allowed = !allowed;
+                        break;
+                    }
+                }
+                if ( !allowed ) {
+                    log.debug("isValidAliasPath: not valid as not in allow list {}", path);
+                    return false;
+                }
+            }
+            return true;
+    }
+
+    /**
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
         // ignore system tree
-        if (resource.getPath().startsWith(JCR_SYSTEM_PREFIX)) {
-            log.debug("loadAliases: Ignoring {}", resource);
+        if (!isValidAliasPath(resource.getPath())) {
             return false;
         }
 
