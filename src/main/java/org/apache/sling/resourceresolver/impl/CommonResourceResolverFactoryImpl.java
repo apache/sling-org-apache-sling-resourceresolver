@@ -472,6 +472,22 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         return configs;
     }
 
+    @Override
+    public List<String> getAliasPath() {
+        final String[] includes = this.activator.getOptimizedAliasResolutionAllowList();
+        if ( includes == null  ) {
+            return null;
+        }
+
+        final List<String> configs = new ArrayList<>();
+        for(final String val : includes) {
+            configs.add(val);
+        }
+
+        Collections.sort(configs);
+        return configs;
+    }
+
     /**
      * Is this factory still alive?
      */
