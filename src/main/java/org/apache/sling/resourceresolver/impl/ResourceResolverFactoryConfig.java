@@ -150,10 +150,10 @@ public @interface ResourceResolverFactoryConfig {
     boolean resource_resolver_optimize_alias_resolution() default true;
 
     @AttributeDefinition(name = "Allowed Optimize alias path",
-         description = "This setting can contain a list of path prefixes, e.g. /libs/, /content/. If \" +\n" +
-                 "such a list is configured, for alias optimization, only paths from resources starting with this prefix \" +\n" +
+         description = "This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +
+                 "such a list is configured, for alias optimization, only paths from resources starting with this prefix " +
                  "are considered. If the list is empty, all paths are used.)")
-    String[] resource_resolver_optimize_alias_allowedlist();
+    String[] resource_resolver_optimize_alias_allowedlist() default {"/apps/", "/libs/", "/content/"};
 
     @AttributeDefinition(name = "Allowed Vanity Path Location",
         description ="This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +
