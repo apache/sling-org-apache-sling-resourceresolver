@@ -236,6 +236,11 @@ public class MockedResourceResolverImplTest {
             }
 
             @Override
+            public String[] resource_resolver_allowed_alias_locations() {
+                return new String[]{"/apps/", "/libs/", "/content/"};
+            }
+
+            @Override
             public String[] resource_resolver_mapping() {
                 return new String[] { "/:/",
                         "/content/:/", "/system/docroot/:/", "/content.html-/$" };

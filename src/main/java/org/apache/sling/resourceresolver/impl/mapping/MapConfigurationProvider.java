@@ -18,6 +18,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -78,4 +79,11 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      * If <code>null</code> is returned, all paths are allowed.
      */
     List<VanityPathConfig> getVanityPathConfig();
+
+    /**
+     * A set of allow prefixes all ending with a slash.
+     * If empty set is returned, all paths are allowed.
+     * @return
+     */
+    Set<String> getAllowedAliasLocations();
 }

@@ -21,14 +21,8 @@ package org.apache.sling.resourceresolver.impl;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
@@ -128,6 +122,9 @@ public class ResourceResolverFactoryActivator {
 
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
+    @SuppressWarnings("java:S3077")
+    private volatile Set<String> allowedAliasLocations = Collections.emptySet();
+
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
 
@@ -203,6 +200,10 @@ public class ResourceResolverFactoryActivator {
 
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.config.resource_resolver_optimize_alias_resolution();
+    }
+
+    public  Set<String> getAllowedAliasLocations(){
+        return this.allowedAliasLocations;
     }
 
     public boolean isLogUnclosedResourceResolvers() {
@@ -302,6 +303,29 @@ public class ResourceResolverFactoryActivator {
         this.observationPaths = new Path[paths.length];
         for(int i=0;i<paths.length;i++) {
             this.observationPaths[i] = new Path(paths[i]);
+        }
+
+        // optimize alias path allow list
+        String[] aliasLocationsPrefix = config.resource_resolver_allowed_alias_locations();
+        if ( aliasLocationsPrefix != null ) {
+            final Set<String> prefixSet = new TreeSet<>();
+            for(final String prefix : aliasLocationsPrefix) {
+                String value = prefix.trim();
+                if (!value.isEmpty()) {
+                    if (value.startsWith("/")) { // absolute path should be given
+                        if (value.endsWith("/")) {
+                            prefixSet.add(value);
+                        } else {
+                            prefixSet.add(value + "/");
+                        }
+                    }else{
+                        logger.warn("Path [{}] is ignored. As only absolute paths are allowed for alias optimization", value);
+                    }
+                }
+            }
+            if ( !prefixSet.isEmpty()) {
+                this.allowedAliasLocations = Collections.unmodifiableSet(prefixSet);
+            }
         }
 
         // vanity path white list
