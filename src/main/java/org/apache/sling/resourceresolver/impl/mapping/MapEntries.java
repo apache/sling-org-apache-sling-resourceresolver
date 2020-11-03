@@ -18,47 +18,8 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.SortedMap;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.sling.api.SlingConstants;
-import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.*;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
@@ -72,6 +33,21 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
 
 public class MapEntries implements
     MapEntriesHandler,
@@ -100,6 +76,8 @@ public class MapEntries implements
 
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
+    private final Logger logger = LoggerFactory.getLogger(MapEntries.class);
+
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -109,7 +87,7 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
-    static final String ALIAS_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
+   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -1038,23 +1016,58 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        final String queryString = ALIAS_QUERY_DEFAULT;
-		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-		        while (i.hasNext()) {
+        final String queryString = updateAliasQuery();
+        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+		     while (i.hasNext()) {
 		            final Resource resource = i.next();
 		            loadAlias(resource, map);
 		        }
         return map;
     }
 
-	/**
+
+    /*
+    * Update alias query based on configured alias locations
+    */
+    private String updateAliasQuery(){
+        final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
+
+        StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
+        baseQuery.append(" ").append("WHERE");
+
+        if(allowedLocations.isEmpty()){
+            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
+                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
+
+        }else{
+            Iterator<String> pathIterator = allowedLocations.iterator();
+            baseQuery.append("(");
+            while(pathIterator.hasNext()){
+                String prefix = pathIterator.next();
+                baseQuery.append(" ").append("ISDESCENDANTNODE(page,")
+                        .append("\"").append(prefix).append("\"")
+                        .append(")").append(" ").append("OR");
+            }
+            //Remove last "OR" keyword
+            int orLastIndex = baseQuery.lastIndexOf("OR");
+            baseQuery.delete(orLastIndex,baseQuery.length());
+            baseQuery.append(")");
+        }
+
+        baseQuery.append(" AND sling:alias IS NOT NULL ");
+        String aliasQuery = baseQuery.toString();
+        logger.debug("Query to fetch alias [{}] ", aliasQuery);
+
+        return aliasQuery;
+    }
+
+    /**
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
         // ignore system tree
-        if (resource.getPath().startsWith(JCR_SYSTEM_PREFIX)) {
-            log.debug("loadAliases: Ignoring {}", resource);
-            return false;
+        if(resource.getPath() == null){
+            throw new IllegalArgumentException("Unexpected null path");
         }
 
         final String resourceName;
@@ -1091,6 +1104,7 @@ public class MapEntries implements
             final String[] aliasArray = props.get(ResourceResolverImpl.PROP_ALIAS, String[].class);
 
             if ( aliasArray != null ) {
+                logger.debug("Found alias, total size {}", aliasArray.length);
                 Map<String, String> parentMap = map.get(parentPath);
                 for (final String alias : aliasArray) {
                     if (parentMap != null && parentMap.containsKey(alias)) {

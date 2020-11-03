@@ -31,20 +31,9 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -91,6 +80,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     private EventAdmin eventAdmin;
 
     private Map<String, Map<String, String>> aliasMap;
+    private int testSize = 5;
 
     @SuppressWarnings({ "unchecked" })
     @Before
@@ -124,6 +114,14 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.<Resource> emptySet().iterator());
+        //when(resourceResolverFactory.getAliasPath()).thenReturn(Arrays.asList("/child"));
+
+        Set<String> aliasPath = new TreeSet<>();
+        aliasPath.add("/parent");
+        for(int i = 1; i < testSize; i++){
+          aliasPath.add("/parent"+i);
+        }
+        when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(aliasPath);
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
@@ -1005,6 +1003,23 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals("parent", aliasMapEntry.get("aliasJcrContent"));
 
         assertEquals(1, aliasMap.size());
+
+        //trying to add invalid alias path
+        final Resource invalidResourcePath = mock(Resource.class);
+        when(resourceResolver.getResource("/notallowedparent")).thenReturn(invalidResourcePath);
+        when(invalidResourcePath.getParent()).thenReturn(parent);
+        when(invalidResourcePath.getPath()).thenReturn("/notallowedparent");
+        when(invalidResourcePath.getName()).thenReturn("notallowedparent");
+        when(invalidResourcePath.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+
+        addResource.invoke(mapEntries, "/notallowedparent", new AtomicBoolean());
+
+        aliasMapEntry = mapEntries.getAliasMap("/");
+        assertNotNull(aliasMapEntry);
+        assertTrue(aliasMapEntry.containsKey("alias"));
+        assertEquals("parent", aliasMapEntry.get("alias"));
+        assertEquals(1, aliasMap.size());
+
     }
 
     @Test
