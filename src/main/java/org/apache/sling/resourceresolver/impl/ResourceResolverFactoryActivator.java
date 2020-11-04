@@ -130,7 +130,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private AtomicReferenceArray aliasPathAllowList;
+    private AtomicReferenceArray<String> aliasPathAllowList;
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -209,7 +209,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public AtomicReferenceArray getOptimizedAliasResolutionAllowList(){
+    public AtomicReferenceArray<String> getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 
