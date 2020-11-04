@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -474,14 +475,14 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
 
     @Override
     public List<String> getAliasPath() {
-        final String[] includes = this.activator.getOptimizedAliasResolutionAllowList();
+        final AtomicReferenceArray includes = this.activator.getOptimizedAliasResolutionAllowList();
         if ( includes == null  ) {
             return null;
         }
 
         final List<String> configs = new ArrayList<>();
-        for(final String val : includes) {
-            configs.add(val);
+        for (int i = 0; i < includes.length(); i++) {
+            configs.add((String) includes.get(i));
         }
 
         Collections.sort(configs);

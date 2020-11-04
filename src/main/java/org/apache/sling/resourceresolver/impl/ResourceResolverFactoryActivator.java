@@ -29,6 +29,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
@@ -129,7 +130,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private volatile String[] aliasPathAllowList;
+    private AtomicReferenceArray aliasPathAllowList;
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -208,7 +209,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public String[] getOptimizedAliasResolutionAllowList(){
+    public AtomicReferenceArray getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 
@@ -325,8 +326,8 @@ public class ResourceResolverFactoryActivator {
                     }
                 }
             }
-            if ( prefixList.size() > 0 ) {
-                this.aliasPathAllowList = prefixList.toArray(new String[prefixList.size()]);
+            if ( !prefixList.isEmpty()) {
+                this.aliasPathAllowList = new AtomicReferenceArray<>( prefixList.toArray(new String[prefixList.size()]));
             }
         }
 
