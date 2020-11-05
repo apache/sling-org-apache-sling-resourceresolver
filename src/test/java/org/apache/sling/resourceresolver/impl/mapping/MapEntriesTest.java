@@ -91,7 +91,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     private EventAdmin eventAdmin;
 
     private Map<String, Map<String, String>> aliasMap;
-    private int testSize = 1500;
+    private int testSize = 5;
 
     @SuppressWarnings({ "unchecked" })
     @Before
@@ -1015,6 +1015,23 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals("parent", aliasMapEntry.get("aliasJcrContent"));
 
         assertEquals(1, aliasMap.size());
+
+        //trying to add invalid alias path
+        final Resource invalidResourcePath = mock(Resource.class);
+        when(resourceResolver.getResource("/notallowedparent")).thenReturn(invalidResourcePath);
+        when(invalidResourcePath.getParent()).thenReturn(parent);
+        when(invalidResourcePath.getPath()).thenReturn("/notallowedparent");
+        when(invalidResourcePath.getName()).thenReturn("notallowedparent");
+        when(invalidResourcePath.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+
+        addResource.invoke(mapEntries, "/notallowedparent", new AtomicBoolean());
+
+        aliasMapEntry = mapEntries.getAliasMap("/");
+        assertNotNull(aliasMapEntry);
+        assertTrue(aliasMapEntry.containsKey("alias"));
+        assertEquals("parent", aliasMapEntry.get("alias"));
+        assertEquals(1, aliasMap.size());
+
     }
 
     @Test
@@ -2126,6 +2143,21 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         System.out.println("[End]test_simple_alias_support_PT " + eTime);
         System.out.println("[Total Time Taken]test_simple_alias_support_PT " + (eTime - sTime));
 
+    }
+
+    @Test
+    public void test_isValidAliasPath() throws Exception {
+        Method method = MapEntries.class.getDeclaredMethod("isValidAliasPath", String.class);
+        method.setAccessible(true);
+
+        //alias path = null
+        //assertNull((Boolean)method.invoke(mapEntries, null));
+        // ignore system tree - path should not start with /jcr:system -
+        assertFalse((Boolean)method.invoke(mapEntries, "/jcr:system/node"));
+        //valid alias path
+        assertTrue((Boolean)method.invoke(mapEntries, "/parent"));
+        // notallowedparent is not valid configured alias path
+        assertFalse((Boolean)method.invoke(mapEntries, "/notallowedparent"));
     }
 
 
