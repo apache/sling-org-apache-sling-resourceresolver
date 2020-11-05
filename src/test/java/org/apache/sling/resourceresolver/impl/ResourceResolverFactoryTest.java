@@ -18,21 +18,24 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.atomic.AtomicReferenceArray;
+
+import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
+import static org.junit.Assert.*;
+
 public class ResourceResolverFactoryTest {
 
     private CommonResourceResolverFactoryImpl commonFactory;
 
+    private ResourceResolverFactoryActivator activator;
+
     @Before public void setup() {
-        ResourceResolverFactoryActivator activator = new ResourceResolverFactoryActivator();
+        activator = new ResourceResolverFactoryActivator();
         activator.resourceProviderTracker = new ResourceProviderTracker();
         commonFactory = new CommonResourceResolverFactoryImpl(activator);
     }
@@ -98,5 +101,13 @@ public class ResourceResolverFactoryTest {
 
         admin.close();
         assertNull(this.commonFactory.getThreadResourceResolver());
+    }
+
+
+    @Test public void testGetAliasPath() throws NoSuchMethodException {
+        assertTrue(this.commonFactory.getAliasPath().isEmpty());
+        String[] allowList = {"/parent", "/parent0"};
+        setInaccessibleField("aliasPathAllowList", activator, new AtomicReferenceArray<String>(allowList));
+        assertTrue(!this.commonFactory.getAliasPath().isEmpty());
     }
 }
