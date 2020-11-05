@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -2103,50 +2104,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_simple_alias_support_PT() {
-        long sTime = System.currentTimeMillis();
-        System.out.println("[Start]test_simple_alias_support " + sTime);
-
-        Resource[] result_P = new Resource[testSize];
-        Resource[] parent_P = new Resource[testSize];
-        for(int i =0 ;i<testSize;i++){
-            result_P[i] = mock(Resource.class);
-            parent_P[i] = mock(Resource.class);
-            when(result_P[i].getPath()).thenReturn("/parent"+i+"/child" + i);
-            when(parent_P[i].getPath()).thenReturn("/parent"+i);
-            when(result_P[i].getParent()).thenReturn(parent_P[i]);
-            when(result_P[i].getName()).thenReturn("child"+i);
-            when(result_P[i].getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
-
-        }
-
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
-
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-                    return Arrays.asList(result_P).iterator();
-                } else {
-                    return Collections.<Resource> emptySet().iterator();
-                }
-            }
-        });
-
-        mapEntries.doInit();
-        for(int i =1 ;i<testSize;i++) {
-            Map<String, String> aliasMap = mapEntries.getAliasMap("/parent" +i);
-            assertNotNull(aliasMap);
-            assertTrue(aliasMap.containsKey("alias"));
-            assertEquals("child"+i, aliasMap.get("alias"));
-        }
-        long eTime =  System.currentTimeMillis();
-        System.out.println("[End]test_simple_alias_support_PT " + eTime);
-        System.out.println("[Total Time Taken]test_simple_alias_support_PT " + (eTime - sTime));
-
-    }
-
-    @Test
-    public void test_isValidAliasPath() throws Exception {
+    public void testIsValidAliasPath() throws Exception {
         Method method = MapEntries.class.getDeclaredMethod("isValidAliasPath", String.class);
         method.setAccessible(true);
 
@@ -2158,5 +2116,14 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertFalse((Boolean)method.invoke(mapEntries, "/notallowedparent"));
     }
 
-
+    @Test
+    public void testNullAliasPath() throws NoSuchMethodException, IllegalAccessException {
+        Method method = MapEntries.class.getDeclaredMethod("isValidAliasPath", String.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(mapEntries, new Object[]{null});
+        }catch (InvocationTargetException e){
+            assertEquals("Unexpected null path", e.getTargetException().getMessage());
+        }
+    }
 }
