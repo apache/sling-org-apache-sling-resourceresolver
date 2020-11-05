@@ -2150,8 +2150,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Method method = MapEntries.class.getDeclaredMethod("isValidAliasPath", String.class);
         method.setAccessible(true);
 
-        //alias path = null
-        //assertNull((Boolean)method.invoke(mapEntries, null));
         // ignore system tree - path should not start with /jcr:system -
         assertFalse((Boolean)method.invoke(mapEntries, "/jcr:system/node"));
         //valid alias path
