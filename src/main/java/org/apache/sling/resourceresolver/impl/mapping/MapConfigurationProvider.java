@@ -79,5 +79,9 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      */
     List<VanityPathConfig> getVanityPathConfig();
 
-    List<String> getAliasPath();
+    /**
+     * A list of allow prefixes all ending with a slash.
+     * If empty list is returned, all paths are allowed.
+     */
+    List<String> getAllowedAliasPaths();
 }

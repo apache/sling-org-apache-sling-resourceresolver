@@ -474,16 +474,13 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public List<String> getAliasPath() {
-        final AtomicReferenceArray<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
+    public List<String> getAllowedAliasPaths() {
+        final List<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
         if (includes == null) {
             return Collections.emptyList();
         }
 
-        final List<String> configs = new ArrayList<>();
-        for (int i = 0; i < includes.length(); i++) {
-            configs.add(includes.get(i));
-        }
+        final List<String> configs = new ArrayList<>(includes);
 
         Collections.sort(configs);
         return configs;

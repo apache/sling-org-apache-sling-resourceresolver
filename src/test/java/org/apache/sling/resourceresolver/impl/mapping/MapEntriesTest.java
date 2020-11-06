@@ -134,7 +134,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             aliasPath.add("/parent"+i);
         }
 
-        when(resourceResolverFactory.getAliasPath()).thenReturn(aliasPath);
+        when(resourceResolverFactory.getAllowedAliasPaths()).thenReturn(aliasPath);
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");

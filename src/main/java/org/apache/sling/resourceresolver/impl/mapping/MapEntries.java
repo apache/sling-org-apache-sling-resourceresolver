@@ -1059,9 +1059,9 @@ public class MapEntries implements
           }
 
             // check white list
-            if ( this.factory.getAliasPath() != null && !this.factory.getAliasPath().isEmpty()) {
+            if ( this.factory.getAllowedAliasPaths() != null && !this.factory.getAllowedAliasPaths().isEmpty()) {
                 boolean allowed = false;
-                for(final String prefix : this.factory.getAliasPath()) {
+                for(final String prefix : this.factory.getAllowedAliasPaths()) {
                     if ( path.startsWith(prefix) ) {
                         allowed = !allowed;
                         break;
