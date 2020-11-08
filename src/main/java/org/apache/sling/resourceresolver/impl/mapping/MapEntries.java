@@ -1024,17 +1024,21 @@ public class MapEntries implements
         return map;
     }
 
+    /**
+     *
+     *  validate alias path based on configuration provided
+     */
+
     private boolean isValidAliasPath(final String path){
-        if (path == null) {
+        if(path == null){
             throw new IllegalArgumentException("Unexpected null path");
         }
 
         // ignore system tree
-        if (path.startsWith(JCR_SYSTEM_PREFIX)) {
+        if (path.startsWith(JCR_SYSTEM_PREFIX)){
             log.debug("loadAliases: Ignoring {}", path);
             return false;
         }
-
         Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
         // check white list
         if(!CollectionUtils.emptyIfNull(allowedPaths).isEmpty()){
