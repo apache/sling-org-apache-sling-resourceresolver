@@ -314,7 +314,7 @@ public class ResourceResolverFactoryActivator {
 
         // optimize alias path allow list
         this.aliasPathAllowList = null;
-        String[] aliasPathPrefix = config.resource_resolver_optimize_alias_allowedlist();
+        String[] aliasPathPrefix = config.resource_resolver_optimize_alias_allowlist();
         if ( aliasPathPrefix != null ) {
             final List<String> prefixList = new ArrayList<>();
             for(final String value : aliasPathPrefix) {

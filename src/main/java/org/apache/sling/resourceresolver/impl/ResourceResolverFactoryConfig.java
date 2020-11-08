@@ -149,11 +149,11 @@ public @interface ResourceResolverFactoryConfig {
                      " and on the alias update time if the number of aliases is huge (over 10000).")
     boolean resource_resolver_optimize_alias_resolution() default true;
 
-    @AttributeDefinition(name = "Allowed Optimize alias path",
+    @AttributeDefinition(name = "Allowed optimized alias paths",
          description = "This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +
                  "such a list is configured, for alias optimization, only paths from resources starting with this prefix " +
                  "are considered. If the list is empty, all paths are used.)")
-    String[] resource_resolver_optimize_alias_allowedlist();
+    String[] resource_resolver_optimize_alias_allowlist();
 
     @AttributeDefinition(name = "Allowed Vanity Path Location",
         description ="This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +

@@ -236,7 +236,7 @@ public class MockedResourceResolverImplTest {
             }
 
             @Override
-            public String[] resource_resolver_optimize_alias_allowedlist() {
+            public String[] resource_resolver_optimize_alias_allowlist() {
                 return new String[]{"/apps/", "/libs/", "/content/"};
             }
 

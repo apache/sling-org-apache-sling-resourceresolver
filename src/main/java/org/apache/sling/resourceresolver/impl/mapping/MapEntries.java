@@ -18,47 +18,9 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.SortedMap;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import javax.servlet.http.HttpServletResponse;
-
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.sling.api.SlingConstants;
-import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.*;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
@@ -72,6 +34,21 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
 
 public class MapEntries implements
     MapEntriesHandler,
@@ -1047,32 +1024,31 @@ public class MapEntries implements
         return map;
     }
 
-    private boolean isValidAliasPath(final String path){
-            if (path == null) {
-                throw new IllegalArgumentException("Unexpected null path");
-            }
+    /**
+     *
+     *  validate alias path based on configuration provided
+     */
 
-          // ignore system tree
-          if (path.startsWith(JCR_SYSTEM_PREFIX)) {
+    private boolean isValidAliasPath(final String path){
+        if(path == null){
+            throw new IllegalArgumentException("Unexpected null path");
+        }
+
+        // ignore system tree
+        if (path.startsWith(JCR_SYSTEM_PREFIX)){
             log.debug("loadAliases: Ignoring {}", path);
             return false;
-          }
-
-            // check white list
-            if ( this.factory.getAliasPath() != null && !this.factory.getAliasPath().isEmpty()) {
-                boolean allowed = false;
-                for(final String prefix : this.factory.getAliasPath()) {
-                    if ( path.startsWith(prefix) ) {
-                        allowed = !allowed;
-                        break;
-                    }
-                }
-                if ( !allowed ) {
-                    log.debug("isValidAliasPath: not valid as not in allow list {}", path);
-                    return false;
-                }
+        }
+        Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
+        // check white list
+        if(!CollectionUtils.emptyIfNull(allowedPaths).isEmpty()){
+            boolean allowed = allowedPaths.stream().anyMatch(path::startsWith);
+            if ( !allowed ) {
+                log.debug("isValidAliasPath: not valid as not in allow list {}", path);
+                return false;
             }
-            return true;
+        }
+        return true;
     }
 
     /**
