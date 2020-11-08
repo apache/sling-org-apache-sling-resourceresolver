@@ -20,14 +20,7 @@ package org.apache.sling.resourceresolver.impl;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -474,18 +467,16 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public List<String> getAliasPath() {
+    public Set<String> getAllowedAliasPaths() {
         final AtomicReferenceArray<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
         if (includes == null) {
-            return Collections.emptyList();
+            return Collections.emptySet();
         }
 
-        final List<String> configs = new ArrayList<>();
+        final TreeSet<String> configs = new TreeSet<>();
         for (int i = 0; i < includes.length(); i++) {
             configs.add(includes.get(i));
         }
-
-        Collections.sort(configs);
         return configs;
     }
 
