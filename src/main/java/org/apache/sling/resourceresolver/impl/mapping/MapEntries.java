@@ -18,7 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.*;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
@@ -1040,8 +1039,8 @@ public class MapEntries implements
             return false;
         }
         Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
-        // check white list
-        if(!CollectionUtils.emptyIfNull(allowedPaths).isEmpty()){
+        // check allow list
+        if(!allowedPaths.isEmpty()){
             boolean allowed = allowedPaths.stream().anyMatch(path::startsWith);
             if ( !allowed ) {
                 log.debug("isValidAliasPath: not valid as not in allow list {}", path);
