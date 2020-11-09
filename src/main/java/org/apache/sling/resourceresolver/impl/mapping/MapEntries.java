@@ -1040,8 +1040,8 @@ public class MapEntries implements
             return false;
         }
         Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
-        // check white list
-        if(!CollectionUtils.emptyIfNull(allowedPaths).isEmpty()){
+        // check allow list
+        if(!allowedPaths.isEmpty()){
             boolean allowed = allowedPaths.stream().anyMatch(path::startsWith);
             if ( !allowed ) {
                 log.debug("isValidAliasPath: not valid as not in allow list {}", path);
