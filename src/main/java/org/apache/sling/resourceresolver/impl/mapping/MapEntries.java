@@ -18,7 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.*;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
