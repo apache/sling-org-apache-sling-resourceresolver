@@ -1028,7 +1028,7 @@ public class MapEntries implements
      *  validate alias path based on configuration provided
      */
 
-    private boolean isValidAliasPath(final String path){
+    protected boolean isValidAliasPath(final String path){
         if(path == null){
             throw new IllegalArgumentException("Unexpected null path");
         }

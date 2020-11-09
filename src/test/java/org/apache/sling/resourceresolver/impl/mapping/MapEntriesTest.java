@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -2096,25 +2095,20 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void testIsValidAliasPath() throws Exception {
-        Method method = MapEntries.class.getDeclaredMethod("isValidAliasPath", String.class);
-        method.setAccessible(true);
-
         // ignore system tree - path should not start with /jcr:system -
-        assertFalse((Boolean)method.invoke(mapEntries, "/jcr:system/node"));
+        boolean isValid = mapEntries.isValidAliasPath("/jcr:system/node");
+        assertFalse(isValid);
         //valid alias path
-        assertTrue((Boolean)method.invoke(mapEntries, "/parent"));
+        isValid = mapEntries.isValidAliasPath("/parent");
+        assertTrue(isValid);
         // notallowedparent is not valid configured alias path
-        assertFalse((Boolean)method.invoke(mapEntries, "/notallowedparent"));
+        isValid = mapEntries.isValidAliasPath( "/notallowedparent");
+        assertFalse(isValid);
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testNullAliasPath() throws NoSuchMethodException, IllegalAccessException {
-        Method method = MapEntries.class.getDeclaredMethod("isValidAliasPath", String.class);
-        method.setAccessible(true);
-        try {
-            method.invoke(mapEntries, new Object[]{null});
-        }catch (InvocationTargetException e){
-            assertEquals("Unexpected null path", e.getTargetException().getMessage());
-        }
+        mapEntries.isValidAliasPath(null);
+
     }
 }
