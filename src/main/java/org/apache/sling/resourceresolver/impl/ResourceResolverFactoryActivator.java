@@ -21,14 +21,8 @@ package org.apache.sling.resourceresolver.impl;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.commons.collections4.BidiMap;
@@ -130,7 +124,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private AtomicReferenceArray<String> aliasPathAllowList;
+    private  volatile Set<String> aliasPathAllowList;
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -209,7 +203,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public AtomicReferenceArray<String> getOptimizedAliasResolutionAllowList(){
+    public  Set<String> getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 
@@ -313,21 +307,21 @@ public class ResourceResolverFactoryActivator {
         }
 
         // optimize alias path allow list
-        this.aliasPathAllowList = null;
         String[] aliasPathPrefix = config.resource_resolver_optimize_alias_allowlist();
         if ( aliasPathPrefix != null ) {
-            final List<String> prefixList = new ArrayList<>();
-            for(final String value : aliasPathPrefix) {
-                if ( value.trim().length() > 0 ) {
-                    if ( value.trim().endsWith("/") ) {
-                        prefixList.add(value.trim());
+            final Set<String> prefixList = new TreeSet<>();
+            for(final String prefix : aliasPathPrefix) {
+                String value = prefix.trim();
+                if ( value.length() > 0 ) {
+                    if ( value.endsWith("/") ) {
+                        prefixList.add(value);
                     } else {
-                        prefixList.add(value.trim() + "/");
+                        prefixList.add(value + "/");
                     }
                 }
             }
             if ( !prefixList.isEmpty()) {
-                this.aliasPathAllowList = new AtomicReferenceArray<>( prefixList.toArray(new String[prefixList.size()]));
+                this.aliasPathAllowList = Collections.unmodifiableSet(prefixList);
             }
         }
 
