@@ -22,6 +22,7 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jetbrains.annotations.NotNull;
@@ -466,12 +467,13 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public Set<String> getAllowedAliasPaths() {
-       final Set<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
+    public CopyOnWriteArrayList<String> getAllowedAliasPaths() {
+       final CopyOnWriteArrayList<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
         if (includes == null) {
-            return Collections.emptySet();
+            return new CopyOnWriteArrayList<>();
         }
 
+        Collections.sort(includes);
         return includes;
 
         }

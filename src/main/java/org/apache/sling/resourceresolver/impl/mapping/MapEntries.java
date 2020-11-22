@@ -1039,7 +1039,7 @@ public class MapEntries implements
             log.debug("loadAliases: Ignoring {}", path);
             return false;
         }
-        Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
+        CopyOnWriteArrayList<String> allowedPaths = this.factory.getAllowedAliasPaths();
         // check allow list
         if(!allowedPaths.isEmpty()){
             boolean allowed = allowedPaths.stream().anyMatch(path::startsWith);

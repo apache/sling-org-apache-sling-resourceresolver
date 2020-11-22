@@ -23,7 +23,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
@@ -124,7 +123,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private  volatile Set<String> aliasPathAllowList;
+    private volatile CopyOnWriteArrayList<String> aliasPathAllowList;
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -203,7 +202,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public  Set<String> getOptimizedAliasResolutionAllowList(){
+    public  CopyOnWriteArrayList<String> getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 
@@ -309,19 +308,19 @@ public class ResourceResolverFactoryActivator {
         // optimize alias path allow list
         String[] aliasPathPrefix = config.resource_resolver_optimize_alias_allowlist();
         if ( aliasPathPrefix != null ) {
-            final Set<String> prefixList = new TreeSet<>();
+            final Set<String> prefixSet = new HashSet<>();
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
                 if ( value.length() > 0 ) {
                     if ( value.endsWith("/") ) {
-                        prefixList.add(value);
+                        prefixSet.add(value);
                     } else {
-                        prefixList.add(value + "/");
+                        prefixSet.add(value + "/");
                     }
                 }
             }
-            if ( !prefixList.isEmpty()) {
-                this.aliasPathAllowList = Collections.unmodifiableSet(prefixList);
+            if ( !prefixSet.isEmpty()) {
+                this.aliasPathAllowList = new CopyOnWriteArrayList<>(prefixSet);
             }
         }
 

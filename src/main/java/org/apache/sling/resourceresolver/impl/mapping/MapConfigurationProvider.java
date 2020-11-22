@@ -18,7 +18,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -85,5 +85,5 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      * If empty set is returned, all paths are allowed.
      * @return
      */
-    Set<String> getAllowedAliasPaths();
+    CopyOnWriteArrayList<String> getAllowedAliasPaths();
 }
