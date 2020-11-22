@@ -123,7 +123,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private volatile CopyOnWriteArrayList<String> aliasPathAllowList;
+    private CopyOnWriteArrayList<String> aliasPathAllowList;
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
