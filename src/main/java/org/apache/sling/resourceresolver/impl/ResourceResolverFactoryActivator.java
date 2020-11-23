@@ -306,7 +306,7 @@ public class ResourceResolverFactoryActivator {
         }
 
         // optimize alias path allow list
-        String[] aliasPathPrefix = config.resource_resolver_optimize_alias_allowlist();
+        String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasPathPrefix != null ) {
             final Set<String> prefixSet = new HashSet<>();
             for(final String prefix : aliasPathPrefix) {
