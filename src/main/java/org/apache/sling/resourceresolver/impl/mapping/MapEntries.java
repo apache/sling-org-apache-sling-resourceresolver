@@ -1026,6 +1026,9 @@ public class MapEntries implements
         return map;
     }
 
+    /*
+    * Update alias query based on configured alias locations
+    */
     private String updateAliasQuery(){
         CopyOnWriteArrayList<String> allowedPaths = this.factory.getAllowedAliasPaths();
 
@@ -1066,21 +1069,7 @@ public class MapEntries implements
             throw new IllegalArgumentException("Unexpected null path");
         }
 
-       /* // ignore system tree
-        if (path.startsWith(JCR_SYSTEM_PREFIX)){
-            log.debug("loadAliases: Ignoring {}", path);
-            return false;
-        }
-        CopyOnWriteArrayList<String> allowedPaths = this.factory.getAllowedAliasPaths();
-        // check allow list
-        if(!allowedPaths.isEmpty()){
-            boolean allowed = allowedPaths.stream().anyMatch(path::startsWith);
-            if ( !allowed ) {
-                log.debug("isValidAliasPath: not valid as not in allow list {}", path);
-                return false;
-            }
-        }*/
-        return true;
+       return true;
     }
 
     /**

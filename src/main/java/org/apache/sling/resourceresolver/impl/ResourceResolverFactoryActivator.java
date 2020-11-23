@@ -311,7 +311,7 @@ public class ResourceResolverFactoryActivator {
             final Set<String> prefixSet = new HashSet<>();
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
-                if ( value.length() > 0 ) {
+                if (!value.isEmpty()) {
                     if ( value.endsWith("/") ) {
                         prefixSet.add(value);
                     } else {
