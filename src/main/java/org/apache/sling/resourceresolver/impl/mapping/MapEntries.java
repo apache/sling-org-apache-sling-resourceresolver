@@ -41,6 +41,7 @@ import java.net.URL;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,6 +87,8 @@ public class MapEntries implements
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
     static final String ALIAS_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
+
+    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base As page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -1014,40 +1017,59 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        final String queryString = ALIAS_QUERY_DEFAULT;
-		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-		        while (i.hasNext()) {
+        final String queryString = updateAliasQuery();
+        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+		     while (i.hasNext()) {
 		            final Resource resource = i.next();
 		            loadAlias(resource, map);
 		        }
         return map;
     }
 
+
+    /*
+    * Update alias query based on configured alias locations
+    */
+    private String updateAliasQuery(){
+        CopyOnWriteArrayList<String> allowedPaths = this.factory.getAllowedAliasPaths();
+
+        StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
+        baseQuery.append(" ").append("WHERE");
+
+        if(!allowedPaths.isEmpty()){
+            Iterator<String> pathIterator = allowedPaths.iterator();
+            baseQuery.append("(");
+            while(pathIterator.hasNext()){
+                String prefix = pathIterator.next();
+                baseQuery.append(" ").append("ISDESCENDANTNODE(page,")
+                        .append("\"").append(prefix).append("\"")
+                        .append(")").append(" ").append("OR");
+            }
+            //Remove last "OR" keyword
+            int orLastIndex = baseQuery.lastIndexOf("OR");
+            baseQuery.delete(orLastIndex,baseQuery.length());
+            baseQuery.append(")");
+        }else{
+            baseQuery.append(" ").append("NOT ISDESCENDANTNODE(page,")
+                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"");
+        }
+
+        baseQuery.append(" AND sling:alias IS NOT NULL ");
+
+        return baseQuery.toString();
+
+    }
+
     /**
      *
      *  validate alias path based on configuration provided
      */
-
     protected boolean isValidAliasPath(final String path){
         if(path == null){
             throw new IllegalArgumentException("Unexpected null path");
         }
 
-        // ignore system tree
-        if (path.startsWith(JCR_SYSTEM_PREFIX)){
-            log.debug("loadAliases: Ignoring {}", path);
-            return false;
-        }
-        Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
-        // check allow list
-        if(!allowedPaths.isEmpty()){
-            boolean allowed = allowedPaths.stream().anyMatch(path::startsWith);
-            if ( !allowed ) {
-                log.debug("isValidAliasPath: not valid as not in allow list {}", path);
-                return false;
-            }
-        }
-        return true;
+       return true;   
     }
 
     /**

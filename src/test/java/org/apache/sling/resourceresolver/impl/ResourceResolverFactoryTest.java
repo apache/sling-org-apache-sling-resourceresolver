@@ -23,7 +23,8 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.Arrays;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
 import static org.junit.Assert.*;
@@ -107,7 +108,7 @@ public class ResourceResolverFactoryTest {
     @Test public void testGetAllowedAliasPaths() throws NoSuchMethodException {
         assertTrue(this.commonFactory.getAllowedAliasPaths().isEmpty());
         String[] allowPaths = {"/parent", "/parent0"};
-        setInaccessibleField("aliasPathAllowList", activator, new AtomicReferenceArray<String>(allowPaths));
+        setInaccessibleField("aliasPathAllowList", activator,new CopyOnWriteArrayList<>(Arrays.asList(allowPaths)));
         assertTrue(!this.commonFactory.getAllowedAliasPaths().isEmpty());
     }
 }

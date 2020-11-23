@@ -21,15 +21,8 @@ package org.apache.sling.resourceresolver.impl;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
@@ -130,7 +123,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private AtomicReferenceArray<String> aliasPathAllowList;
+    private CopyOnWriteArrayList<String> aliasPathAllowList;
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -209,7 +202,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public AtomicReferenceArray<String> getOptimizedAliasResolutionAllowList(){
+    public  CopyOnWriteArrayList<String> getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 
@@ -313,21 +306,21 @@ public class ResourceResolverFactoryActivator {
         }
 
         // optimize alias path allow list
-        this.aliasPathAllowList = null;
-        String[] aliasPathPrefix = config.resource_resolver_optimize_alias_allowlist();
+        String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasPathPrefix != null ) {
-            final List<String> prefixList = new ArrayList<>();
-            for(final String value : aliasPathPrefix) {
-                if ( value.trim().length() > 0 ) {
-                    if ( value.trim().endsWith("/") ) {
-                        prefixList.add(value.trim());
+            final Set<String> prefixSet = new HashSet<>();
+            for(final String prefix : aliasPathPrefix) {
+                String value = prefix.trim();
+                if (!value.isEmpty()) {
+                    if ( value.endsWith("/") ) {
+                        prefixSet.add(value);
                     } else {
-                        prefixList.add(value.trim() + "/");
+                        prefixSet.add(value + "/");
                     }
                 }
             }
-            if ( !prefixList.isEmpty()) {
-                this.aliasPathAllowList = new AtomicReferenceArray<>( prefixList.toArray(new String[prefixList.size()]));
+            if ( !prefixSet.isEmpty()) {
+                this.aliasPathAllowList = new CopyOnWriteArrayList<>(prefixSet);
             }
         }
 

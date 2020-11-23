@@ -22,8 +22,8 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -467,18 +467,17 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public Set<String> getAllowedAliasPaths() {
-        final AtomicReferenceArray<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
+
+    public CopyOnWriteArrayList<String> getAllowedAliasPaths() {
+       final CopyOnWriteArrayList<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
         if (includes == null) {
-            return Collections.emptySet();
+            return new CopyOnWriteArrayList<>();
         }
 
-        final TreeSet<String> configs = new TreeSet<>();
-        for (int i = 0; i < includes.length(); i++) {
-            configs.add(includes.get(i));
-        }
-        return configs;
-    }
+        Collections.sort(includes);
+        return includes;
+
+      }
 
     /**
      * Is this factory still alive?
