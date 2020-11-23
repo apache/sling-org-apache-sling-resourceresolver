@@ -155,6 +155,7 @@ public @interface ResourceResolverFactoryConfig {
                  "are considered. If the list is empty, all paths are used.)")
     String[] resource_resolver_allowed_alias_locations();
 
+
     @AttributeDefinition(name = "Allowed Vanity Path Location",
         description ="This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +
                     "such a list is configured, only vanity paths from resources starting with this prefix " +

@@ -467,6 +467,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
+
     public CopyOnWriteArrayList<String> getAllowedAliasPaths() {
        final CopyOnWriteArrayList<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
         if (includes == null) {
@@ -476,7 +477,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         Collections.sort(includes);
         return includes;
 
-        }
+      }
 
     /**
      * Is this factory still alive?

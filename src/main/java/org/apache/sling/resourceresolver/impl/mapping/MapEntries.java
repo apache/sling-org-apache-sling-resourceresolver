@@ -1026,6 +1026,7 @@ public class MapEntries implements
         return map;
     }
 
+
     /*
     * Update alias query based on configured alias locations
     */
@@ -1063,13 +1064,12 @@ public class MapEntries implements
      *
      *  validate alias path based on configuration provided
      */
-
     protected boolean isValidAliasPath(final String path){
         if(path == null){
             throw new IllegalArgumentException("Unexpected null path");
         }
 
-       return true;
+       return true;   
     }
 
     /**
