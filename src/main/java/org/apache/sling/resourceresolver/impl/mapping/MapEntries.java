@@ -88,6 +88,8 @@ public class MapEntries implements
 
     static final String ALIAS_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
 
+    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base As page";
+
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /** default log */
@@ -1015,13 +1017,43 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        final String queryString = ALIAS_QUERY_DEFAULT;
-		        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-		        while (i.hasNext()) {
+        final String queryString = updateAliasQuery();
+        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+		     while (i.hasNext()) {
 		            final Resource resource = i.next();
 		            loadAlias(resource, map);
 		        }
         return map;
+    }
+
+    private String updateAliasQuery(){
+        CopyOnWriteArrayList<String> allowedPaths = this.factory.getAllowedAliasPaths();
+
+        StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
+        baseQuery.append(" ").append("WHERE");
+
+        if(!allowedPaths.isEmpty()){
+            Iterator<String> pathIterator = allowedPaths.iterator();
+            baseQuery.append("(");
+            while(pathIterator.hasNext()){
+                String prefix = pathIterator.next();
+                baseQuery.append(" ").append("ISDESCENDANTNODE(page,")
+                        .append("\"").append(prefix).append("\"")
+                        .append(")").append(" ").append("OR");
+            }
+            //Remove last "OR" keyword
+            int orLastIndex = baseQuery.lastIndexOf("OR");
+            baseQuery.delete(orLastIndex,baseQuery.length());
+            baseQuery.append(")");
+        }else{
+            baseQuery.append(" ").append("NOT ISDESCENDANTNODE(page,")
+                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"");
+        }
+
+        baseQuery.append(" AND sling:alias IS NOT NULL ");
+
+        return baseQuery.toString();
+
     }
 
     /**
@@ -1034,7 +1066,7 @@ public class MapEntries implements
             throw new IllegalArgumentException("Unexpected null path");
         }
 
-        // ignore system tree
+       /* // ignore system tree
         if (path.startsWith(JCR_SYSTEM_PREFIX)){
             log.debug("loadAliases: Ignoring {}", path);
             return false;
@@ -1047,7 +1079,7 @@ public class MapEntries implements
                 log.debug("isValidAliasPath: not valid as not in allow list {}", path);
                 return false;
             }
-        }
+        }*/
         return true;
     }
 

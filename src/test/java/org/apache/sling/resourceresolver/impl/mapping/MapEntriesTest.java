@@ -2090,7 +2090,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         }
     }
 
-    @Test
+   /* @Test
     public void testIsValidAliasPath() throws Exception {
         // ignore system tree - path should not start with /jcr:system -
         boolean isValid = mapEntries.isValidAliasPath("/jcr:system/node");
@@ -2101,7 +2101,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         // notallowedparent is not valid configured alias path
         isValid = mapEntries.isValidAliasPath( "/notallowedparent");
         assertFalse(isValid);
-    }
+    }*/
 
     @Test(expected = IllegalArgumentException.class)
     public void testNullAliasPath() throws NoSuchMethodException, IllegalAccessException {
