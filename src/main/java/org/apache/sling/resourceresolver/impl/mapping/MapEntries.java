@@ -77,6 +77,8 @@ public class MapEntries implements
 
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
+    private static final Logger logger = LoggerFactory.getLogger(MapEntries.class);
+
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -86,9 +88,7 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
-    static final String ALIAS_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base WHERE sling:alias IS NOT NULL";
-
-    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base As page";
+   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base As page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -1050,14 +1050,15 @@ public class MapEntries implements
             baseQuery.delete(orLastIndex,baseQuery.length());
             baseQuery.append(")");
         }else{
-            baseQuery.append(" ").append("NOT ISDESCENDANTNODE(page,")
-                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"");
+            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
+                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
         }
 
         baseQuery.append(" AND sling:alias IS NOT NULL ");
+        String aliasQuery = baseQuery.toString();
+        logger.debug("Query to fetch alias [{}] ", aliasQuery);
 
-        return baseQuery.toString();
-
+        return aliasQuery;
     }
 
     /**
@@ -1115,6 +1116,7 @@ public class MapEntries implements
             final String[] aliasArray = props.get(ResourceResolverImpl.PROP_ALIAS, String[].class);
 
             if ( aliasArray != null ) {
+                logger.debug("Found alias, total size {}", aliasArray.length);
                 Map<String, String> parentMap = map.get(parentPath);
                 for (final String alias : aliasArray) {
                     if (parentMap != null && parentMap.containsKey(alias)) {
