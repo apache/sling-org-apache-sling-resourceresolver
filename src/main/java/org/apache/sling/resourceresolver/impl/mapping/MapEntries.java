@@ -1036,7 +1036,11 @@ public class MapEntries implements
         StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
         baseQuery.append(" ").append("WHERE");
 
-        if(!allowedPaths.isEmpty()){
+        if(allowedPaths.isEmpty()){
+            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
+                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
+
+        }else{
             Iterator<String> pathIterator = allowedPaths.iterator();
             baseQuery.append("(");
             while(pathIterator.hasNext()){
@@ -1049,9 +1053,6 @@ public class MapEntries implements
             int orLastIndex = baseQuery.lastIndexOf("OR");
             baseQuery.delete(orLastIndex,baseQuery.length());
             baseQuery.append(")");
-        }else{
-            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
-                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
         }
 
         baseQuery.append(" AND sling:alias IS NOT NULL ");

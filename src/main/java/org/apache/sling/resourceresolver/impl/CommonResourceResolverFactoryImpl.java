@@ -467,12 +467,11 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-
     public CopyOnWriteArrayList<String> getAllowedAliasPaths() {
        final CopyOnWriteArrayList<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
-        if (includes == null) {
+      /*  if (includes == null) {
             return new CopyOnWriteArrayList<>();
-        }
+        }*/
 
         Collections.sort(includes);
         return includes;

@@ -123,7 +123,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private CopyOnWriteArrayList<String> aliasPathAllowList;
+    private final CopyOnWriteArrayList<String> aliasPathAllowList = new CopyOnWriteArrayList<>();
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -306,22 +306,24 @@ public class ResourceResolverFactoryActivator {
         }
 
         // optimize alias path allow list
+        this.aliasPathAllowList.clear();
         String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasPathPrefix != null ) {
-            final Set<String> prefixSet = new HashSet<>();
+            //final Set<String> prefixSet = new HashSet<>();
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
                 if (!value.isEmpty()) {
                     if ( value.endsWith("/") ) {
-                        prefixSet.add(value);
+                        this.aliasPathAllowList.add(value);
+                        //prefixSet.add(value);
                     } else {
-                        prefixSet.add(value + "/");
+                        this.aliasPathAllowList.add(value + "/");
                     }
                 }
             }
-            if ( !prefixSet.isEmpty()) {
+            /*if ( !prefixSet.isEmpty()) {
                 this.aliasPathAllowList = new CopyOnWriteArrayList<>(prefixSet);
-            }
+            }*/
         }
 
         // vanity path white list
