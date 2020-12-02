@@ -309,21 +309,18 @@ public class ResourceResolverFactoryActivator {
         this.aliasPathAllowList.clear();
         String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasPathPrefix != null ) {
-            //final Set<String> prefixSet = new HashSet<>();
+
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
                 if (!value.isEmpty()) {
                     if ( value.endsWith("/") ) {
                         this.aliasPathAllowList.add(value);
-                        //prefixSet.add(value);
                     } else {
                         this.aliasPathAllowList.add(value + "/");
                     }
                 }
             }
-            /*if ( !prefixSet.isEmpty()) {
-                this.aliasPathAllowList = new CopyOnWriteArrayList<>(prefixSet);
-            }*/
+
         }
 
         // vanity path white list
