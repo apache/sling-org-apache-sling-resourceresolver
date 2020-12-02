@@ -84,5 +84,5 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      * If empty set is returned, all paths are allowed.
      * @return
      */
-    CopyOnWriteArrayList<String> getAllowedAliasPaths();
+    List<String> getAllowedAliasPaths();
 }

@@ -88,7 +88,7 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
-   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base As page";
+   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -1031,7 +1031,7 @@ public class MapEntries implements
     * Update alias query based on configured alias locations
     */
     private String updateAliasQuery(){
-        CopyOnWriteArrayList<String> allowedPaths = this.factory.getAllowedAliasPaths();
+        List<String> allowedPaths = this.factory.getAllowedAliasPaths();
 
         StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
         baseQuery.append(" ").append("WHERE");

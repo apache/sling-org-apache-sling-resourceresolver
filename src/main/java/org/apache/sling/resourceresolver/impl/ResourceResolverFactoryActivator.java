@@ -123,7 +123,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private final CopyOnWriteArrayList<String> aliasPathAllowList = new CopyOnWriteArrayList<>();
+    private final List<String> aliasPathAllowList = new CopyOnWriteArrayList<>();
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -202,7 +202,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public  CopyOnWriteArrayList<String> getOptimizedAliasResolutionAllowList(){
+    public  List<String> getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 
