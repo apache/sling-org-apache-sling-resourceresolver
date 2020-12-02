@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.Unmodifiable;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.sling.api.resource.ResourceDecorator;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -123,7 +124,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private final CopyOnWriteArrayList<String> aliasPathAllowList = new CopyOnWriteArrayList<>();
+    private volatile Set<String > aliasPathAllowList = new TreeSet<>();
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -202,7 +203,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public  CopyOnWriteArrayList<String> getOptimizedAliasResolutionAllowList(){
+    public  Set<String> getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 

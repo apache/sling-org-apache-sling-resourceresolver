@@ -116,7 +116,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 Collections.<Resource> emptySet().iterator());
         //when(resourceResolverFactory.getAliasPath()).thenReturn(Arrays.asList("/child"));
 
-        CopyOnWriteArrayList<String> aliasPath = new CopyOnWriteArrayList<>();
+        Set<String> aliasPath = new TreeSet<>();
         aliasPath.add("/parent");
         for(int i = 1;i<testSize;i++){
             aliasPath.add("/parent"+i);

@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
@@ -108,7 +109,7 @@ public class ResourceResolverFactoryTest {
     @Test public void testGetAllowedAliasPaths() throws NoSuchMethodException {
         assertTrue(this.commonFactory.getAllowedAliasPaths().isEmpty());
         String[] allowPaths = {"/parent", "/parent0"};
-        setInaccessibleField("aliasPathAllowList", activator,new CopyOnWriteArrayList<>(Arrays.asList(allowPaths)));
+        setInaccessibleField("aliasPathAllowList", activator,new TreeSet<>(Arrays.asList(allowPaths)));
         assertTrue(!this.commonFactory.getAllowedAliasPaths().isEmpty());
     }
 }
