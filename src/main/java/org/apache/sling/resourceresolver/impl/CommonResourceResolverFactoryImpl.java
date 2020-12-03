@@ -467,12 +467,8 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
 
     @Override
     public List<String> getAllowedAliasPaths() {
-       final List<String> includes = this.activator.getOptimizedAliasResolutionAllowList();
-
-        Collections.sort(includes);
-        return includes;
-
-      }
+       return this.activator.getOptimizedAliasResolutionAllowList();
+    }
 
     /**
      * Is this factory still alive?
