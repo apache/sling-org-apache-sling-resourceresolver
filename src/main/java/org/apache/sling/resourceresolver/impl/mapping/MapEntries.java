@@ -41,7 +41,6 @@ import java.net.URL;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -88,7 +87,7 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
-   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base As page";
+   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -1031,12 +1030,16 @@ public class MapEntries implements
     * Update alias query based on configured alias locations
     */
     private String updateAliasQuery(){
-        CopyOnWriteArrayList<String> allowedPaths = this.factory.getAllowedAliasPaths();
+        List<String> allowedPaths = this.factory.getAllowedAliasPaths();
 
         StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
         baseQuery.append(" ").append("WHERE");
 
-        if(!allowedPaths.isEmpty()){
+        if(allowedPaths.isEmpty()){
+            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
+                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
+
+        }else{
             Iterator<String> pathIterator = allowedPaths.iterator();
             baseQuery.append("(");
             while(pathIterator.hasNext()){
@@ -1049,9 +1052,6 @@ public class MapEntries implements
             int orLastIndex = baseQuery.lastIndexOf("OR");
             baseQuery.delete(orLastIndex,baseQuery.length());
             baseQuery.append(")");
-        }else{
-            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
-                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
         }
 
         baseQuery.append(" AND sling:alias IS NOT NULL ");
