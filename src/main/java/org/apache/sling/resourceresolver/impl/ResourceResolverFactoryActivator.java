@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
@@ -123,7 +124,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private volatile List<String> aliasPathAllowList = new ArrayList<>();
+    private volatile List<String> aliasPathAllowList =  Collections.emptyList();
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -309,15 +310,19 @@ public class ResourceResolverFactoryActivator {
         this.aliasPathAllowList.clear();
         String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasPathPrefix != null ) {
+            final List<String> aliasPathList = new ArrayList<>();
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
                     if (!value.isEmpty()&&value.startsWith("/")) { // absolute path should be given
                         if (value.endsWith("/")) {
-                            this.aliasPathAllowList.add(value);
+                            aliasPathList.add(value);
                         } else {
-                            this.aliasPathAllowList.add(value + "/");
+                            aliasPathList.add(value + "/");
                         }
                     }
+            }
+            if(!aliasPathList.isEmpty()){
+                this.aliasPathAllowList = Collections.unmodifiableList(aliasPathList);
             }
         }
 
