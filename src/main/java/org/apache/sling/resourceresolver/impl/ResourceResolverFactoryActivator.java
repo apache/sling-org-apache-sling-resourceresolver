@@ -203,7 +203,7 @@ public class ResourceResolverFactoryActivator {
     }
 
     public  List<String> getOptimizedAliasResolutionAllowList(){
-        return this.aliasPathAllowList;
+        return Collections.unmodifiableList(this.aliasPathAllowList);
     }
 
     public boolean isLogUnclosedResourceResolvers() {
@@ -319,6 +319,7 @@ public class ResourceResolverFactoryActivator {
                         }
                     }
             }
+            Collections.sort(this.aliasPathAllowList);
         }
 
         // vanity path white list
