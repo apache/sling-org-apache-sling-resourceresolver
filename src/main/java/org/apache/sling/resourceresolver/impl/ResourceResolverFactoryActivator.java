@@ -311,15 +311,14 @@ public class ResourceResolverFactoryActivator {
         if ( aliasPathPrefix != null ) {
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
-                if (!value.isEmpty()) {
-                    if ( value.endsWith("/") ) {
-                        this.aliasPathAllowList.add(value);
-                    } else {
-                        this.aliasPathAllowList.add(value + "/");
+                    if (!value.isEmpty()&&value.startsWith("/")) { // absolute path should be given
+                        if (value.endsWith("/")) {
+                            this.aliasPathAllowList.add(value);
+                        } else {
+                            this.aliasPathAllowList.add(value + "/");
+                        }
                     }
-                }
             }
-
         }
 
         // vanity path white list
