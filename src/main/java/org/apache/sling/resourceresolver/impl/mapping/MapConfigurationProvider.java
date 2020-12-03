@@ -18,7 +18,6 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
@@ -80,9 +79,9 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
     List<VanityPathConfig> getVanityPathConfig();
 
     /**
-     * A Set of allow prefixes all ending with a slash.
-     * If empty set is returned, all paths are allowed.
+     * A List of allow prefixes all ending with a slash.
+     * If empty List is returned, all paths are allowed.
      * @return
      */
-    CopyOnWriteArrayList<String> getAllowedAliasPaths();
+    List<String> getAllowedAliasPaths();
 }
