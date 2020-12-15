@@ -18,6 +18,7 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
+import org.apache.commons.collections4.list.UnmodifiableList;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.junit.Before;
@@ -108,7 +109,7 @@ public class ResourceResolverFactoryTest {
     @Test public void testGetAllowedAliasPaths() throws NoSuchMethodException {
         assertTrue(this.commonFactory.getAllowedAliasPaths().isEmpty());
         String[] allowPaths = {"/parent", "/parent0"};
-        setInaccessibleField("aliasPathAllowList", activator, Collections.unmodifiableList(Arrays.asList(allowPaths)));
+        setInaccessibleField("aliasPathAllowList", activator, new UnmodifiableList<>(Arrays.asList(allowPaths)));
         assertTrue(!this.commonFactory.getAllowedAliasPaths().isEmpty());
     }
 }

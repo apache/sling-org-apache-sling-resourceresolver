@@ -27,6 +27,7 @@ import java.util.*;
 import org.apache.commons.collections4.BidiMap;
 
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
+import org.apache.commons.collections4.list.UnmodifiableList;
 import org.apache.sling.api.resource.ResourceDecorator;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
@@ -124,7 +125,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private volatile List<String> aliasPathAllowList = Collections.unmodifiableList(new ArrayList<>());
+    private volatile UnmodifiableList<String> aliasPathAllowList = new UnmodifiableList<>(Collections.EMPTY_LIST);
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -322,7 +323,7 @@ public class ResourceResolverFactoryActivator {
                 }
             }
             if ( !prefixSet.isEmpty()) {
-                this.aliasPathAllowList = Collections.unmodifiableList(prefixSet);
+                this.aliasPathAllowList = new UnmodifiableList(prefixSet);
             }
         }
 
