@@ -22,9 +22,10 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
+
 
 import org.apache.commons.collections4.BidiMap;
+
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.sling.api.resource.ResourceDecorator;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -123,7 +124,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    private final List<String> aliasPathAllowList = new CopyOnWriteArrayList<>();
+    private volatile List<String> aliasPathAllowList = Collections.unmodifiableList(new ArrayList<>());
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -203,7 +204,7 @@ public class ResourceResolverFactoryActivator {
     }
 
     public  List<String> getOptimizedAliasResolutionAllowList(){
-        return Collections.unmodifiableList(this.aliasPathAllowList);
+        return this.aliasPathAllowList;
     }
 
     public boolean isLogUnclosedResourceResolvers() {
@@ -306,27 +307,30 @@ public class ResourceResolverFactoryActivator {
         }
 
         // optimize alias path allow list
-        this.aliasPathAllowList.clear();
+        // optimize alias path allow list
         String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasPathPrefix != null ) {
+            final List<String> prefixSet = new ArrayList<>();
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
-                    if (!value.isEmpty()&&value.startsWith("/")) { // absolute path should be given
-                        if (value.endsWith("/")) {
-                            this.aliasPathAllowList.add(value);
-                        } else {
-                            this.aliasPathAllowList.add(value + "/");
-                        }
+                if (!value.isEmpty()) {
+                    if ( value.endsWith("/") ) {
+                        prefixSet.add(value);
+                    } else {
+                        prefixSet.add(value + "/");
                     }
+                }
             }
-            Collections.sort(this.aliasPathAllowList);
+            if ( !prefixSet.isEmpty()) {
+                this.aliasPathAllowList = Collections.unmodifiableList(prefixSet);
+            }
         }
 
         // vanity path white list
         this.vanityPathWhiteList = null;
         String[] vanityPathPrefixes = config.resource_resolver_vanitypath_whitelist();
         if ( vanityPathPrefixes != null ) {
-            final List<String> prefixList = new ArrayList<>();
+             List<String> prefixList = new ArrayList<>();
             for(final String value : vanityPathPrefixes) {
                 if ( value.trim().length() > 0 ) {
                     if ( value.trim().endsWith("/") ) {
