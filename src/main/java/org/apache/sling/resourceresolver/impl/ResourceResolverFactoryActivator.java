@@ -123,7 +123,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     /** Alias path whitelist */
-    @SuppressWarnings("PMD.AvoidUsingVolatile")
+    //NOSONAR
     private volatile List<String> aliasPathAllowList = Collections.unmodifiableList(new ArrayList<>());
 
     /** Vanity path whitelist */
