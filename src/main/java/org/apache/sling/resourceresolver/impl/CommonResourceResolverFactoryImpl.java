@@ -466,7 +466,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public List<String> getAllowedAliasPaths() {
+    public Set<String> getAllowedAliasPaths() {
        return this.activator.getOptimizedAliasResolutionAllowList();
     }
 
