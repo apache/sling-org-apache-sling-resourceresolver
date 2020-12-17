@@ -2096,4 +2096,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.isValidAliasPath(null);
 
     }
+
+    public void testUpdateAliasPath() throws NoSuchMethodException, IllegalAccessException {
+        mapEntries.
+
+    }
 }

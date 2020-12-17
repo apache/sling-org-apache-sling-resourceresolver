@@ -124,7 +124,7 @@ public class ResourceResolverFactoryActivator {
 
     /** Alias path whitelist */
     @SuppressWarnings("java:S3077")
-    private volatile Set<String> aliasPathAllowList = Collections.unmodifiableSet(Collections.EMPTY_SET);
+    private volatile Set<String> aliasPathAllowList = Collections.unmodifiableSet(Collections.emptySet());
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
