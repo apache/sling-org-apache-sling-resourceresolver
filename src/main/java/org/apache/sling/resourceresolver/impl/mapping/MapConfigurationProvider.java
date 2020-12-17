@@ -18,6 +18,8 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
@@ -83,5 +85,5 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
      * If empty List is returned, all paths are allowed.
      * @return
      */
-    List<String> getAllowedAliasPaths();
+    Set<String> getAllowedAliasPaths();
 }

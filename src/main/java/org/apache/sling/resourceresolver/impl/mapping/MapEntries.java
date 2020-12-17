@@ -1030,7 +1030,7 @@ public class MapEntries implements
     * Update alias query based on configured alias locations
     */
     private String updateAliasQuery(){
-        List<String> allowedPaths = this.factory.getAllowedAliasPaths();
+        Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
 
         StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
         baseQuery.append(" ").append("WHERE");

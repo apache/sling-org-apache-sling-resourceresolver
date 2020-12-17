@@ -116,9 +116,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 Collections.<Resource> emptySet().iterator());
         //when(resourceResolverFactory.getAliasPath()).thenReturn(Arrays.asList("/child"));
 
-        CopyOnWriteArrayList<String> aliasPath = new CopyOnWriteArrayList<>();
+        Set<String> aliasPath = new TreeSet<>();
         aliasPath.add("/parent");
-        for(int i = 1;i<testSize;i++){
+              for(int i = 1;i<testSize;i++){
             aliasPath.add("/parent"+i);
         }
 
@@ -2091,20 +2091,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         }
     }
 
-   /* @Test
-    public void testIsValidAliasPath() throws Exception {
-        // ignore system tree - path should not start with /jcr:system -
-        boolean isValid = mapEntries.isValidAliasPath("/jcr:system/node");
-        assertFalse(isValid);
-        //valid alias path
-        isValid = mapEntries.isValidAliasPath("/parent");
-        assertTrue(isValid);
-        // notallowedparent is not valid configured alias path
-        isValid = mapEntries.isValidAliasPath( "/notallowedparent");
-        assertFalse(isValid);
-    }*/
-
-    @Test(expected = IllegalArgumentException.class)
+   @Test(expected = IllegalArgumentException.class)
     public void testNullAliasPath() throws NoSuchMethodException, IllegalAccessException {
         mapEntries.isValidAliasPath(null);
 

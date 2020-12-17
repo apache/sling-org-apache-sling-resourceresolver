@@ -124,7 +124,7 @@ public class ResourceResolverFactoryActivator {
 
     /** Alias path whitelist */
     @SuppressWarnings("java:S3077")
-    private volatile List<String> aliasPathAllowList = Collections.unmodifiableList(new ArrayList<>());
+    private volatile Set<String> aliasPathAllowList = Collections.unmodifiableSet(Collections.EMPTY_SET);
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -203,7 +203,7 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public  List<String> getOptimizedAliasResolutionAllowList(){
+    public  Set<String> getOptimizedAliasResolutionAllowList(){
         return this.aliasPathAllowList;
     }
 
@@ -307,10 +307,9 @@ public class ResourceResolverFactoryActivator {
         }
 
         // optimize alias path allow list
-        // optimize alias path allow list
         String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasPathPrefix != null ) {
-            final List<String> prefixSet = new ArrayList<>();
+            final Set<String> prefixSet = new TreeSet<>();
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
                 if (!value.isEmpty()) {
@@ -322,7 +321,7 @@ public class ResourceResolverFactoryActivator {
                 }
             }
             if ( !prefixSet.isEmpty()) {
-                this.aliasPathAllowList = Collections.unmodifiableList(prefixSet);
+                this.aliasPathAllowList = Collections.unmodifiableSet(prefixSet);
             }
         }
 
