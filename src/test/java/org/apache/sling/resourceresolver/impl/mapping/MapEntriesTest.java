@@ -80,7 +80,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     private EventAdmin eventAdmin;
 
     private Map<String, Map<String, String>> aliasMap;
-    private int testSize = 5;
 
     @SuppressWarnings({ "unchecked" })
     @Before
@@ -115,14 +114,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.<Resource> emptySet().iterator());
         //when(resourceResolverFactory.getAliasPath()).thenReturn(Arrays.asList("/child"));
-
-        Set<String> aliasPath = new TreeSet<>();
-        aliasPath.add("/parent");
-              for(int i = 1;i<testSize;i++){
-            aliasPath.add("/parent"+i);
-        }
-
-        when(resourceResolverFactory.getAllowedAliasPaths()).thenReturn(aliasPath);
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
