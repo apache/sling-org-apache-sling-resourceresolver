@@ -1030,17 +1030,17 @@ public class MapEntries implements
     * Update alias query based on configured alias locations
     */
     private String updateAliasQuery(){
-        final Set<String> allowedPaths = this.factory.getAllowedAliasPaths();
+        final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
         StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
         baseQuery.append(" ").append("WHERE");
 
-        if(allowedPaths.isEmpty()){
+        if(allowedLocations.isEmpty()){
             baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
                     .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
 
         }else{
-            Iterator<String> pathIterator = allowedPaths.iterator();
+            Iterator<String> pathIterator = allowedLocations.iterator();
             baseQuery.append("(");
             while(pathIterator.hasNext()){
                 String prefix = pathIterator.next();

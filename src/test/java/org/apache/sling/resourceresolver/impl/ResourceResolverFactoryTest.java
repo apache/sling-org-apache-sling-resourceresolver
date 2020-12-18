@@ -107,9 +107,9 @@ public class ResourceResolverFactoryTest {
 
 
     @Test public void testGetAllowedAliasPaths() throws NoSuchMethodException {
-        assertTrue(this.commonFactory.getAllowedAliasPaths().isEmpty());
+        assertTrue(this.commonFactory.getAllowedAliasLocations().isEmpty());
         String[] allowPaths = {"/parent", "/parent0"};
-        setInaccessibleField("aliasPathAllowList", activator, Collections.unmodifiableSet(new TreeSet<>(Arrays.asList(allowPaths))));
-        assertTrue(!this.commonFactory.getAllowedAliasPaths().isEmpty());
+        setInaccessibleField("allowedAliasLocations", activator, Collections.unmodifiableSet(new TreeSet<>(Arrays.asList(allowPaths))));
+        assertTrue(!this.commonFactory.getAllowedAliasLocations().isEmpty());
     }
 }

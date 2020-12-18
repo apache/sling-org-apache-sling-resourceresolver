@@ -123,7 +123,7 @@ public class ResourceResolverFactoryActivator {
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
     @SuppressWarnings("java:S3077")
-    private volatile Set<String> aliasPathAllowList = Collections.emptySet();
+    private volatile Set<String> allowedAliasLocations = Collections.emptySet();
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -202,8 +202,8 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public  Set<String> getOptimizedAliasResolutionAllowList(){
-        return this.aliasPathAllowList;
+    public  Set<String> getAllowedAliasLocations(){
+        return this.allowedAliasLocations;
     }
 
     public boolean isLogUnclosedResourceResolvers() {
@@ -306,10 +306,10 @@ public class ResourceResolverFactoryActivator {
         }
 
         // optimize alias path allow list
-        String[] aliasPathPrefix = config.resource_resolver_allowed_alias_locations();
-        if ( aliasPathPrefix != null ) {
+        String[] aliasLocationsPrefix = config.resource_resolver_allowed_alias_locations();
+        if ( aliasLocationsPrefix != null ) {
             final Set<String> prefixSet = new TreeSet<>();
-            for(final String prefix : aliasPathPrefix) {
+            for(final String prefix : aliasLocationsPrefix) {
                 String value = prefix.trim();
                 if (!value.isEmpty()) {
                     if (value.startsWith("/")) { // absolute path should be given
@@ -324,7 +324,7 @@ public class ResourceResolverFactoryActivator {
                 }
             }
             if ( !prefixSet.isEmpty()) {
-                this.aliasPathAllowList = Collections.unmodifiableSet(prefixSet);
+                this.allowedAliasLocations = Collections.unmodifiableSet(prefixSet);
             }
         }
 
