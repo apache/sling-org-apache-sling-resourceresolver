@@ -122,9 +122,8 @@ public class ResourceResolverFactoryActivator {
 
     private volatile ResourceResolverFactoryConfig config = DEFAULT_CONFIG;
 
-    /** Alias path whitelist */
     @SuppressWarnings("java:S3077")
-    private volatile Set<String> aliasPathAllowList = Collections.unmodifiableSet(Collections.emptySet());
+    private volatile Set<String> aliasPathAllowList = Collections.emptySet();
 
     /** Vanity path whitelist */
     private volatile String[] vanityPathWhiteList;
@@ -313,10 +312,14 @@ public class ResourceResolverFactoryActivator {
             for(final String prefix : aliasPathPrefix) {
                 String value = prefix.trim();
                 if (!value.isEmpty()) {
-                    if ( value.endsWith("/") ) {
-                        prefixSet.add(value);
-                    } else {
-                        prefixSet.add(value + "/");
+                    if (value.startsWith("/")) { // absolute path should be given
+                        if (value.endsWith("/")) {
+                            prefixSet.add(value);
+                        } else {
+                            prefixSet.add(value + "/");
+                        }
+                    }else{
+                        logger.warn("Path [{}] is ignored. As only absolute paths are allowed for alias optimization", value);
                     }
                 }
             }
@@ -329,7 +332,7 @@ public class ResourceResolverFactoryActivator {
         this.vanityPathWhiteList = null;
         String[] vanityPathPrefixes = config.resource_resolver_vanitypath_whitelist();
         if ( vanityPathPrefixes != null ) {
-             List<String> prefixList = new ArrayList<>();
+            final List<String> prefixList = new ArrayList<>();
             for(final String value : vanityPathPrefixes) {
                 if ( value.trim().length() > 0 ) {
                     if ( value.trim().endsWith("/") ) {

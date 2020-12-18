@@ -81,8 +81,8 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
     List<VanityPathConfig> getVanityPathConfig();
 
     /**
-     * A List of allow prefixes all ending with a slash.
-     * If empty List is returned, all paths are allowed.
+     * A set of allow prefixes all ending with a slash.
+     * If empty set is returned, all paths are allowed.
      * @return
      */
     Set<String> getAllowedAliasPaths();
