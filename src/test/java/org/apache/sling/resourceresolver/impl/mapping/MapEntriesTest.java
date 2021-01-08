@@ -118,10 +118,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         Set<String> aliasPath = new TreeSet<>();
         aliasPath.add("/parent");
-        for(int i = 1;i<testSize;i++){
+        for(int i = 1; i < testSize; i++){
           aliasPath.add("/parent"+i);
         }
-
         when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(aliasPath);
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
@@ -2091,9 +2090,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         }
     }
 
-   @Test(expected = IllegalArgumentException.class)
+  /* @Test(expected = IllegalArgumentException.class)
     public void testNullAliasPath() throws NoSuchMethodException, IllegalAccessException {
         mapEntries.isValidAliasPath(null);
 
-    }
+
+    }*/
 }

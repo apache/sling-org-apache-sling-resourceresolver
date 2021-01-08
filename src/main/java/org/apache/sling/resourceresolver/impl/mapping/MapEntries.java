@@ -76,7 +76,7 @@ public class MapEntries implements
 
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
-    private static final Logger logger = LoggerFactory.getLogger(MapEntries.class);
+    private final Logger logger = LoggerFactory.getLogger(MapEntries.class);
 
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
@@ -1061,25 +1061,15 @@ public class MapEntries implements
         return aliasQuery;
     }
 
-    /**
-     *
-     *  validate alias path based on configuration provided
-     */
-    protected boolean isValidAliasPath(final String path){
-        if(path == null){
-            throw new IllegalArgumentException("Unexpected null path");
-        }
 
-       return true;   
-    }
 
     /**
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
-        // ignore system tree
-        if (!isValidAliasPath(resource.getPath())) {
-            return false;
+
+        if(resource.getPath() == null){
+            throw new IllegalArgumentException("Unexpected null path");
         }
 
         final String resourceName;
