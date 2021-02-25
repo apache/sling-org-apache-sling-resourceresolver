@@ -18,6 +18,7 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.*;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
@@ -1036,8 +1037,9 @@ public class MapEntries implements
         baseQuery.append(" ").append("WHERE");
 
         if(allowedLocations.isEmpty()){
+            String jcrSystemPath = StringUtils.removeEnd(JCR_SYSTEM_PREFIX, "/");
             baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
-                    .append("\"").append(JCR_SYSTEM_PREFIX).append("\"").append("))");
+                    .append("\"").append(jcrSystemPath).append("\"").append("))");
 
         }else{
             Iterator<String> pathIterator = allowedLocations.iterator();

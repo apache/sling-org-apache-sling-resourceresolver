@@ -19,6 +19,7 @@ package org.apache.sling.resourceresolver.impl;
 
 import static org.apache.sling.resourceresolver.util.MockTestUtil.getResourceName;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -36,6 +37,7 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
@@ -237,7 +239,8 @@ public class MockedResourceResolverImplTest {
 
             @Override
             public String[] resource_resolver_allowed_alias_locations() {
-                return new String[]{"/apps/", "/libs/", "/content/"};
+                // deliberately put a mixture of paths with and without ending slash in here - both should be handled correct
+                return new String[]{"/apps/", "/libs", "/content/"};
             }
 
             @Override
@@ -317,6 +320,11 @@ public class MockedResourceResolverImplTest {
         }
         Assert.assertTrue(rrf instanceof ResourceResolverFactoryImpl);
         resourceResolverFactory = (ResourceResolverFactoryImpl) rrf;
+
+        // ensure allowed alias locations are *not* ending with a slash (invalid absolut path)
+        for (String path : activator.getAllowedAliasLocations()) {
+            assertFalse("Path must not end with '/': " + path, StringUtils.endsWith(path, "/"));
+        }
     }
 
     public static ResourceProviderHandler createRPHandler(ResourceProvider<?> rp, String pid, long ranking,
