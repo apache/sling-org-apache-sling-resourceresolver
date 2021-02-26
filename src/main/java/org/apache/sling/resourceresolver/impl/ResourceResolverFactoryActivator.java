@@ -315,11 +315,7 @@ public class ResourceResolverFactoryActivator {
                 if (!value.isEmpty()) {
                     if (value.startsWith("/")) { // absolute path should be given
                         // path must not end with "/" to be valid absolute path
-                        if (value.endsWith("/")) {
-                            prefixSet.add(StringUtils.removeEnd(value, "/"));
-                        } else {
-                            prefixSet.add(value);
-                        }
+                        prefixSet.add(StringUtils.removeEnd(value, "/"));
                     }else{
                         logger.warn("Path [{}] is ignored. As only absolute paths are allowed for alias optimization", value);
                     }
