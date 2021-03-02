@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.observation.ResourceChange;
@@ -2089,4 +2090,21 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         }
     }
+
+    @Test
+    public void testLoadAliases_ValidAbsolutePath_DefaultPaths() {
+        when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(Collections.emptySet());
+
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+            @Override
+            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+                String query = StringUtils.trim((String)invocation.getArguments()[0]);
+                assertEquals("SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,\"/jcr:system\")) AND sling:alias IS NOT NULL", query);
+                return Collections.<Resource> emptySet().iterator();
+            }
+        });
+
+        mapEntries.doInit();
+    }
+
 }

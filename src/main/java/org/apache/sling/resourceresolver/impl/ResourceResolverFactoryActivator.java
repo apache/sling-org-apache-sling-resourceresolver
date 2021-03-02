@@ -26,6 +26,7 @@ import java.util.*;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.ResourceDecorator;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
@@ -313,11 +314,8 @@ public class ResourceResolverFactoryActivator {
                 String value = prefix.trim();
                 if (!value.isEmpty()) {
                     if (value.startsWith("/")) { // absolute path should be given
-                        if (value.endsWith("/")) {
-                            prefixSet.add(value);
-                        } else {
-                            prefixSet.add(value + "/");
-                        }
+                        // path must not end with "/" to be valid absolute path
+                        prefixSet.add(StringUtils.removeEnd(value, "/"));
                     }else{
                         logger.warn("Path [{}] is ignored. As only absolute paths are allowed for alias optimization", value);
                     }
