@@ -92,6 +92,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     /** Resource resolver context. */
     private final ResourceResolverContext context;
 
+    private final Map<StringTupel,Boolean> resourceTypeLookupCache;
+
+
     private volatile Exception closedResolverException;
 
     public ResourceResolverImpl(final CommonResourceResolverFactoryImpl factory, final boolean isAdmin, final Map<String, Object> authenticationInfo) throws LoginException {
@@ -103,6 +106,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         this.context = new ResourceResolverContext(this, factory.getResourceAccessSecurityTracker());
         this.control = createControl(resourceProviderTracker, authenticationInfo, isAdmin);
         this.factory.register(this, control);
+        this.resourceTypeLookupCache = new HashMap<>();
     }
 
     /**
@@ -124,6 +128,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         this.context = new ResourceResolverContext(this, factory.getResourceAccessSecurityTracker());
         this.control = createControl(factory.getResourceProviderTracker(), authInfo, resolver.control.isAdmin());
         this.factory.register(this, control);
+        this.resourceTypeLookupCache = new HashMap<>();
     }
 
     /**
@@ -1046,28 +1051,47 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     public boolean isResourceType(final Resource resource, final String resourceType) {
         boolean result = false;
         if ( resource != null && resourceType != null ) {
-             // Check if the resource is of the given type. This method first checks the
-             // resource type of the resource, then its super resource type and continues
-             //  to go up the resource super type hierarchy.
-             if (ResourceTypeUtil.areResourceTypesEqual(resourceType, resource.getResourceType(), factory.getSearchPath())) {
-                 result = true;
-             } else {
-                 Set<String> superTypesChecked = new HashSet<>();
-                 String superType = this.getParentResourceType(resource);
-                 while (!result && superType != null) {
-                     if (ResourceTypeUtil.areResourceTypesEqual(resourceType, superType, factory.getSearchPath())) {
-                         result = true;
-                     } else {
-                         superTypesChecked.add(superType);
-                         superType = this.getParentResourceType(superType);
-                         if (superType != null && superTypesChecked.contains(superType)) {
-                             throw new SlingException("Cyclic dependency for resourceSuperType hierarchy detected on resource " + resource.getPath(), null);
-                         }
+
+             // Check if the result is already available from cache
+             StringTupel key = new StringTupel(resource.getResourceType(),resourceType);
+             if (resourceTypeLookupCache.containsKey(key)) {
+                 return resourceTypeLookupCache.get(key);
+             }
+
+             // Perform the resolution and store the result in the cache
+             result = isResourceTypeInternal(resource, resourceType);
+             resourceTypeLookupCache.put(key, result);
+        }
+        return result;
+    }
+
+    /**
+     * Perform the actual check of the resourceType
+     * @param resource the resource
+     * @param resourceType the resource type to compare to
+     * @return
+     */
+    boolean isResourceTypeInternal(final Resource resource, final String resourceType) {
+        boolean result = false;
+        if (ResourceTypeUtil.areResourceTypesEqual(resourceType, resource.getResourceType(), factory.getSearchPath())) {
+             // direct match
+             result = true;
+         } else {
+             // iterate the resourcetype hierarchy
+             Set<String> superTypesChecked = new HashSet<>();
+             String superType = this.getParentResourceType(resource);
+             while (!result && superType != null) {
+                 if (ResourceTypeUtil.areResourceTypesEqual(resourceType, superType, factory.getSearchPath())) {
+                     result = true;
+                 } else {
+                     superTypesChecked.add(superType);
+                     superType = this.getParentResourceType(superType);
+                     if (superType != null && superTypesChecked.contains(superType)) {
+                         throw new SlingException("Cyclic dependency for resourceSuperType hierarchy detected on resource " + resource.getPath(), null);
                      }
                  }
              }
-
-        }
+         }
         return result;
     }
 
@@ -1077,6 +1101,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public void refresh() {
         this.control.refresh(this.context);
+        resourceTypeLookupCache.clear();
     }
 
     @Override
@@ -1117,4 +1142,57 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         }
         return rsrc;
     }
+
+
+
+    public class StringTupel {
+
+        String resourceType;
+        String resourceSuperType;
+
+        public StringTupel (String rt, String rst) {
+            this.resourceType = rt;
+            this.resourceSuperType = rst;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + getEnclosingInstance().hashCode();
+            result = prime * result + ((resourceSuperType == null) ? 0 : resourceSuperType.hashCode());
+            result = prime * result + ((resourceType == null) ? 0 : resourceType.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            StringTupel other = (StringTupel) obj;
+            if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
+                return false;
+            if (resourceSuperType == null) {
+                if (other.resourceSuperType != null)
+                    return false;
+            } else if (!resourceSuperType.equals(other.resourceSuperType))
+                return false;
+            if (resourceType == null) {
+                if (other.resourceType != null)
+                    return false;
+            } else if (!resourceType.equals(other.resourceType))
+                return false;
+            return true;
+        }
+
+        private ResourceResolverImpl getEnclosingInstance() {
+            return ResourceResolverImpl.this;
+        }
+    }
+
+
 }
