@@ -1056,8 +1056,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
              // Check if the result is already available from cache
              ResourceTypeInformation key = new ResourceTypeInformation(resource.getResourceType(),resource.getResourceSuperType(), resourceType);
-             if (resourceTypeLookupCache.containsKey(key)) {
-                 return resourceTypeLookupCache.get(key);
+             Boolean value = resourceTypeLookupCache.get(key);
+             if (value != null) {
+                 return value.booleanValue();
              }
 
              // Perform the resolution and store the result in the cache
@@ -1068,7 +1069,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     }
 
     /**
-     * Perform the actual check of the resourceType
+     * Check if the resource is of the given type. This method first checks the
+     * resource type of the resource, then its super resource type and continues
+     * to go up the resource super type hierarchy.
      * @param resource the resource
      * @param resourceType the resource type to compare to
      * @return
@@ -1079,7 +1082,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
              // direct match
              result = true;
          } else {
-             // iterate the resourcetype hierarchy
+
              Set<String> superTypesChecked = new HashSet<>();
              String superType = this.getParentResourceType(resource);
              while (!result && superType != null) {
@@ -1147,8 +1150,18 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
 
 
-    // A very simple tupel implementation which can be used as key in any map
+    // Simple pojo acting as key for the resourceTypeLookupCache 
     public class ResourceTypeInformation {
+ 
+        String s1;
+        String s2;
+        String s3;
+
+        public ResourceTypeInformation (String resourceType, String resourceSuperType, String resourceTypeToCompareTo) {
+            this.s1 = resourceType;
+            this.s2 = resourceSuperType;
+            this.s3 = resourceTypeToCompareTo;
+        }
 
         @Override
         public int hashCode() {
@@ -1190,20 +1203,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             return true;
         }
 
-        String s1;
-        String s2;
-        String s3;
-
-        public ResourceTypeInformation (String resourceType, String resourceSuperType, String resourceTypeToCompareTo) {
-            this.s1 = resourceType;
-            this.s2 = resourceSuperType;
-            this.s3 = resourceTypeToCompareTo;
-        }
-
         private ResourceResolverImpl getEnclosingInstance() {
             return ResourceResolverImpl.this;
         }
-
 
     }
 

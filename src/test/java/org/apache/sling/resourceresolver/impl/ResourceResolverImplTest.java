@@ -527,7 +527,7 @@ public class ResourceResolverImplTest {
         assertFalse(resolver.isResourceType(r, "h:p"));
     }
 
-    @Test public void testIsResourceTypeCached() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+    @Test public void testIsResourceTypeCached() throws Exception {
         final PathBasedResourceResolverImpl resolver = Mockito.spy(getPathBasedResourceResolver());
         final Resource r1 = resolver.add(new SyntheticResource(resolver, "/a", "a:b"));
         final Resource r2 = resolver.add(new SyntheticResourceWithSupertype(resolver, "/b", "a:b", "c:d"));
