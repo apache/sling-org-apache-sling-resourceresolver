@@ -53,7 +53,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.SyntheticResource;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl.String3Tupel;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl.ResourceTypeInformation;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;

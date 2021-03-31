@@ -92,7 +92,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     /** Resource resolver context. */
     private final ResourceResolverContext context;
 
-    protected final Map<String3Tupel,Boolean> resourceTypeLookupCache;
+    protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache;
 
 
     private volatile Exception closedResolverException;
@@ -106,7 +106,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         this.context = new ResourceResolverContext(this, factory.getResourceAccessSecurityTracker());
         this.control = createControl(resourceProviderTracker, authenticationInfo, isAdmin);
         this.factory.register(this, control);
-        this.resourceTypeLookupCache = new HashMap<>();
+        Map<ResourceTypeInformation,Boolean> m = new HashMap<>();
+        this.resourceTypeLookupCache = Collections.synchronizedMap(m);
     }
 
     /**
@@ -1003,6 +1004,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public void commit() throws PersistenceException {
         this.control.commit(this.context);
+        resourceTypeLookupCache.clear();
     }
 
     /**
@@ -1053,7 +1055,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if ( resource != null && resourceType != null ) {
 
              // Check if the result is already available from cache
-             String3Tupel key = new String3Tupel(resource.getResourceType(),resource.getResourceSuperType(), resourceType);
+             ResourceTypeInformation key = new ResourceTypeInformation(resource.getResourceType(),resource.getResourceSuperType(), resourceType);
              if (resourceTypeLookupCache.containsKey(key)) {
                  return resourceTypeLookupCache.get(key);
              }
@@ -1146,7 +1148,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
 
     // A very simple tupel implementation which can be used as key in any map
-    public class String3Tupel {
+    public class ResourceTypeInformation {
 
         @Override
         public int hashCode() {
@@ -1167,7 +1169,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            String3Tupel other = (String3Tupel) obj;
+            ResourceTypeInformation other = (ResourceTypeInformation) obj;
             if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
                 return false;
             if (s1 == null) {
@@ -1192,10 +1194,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         String s2;
         String s3;
 
-        public String3Tupel (String string1, String string2, String string3) {
-            this.s1 = string1;
-            this.s2 = string2;
-            this.s3 = string3;
+        public ResourceTypeInformation (String resourceType, String resourceSuperType, String resourceTypeToCompareTo) {
+            this.s1 = resourceType;
+            this.s2 = resourceSuperType;
+            this.s3 = resourceTypeToCompareTo;
         }
 
         private ResourceResolverImpl getEnclosingInstance() {
