@@ -92,7 +92,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     /** Resource resolver context. */
     private final ResourceResolverContext context;
 
-    private final Map<StringTupel,Boolean> resourceTypeLookupCache;
+    protected final Map<String3Tupel,Boolean> resourceTypeLookupCache;
 
 
     private volatile Exception closedResolverException;
@@ -1053,7 +1053,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if ( resource != null && resourceType != null ) {
 
              // Check if the result is already available from cache
-             StringTupel key = new StringTupel(resource.getResourceType(),resourceType);
+             String3Tupel key = new String3Tupel(resource.getResourceType(),resource.getResourceSuperType(), resourceType);
              if (resourceTypeLookupCache.containsKey(key)) {
                  return resourceTypeLookupCache.get(key);
              }
@@ -1145,23 +1145,17 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
 
 
-    public class StringTupel {
-
-        String resourceType;
-        String resourceSuperType;
-
-        public StringTupel (String rt, String rst) {
-            this.resourceType = rt;
-            this.resourceSuperType = rst;
-        }
+    // A very simple tupel implementation which can be used as key in any map
+    public class String3Tupel {
 
         @Override
         public int hashCode() {
             final int prime = 31;
             int result = 1;
             result = prime * result + getEnclosingInstance().hashCode();
-            result = prime * result + ((resourceSuperType == null) ? 0 : resourceSuperType.hashCode());
-            result = prime * result + ((resourceType == null) ? 0 : resourceType.hashCode());
+            result = prime * result + ((s1 == null) ? 0 : s1.hashCode());
+            result = prime * result + ((s2 == null) ? 0 : s2.hashCode());
+            result = prime * result + ((s3 == null) ? 0 : s3.hashCode());
             return result;
         }
 
@@ -1173,25 +1167,42 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            StringTupel other = (StringTupel) obj;
+            String3Tupel other = (String3Tupel) obj;
             if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
                 return false;
-            if (resourceSuperType == null) {
-                if (other.resourceSuperType != null)
+            if (s1 == null) {
+                if (other.s1 != null)
                     return false;
-            } else if (!resourceSuperType.equals(other.resourceSuperType))
+            } else if (!s1.equals(other.s1))
                 return false;
-            if (resourceType == null) {
-                if (other.resourceType != null)
+            if (s2 == null) {
+                if (other.s2 != null)
                     return false;
-            } else if (!resourceType.equals(other.resourceType))
+            } else if (!s2.equals(other.s2))
+                return false;
+            if (s3 == null) {
+                if (other.s3 != null)
+                    return false;
+            } else if (!s3.equals(other.s3))
                 return false;
             return true;
+        }
+
+        String s1;
+        String s2;
+        String s3;
+
+        public String3Tupel (String string1, String string2, String string3) {
+            this.s1 = string1;
+            this.s2 = string2;
+            this.s3 = string3;
         }
 
         private ResourceResolverImpl getEnclosingInstance() {
             return ResourceResolverImpl.this;
         }
+
+
     }
 
 
