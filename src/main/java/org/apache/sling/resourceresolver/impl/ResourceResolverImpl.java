@@ -27,8 +27,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
@@ -92,7 +94,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     /** Resource resolver context. */
     private final ResourceResolverContext context;
 
-    protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache;
+    protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
 
 
     private volatile Exception closedResolverException;
@@ -106,8 +108,6 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         this.context = new ResourceResolverContext(this, factory.getResourceAccessSecurityTracker());
         this.control = createControl(resourceProviderTracker, authenticationInfo, isAdmin);
         this.factory.register(this, control);
-        Map<ResourceTypeInformation,Boolean> m = new HashMap<>();
-        this.resourceTypeLookupCache = Collections.synchronizedMap(m);
     }
 
     /**
@@ -129,7 +129,6 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         this.context = new ResourceResolverContext(this, factory.getResourceAccessSecurityTracker());
         this.control = createControl(factory.getResourceProviderTracker(), authInfo, resolver.control.isAdmin());
         this.factory.register(this, control);
-        this.resourceTypeLookupCache = new HashMap<>();
     }
 
     /**
@@ -1051,21 +1050,15 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public boolean isResourceType(final Resource resource, final String resourceType) {
-        boolean result = false;
+
         if ( resource != null && resourceType != null ) {
-
-             // Check if the result is already available from cache
              ResourceTypeInformation key = new ResourceTypeInformation(resource.getResourceType(),resource.getResourceSuperType(), resourceType);
-             Boolean value = resourceTypeLookupCache.get(key);
-             if (value != null) {
-                 return value.booleanValue();
-             }
-
-             // Perform the resolution and store the result in the cache
-             result = isResourceTypeInternal(resource, resourceType);
-             resourceTypeLookupCache.put(key, result);
+             Boolean value = resourceTypeLookupCache.computeIfAbsent(key,
+                     (k) -> isResourceTypeInternal(resource, resourceType));
+             return value.booleanValue();
+        } else {
+            return false;
         }
-        return result;
     }
 
     /**
@@ -1167,10 +1160,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + getEnclosingInstance().hashCode();
-            result = prime * result + ((s1 == null) ? 0 : s1.hashCode());
-            result = prime * result + ((s2 == null) ? 0 : s2.hashCode());
-            result = prime * result + ((s3 == null) ? 0 : s3.hashCode());
+            result = prime * result + Objects.hash(s1, s2, s3);
             return result;
         }
 
@@ -1183,30 +1173,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             if (getClass() != obj.getClass())
                 return false;
             ResourceTypeInformation other = (ResourceTypeInformation) obj;
-            if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
-                return false;
-            if (s1 == null) {
-                if (other.s1 != null)
-                    return false;
-            } else if (!s1.equals(other.s1))
-                return false;
-            if (s2 == null) {
-                if (other.s2 != null)
-                    return false;
-            } else if (!s2.equals(other.s2))
-                return false;
-            if (s3 == null) {
-                if (other.s3 != null)
-                    return false;
-            } else if (!s3.equals(other.s3))
-                return false;
-            return true;
+            return Objects.equals(s1, other.s1) && Objects.equals(s2, other.s2) && Objects.equals(s3, other.s3);
         }
-
-        private ResourceResolverImpl getEnclosingInstance() {
-            return ResourceResolverImpl.this;
-        }
-
     }
 
 
