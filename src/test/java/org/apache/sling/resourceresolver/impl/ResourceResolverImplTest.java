@@ -29,7 +29,11 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
+import static org.mockito.Mockito.eq;
+
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,6 +53,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.SyntheticResource;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl.ResourceTypeInformation;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
@@ -57,6 +62,7 @@ import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.osgi.framework.Bundle;
 
@@ -519,6 +525,28 @@ public class ResourceResolverImplTest {
         assertFalse(resolver.isResourceType(r, "x:y"));
         assertTrue(resolver.isResourceType(r, "t:c"));
         assertFalse(resolver.isResourceType(r, "h:p"));
+    }
+
+    @Test public void testIsResourceTypeCached() throws Exception {
+        final PathBasedResourceResolverImpl resolver = Mockito.spy(getPathBasedResourceResolver());
+        final Resource r1 = resolver.add(new SyntheticResource(resolver, "/a", "a:b"));
+        final Resource r2 = resolver.add(new SyntheticResourceWithSupertype(resolver, "/b", "a:b", "c:d"));
+
+        // 1st lookup needs to get through, 2nd will be taken from cache
+        assertTrue(resolver.isResourceType(r1, "a:b"));
+        Mockito.verify(resolver, Mockito.times(1)).isResourceTypeInternal(eq(r1), eq("a:b"));
+        assertTrue(resolver.isResourceType(r1, "a:b"));
+        Mockito.verify(resolver, Mockito.times(1)).isResourceTypeInternal(eq(r1), eq("a:b"));
+
+        resolver.refresh();
+        assertTrue(resolver.isResourceType(r1, "a:b"));
+        Mockito.verify(resolver, Mockito.times(2)).isResourceTypeInternal(eq(r1), eq("a:b"));
+
+        // make sure that resources with the same resourceType but different resourceSuperType are
+        // treated differently
+        assertTrue(resolver.isResourceType(r2, "c:d"));
+        assertFalse(resolver.isResourceType(r1, "c:d"));
+
     }
 
     @Test public void testIsResourceTypeWithPaths() {

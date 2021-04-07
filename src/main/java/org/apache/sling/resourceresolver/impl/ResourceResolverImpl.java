@@ -27,8 +27,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
@@ -91,6 +93,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     /** Resource resolver context. */
     private final ResourceResolverContext context;
+
+    protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
+
 
     private volatile Exception closedResolverException;
 
@@ -998,6 +1003,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public void commit() throws PersistenceException {
         this.control.commit(this.context);
+        resourceTypeLookupCache.clear();
     }
 
     /**
@@ -1044,30 +1050,46 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public boolean isResourceType(final Resource resource, final String resourceType) {
-        boolean result = false;
+
         if ( resource != null && resourceType != null ) {
-             // Check if the resource is of the given type. This method first checks the
-             // resource type of the resource, then its super resource type and continues
-             //  to go up the resource super type hierarchy.
-             if (ResourceTypeUtil.areResourceTypesEqual(resourceType, resource.getResourceType(), factory.getSearchPath())) {
-                 result = true;
-             } else {
-                 Set<String> superTypesChecked = new HashSet<>();
-                 String superType = this.getParentResourceType(resource);
-                 while (!result && superType != null) {
-                     if (ResourceTypeUtil.areResourceTypesEqual(resourceType, superType, factory.getSearchPath())) {
-                         result = true;
-                     } else {
-                         superTypesChecked.add(superType);
-                         superType = this.getParentResourceType(superType);
-                         if (superType != null && superTypesChecked.contains(superType)) {
-                             throw new SlingException("Cyclic dependency for resourceSuperType hierarchy detected on resource " + resource.getPath(), null);
-                         }
+             ResourceTypeInformation key = new ResourceTypeInformation(resource.getResourceType(),resource.getResourceSuperType(), resourceType);
+             Boolean value = resourceTypeLookupCache.computeIfAbsent(key,
+                     (k) -> isResourceTypeInternal(resource, resourceType));
+             return value.booleanValue();
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Check if the resource is of the given type. This method first checks the
+     * resource type of the resource, then its super resource type and continues
+     * to go up the resource super type hierarchy.
+     * @param resource the resource
+     * @param resourceType the resource type to compare to
+     * @return
+     */
+    boolean isResourceTypeInternal(final Resource resource, final String resourceType) {
+        boolean result = false;
+        if (ResourceTypeUtil.areResourceTypesEqual(resourceType, resource.getResourceType(), factory.getSearchPath())) {
+             // direct match
+             result = true;
+         } else {
+
+             Set<String> superTypesChecked = new HashSet<>();
+             String superType = this.getParentResourceType(resource);
+             while (!result && superType != null) {
+                 if (ResourceTypeUtil.areResourceTypesEqual(resourceType, superType, factory.getSearchPath())) {
+                     result = true;
+                 } else {
+                     superTypesChecked.add(superType);
+                     superType = this.getParentResourceType(superType);
+                     if (superType != null && superTypesChecked.contains(superType)) {
+                         throw new SlingException("Cyclic dependency for resourceSuperType hierarchy detected on resource " + resource.getPath(), null);
                      }
                  }
              }
-
-        }
+         }
         return result;
     }
 
@@ -1077,6 +1099,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public void refresh() {
         this.control.refresh(this.context);
+        resourceTypeLookupCache.clear();
     }
 
     @Override
@@ -1117,4 +1140,42 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         }
         return rsrc;
     }
+
+
+
+    // Simple pojo acting as key for the resourceTypeLookupCache 
+    public class ResourceTypeInformation {
+ 
+        String s1;
+        String s2;
+        String s3;
+
+        public ResourceTypeInformation (String resourceType, String resourceSuperType, String resourceTypeToCompareTo) {
+            this.s1 = resourceType;
+            this.s2 = resourceSuperType;
+            this.s3 = resourceTypeToCompareTo;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + Objects.hash(s1, s2, s3);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ResourceTypeInformation other = (ResourceTypeInformation) obj;
+            return Objects.equals(s1, other.s1) && Objects.equals(s2, other.s2) && Objects.equals(s3, other.s3);
+        }
+    }
+
+
 }
