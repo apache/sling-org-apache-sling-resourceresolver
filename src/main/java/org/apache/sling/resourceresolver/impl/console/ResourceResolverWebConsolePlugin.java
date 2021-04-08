@@ -51,6 +51,7 @@ import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntriesHandler;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntry;
+import org.apache.sling.resourceresolver.impl.mapping.MapTracker;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -65,6 +66,8 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
     private static final String ATTR_TEST = "plugin.test";
 
     private static final String ATTR_SUBMIT = "plugin.submit";
+
+    private static final String ATTR_CLEAR_MAP_TRACKING = "plugin.clearMapTracking";
 
     private static final String PAR_MSG = "msg";
     private static final String PAR_TEST = "test";
@@ -84,7 +87,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         this.runtimeService = runtimeService;
         this.bundleContext = context;
 
-        Dictionary<String, Object> props = new Hashtable<String, Object>();
+        Dictionary<String, Object> props = new Hashtable<>();
         props.put(Constants.SERVICE_DESCRIPTION,
                 "Apache Sling Resource Resolver Web Console Plugin");
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
@@ -202,6 +205,19 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
 
         separatorHtml(pw);
 
+        titleHtml(pw, "Map calls tracking data", "In-memory cache tracking all calls to map()");
+
+        pw.println("<tr class='content'><td class='content' colspan='3'>");
+        pw.println("<form method='post'>");
+        pw.println("<input type='submit' name='" + ATTR_CLEAR_MAP_TRACKING + "' class='submit' value='Clear map tracking data'>");
+        pw.println("</form>");
+        pw.println("</td></tr class='content'>");
+
+        pw.println("<tr class='content'><td class='content' colspan='3'><pre>");
+        MapTracker.get().dump(pw);
+        pw.println("</pre></td></tr class='content'>");
+        separatorHtml(pw);
+
         dumpDTOsHtml(pw);
 
         pw.println("</table>");
@@ -250,6 +266,10 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                 }
             }
 
+        }
+
+        if ( request.getParameter(ATTR_CLEAR_MAP_TRACKING) != null ) {
+            MapTracker.get().clear();
         }
 
         // finally redirect
@@ -326,7 +346,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         pw.println("<th class='content'>Redirect</th>");
         pw.println("</tr>");
 
-        final Set<String> usedPatterns = new HashSet<String>();
+        final Set<String> usedPatterns = new HashSet<>();
 
         for (final MapEntry entry : list) {
             final String pattern = entry.getPattern();
