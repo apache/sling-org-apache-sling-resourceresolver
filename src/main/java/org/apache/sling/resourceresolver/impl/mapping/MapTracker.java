@@ -19,11 +19,17 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 
 public class MapTracker {
 
@@ -54,21 +60,59 @@ public class MapTracker {
     }
 
     static class Key {
+        private static final List<String> IGNORED_CLASS_NAMES = Arrays.asList(
+                ResourceResolverImpl.class.getName(),
+                ResourceMapperImpl.class.getName(),
+                MapTracker.class.getName(),
+                MapTracker.Key.class.getName());
+
+        private static final List<String> IGNORED_PACKAGE_PREFIXES = Arrays.asList(
+                "sun.reflect.",
+                "java.lang.reflect."
+        );
+
         private final String resourcePath;
-        private final String requestPath;
+        private final String requestor;
 
         public Key(String resourcePath, HttpServletRequest request) {
             this.resourcePath = resourcePath;
-            this.requestPath = request != null ? request.getRequestURI() : null;
+            this.requestor = request != null ? "REQUEST:" + request.getRequestURI() : "SERVICE:"+inferService();
         }
+
+        private String inferService() {
+            Throwable origin = new RuntimeException().fillInStackTrace();
+            List<String> serviceChain = new ArrayList<>();
+            for ( StackTraceElement elem : origin.getStackTrace() ) {
+                if ( IGNORED_CLASS_NAMES.contains(elem.getClassName() ))
+                    continue;
+
+                boolean isIgnoredPackage = IGNORED_PACKAGE_PREFIXES.stream()
+                        .anyMatch( prefix -> elem.getClassName().startsWith(prefix) );
+
+                if ( isIgnoredPackage )
+                    continue;
+                serviceChain.add(elem.getClassName() + "." + elem.getMethodName());
+
+                if ( serviceChain.size() == 3) {
+                    return StringUtils.join(serviceChain, "|");
+                }
+            }
+
+            if ( !serviceChain.isEmpty() )
+                return StringUtils.join(serviceChain, "|");
+
+            return "UNKNOWN";
+
+        }
+
 
         @Override
         public int hashCode() {
-            return Objects.hash(requestPath, resourcePath);
+            return Objects.hash(requestor, resourcePath);
         }
 
         public String getRequestPath() {
-            return requestPath;
+            return requestor;
         }
 
         public String getResourcePath() {
@@ -84,7 +128,7 @@ public class MapTracker {
             if (getClass() != obj.getClass())
                 return false;
             Key other = (Key) obj;
-            return Objects.equals(requestPath, other.requestPath) && Objects.equals(resourcePath, other.resourcePath);
+            return Objects.equals(requestor, other.requestor) && Objects.equals(resourcePath, other.resourcePath);
         }
 
 
