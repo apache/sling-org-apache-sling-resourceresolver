@@ -86,7 +86,7 @@ public class ResourceMapperImpl implements ResourceMapper {
     public Collection<String> getAllMappings(String resourcePath, HttpServletRequest request) {
         
         resolver.checkClosed();
-        MapTracker.get().trackMapCall(resourcePath);
+        MapTracker.get().trackMapCall(resourcePath, request);
         
         // A note on the usage of the 'mappings' variable and the order of the results
         //

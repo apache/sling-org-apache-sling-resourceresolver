@@ -19,13 +19,13 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.io.PrintWriter;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class MapTracker {
+import javax.servlet.http.HttpServletRequest;
 
-    public static void main(String[] args) {
-    }
+public class MapTracker {
 
     private static final MapTracker INSTANCE = new MapTracker();
 
@@ -33,10 +33,10 @@ public class MapTracker {
         return INSTANCE;
     }
 
-    private final ConcurrentHashMap<String, AtomicInteger> calls = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Key, AtomicInteger> calls = new ConcurrentHashMap<>();
 
-    public void trackMapCall(String resourcePath) {
-        calls.computeIfAbsent(resourcePath, path -> new AtomicInteger(0)).incrementAndGet();
+    public void trackMapCall(String resourcePath, HttpServletRequest request) {
+        calls.computeIfAbsent(new Key(resourcePath, request), path -> new AtomicInteger(0)).incrementAndGet();
     }
 
     public void dump(PrintWriter pw) {
@@ -45,11 +45,48 @@ public class MapTracker {
         calls.entrySet()
             .stream()
             .sorted( (first, second) -> Integer.compare(second.getValue().get(), first.getValue().get()) )
-            .forEachOrdered( entry -> pw.printf("%10d\t%s%n", entry.getValue().get(), entry.getKey()));
+            .forEachOrdered( entry -> pw.printf("%10d\t%s\t%s%n", entry.getValue().get(), entry.getKey().getResourcePath(), entry.getKey().getRequestPath()));
         pw.println("--- END ---");
     }
 
     public void clear() {
         calls.clear();
+    }
+
+    static class Key {
+        private final String resourcePath;
+        private final String requestPath;
+
+        public Key(String resourcePath, HttpServletRequest request) {
+            this.resourcePath = resourcePath;
+            this.requestPath = request != null ? request.getRequestURI() : null;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(requestPath, resourcePath);
+        }
+
+        public String getRequestPath() {
+            return requestPath;
+        }
+
+        public String getResourcePath() {
+            return resourcePath;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            Key other = (Key) obj;
+            return Objects.equals(requestPath, other.requestPath) && Objects.equals(resourcePath, other.resourcePath);
+        }
+
+
     }
 }

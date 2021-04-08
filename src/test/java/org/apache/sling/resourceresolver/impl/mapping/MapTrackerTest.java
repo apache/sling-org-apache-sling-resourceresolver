@@ -36,13 +36,13 @@ public class MapTrackerTest {
         mt.clear();
 
         for (int i = 0; i < 10; i++)
-            mt.trackMapCall("/content.html");
+            mt.trackMapCall("/content.html", null);
 
         for (int i = 0; i < 2; i++)
-            mt.trackMapCall("/content/foo.html");
+            mt.trackMapCall("/content/foo.html", null);
 
         for (int i = 0; i < 5; i++)
-            mt.trackMapCall("/content/bar.html");
+            mt.trackMapCall("/content/bar.html", null);
 
         StringWriter out = new StringWriter();
         mt.dump(new PrintWriter(out));
