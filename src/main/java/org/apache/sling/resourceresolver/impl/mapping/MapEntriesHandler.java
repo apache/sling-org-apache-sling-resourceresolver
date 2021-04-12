@@ -24,20 +24,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Exposes low-level methods used for resource resolving and mapping
- * 
+ *
  * <p>This interface is intended for bundle internal use and its main goal is to
- * prevent accidental modifications of the internal state by only exposing 
+ * prevent accidental modifications of the internal state by only exposing
  * accessor methods.</p>
- * 
- * @see ResourceMapper
- * @see ResourceResolver#map(String)
- * @see ResourceResolver#map(javax.servlet.http.HttpServletRequest, String)
+ *
+ * @see org.apache.sling.api.resource.mapping.ResourceMapper
+ * @see org.apache.sling.api.resource.ResourceResolver#map(String)
+ * @see org.apache.sling.api.resource.ResourceResolver#map(javax.servlet.http.HttpServletRequest, String)
  */
 public interface MapEntriesHandler {
 
@@ -62,7 +60,7 @@ public interface MapEntriesHandler {
         public Map<String, String> getAliasMap(String parentPath) {
             return Collections.emptyMap();
         }
-        
+
         @Override
         public Map<String, List<String>> getVanityPathMappings() {
             return Collections.emptyMap();
@@ -72,7 +70,7 @@ public interface MapEntriesHandler {
 		public boolean isOptimizeAliasResolutionEnabled() {
 			return false;
         }
-        
+
 		@Override
         public void logDisableAliasOptimization() {
             // nothing to do
@@ -84,17 +82,17 @@ public interface MapEntriesHandler {
      * If it is enabled {@link #getAliasMap(String)} can be used.
      */
     boolean isOptimizeAliasResolutionEnabled();
-    
+
     /**
      * Log an error if alias optimization should be used but is currently disabled
      */
     void logDisableAliasOptimization();
 
     /**
-     * Returns all alias entries that for children of the specified <tt>parentPath</tt>
-     * 
+     * Returns all alias entries that for children of the specified <code>parentPath</code>
+     *
      * <p>The returned map has resource names as keys and aliases as values.</p>
-     * 
+     *
      * @param parentPath the parent path
      * @return a map of all child alias entries, possibly empty
      */
@@ -102,42 +100,42 @@ public interface MapEntriesHandler {
 
     /**
      * Creates an iterator over the possibly applicable mapping entries for resolving a resource
-     * 
+     *
      * <p>This method uses the request path to filter out any unapplicable mapping entries and
      * is therefore preferrable over {@link #getResolveMaps()}.</p>
-     * 
-     * <p>The iterator will iterate over the mapping entries in the order of the pattern length.</p> 
-     * 
+     *
+     * <p>The iterator will iterate over the mapping entries in the order of the pattern length.</p>
+     *
      * @return the map entry iterator
      */
     @NotNull Iterator<MapEntry> getResolveMapsIterator(@NotNull String requestPath);
 
     /**
      * Return a flat listing of map entries used for mapping resources to URLs
-     * 
+     *
      * <p>This method returns information about all mapping rules. Note that vanity paths are excluded.</p>
-     * 
+     *
      * @return an unmodifiable collection of map entries
      */
     @NotNull Collection<MapEntry> getMapMaps();
 
     /**
      * Creates a flat listing of all the map entries used for resolving URLs to resources
-     * 
+     *
      * <p>This method returns information about all resolve rules, such as vanity paths, mapping entries,
      * virtual URLs and URL mappings.</p>
-     * 
+     *
      * <p>This list is computed on-demand and therefore should not be used in performance-critical code.</p>
-     * 
+     *
      * @return an unmodifiable, sorted, list of resolution map entries
      */
     @NotNull List<MapEntry> getResolveMaps();
-    
+
     /**
      * Returns vanity paths mappings
-     * 
+     *
      * <p>The keys in the map are resource paths and the values are the vanity mappings.</p>
-     * 
+     *
      * @return an unmodifiable list of vanity path mappings
      */
     @NotNull Map<String, List<String>> getVanityPathMappings();

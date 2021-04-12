@@ -70,7 +70,7 @@ public class StarResource extends SyntheticResource {
     }
 
     /**
-     * Calls {@link ResourceUtil#getResourceSuperType(ResourceResolver, String)}
+     * Calls {@link org.apache.sling.api.resource.ResourceUtil#getResourceSuperType(ResourceResolver, String)}
      * method to dynamically resolve the resource super type of this star
      * resource.
      */

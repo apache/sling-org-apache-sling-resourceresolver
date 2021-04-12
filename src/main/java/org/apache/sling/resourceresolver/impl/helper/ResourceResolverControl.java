@@ -45,7 +45,6 @@ import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.PathBuilder;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
-import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.resourceresolver.impl.providers.stateful.AuthenticatedResourceProvider;
@@ -62,8 +61,8 @@ import org.slf4j.LoggerFactory;
 /**
  * This class takes a number of {@link AuthenticatedResourceProvider} objects and
  * exposes it as one such object. Provider appropriate for the given operation
- * is chosen basing on its {@link ResourceProviderInfo#getPath()} (more specific
- * first) and service ranking.
+ * is chosen basing on its {@link org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo#getPath()}
+ * (more specific first) and service ranking.
  *
  * Like a resource resolver itself, this class is not thread safe.
  */
@@ -177,7 +176,7 @@ public class ResourceResolverControl {
      *
      * In some cases the {@link SyntheticResource} can be returned if no
      * resource provider returns parent for this child. See
-     * {@link #getResource(String, Resource, Map, boolean)} for more details
+     * {@link #getResource(ResourceResolverContext, String, Resource, Map, boolean)} for more details
      */
     public Resource getParent(@NotNull final ResourceResolverContext context, @NotNull final String parentPath, @NotNull final Resource child) {
         final AuthenticatedResourceProvider childProvider = getBestMatchingProvider(context, child.getPath());
@@ -202,7 +201,7 @@ public class ResourceResolverControl {
 
     /**
      * Returns resource from the most appropriate resource provider.
-     * <br/><br/>
+     * <p>
      * If there's no such provider and the path is a part of some resource
      * provider path, then the {@link SyntheticResource} will be returned. For
      * instance, if we have resource provider under
@@ -210,9 +209,11 @@ public class ResourceResolverControl {
      * returns a resource for {@code /libs/sling/servlet/default}, then the
      * {@link SyntheticResource} will be returned to provide a consistent
      * resource tree.
-     * <br/><br/>
-     * The same behaviour occurs in {@link #getParent(Resource)} and
-     * {@link #listChildren(Resource)}.
+     * </p>
+     * <p>
+     * The same behaviour occurs in {@link #getParent(ResourceResolverContext, String, Resource)} and
+     * {@link #listChildren(ResourceResolverContext, Resource)}.
+     * </p>
      */
     public Resource getResource(final ResourceResolverContext context,
             String path, Resource parent, Map<String, String> parameters,
@@ -252,7 +253,7 @@ public class ResourceResolverControl {
     /**
      * This method asks all matching resource providers for the children iterators,
      * merges them, adds {@link SyntheticResource}s (see
-     * {@link #getResource(String, Resource, Map, boolean)} for more details),
+     * {@link #getResource(ResourceResolverContext, String, Resource, Map, boolean)} for more details),
      * filters out the duplicates and returns the resulting iterator. All
      * transformations are done lazily, during the {@link Iterator#hasNext()}
      * invocation on the result.
