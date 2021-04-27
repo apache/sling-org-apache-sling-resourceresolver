@@ -272,13 +272,10 @@ public class ResourceResolverControl {
         if ( provider != null ) {
             realChildren = provider.listChildren(parent);
         }
-
+ 
         final Set<String> visitedNames = new HashSet<>();
 
         IteratorChain chain = new IteratorChain();
-        if ( realChildren != null ) {
-            chain.addIterator(realChildren);
-        }
 
         // synthetic and providers are done in one loop
         final Node<ResourceProviderHandler> node = getResourceProviderStorage().getTree().getNode(parent.getPath());
@@ -318,9 +315,14 @@ public class ResourceResolverControl {
             if ( !providerList.isEmpty() ) {
                 chain.addIterator(providerList.iterator());
             }
+            if ( realChildren != null ) {
+                chain.addIterator(realChildren);
+            }
             if ( !syntheticList.isEmpty() ) {
                 chain.addIterator(syntheticList.iterator());
             }
+        } else if ( realChildren != null ) {
+            chain.addIterator(realChildren);
         }
         if ( chain.size() == 0 ) {
             return Collections.EMPTY_LIST.iterator();

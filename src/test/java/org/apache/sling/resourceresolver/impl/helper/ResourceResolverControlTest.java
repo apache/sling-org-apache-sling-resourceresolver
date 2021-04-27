@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -97,6 +98,9 @@ public class ResourceResolverControlTest {
     private ResourceProvider<Object> rootProvider;
     private Resource subProviderResource;
     private Resource somethingResource;
+    private Resource someRootResource;
+    private Resource somePathRootResource;
+    private Resource somePathResource;
     private ResourceResolverContext context;
 
     @Before
@@ -110,6 +114,11 @@ public class ResourceResolverControlTest {
         subProvider = Mockito.mock(ResourceProvider.class);
         ResourceProviderInfo info = fixture.registerResourceProvider(subProvider, "/some/path", AuthType.required);
         ResourceProviderHandler handler = new ResourceProviderHandler(bc, info);
+        // second sub provider
+        ResourceProvider<?> subProvider2 = Mockito.mock(ResourceProvider.class);
+        ResourceProviderInfo info2 = fixture.registerResourceProvider(subProvider2, "/foo/path", AuthType.required);
+        ResourceProviderHandler handler2 = new ResourceProviderHandler(bc, info2);
+
         when(subProvider.getQueryLanguageProvider()).thenReturn(new SimpleQueryLanguageProvider(QL_MOCK, QL_ANOTHER_MOCK) {
             @Override
             public Iterator<ValueMap> queryResources(ResolveContext<Object> ctx, String query, String language) {
@@ -134,6 +143,7 @@ public class ResourceResolverControlTest {
             }
         });
         handler.activate();
+        handler2.activate();
 
         rootProvider = mock(ResourceProvider.class);
         ResourceProviderInfo rootInfo = fixture.registerResourceProvider(rootProvider, "/", AuthType.required);
@@ -145,15 +155,20 @@ public class ResourceResolverControlTest {
         Resource root = configureResourceAt(rootProvider, "/");
         somethingResource = configureResourceAt(rootProvider, "/something");
         subProviderResource = configureResourceAt(subProvider, "/some/path/object");
+        someRootResource = configureResourceAt(rootProvider, "/some");
+        somePathResource = configureResourceAt(subProvider, "/some/path");
+        somePathRootResource = configureResourceAt(rootProvider, "/some/path");
 
         // configure query at '/'
-        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq(root))).thenReturn(Collections.singleton(somethingResource).iterator());
+        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq(root))).thenReturn(Arrays.asList(somethingResource, someRootResource).iterator());
+        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq(someRootResource))).thenReturn(Arrays.asList(somePathRootResource).iterator());
+        when(rootProvider.getResource((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq("/some/path"), Mockito.anyObject(), Mockito.anyObject())).thenReturn(somePathResource);
 
         ResourceResolver rr = mock(ResourceResolver.class);
         ResourceAccessSecurityTracker securityTracker = Mockito.mock(ResourceAccessSecurityTracker.class);
         authInfo = getAuthInfo();
 
-        handlers = Arrays.asList(rootHandler, handler);
+        handlers = Arrays.asList(rootHandler, handler, handler2);
         final ResourceProviderStorage storage = new ResourceProviderStorage(handlers);
 
         crp = new ResourceResolverControl(false, authInfo, new ResourceProviderStorageProvider() {
@@ -233,7 +248,7 @@ public class ResourceResolverControlTest {
     @Test
     public void getResource_synthetic() {
 
-        Resource resource = crp.getResource(context, "/some", null, null, false);
+        Resource resource = crp.getResource(context, "/foo", null, null, false);
 
         assertTrue("Not a syntethic resource : " + resource, ResourceUtil.isSyntheticResource(resource));
     }
@@ -314,9 +329,10 @@ public class ResourceResolverControlTest {
             all.put(child.getPath(), child);
         }
 
-        assertThat(all.entrySet(), Matchers.hasSize(2));
+        assertThat(all.entrySet(), Matchers.hasSize(3));
         assertThat("Resource at /something", all.get("/something"), not(nullValue()));
         assertThat("Resource at /some", all.get("/some"), not(nullValue()));
+        assertThat("Resource at /foo", all.get("/foo"), not(nullValue()));
     }
 
     /**
@@ -336,7 +352,7 @@ public class ResourceResolverControlTest {
 
         assertThat(all.entrySet(), Matchers.hasSize(1));
         assertThat("Resource at /some/path", all.get("/some/path"), not(nullValue()));
-
+        assertSame(somePathResource, all.get("/some/path"));
     }
 
     /**
