@@ -83,6 +83,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     private Map<String, Map<String, String>> aliasMap;
     private int testSize = 5;
 
+    @Override
     @SuppressWarnings({ "unchecked" })
     @Before
     public void setup() throws Exception {
@@ -131,8 +132,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
     }
 
+    @Override
     @After
     public void tearDown() throws Exception {
+        mapEntries.dispose();
         vanityBloomFilterFile.delete();
     }
 
@@ -2103,6 +2106,16 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 return Collections.<Resource> emptySet().iterator();
             }
         });
+
+        mapEntries.doInit();
+    }
+
+    @Test
+    public void test_vanitypath_disabled() throws Exception {
+        // initialize with having vanity path disabled - must not throw errors here or on disposal
+        when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(false);
+
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
 
         mapEntries.doInit();
     }

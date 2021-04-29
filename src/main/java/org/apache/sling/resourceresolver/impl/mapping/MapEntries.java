@@ -527,7 +527,9 @@ public class MapEntries implements
      */
     public void dispose() {
 
-        timer.cancel();
+        if (timer != null) {
+            timer.cancel();
+        }
 
         persistBloomFilter();
 
