@@ -47,6 +47,7 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -324,6 +325,21 @@ public class ResourceMapperImplTest {
             .singleMappingWithRequest("/app/vain")
             .allMappings("/vanity-a", "/vanity-b", "/vain")
             .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that the mapping for a non-existing resource that is the target of an alias
+     * is the alias itself
+     */
+    @Test
+    @Ignore("SLING-10432")
+    public void mapAliasTarget() {
+        ExpectedMappings.nonExistingResource("/alias-value")
+            .singleMapping("/alias-value")
+            .singleMappingWithRequest("/app/alias-value")
+            .allMappings("/alias-value")
+            .allMappingsWithRequest("/app/alias-value")
             .verify(resolver, req);
     }
 
