@@ -55,30 +55,30 @@ import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Validates that the {@link ResourceMapperImpl} correctly queries all sources of mappings
- * 
+ *
  * <p>This test ensures that in case more than one mappings is possible, for instance:
- * 
+ *
  * <ol>
  *   <li>path for an existing resource</li>
  *   <li>alias</li>
  *   <li>/etc/map entries</li>
  * </ol>
- * 
+ *
  * all are correctly considered and included in the relevant method calls.
  * </p>
- * 
+ *
  * <p>This test should not exhaustively test all mapping scenarios, other tests in this
  * module and the Sling ITs cover that.</p>
  *
  */
 @RunWith(Parameterized.class)
 public class ResourceMapperImplTest {
-    
+
     @Parameters(name="optimized alias resolution → {0}")
     public static Object[] data() {
         return new Object[] { false, true};
     }
-    
+
 
     @Rule
     public final OsgiContext ctx = new OsgiContext();
@@ -122,40 +122,40 @@ public class ResourceMapperImplTest {
                 "sling:match", "localhost.8080/everywhere");
         resourceProvider.putResource("/etc/map/http/virtual.host.com.80",
                 "sling:internalRedirect", "/content/virtual");
-        
+
         // we fake the fact that we are the JCR resource provider since it's the required one
         ctx.registerService(ResourceProvider.class, resourceProvider, PROPERTY_ROOT, "/", PROPERTY_NAME, "JCR");
         // disable optimised alias resolution as it relies on JCR queries
         ctx.registerInjectActivateService(new ResourceResolverFactoryActivator(),
                 "resource.resolver.optimize.alias.resolution", optimiseAliasResolution);
-        
+
         ResourceResolverFactory factory = ctx.getService(ResourceResolverFactory.class);
-        
+
         assertNotNull(factory);
-        
+
         resolver = factory.getResourceResolver(null);
-        
+
         req = mock(HttpServletRequest.class);
         when(req.getScheme()).thenReturn("http");
         when(req.getServerName()).thenReturn("localhost");
         when(req.getServerPort()).thenReturn(8080);
         when(req.getContextPath()).thenReturn("/app");
     }
-    
+
     @After
     public void cleanup() {
         if ( resolver != null )
             resolver.close();
     }
-    
+
     /**
      * Validates that mappings for an empty return the root path
-     * 
+     *
      * @throws LoginException
      */
     @Test
     public void mapNonExistingEmptyPath() throws LoginException {
-        
+
         ExpectedMappings.nonExistingResource("")
             .singleMapping("/")
             .singleMappingWithRequest("/app/")
@@ -163,15 +163,15 @@ public class ResourceMapperImplTest {
             .allMappingsWithRequest("/app/")
             .verify(resolver, req);
     }
-    
+
     /**
      * Validates that mappings for a non-existing resource only contain that resource's path
-     * 
+     *
      * @throws LoginException
      */
     @Test
     public void mapNonExistingPath() throws LoginException {
-        
+
         ExpectedMappings.nonExistingResource("/not-here")
             .singleMapping("/not-here")
             .singleMappingWithRequest("/app/not-here")
@@ -179,15 +179,15 @@ public class ResourceMapperImplTest {
             .allMappingsWithRequest("/app/not-here")
             .verify(resolver, req);
     }
-    
+
     /**
      * Validates that mappings for an existing resource only contain that resource's path
-     * 
+     *
      * @throws LoginException
      */
     @Test
     public void mapExistingPath() throws LoginException {
-        
+
         ExpectedMappings.existingResource("/here")
             .singleMapping("/here")
             .singleMappingWithRequest("/app/here")
@@ -198,12 +198,12 @@ public class ResourceMapperImplTest {
 
     /**
      * Validates that mappings for a existing resource with an alias contain the alias and the resource's path
-     * 
+     *
      * @throws LoginException
      */
     @Test
     public void mapResourceWithAlias() {
-        
+
         ExpectedMappings.existingResource("/there")
             .singleMapping("/alias-value")
             .singleMappingWithRequest("/app/alias-value")
@@ -219,7 +219,7 @@ public class ResourceMapperImplTest {
      */
     @Test
     public void mapResourceWithMultivaluedAlias() {
-        
+
         ExpectedMappings.existingResource("/there-multiple")
                 .singleMapping("/alias-value-3")
                 .singleMappingWithRequest("/app/alias-value-3")
@@ -231,12 +231,12 @@ public class ResourceMapperImplTest {
     /**
      * Validates that mappings for a existing resource with an alias and /etc/map entry
      * contain the /etc/map entry, the alias and the resource's path
-     * 
+     *
      * @throws LoginException
-     */    
+     */
     @Test
     public void mapResourceWithAliasAndEtcMap() {
-        
+
         ExpectedMappings.existingResource("/somewhere")
             .singleMapping("/alias-value-2")
             .singleMappingWithRequest("/app/alias-value-2")
@@ -244,11 +244,11 @@ public class ResourceMapperImplTest {
             .allMappingsWithRequest("/app/alias-value-2", "/app/everywhere", "/app/somewhere")
             .verify(resolver, req);
     }
-    
+
     /**
      * Validates that a resource with an alias on parent has the parent path set
      * to the alias value
-     * 
+     *
      * @throws LoginException
      */
     @Test
@@ -258,7 +258,7 @@ public class ResourceMapperImplTest {
             .singleMappingWithRequest("/app/alias-value/that")
             .allMappings("/alias-value/that", "/there/that")
             .allMappingsWithRequest("/app/alias-value/that","/app/there/that")
-            .verify(resolver, req);       
+            .verify(resolver, req);
     }
 
     @Test
@@ -270,14 +270,14 @@ public class ResourceMapperImplTest {
         when(req.getServerPort()).thenReturn(-1);
         when(req.getContextPath()).thenReturn("");
         when(req.getPathInfo()).thenReturn(null);
-        
+
         ExpectedMappings.existingResource("/content/virtual/foo")
             .singleMapping("http://virtual.host.com/foo")
             .singleMappingWithRequest("/foo")
             .allMappings("http://virtual.host.com/foo", "/content/virtual/foo")
             .allMappingsWithRequest("/foo", "/content/virtual/foo")
-            .verify(resolver, req);    
-        
+            .verify(resolver, req);
+
     }
 
 
@@ -310,10 +310,10 @@ public class ResourceMapperImplTest {
                 .allMappingsWithRequest("/app/alias-parent/alias-child-1", "/app/alias-parent/alias-child-2", "/app/alias-parent/child-multiple", "/app/parent/alias-child-1", "/app/parent/alias-child-2", "/app/parent/child-multiple")
                 .verify(resolver, req);
     }
-    
+
     /**
      * Validates that vanity paths are returned as mappings
-     * 
+     *
      * <p>As vanity paths are alternate paths rather than variations so they will not be returned
      * from the singleMapping() methods.</p>
      */
@@ -328,23 +328,23 @@ public class ResourceMapperImplTest {
     }
 
     static class ExpectedMappings {
-        
+
         public static ExpectedMappings existingResource(String path) {
             return new ExpectedMappings(path, true);
         }
-        
+
         public static ExpectedMappings nonExistingResource(String path) {
             return new ExpectedMappings(path, false);
         }
-        
+
         private final String path;
         private final boolean exists;
-        
+
         private String singleMapping;
         private String singleMappingWithRequest;
         private Set<String> allMappings;
         private Set<String> allMappingsWithRequest;
-        
+
         private ExpectedMappings(String path, boolean exists) {
             this.path = path;
             this.exists = exists;
@@ -352,31 +352,31 @@ public class ResourceMapperImplTest {
 
         public ExpectedMappings singleMapping(String singleMapping) {
             this.singleMapping = singleMapping;
-            
+
             return this;
         }
-        
+
         public ExpectedMappings singleMappingWithRequest(String singleMappingWithRequest) {
             this.singleMappingWithRequest = singleMappingWithRequest;
-            
+
             return this;
         }
-        
+
         public ExpectedMappings allMappings(String... allMappings) {
             this.allMappings = new HashSet<>(Arrays.asList(allMappings));
-            
+
             return this;
         }
 
         public ExpectedMappings allMappingsWithRequest(String... allMappingsWithRequest) {
             this.allMappingsWithRequest = new HashSet<>(Arrays.asList(allMappingsWithRequest));
-            
+
             return this;
         }
-        
+
         public void verify(ResourceResolver resolver, HttpServletRequest request) {
             checkConfigured();
-            
+
             Resource res = resolver.getResource(path);
             if ( exists ) {
                 assertThat("Resource was null but should exist", res, notNullValue());
@@ -387,7 +387,7 @@ public class ResourceMapperImplTest {
 
             // downcast to ensure we're testing the right class
             ResourceMapperImpl mapper = (ResourceMapperImpl) resolver.adaptTo(ResourceMapper.class);
-            
+
             assertThat("Single mapping without request", mapper.getMapping(path), is(singleMapping));
             if ( !path.isEmpty() ) // an empty path is invalid, hence not testing with a request
                 assertThat("Single mapping with request", mapper.getMapping(path, request), is(singleMappingWithRequest));
