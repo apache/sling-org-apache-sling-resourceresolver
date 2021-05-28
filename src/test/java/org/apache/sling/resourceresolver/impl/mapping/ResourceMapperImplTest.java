@@ -47,7 +47,6 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -333,7 +332,6 @@ public class ResourceMapperImplTest {
      * is the alias itself
      */
     @Test
-    @Ignore("SLING-10432")
     public void mapAliasTarget() {
         ExpectedMappings.nonExistingResource("/alias-value")
             .singleMapping("/alias-value")
