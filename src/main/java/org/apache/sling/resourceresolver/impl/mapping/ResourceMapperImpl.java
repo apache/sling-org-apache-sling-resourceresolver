@@ -164,10 +164,14 @@ public class ResourceMapperImpl implements ResourceMapper {
         // vanity paths are prepended to make sure they get returned last
         mappings.addAll(0, vanityPaths);
 
-        // 7. apply context path if needed
+        // 7. final effort to make sure we have at least one mapped path
+        if ( mappings.isEmpty() && nonDecoratedResource != null )
+            mappings.add(nonDecoratedResource.getPath());
+
+        // 8. apply context path if needed
         mappings.replaceAll(new ApplyContextPath(request));
        
-        // 8. set back the fragment query if needed
+        // 9. set back the fragment query if needed
         if ( fragmentQuery != null ) {
             mappings.replaceAll(path -> path.concat(fragmentQuery));
         }
@@ -218,6 +222,11 @@ public class ResourceMapperImpl implements ResourceMapper {
         
         // and then we have the mapped path to work on
         List<String> mappedPaths = pathBuilder.generatePaths();
+        // specifically exclude the resource's path when generating aliases
+        // usually this is removed the invoking method if the path matches an existing
+        // resource, but for non-existing ones this does not work
+        mappedPaths.remove(nonDecoratedResource.getPath());
+
         logger.debug("map: Alias mapping resolves to paths {}", mappedPaths);
         
         return mappedPaths;
