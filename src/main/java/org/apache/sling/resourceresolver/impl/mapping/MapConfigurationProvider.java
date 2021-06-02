@@ -37,8 +37,6 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
 
     boolean isMapConfiguration(String path);
 
-    Path[] getObservationPaths();
-
     Map<?, ?> getVirtualURLMap();
 
     Mapping[] getMappings();

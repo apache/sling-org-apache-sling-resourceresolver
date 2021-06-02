@@ -18,20 +18,14 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.*;
-
-
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.ResourceDecorator;
 import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
@@ -55,6 +49,19 @@ import org.osgi.service.event.EventAdmin;
 import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The <code>ResourceResolverFactoryActivator/code> keeps track of required services for the
@@ -131,9 +138,6 @@ public class ResourceResolverFactoryActivator {
 
     /** Vanity path blacklist */
     private volatile String[] vanityPathBlackList;
-
-    /** Observation paths */
-    private volatile Path[] observationPaths;
 
     private final FactoryPreconditions preconds = new FactoryPreconditions();
 
@@ -239,10 +243,6 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_log_closing();
     }
 
-    public Path[] getObservationPaths() {
-        return this.observationPaths;
-    }
-
     // ---------- SCR Integration ---------------------------------------------
 
     /**
@@ -299,12 +299,6 @@ public class ResourceResolverFactoryActivator {
         // the root of the resolver mappings
         mapRoot = config.resource_resolver_map_location();
         mapRootPrefix = mapRoot + '/';
-
-        final String[] paths = config.resource_resolver_map_observation();
-        this.observationPaths = new Path[paths.length];
-        for(int i=0;i<paths.length;i++) {
-            this.observationPaths[i] = new Path(paths[i]);
-        }
 
         // optimize alias path allow list
         String[] aliasLocationsPrefix = config.resource_resolver_allowed_alias_locations();

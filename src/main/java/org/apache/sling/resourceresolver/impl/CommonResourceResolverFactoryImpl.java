@@ -439,11 +439,6 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public Path[] getObservationPaths() {
-        return this.activator.getObservationPaths();
-    }
-
-    @Override
     public List<VanityPathConfig> getVanityPathConfig() {
         final String[] includes = this.activator.getVanityPathWhiteList();
         final String[] excludes = this.activator.getVanityPathBlackList();

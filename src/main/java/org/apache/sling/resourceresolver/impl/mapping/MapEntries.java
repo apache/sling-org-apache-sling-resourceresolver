@@ -28,7 +28,6 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
-import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.osgi.framework.BundleContext;
@@ -48,11 +47,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -173,12 +172,29 @@ public class MapEntries implements
         this.useOptimizeAliasResolution = doInit();
 
         final Dictionary<String, Object> props = new Hashtable<>(); // NOSONAR - required by OSGi APIs
-        final String[] paths = new String[factory.getObservationPaths().length];
-        for(int i=0 ; i < paths.length; i++) {
-            paths[i] = factory.getObservationPaths()[i].getPath();
+        final Set<String> paths = new HashSet<>();
+        if (factory.getAllowedAliasLocations().isEmpty()) {
+            paths.add(String.valueOf('/'));
+        } else {
+            paths.addAll(factory.getAllowedAliasLocations());
         }
-        props.put(ResourceChangeListener.PATHS, paths);
-        log.info("Registering for {}", Arrays.toString(factory.getObservationPaths()));
+        if (factory.isVanityPathEnabled()) {
+            final List<String> vanityPathLocations = Optional.ofNullable(factory.getVanityPathConfig()).orElseGet(Collections::emptyList)
+                .stream()
+                .filter(vanityPathConfig -> !vanityPathConfig.isExclude)
+                .map(vanityPathConfig -> StringUtils.removeEnd(vanityPathConfig.prefix, String.valueOf('/')))
+                .collect(Collectors.toList());
+            if (vanityPathLocations.isEmpty()) {
+                paths.add(String.valueOf('/'));
+            } else {
+                paths.addAll(vanityPathLocations);
+            }
+        }
+        if (factory.getMapRoot() != null) {
+            paths.add(factory.getMapRoot());
+        }
+        props.put(ResourceChangeListener.PATHS, paths.toArray(new String[0]));
+        log.info("Registering for {}", paths);
         props.put(Constants.SERVICE_DESCRIPTION, "Apache Sling Map Entries Observation");
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
         this.registration = bundleContext.registerService(ResourceChangeListener.class, this, props);
@@ -862,21 +878,12 @@ public class MapEntries implements
             final Iterator<Resource> i = queryResolver.findResources(queryString, "sql");
             while (i.hasNext()) {
                 final Resource resource = i.next();
-                boolean isValid = false;
-                for(final Path sPath : this.factory.getObservationPaths()) {
-                    if ( sPath.matches(resource.getPath())) {
-                        isValid = true;
-                        break;
-                    }
-                }
-                if ( isValid ) {
-                    if (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
-                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, false);
-                        entryMap = resolveMapsMap;
-                    } else {
-                        final Map <String, List<String>> targetPaths = new HashMap <>();
-                        loadVanityPath(resource, entryMap, targetPaths, true, false);
-                    }
+                if (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
+                    loadVanityPath(resource, resolveMapsMap, vanityTargets, true, false);
+                    entryMap = resolveMapsMap;
+                } else {
+                    final Map<String, List<String>> targetPaths = new HashMap<>();
+                    loadVanityPath(resource, entryMap, targetPaths, true, false);
                 }
             }
         } catch (LoginException e) {
@@ -1186,10 +1193,7 @@ public class MapEntries implements
         Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
         while (i.hasNext() && (createVanityBloomFilter || isCacheComplete.get())) {
             final Resource resource = i.next();
-            final String resourcePath = resource.getPath();
-            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
-                loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get(), createVanityBloomFilter);
-            }
+            loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get(), createVanityBloomFilter);
         }
 
         return targetPaths;

@@ -127,7 +127,6 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("stringInterpolationProvider", activator, stringInterpolationProvider);
         setInaccessibleField("mapRoot", activator, "/etc/map");
         setInaccessibleField("mapRootPrefix", activator, "/etc/map");
-        setInaccessibleField("observationPaths", activator, new Path[] {new Path("/")});
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);
         setInaccessibleField("serviceUserMapper", activator, serviceUserMapper);
         commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
