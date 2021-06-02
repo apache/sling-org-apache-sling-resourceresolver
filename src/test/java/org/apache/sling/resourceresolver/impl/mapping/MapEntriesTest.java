@@ -110,7 +110,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
