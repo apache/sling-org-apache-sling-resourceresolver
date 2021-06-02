@@ -113,6 +113,7 @@ public class MapEntries implements
 
     public static final int DEFAULT_DEFAULT_VANITY_PATH_REDIRECT_STATUS = HttpServletResponse.SC_FOUND;
 
+    @SuppressWarnings("java:S1075") // Content path
     private static final String JCR_SYSTEM_PATH = "/jcr:system";
 
     private static final String VANITY_PATH_BASE_QUERY_DEFAULT = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base AS page";
