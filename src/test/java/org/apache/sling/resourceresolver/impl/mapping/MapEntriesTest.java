@@ -370,26 +370,31 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_vanity_path_registration_include_exclude() throws IOException {
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
-        final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
 
         final List<Resource> resources = new ArrayList<>();
         for(final String val : validPaths) {
             resources.add(getVanityPathResource(val));
         }
-        for(final String val : invalidPaths) {
-            resources.add(getVanityPathResource(val));
-        }
-
-
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
-
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
-                    return resources.iterator();
-                } else {
-                    return Collections.<Resource> emptySet().iterator();
-                }
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            if (("SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base AS page" +
+                " WHERE sling:vanityPath IS NOT NULL" +
+                " AND" +
+                " (ISDESCENDANTNODE(page, '/redirectingVanityPath301')" +
+                " OR ISDESCENDANTNODE(page, '/vanityPathOnJcrContent')" +
+                " OR ISDESCENDANTNODE(page, '/redirectingVanityPath')" +
+                " OR ISDESCENDANTNODE(page, '/justVanityPath2')" +
+                " OR ISDESCENDANTNODE(page, '/justVanityPath')" +
+                " OR ISDESCENDANTNODE(page, '/badVanityPath')" +
+                " OR ISDESCENDANTNODE(page, '/libs')" +
+                " OR ISDESCENDANTNODE(page, '/foo')" +
+                " OR ISDESCENDANTNODE(page, '/baa')" +
+                ") AND " +
+                "(NOT ISDESCENDANTNODE(page, '/jcr:system')" +
+                " AND NOT ISDESCENDANTNODE(page, '/libs/denied')" +
+                ")").equals(invocation.getArguments()[0].toString())) {
+                return resources.iterator();
+            } else {
+                return Collections.emptyIterator();
             }
         });
 

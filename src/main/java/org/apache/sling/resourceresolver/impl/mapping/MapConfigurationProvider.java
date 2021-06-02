@@ -83,7 +83,6 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
     /**
      * A set of allow prefixes all ending with a slash.
      * If empty set is returned, all paths are allowed.
-     * @return
      */
     Set<String> getAllowedAliasLocations();
 }

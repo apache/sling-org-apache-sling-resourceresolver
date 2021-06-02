@@ -20,7 +20,11 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
-import org.apache.sling.api.resource.*;
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
@@ -36,17 +40,40 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -86,9 +113,11 @@ public class MapEntries implements
 
     public static final int DEFAULT_DEFAULT_VANITY_PATH_REDIRECT_STATUS = HttpServletResponse.SC_FOUND;
 
-    private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
+    private static final String JCR_SYSTEM_PATH = "/jcr:system";
 
-   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
+    private static final String VANITY_PATH_BASE_QUERY_DEFAULT = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base AS page";
+
+    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -707,7 +736,7 @@ public class MapEntries implements
             log.debug("onChange, type={}, path={}", rc.getType(), path);
 
             // don't care for system area
-            if (path.startsWith(JCR_SYSTEM_PREFIX)) {
+            if (path.startsWith(JCR_SYSTEM_PATH + '/')) {
                 continue;
             }
 
@@ -814,9 +843,16 @@ public class MapEntries implements
 
         Map<String, List<MapEntry>> entryMap = new HashMap<>();
 
-                // sling:vanityPath (lowercase) is the property name
-        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath ="
-                + "'"+escapeIllegalXpathSearchChars(vanityPath).replaceAll("'", "''")+"' OR sling:vanityPath ="+ "'"+escapeIllegalXpathSearchChars(vanityPath.substring(1)).replaceAll("'", "''")+"' ORDER BY sling:vanityOrder DESC";
+        // sling:vanityPath (lowercase) is the property name
+        final String queryString = createVanityPathQuery() +
+            " AND (" +
+            Stream
+                .of(vanityPath, vanityPath.substring(1))
+                .map(MapEntries::escapeIllegalXpathSearchChars)
+                .map(value -> StringUtils.replace(value, "'", "''"))
+                .map(escapedValue -> "sling:vanityPath = '" + escapedValue + "'")
+                .collect(Collectors.joining(" OR ")) +
+            ")";
 
         ResourceResolver queryResolver = null;
 
@@ -860,12 +896,6 @@ public class MapEntries implements
     private boolean isValidVanityPath(final String path){
         if (path == null) {
             throw new IllegalArgumentException("Unexpected null path");
-        }
-
-        // ignore system tree
-        if (path.startsWith(JCR_SYSTEM_PREFIX)) {
-            log.debug("isValidVanityPath: not valid {}", path);
-            return false;
         }
 
         // check white list
@@ -1019,7 +1049,7 @@ public class MapEntries implements
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        final String queryString = updateAliasQuery();
+        final String queryString = createAliasQuery();
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
 		     while (i.hasNext()) {
 		            final Resource resource = i.next();
@@ -1032,34 +1062,33 @@ public class MapEntries implements
     /*
     * Update alias query based on configured alias locations
     */
-    private String updateAliasQuery(){
+    private String createAliasQuery(){
         final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
-        StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
-        baseQuery.append(" ").append("WHERE");
+        StringBuilder query = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
+        query.append(" ").append("WHERE");
 
         if(allowedLocations.isEmpty()){
-            String jcrSystemPath = StringUtils.removeEnd(JCR_SYSTEM_PREFIX, "/");
-            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
-                    .append("\"").append(jcrSystemPath).append("\"").append("))");
+            query.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
+                    .append("\"").append(JCR_SYSTEM_PATH).append("\"").append("))");
 
         }else{
             Iterator<String> pathIterator = allowedLocations.iterator();
-            baseQuery.append("(");
+            query.append("(");
             while(pathIterator.hasNext()){
                 String prefix = pathIterator.next();
-                baseQuery.append(" ").append("ISDESCENDANTNODE(page,")
+                query.append(" ").append("ISDESCENDANTNODE(page,")
                         .append("\"").append(prefix).append("\"")
                         .append(")").append(" ").append("OR");
             }
             //Remove last "OR" keyword
-            int orLastIndex = baseQuery.lastIndexOf("OR");
-            baseQuery.delete(orLastIndex,baseQuery.length());
-            baseQuery.append(")");
+            int orLastIndex = query.lastIndexOf("OR");
+            query.delete(orLastIndex,query.length());
+            query.append(")");
         }
 
-        baseQuery.append(" AND sling:alias IS NOT NULL ");
-        String aliasQuery = baseQuery.toString();
+        query.append(" AND sling:alias IS NOT NULL");
+        String aliasQuery = query.toString();
         logger.debug("Query to fetch alias [{}] ", aliasQuery);
 
         return aliasQuery;
@@ -1069,11 +1098,6 @@ public class MapEntries implements
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
-        // ignore system tree
-        if(resource.getPath() == null){
-            throw new IllegalArgumentException("Unexpected null path");
-        }
-
         final String resourceName;
         final String parentPath;
         if (JCR_CONTENT.equals(resource.getName())) {
@@ -1155,7 +1179,7 @@ public class MapEntries implements
     private Map <String, List<String>> loadVanityPaths(boolean createVanityBloomFilter) {
         // sling:vanityPath (lowercase) is the property name
         final Map <String, List<String>> targetPaths = new ConcurrentHashMap <>();
-        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath IS NOT NULL";
+        final String queryString = createVanityPathQuery();
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
 
         Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
@@ -1174,11 +1198,6 @@ public class MapEntries implements
      * Load vanity path given a resource
      */
     private boolean loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache, boolean newVanity) {
-
-        if (!isValidVanityPath(resource.getPath())) {
-            return false;
-        }
-
         final ValueMap props = resource.getValueMap();
         long vanityOrder = props.get(PROP_VANITY_ORDER, 0L);
 
@@ -1255,6 +1274,33 @@ public class MapEntries implements
         return hasVanityPath;
     }
 
+    private String createVanityPathQuery() {
+        final String query =
+            VANITY_PATH_BASE_QUERY_DEFAULT +
+                " WHERE sling:vanityPath IS NOT NULL" +
+                Stream
+                    .of(true, false)
+                    .map(this::createVanityPathQueryPathRestriction)
+                    .filter(restriction -> restriction.length() != 0)
+                    .map(restriction -> " AND (" + restriction + ")")
+                    .collect(Collectors.joining());
+        logger.debug("Query to fetch vanity paths [{}] ", query);
+        return query;
+    }
+
+    private String createVanityPathQueryPathRestriction(final boolean include) {
+        return Stream.concat(
+            Stream.of(new VanityPathConfig(JCR_SYSTEM_PATH, true)),
+            Optional.ofNullable(this.factory.getVanityPathConfig()).map(List::stream).orElseGet(Stream::empty)
+        )
+            .filter(cfg -> cfg.isExclude != include)
+            .map(vanityPathConfig -> String.format(
+                "%sISDESCENDANTNODE(page, '%s')",
+                vanityPathConfig.isExclude ? "NOT " : StringUtils.EMPTY,
+                StringUtils.removeEnd(vanityPathConfig.prefix, String.valueOf('/'))))
+            .collect(Collectors.joining(include ? " OR " : " AND "));
+    }
+
     private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
         if (entry == null) {
            return;
@@ -1288,7 +1334,7 @@ public class MapEntries implements
                         log.warn("Ignoring malformed vanity path {}", pVanityPath);
                     }
                 } else {
-                    prefix = "^" + ANY_SCHEME_HOST;
+                    prefix = StringUtils.EMPTY;
                     if (!info.startsWith("/")) {
                         path = "/" + info;
                     } else {
@@ -1322,7 +1368,7 @@ public class MapEntries implements
                     // this regular expression must match the whole URL !!
                     final String url = "^" + ANY_SCHEME_HOST + extPath + "$";
                     final String redirect = intPath;
-                    MapEntry mapEntry = getMapEntry(url, -1, false, redirect);
+                    MapEntry mapEntry = getMapEntry(url, -1, false, 0, redirect);
                     if (mapEntry!=null){
                         entries.add(mapEntry);
                     }
@@ -1350,7 +1396,7 @@ public class MapEntries implements
             }
 
             for (final Entry<String, List<String>> entry : map.entrySet()) {
-                MapEntry mapEntry = getMapEntry(ANY_SCHEME_HOST + entry.getKey(), -1, false, entry.getValue().toArray(new String[0]));
+                MapEntry mapEntry = getMapEntry(ANY_SCHEME_HOST + entry.getKey(), -1, false, 0, entry.getValue().toArray(new String[0]));
                 if (mapEntry!=null){
                     entries.add(mapEntry);
                 }
@@ -1393,13 +1439,13 @@ public class MapEntries implements
     private void addMapEntry(final Map<String, MapEntry> entries, final String path, final String url, final int status) {
         MapEntry entry = entries.get(path);
         if (entry == null) {
-            entry = getMapEntry(path, status, false, url);
+            entry = getMapEntry(path, status, false, 0, url);
         } else {
             final String[] redir = entry.getRedirect();
             final String[] newRedir = new String[redir.length + 1];
             System.arraycopy(redir, 0, newRedir, 0, redir.length);
             newRedir[redir.length] = url;
-            entry = getMapEntry(entry.getPattern(), entry.getStatus(), false, newRedir);
+            entry = getMapEntry(entry.getPattern(), entry.getStatus(), false, 0, newRedir);
         }
         if (entry!=null){
             entries.put(path, entry);
@@ -1540,19 +1586,6 @@ public class MapEntries implements
                 this.nextSpecial = null;
             }
         }
-    };
-
-    private MapEntry getMapEntry(String url, final int status, final boolean trailingSlash,
-            final String... redirect){
-
-        MapEntry mapEntry = null;
-        try{
-            mapEntry = new MapEntry(url, status, trailingSlash, 0, redirect);
-        }catch (IllegalArgumentException iae){
-            //ignore this entry
-            log.debug("ignored entry due exception ",iae);
-        }
-        return mapEntry;
     }
 
     private MapEntry getMapEntry(String url, final int status, final boolean trailingSlash, long order,
