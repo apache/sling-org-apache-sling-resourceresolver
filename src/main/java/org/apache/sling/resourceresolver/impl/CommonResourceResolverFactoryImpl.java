@@ -18,19 +18,10 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.jetbrains.annotations.NotNull;
-
 import org.apache.commons.collections4.BidiMap;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.console.ResourceResolverWebConsolePlugin;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.helper.ResourceResolverControl;
@@ -41,10 +32,24 @@ import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The <code>CommonResourceResolverFactoryImpl</code> is a singleton
@@ -439,28 +444,6 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public List<VanityPathConfig> getVanityPathConfig() {
-        final String[] includes = this.activator.getVanityPathWhiteList();
-        final String[] excludes = this.activator.getVanityPathBlackList();
-        if ( includes == null && excludes == null ) {
-            return null;
-        }
-        final List<VanityPathConfig> configs = new ArrayList<>();
-        if ( includes != null ) {
-            for(final String val : includes) {
-                configs.add(new VanityPathConfig(val, false));
-            }
-        }
-        if ( excludes != null ) {
-            for(final String val : excludes) {
-                configs.add(new VanityPathConfig(val, true));
-            }
-        }
-        Collections.sort(configs);
-        return configs;
-    }
-
-    @Override
     public Set<String> getAllowedAliasLocations() {
        return this.activator.getAllowedAliasLocations();
     }
@@ -509,6 +492,16 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         }
 
         return authenticationInfo;
+    }
+
+    @Override
+    public @NotNull Set<String> getVanityPathWhiteList() {
+        return activator.getVanityPathWhiteList();
+    }
+
+    @Override
+    public @NotNull Set<String> getVanityPathBlackList() {
+        return activator.getVanityPathBlackList();
     }
 
     /**

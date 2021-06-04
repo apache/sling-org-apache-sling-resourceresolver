@@ -16,13 +16,12 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.path.Path;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Internal interface representing the additional methods
@@ -56,27 +55,20 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
     boolean hasVanityPathPrecedence();
 
     Map<String, Object> getServiceUserAuthenticationInfo(final String subServiceName) throws LoginException;
-    
-    public class VanityPathConfig implements Comparable<VanityPathConfig> {
-        public final boolean isExclude;
-        public final String prefix;
-
-        public VanityPathConfig(final String prefix, final boolean isExclude) {
-            this.prefix = prefix;
-            this.isExclude = isExclude;
-        }
-
-        @Override
-        public int compareTo(VanityPathConfig o2) {
-            return new Integer(o2.prefix.length()).compareTo(this.prefix.length());
-        }
-    }
 
     /**
-     * A list of white and black list prefixes all ending with a slash.
-     * If <code>null</code> is returned, all paths are allowed.
+     * A set of whitelisted prefixes all ending with a slash.
+     * If empty set is returned, all paths are allowed.
      */
-    List<VanityPathConfig> getVanityPathConfig();
+    @NotNull
+    Set<String> getVanityPathWhiteList();
+
+    /**
+     * A set of blacklisted prefixes all ending with a slash.
+     * If empty set is returned, all paths are allowed.
+     */
+    @NotNull
+    Set<String> getVanityPathBlackList();
 
     /**
      * A set of allow prefixes all ending with a slash.

@@ -112,7 +112,6 @@ public class EtcMappingResourceResolverTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        List<MapConfigurationProvider.VanityPathConfig> configs = getVanityPathConfigs();
         vanityBloomFilterFile = new File("target/test-classes/resourcesvanityBloomFilter.txt");
         List<ResourceProviderHandler> handlers = asList(createRPHandler(resourceProvider, "rp1", 0, "/"));
         ResourceProviderTracker resourceProviderTracker = mock(ResourceProviderTracker.class);
@@ -142,10 +141,6 @@ public class EtcMappingResourceResolverTest {
         etc = buildResource("/etc", null, resourceResolver, resourceProvider);
         map = buildResource("/etc/map", etc, resourceResolver, resourceProvider);
         http = buildResource("/etc/map/http", map, resourceResolver, resourceProvider);
-    }
-
-    List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {
-        return new ArrayList<>();
     }
 
     /**

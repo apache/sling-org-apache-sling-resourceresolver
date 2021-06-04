@@ -29,7 +29,6 @@ import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
-import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
@@ -59,7 +58,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.Timer;
@@ -179,15 +177,11 @@ public class MapEntries implements
             paths.addAll(factory.getAllowedAliasLocations());
         }
         if (factory.isVanityPathEnabled()) {
-            final List<String> vanityPathLocations = Optional.ofNullable(factory.getVanityPathConfig()).orElseGet(Collections::emptyList)
-                .stream()
-                .filter(vanityPathConfig -> !vanityPathConfig.isExclude)
-                .map(vanityPathConfig -> StringUtils.removeEnd(vanityPathConfig.prefix, String.valueOf('/')))
-                .collect(Collectors.toList());
-            if (vanityPathLocations.isEmpty()) {
+            final Set<String> vanityPathWhiteList = factory.getVanityPathWhiteList();
+            if (vanityPathWhiteList.isEmpty()) {
                 paths.add(String.valueOf('/'));
             } else {
-                paths.addAll(vanityPathLocations);
+                paths.addAll(vanityPathWhiteList);
             }
         }
         if (factory.getMapRoot() != null) {
@@ -317,7 +311,8 @@ public class MapEntries implements
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
-        final boolean isValidVanityPath =  this.isValidVanityPath(path);
+        // Blacklist cannot be configured with ResourceChangeListener, so do it here
+        final boolean isValidVanityPath = this.factory.getVanityPathBlackList().stream().noneMatch(path::startsWith);
         if ( this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
@@ -896,33 +891,6 @@ public class MapEntries implements
         return entryMap;
     }
 
-    /**
-     * Check if the path is a valid vanity path
-     * @param path The resource path to check
-     * @return {@code true} if this is valid, {@code false} otherwise
-     */
-    private boolean isValidVanityPath(final String path){
-        if (path == null) {
-            throw new IllegalArgumentException("Unexpected null path");
-        }
-
-        // check white list
-        if ( this.factory.getVanityPathConfig() != null ) {
-            boolean allowed = false;
-            for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
-                if ( path.startsWith(config.prefix) ) {
-                    allowed = !config.isExclude;
-                    break;
-                }
-            }
-            if ( !allowed ) {
-                log.debug("isValidVanityPath: not valid as not in white list {}", path);
-                return false;
-            }
-        }
-        return true;
-    }
-
     private String getActualContentPath(final String path){
         final String checkPath;
         if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
@@ -1078,7 +1046,7 @@ public class MapEntries implements
 
         if(allowedLocations.isEmpty()){
             query.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
-                    .append("\"").append(JCR_SYSTEM_PATH).append("\"").append("))");
+                    .append("'").append(JCR_SYSTEM_PATH).append("'").append("))");
 
         }else{
             Iterator<String> pathIterator = allowedLocations.iterator();
@@ -1086,7 +1054,7 @@ public class MapEntries implements
             while(pathIterator.hasNext()){
                 String prefix = pathIterator.next();
                 query.append(" ").append("ISDESCENDANTNODE(page,")
-                        .append("\"").append(prefix).append("\"")
+                        .append("'").append(prefix).append("'")
                         .append(")").append(" ").append("OR");
             }
             //Remove last "OR" keyword
@@ -1283,27 +1251,27 @@ public class MapEntries implements
         final String query =
             VANITY_PATH_BASE_QUERY_DEFAULT +
                 " WHERE sling:vanityPath IS NOT NULL" +
-                Stream
-                    .of(true, false)
-                    .map(this::createVanityPathQueryPathRestriction)
-                    .filter(restriction -> restriction.length() != 0)
+                Stream.of(
+                    createVanityPathQueryPathRestriction(factory.getVanityPathWhiteList(), true),
+                    createVanityPathQueryPathRestriction(factory.getVanityPathBlackList(), false)
+                )
+                    .filter(StringUtils::isNotEmpty)
                     .map(restriction -> " AND (" + restriction + ")")
                     .collect(Collectors.joining());
         logger.debug("Query to fetch vanity paths [{}] ", query);
         return query;
     }
 
-    private String createVanityPathQueryPathRestriction(final boolean include) {
-        return Stream.concat(
-            Stream.of(new VanityPathConfig(JCR_SYSTEM_PATH, true)),
-            Optional.ofNullable(this.factory.getVanityPathConfig()).map(List::stream).orElseGet(Stream::empty)
-        )
-            .filter(cfg -> cfg.isExclude != include)
-            .map(vanityPathConfig -> String.format(
+    private String createVanityPathQueryPathRestriction(final Set<String> paths, final boolean include) {
+        final String prefix = include ? StringUtils.EMPTY : "NOT ";
+        final String condition = include ? " OR " : " AND ";
+        return paths
+            .stream()
+            .map(path -> String.format(
                 "%sISDESCENDANTNODE(page, '%s')",
-                vanityPathConfig.isExclude ? "NOT " : StringUtils.EMPTY,
-                StringUtils.removeEnd(vanityPathConfig.prefix, String.valueOf('/'))))
-            .collect(Collectors.joining(include ? " OR " : " AND "));
+                prefix,
+                StringUtils.removeEnd(path, String.valueOf('/'))))
+            .collect(Collectors.joining(condition));
     }
 
     private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
@@ -1339,7 +1307,7 @@ public class MapEntries implements
                         log.warn("Ignoring malformed vanity path {}", pVanityPath);
                     }
                 } else {
-                    prefix = StringUtils.EMPTY;
+                    prefix = "^" + ANY_SCHEME_HOST;
                     if (!info.startsWith("/")) {
                         path = "/" + info;
                     } else {
