@@ -100,19 +100,19 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        final SortedSet<String> vanityPathBlackList = new TreeSet<>();
-        vanityPathBlackList.add("/libs/denied/");
-        vanityPathBlackList.add("/jcr:system/");
-        final SortedSet<String> vanityPathWhiteList = new TreeSet<>();
-        vanityPathWhiteList.add("/libs/");
-        vanityPathWhiteList.add("/foo/");
-        vanityPathWhiteList.add("/baa/");
-        vanityPathWhiteList.add("/justVanityPath");
-        vanityPathWhiteList.add("/justVanityPath2");
-        vanityPathWhiteList.add("/badVanityPath");
-        vanityPathWhiteList.add("/redirectingVanityPath");
-        vanityPathWhiteList.add("/redirectingVanityPath301");
-        vanityPathWhiteList.add("/vanityPathOnJcrContent");
+        final SortedSet<String> excludedVanityPathLocations = new TreeSet<>();
+        excludedVanityPathLocations.add("/libs/denied/");
+        excludedVanityPathLocations.add("/jcr:system/");
+        final SortedSet<String> allowedVanityPathLocations = new TreeSet<>();
+        allowedVanityPathLocations.add("/libs/");
+        allowedVanityPathLocations.add("/foo/");
+        allowedVanityPathLocations.add("/baa/");
+        allowedVanityPathLocations.add("/justVanityPath");
+        allowedVanityPathLocations.add("/justVanityPath2");
+        allowedVanityPathLocations.add("/badVanityPath");
+        allowedVanityPathLocations.add("/redirectingVanityPath");
+        allowedVanityPathLocations.add("/redirectingVanityPath301");
+        allowedVanityPathLocations.add("/vanityPathOnJcrContent");
 
         vanityBloomFilterFile = new File("src/main/resourcesvanityBloomFilter.txt");
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
@@ -120,8 +120,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getVanityPathBlackList()).thenReturn(vanityPathBlackList);
-        when(resourceResolverFactory.getVanityPathWhiteList()).thenReturn(vanityPathWhiteList);
+        when(resourceResolverFactory.getExcludedVanityPathLocations()).thenReturn(excludedVanityPathLocations);
+        when(resourceResolverFactory.getAllowedVanityPathLocations()).thenReturn(allowedVanityPathLocations);
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);

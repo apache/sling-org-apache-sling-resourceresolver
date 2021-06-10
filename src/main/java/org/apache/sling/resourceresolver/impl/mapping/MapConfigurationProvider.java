@@ -57,18 +57,18 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
     Map<String, Object> getServiceUserAuthenticationInfo(final String subServiceName) throws LoginException;
 
     /**
-     * A set of whitelisted prefixes all ending with a slash.
+     * A set of allowed prefixes all ending with a slash.
      * If empty set is returned, all paths are allowed.
      */
     @NotNull
-    Set<String> getVanityPathWhiteList();
+    Set<String> getAllowedVanityPathLocations();
 
     /**
-     * A set of blacklisted prefixes all ending with a slash.
+     * A set of excluded prefixes all ending with a slash.
      * If empty set is returned, all paths are allowed.
      */
     @NotNull
-    Set<String> getVanityPathBlackList();
+    Set<String> getExcludedVanityPathLocations();
 
     /**
      * A set of allow prefixes all ending with a slash.

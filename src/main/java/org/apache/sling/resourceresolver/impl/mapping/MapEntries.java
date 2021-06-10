@@ -177,11 +177,11 @@ public class MapEntries implements
             paths.addAll(factory.getAllowedAliasLocations());
         }
         if (factory.isVanityPathEnabled()) {
-            final Set<String> vanityPathWhiteList = factory.getVanityPathWhiteList();
-            if (vanityPathWhiteList.isEmpty()) {
+            final Set<String> allowedVanityPathLocations = factory.getAllowedVanityPathLocations();
+            if (allowedVanityPathLocations.isEmpty()) {
                 paths.add(String.valueOf('/'));
             } else {
-                paths.addAll(vanityPathWhiteList);
+                paths.addAll(allowedVanityPathLocations);
             }
         }
         if (factory.getMapRoot() != null) {
@@ -312,7 +312,7 @@ public class MapEntries implements
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
         // Blacklist cannot be configured with ResourceChangeListener, so do it here
-        final boolean isValidVanityPath = this.factory.getVanityPathBlackList().stream().noneMatch(path::startsWith);
+        final boolean isValidVanityPath = this.factory.getExcludedVanityPathLocations().stream().noneMatch(path::startsWith);
         if ( this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
@@ -1252,8 +1252,8 @@ public class MapEntries implements
             VANITY_PATH_BASE_QUERY_DEFAULT +
                 " WHERE sling:vanityPath IS NOT NULL" +
                 Stream.of(
-                    createVanityPathQueryPathRestriction(factory.getVanityPathWhiteList(), true),
-                    createVanityPathQueryPathRestriction(factory.getVanityPathBlackList(), false)
+                    createVanityPathQueryPathRestriction(factory.getAllowedVanityPathLocations(), true),
+                    createVanityPathQueryPathRestriction(factory.getExcludedVanityPathLocations(), false)
                 )
                     .filter(StringUtils::isNotEmpty)
                     .map(restriction -> " AND (" + restriction + ")")

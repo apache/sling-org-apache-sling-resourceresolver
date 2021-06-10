@@ -495,13 +495,13 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public @NotNull Set<String> getVanityPathWhiteList() {
-        return activator.getVanityPathWhiteList();
+    public @NotNull Set<String> getAllowedVanityPathLocations() {
+        return activator.getAllowedVanityPathLocations();
     }
 
     @Override
-    public @NotNull Set<String> getVanityPathBlackList() {
-        return activator.getVanityPathBlackList();
+    public @NotNull Set<String> getExcludedVanityPathLocations() {
+        return activator.getExcludedVanityPathLocations();
     }
 
     /**

@@ -138,11 +138,11 @@ public class ResourceResolverFactoryActivator {
     @SuppressWarnings("java:S3077")
     private volatile Set<String> allowedAliasLocations = Collections.emptySet();
 
-    /** Vanity path whitelist */
-    private volatile Set<String> vanityPathWhiteList = Collections.emptySet();
+    /** Allowed vanity path locations */
+    private volatile Set<String> allowedVanityPathLocations = Collections.emptySet();
 
-    /** Vanity path blacklist */
-    private volatile Set<String> vanityPathBlackList = Collections.emptySet();
+    /** Excluded vanity path locations */
+    private volatile Set<String> excludedVanityPathLocations = Collections.emptySet();
 
     private final FactoryPreconditions preconds = new FactoryPreconditions();
 
@@ -221,13 +221,13 @@ public class ResourceResolverFactoryActivator {
     }
 
     @NotNull
-    public Set<String> getVanityPathWhiteList() {
-        return this.vanityPathWhiteList;
+    public Set<String> getAllowedVanityPathLocations() {
+        return this.allowedVanityPathLocations;
     }
 
     @NotNull
-    public Set<String> getVanityPathBlackList() {
-        return this.vanityPathBlackList;
+    public Set<String> getExcludedVanityPathLocations() {
+        return this.excludedVanityPathLocations;
     }
 
     public boolean hasVanityPathPrecedence() {
@@ -327,14 +327,12 @@ public class ResourceResolverFactoryActivator {
             }
         }
 
-        // vanity path white list
-        this.vanityPathWhiteList = Collections.unmodifiableSet(Arrays
+        this.allowedVanityPathLocations = Collections.unmodifiableSet(Arrays
             .stream(ArrayUtils.nullToEmpty(config.resource_resolver_vanitypath_whitelist()))
             .map(String::trim)
             .map(value -> StringUtils.appendIfMissing(value, String.valueOf('/')))
             .collect(Collectors.toSet()));
-        // vanity path black list
-        this.vanityPathBlackList = Collections.unmodifiableSet(Stream.concat(Arrays
+        this.excludedVanityPathLocations = Collections.unmodifiableSet(Stream.concat(Arrays
             .stream(ArrayUtils.nullToEmpty(config.resource_resolver_vanitypath_blacklist())), Stream.of("/jcr:system"))
             .map(String::trim)
             .map(value -> StringUtils.appendIfMissing(value, String.valueOf('/')))
