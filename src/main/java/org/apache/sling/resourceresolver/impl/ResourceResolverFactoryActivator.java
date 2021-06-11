@@ -139,9 +139,11 @@ public class ResourceResolverFactoryActivator {
     private volatile Set<String> allowedAliasLocations = Collections.emptySet();
 
     /** Allowed vanity path locations */
+    @SuppressWarnings("java:S3077")
     private volatile Set<String> allowedVanityPathLocations = Collections.emptySet();
 
     /** Excluded vanity path locations */
+    @SuppressWarnings("java:S3077")
     private volatile Set<String> excludedVanityPathLocations = Collections.emptySet();
 
     private final FactoryPreconditions preconds = new FactoryPreconditions();
