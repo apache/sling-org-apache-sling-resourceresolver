@@ -386,6 +386,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         for(final String val : validPaths) {
             resources.add(getVanityPathResource(val));
         }
+        // Note that it's *way* better to test these querys with a real query engine - Idea for Sling starter tests?
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
             if (("SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base AS page" +
                 " WHERE sling:vanityPath IS NOT NULL" +
