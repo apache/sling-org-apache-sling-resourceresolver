@@ -317,9 +317,10 @@ public class MapEntries implements
             }
         }
         if (this.useOptimizeAliasResolution) {
+            final String pathPrefix = path + "/";
             for (final String contentPath : this.aliasMap.keySet()) {
                 if (path.startsWith(contentPath + "/") || path.equals(contentPath)
-                        || contentPath.startsWith(actualContentPathPrefix)) {
+                        || contentPath.startsWith(pathPrefix)) {
                     changed |= removeAlias(contentPath, path, resolverRefreshed);
                 }
             }
