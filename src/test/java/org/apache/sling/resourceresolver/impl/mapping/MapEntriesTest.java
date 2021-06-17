@@ -1494,6 +1494,86 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
     }
 
+    // SLING-10476
+    @Test
+    public void test_doNotRemoveAliasWhenJCRContentDeletedInParentPath() throws Exception {
+        final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
+        addResource.setAccessible(true);
+
+        final Method removeResource = MapEntries.class.getDeclaredMethod("removeResource", String.class, AtomicBoolean.class);
+        removeResource.setAccessible(true);
+
+        assertEquals(0, aliasMap.size());
+
+        Resource parent = mock(Resource.class);
+        when(resourceResolver.getResource("/parent")).thenReturn(parent);
+        when(parent.getParent()).thenReturn(parent);
+        when(parent.getPath()).thenReturn("/parent");
+        when(parent.getName()).thenReturn("parent");
+        when(parent.getValueMap()).thenReturn(buildValueMap());
+
+        final Resource container = mock(Resource.class);
+        when(resourceResolver.getResource("/parent/container")).thenReturn(container);
+        when(container.getParent()).thenReturn(parent);
+        when(container.getPath()).thenReturn("/parent/container");
+        when(container.getName()).thenReturn("container");
+        when(container.getValueMap()).thenReturn(buildValueMap());
+        when(parent.getChild("container")).thenReturn(container);
+
+        final Resource jcrContent = mock(Resource.class);
+        when(resourceResolver.getResource("/parent/container/jcr:content")).thenReturn(jcrContent);
+        when(jcrContent.getParent()).thenReturn(container);
+        when(jcrContent.getPath()).thenReturn("/parent/container/jcr:content");
+        when(jcrContent.getName()).thenReturn("jcr:content");
+        when(jcrContent.getValueMap()).thenReturn(buildValueMap());
+        when(container.getChild("jcr:content")).thenReturn(jcrContent);
+
+        final Resource childContainer = mock(Resource.class);
+        when(resourceResolver.getResource("/parent/container/childContainer")).thenReturn(childContainer);
+        when(childContainer.getParent()).thenReturn(container);
+        when(childContainer.getPath()).thenReturn("/parent/container/childContainer");
+        when(childContainer.getName()).thenReturn("childContainer");
+        when(childContainer.getValueMap()).thenReturn(buildValueMap());
+        when(container.getChild("childContainer")).thenReturn(childContainer);
+
+        final Resource grandChild = mock(Resource.class);
+        when(resourceResolver.getResource("/parent/container/childContainer/grandChild")).thenReturn(grandChild);
+        when(grandChild.getParent()).thenReturn(childContainer);
+        when(grandChild.getPath()).thenReturn("/parent/container/childContainer/grandChild");
+        when(grandChild.getName()).thenReturn("grandChild");
+        when(grandChild.getValueMap()).thenReturn(buildValueMap());
+        when(childContainer.getChild("grandChild")).thenReturn(grandChild);
+
+        final Resource grandChildJcrContent = mock(Resource.class);
+        when(resourceResolver.getResource("/parent/container/childContainer/grandChild/jcr:content")).thenReturn(grandChildJcrContent);
+        when(grandChildJcrContent.getParent()).thenReturn(grandChild);
+        when(grandChildJcrContent.getPath()).thenReturn("/parent/container/childContainer/grandChild/jcr:content");
+        when(grandChildJcrContent.getName()).thenReturn("jcr:content");
+        when(grandChildJcrContent.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "gc"));
+        when(grandChild.getChild("jcr:content")).thenReturn(grandChildJcrContent);
+
+        addResource.invoke(mapEntries, grandChildJcrContent.getPath(), new AtomicBoolean());
+
+        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent/container/childContainer");
+        assertNotNull(aliasMapEntry);
+        assertEquals(1, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("gc"));
+        assertEquals("grandChild", aliasMapEntry.get("gc"));
+
+
+        // delete the jcr:content present in a parent path
+        when(container.getChild("jcr:content")).thenReturn(null);
+        removeResource.invoke(mapEntries, jcrContent.getPath(), new AtomicBoolean());
+
+        // Alias of the other resources under the same parent of deleted jcr:content, should not be deleted
+        aliasMapEntry = mapEntries.getAliasMap("/parent/container/childContainer");
+        assertNotNull(aliasMapEntry);
+        assertEquals(1, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("gc"));
+        assertEquals("grandChild", aliasMapEntry.get("gc"));
+
+    }
+
     @Test
     public void test_doRemoveAliasFromSibling() throws Exception {
         final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
