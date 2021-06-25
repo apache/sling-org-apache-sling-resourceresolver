@@ -258,7 +258,6 @@ public class ResourceResolverControl {
      * transformations are done lazily, during the {@link Iterator#hasNext()}
      * invocation on the result.
      */
-    @SuppressWarnings("unchecked")
     public Iterator<Resource> listChildren(final ResourceResolverContext context, final Resource parent) {
         final String parentPath = parent.getPath();
 
@@ -272,13 +271,20 @@ public class ResourceResolverControl {
         if ( provider != null ) {
             realChildren = provider.listChildren(parent);
         }
- 
+        return listChildrenInternal(context, getResourceProviderStorage().getTree().getNode(parentPath), parent, realChildren);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Iterator<Resource> listChildrenInternal(final ResourceResolverContext context, 
+        final Node<ResourceProviderHandler> node,
+        final Resource parent,
+        final Iterator<Resource> realChildren) {
+        
         final Set<String> visitedNames = new HashSet<>();
 
-        IteratorChain chain = new IteratorChain();
+        IteratorChain<Resource> chain = new IteratorChain<>();
 
         // synthetic and providers are done in one loop
-        final Node<ResourceProviderHandler> node = getResourceProviderStorage().getTree().getNode(parent.getPath());
         if (node != null) {
             final List<Resource> syntheticList = new ArrayList<>();
             final List<Resource> providerList = new ArrayList<>();

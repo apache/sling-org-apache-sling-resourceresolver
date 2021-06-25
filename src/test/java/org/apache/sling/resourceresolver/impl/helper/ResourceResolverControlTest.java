@@ -59,6 +59,9 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
+import org.apache.sling.resourceresolver.impl.providers.stateful.AuthenticatedResourceProvider;
+import org.apache.sling.resourceresolver.impl.providers.stateful.ProviderManager;
+import org.apache.sling.resourceresolver.impl.providers.tree.PathTree;
 import org.apache.sling.spi.resource.provider.QueryLanguageProvider;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
@@ -505,6 +508,100 @@ public class ResourceResolverControlTest {
             assertNull("Expecting " + name + " to be hidden", crp.getAttribute(context, name));
         }
         assertEquals("is " + TEST_ATTRIBUTE, crp.getAttribute(context, TEST_ATTRIBUTE));
+    }
+
+    @Test
+    public void testListChildrenInternalNoRealChildren() throws LoginException {
+        final ResourceResolverControl control = new ResourceResolverControl(false, Collections.emptyMap(), null);
+        
+        final ResourceResolverContext context = Mockito.mock(ResourceResolverContext.class);
+        final ProviderManager providerManager = Mockito.mock(ProviderManager.class);
+        Mockito.when(context.getProviderManager()).thenReturn(providerManager);
+        
+        final ResourceProviderHandler root = Mockito.mock(ResourceProviderHandler.class);
+        Mockito.when(root.getPath()).thenReturn("/");
+        final AuthenticatedResourceProvider rootProvider = Mockito.mock(AuthenticatedResourceProvider.class);
+        Mockito.when(providerManager.getOrCreateProvider(root, control)).thenReturn(rootProvider);
+        
+        final ResourceProviderHandler sub1 = Mockito.mock(ResourceProviderHandler.class);
+        Mockito.when(sub1.getPath()).thenReturn("/libs/sub1");
+        final AuthenticatedResourceProvider sub1Provider = Mockito.mock(AuthenticatedResourceProvider.class);
+        Mockito.when(providerManager.getOrCreateProvider(sub1, control)).thenReturn(sub1Provider);
+
+        final ResourceProviderHandler sub2 = Mockito.mock(ResourceProviderHandler.class);
+        Mockito.when(sub2.getPath()).thenReturn("/libs/sub1/xy/sub2");
+        final AuthenticatedResourceProvider sub2Provider = Mockito.mock(AuthenticatedResourceProvider.class);
+        Mockito.when(providerManager.getOrCreateProvider(sub2, control)).thenReturn(sub2Provider);
+
+        final List<ResourceProviderHandler> handlers = new ArrayList<>();
+        handlers.add(root);
+        handlers.add(sub1);
+        handlers.add(sub2);
+
+        final PathTree<ResourceProviderHandler> tree = new PathTree<>(handlers);
+        
+//        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs"), newMockResource("/libs"), null), "/libs/sub1" );
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), null), "/libs/sub1/xy" );
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"), newMockResource("/libs/sub1/xy"), null), "/libs/sub1/xy/sub2" );
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy/sub2"), newMockResource("/libs/sub1/xy/sub2"), null) );
+    }
+
+    @Test
+    public void testListChildrenInternalRealChildren() throws LoginException {
+        final ResourceResolverControl control = new ResourceResolverControl(false, Collections.emptyMap(), null);
+        
+        final ResourceResolverContext context = Mockito.mock(ResourceResolverContext.class);
+        final ProviderManager providerManager = Mockito.mock(ProviderManager.class);
+        Mockito.when(context.getProviderManager()).thenReturn(providerManager);
+        
+        final ResourceProviderHandler root = Mockito.mock(ResourceProviderHandler.class);
+        Mockito.when(root.getPath()).thenReturn("/");
+        final AuthenticatedResourceProvider rootProvider = Mockito.mock(AuthenticatedResourceProvider.class);
+        Mockito.when(providerManager.getOrCreateProvider(root, control)).thenReturn(rootProvider);
+        
+        final ResourceProviderHandler sub1 = Mockito.mock(ResourceProviderHandler.class);
+        Mockito.when(sub1.getPath()).thenReturn("/libs/sub1");
+        final AuthenticatedResourceProvider sub1Provider = Mockito.mock(AuthenticatedResourceProvider.class);
+        Mockito.when(providerManager.getOrCreateProvider(sub1, control)).thenReturn(sub1Provider);
+
+        final ResourceProviderHandler sub2 = Mockito.mock(ResourceProviderHandler.class);
+        Mockito.when(sub2.getPath()).thenReturn("/libs/sub1/xy/sub2");
+        final AuthenticatedResourceProvider sub2Provider = Mockito.mock(AuthenticatedResourceProvider.class);
+        Mockito.when(providerManager.getOrCreateProvider(sub2, control)).thenReturn(sub2Provider);
+
+        final List<ResourceProviderHandler> handlers = new ArrayList<>();
+        handlers.add(root);
+        handlers.add(sub1);
+        handlers.add(sub2);
+
+        final PathTree<ResourceProviderHandler> tree = new PathTree<>(handlers);
+        
+        final Resource c1 = newMockResource("/libs/sub1/a");
+        final Resource c2 = newMockResource("/libs/sub1/b");
+
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), 
+            Arrays.asList(c1, c2).iterator()), "/libs/sub1/xy", "/libs/sub1/a", "/libs/sub1/b" );
+    }
+
+    private Map<String, Resource> mapChildren(final Iterator<Resource> children) {
+        final Map<String, Resource> all = new HashMap<String, Resource>();
+        while ( children.hasNext() ) {
+            final Resource child = children.next();
+            all.put(child.getPath(), child);
+        }
+        return all;
+    }
+    
+    private void assertChildren(final Iterator<Resource> children, final String... paths) {
+        final Map<String, Resource> all = mapChildren(children);
+        if ( paths == null ) {
+            assertTrue(all.isEmpty());
+        } else {
+            assertEquals("" + all.keySet(), paths.length, all.size());
+            for(final String path : paths) {
+                assertTrue(all.keySet() + " : " + path, all.containsKey(path));
+            }    
+        }
     }
 
     /**
