@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -50,6 +51,7 @@ import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.runtime.dto.AuthType;
 import org.apache.sling.resourceresolver.impl.Fixture;
@@ -222,6 +224,10 @@ public class ResourceResolverControlTest {
         when(mockResource.getChildren()).thenReturn(Collections.<Resource> emptyList());
 
         return mockResource;
+    }
+
+    private Resource newSyntheticResource(final String path) {
+        return new SyntheticResource(null, path, "type");
     }
 
     /**
@@ -541,8 +547,8 @@ public class ResourceResolverControlTest {
         final PathTree<ResourceProviderHandler> tree = new PathTree<>(handlers);
         
 //        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs"), newMockResource("/libs"), null), "/libs/sub1" );
-        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), null), "/libs/sub1/xy" );
-        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"), newMockResource("/libs/sub1/xy"), null), "/libs/sub1/xy/sub2" );
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), null), newSyntheticResource("/libs/sub1/xy") );
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"), newMockResource("/libs/sub1/xy"), null), newSyntheticResource("/libs/sub1/xy/sub2") );
         assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy/sub2"), newMockResource("/libs/sub1/xy/sub2"), null) );
     }
 
@@ -576,30 +582,57 @@ public class ResourceResolverControlTest {
 
         final PathTree<ResourceProviderHandler> tree = new PathTree<>(handlers);
         
+        // two resources - not overlapping
         final Resource c1 = newMockResource("/libs/sub1/a");
         final Resource c2 = newMockResource("/libs/sub1/b");
 
         assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), 
-            Arrays.asList(c1, c2).iterator()), "/libs/sub1/xy", "/libs/sub1/a", "/libs/sub1/b" );
+            Arrays.asList(c1, c2).iterator()), newSyntheticResource("/libs/sub1/xy"), c1, c2 );
+
+        // additional resource, overlapping with synthetic
+        final Resource c3 = newMockResource("/libs/sub1/xy");
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), 
+            Arrays.asList(c1, c2, c3).iterator()), c1, c2, c3 );
+
+        // same as provider, provider not returning resource
+        final Resource c4 = newMockResource("/libs/sub1/xy/sub2");
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"), newMockResource("/libs/sub1/xy"), 
+            Arrays.asList(c4).iterator()), c4 );
+
+        // same as provider, provider returning resource
+        final Resource parent = newMockResource("/libs/sub1/xy");
+        final Resource c5 = newMockResource("/libs/sub1/xy/sub2");
+        Mockito.when(sub2Provider.getResource("/libs/sub1/xy/sub2", parent, null)).thenReturn(c5);
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"),parent , 
+            Arrays.asList(c4).iterator()), c5 );
     }
 
     private Map<String, Resource> mapChildren(final Iterator<Resource> children) {
         final Map<String, Resource> all = new HashMap<String, Resource>();
         while ( children.hasNext() ) {
             final Resource child = children.next();
+            if ( all.containsKey(child.getPath()) ) {
+                fail(child.getPath());
+            }
             all.put(child.getPath(), child);
         }
         return all;
     }
     
-    private void assertChildren(final Iterator<Resource> children, final String... paths) {
+    private void assertChildren(final Iterator<Resource> children, final Resource... resources) {
         final Map<String, Resource> all = mapChildren(children);
-        if ( paths == null ) {
+        if ( resources == null ) {
             assertTrue(all.isEmpty());
         } else {
-            assertEquals("" + all.keySet(), paths.length, all.size());
-            for(final String path : paths) {
-                assertTrue(all.keySet() + " : " + path, all.containsKey(path));
+            assertEquals("" + all.keySet(), resources.length, all.size());
+            for(final Resource rsrc : resources) {
+                assertTrue(all.keySet() + " : " + rsrc.getPath(), all.containsKey(rsrc.getPath()));
+                if ( ResourceUtil.isSyntheticResource(rsrc)) {
+                    assertTrue(ResourceUtil.isSyntheticResource(all.get(rsrc.getPath())));
+                } else {
+                    assertFalse(ResourceUtil.isSyntheticResource(all.get(rsrc.getPath())));
+                    assertSame(rsrc, all.get(rsrc.getPath()));
+                }
             }    
         }
     }
