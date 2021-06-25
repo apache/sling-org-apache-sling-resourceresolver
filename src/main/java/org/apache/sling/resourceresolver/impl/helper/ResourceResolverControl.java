@@ -310,7 +310,7 @@ public class ResourceResolverControl {
                     } else {
                         // if there is a child provider underneath, we need to create a synthetic resource
                         // otherwise we need to make sure that no one else is providing this child
-                        if ( entry.getValue().getChildren().isEmpty() ) {
+                        if ( !entry.getValue().getChildren().isEmpty() ) {
                             syntheticList.add(new SyntheticResource(context.getResourceResolver(), childPath, ResourceProvider.RESOURCE_TYPE_SYNTHETIC));
                         } else {
                             visitedNames.add(name);

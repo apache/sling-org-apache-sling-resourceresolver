@@ -546,9 +546,9 @@ public class ResourceResolverControlTest {
 
         final PathTree<ResourceProviderHandler> tree = new PathTree<>(handlers);
         
-//        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs"), newMockResource("/libs"), null), "/libs/sub1" );
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs"), newMockResource("/libs"), null), newSyntheticResource("/libs/sub1") );
         assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), null), newSyntheticResource("/libs/sub1/xy") );
-        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"), newMockResource("/libs/sub1/xy"), null), newSyntheticResource("/libs/sub1/xy/sub2") );
+        assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"), newMockResource("/libs/sub1/xy"), null) );
         assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy/sub2"), newMockResource("/libs/sub1/xy/sub2"), null) );
     }
 
@@ -594,12 +594,12 @@ public class ResourceResolverControlTest {
         assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1"), newMockResource("/libs/sub1"), 
             Arrays.asList(c1, c2, c3).iterator()), c1, c2, c3 );
 
-        // same as provider, provider not returning resource
+        // same as provider, provider not returning resource -> no resource should be returned, provider is shadowing
         final Resource c4 = newMockResource("/libs/sub1/xy/sub2");
         assertChildren( control.listChildrenInternal(context, tree.getNode("/libs/sub1/xy"), newMockResource("/libs/sub1/xy"), 
-            Arrays.asList(c4).iterator()), c4 );
+            Arrays.asList(c4).iterator()) );
 
-        // same as provider, provider returning resource
+        // same as provider, provider returning resource, provider resource should be returned
         final Resource parent = newMockResource("/libs/sub1/xy");
         final Resource c5 = newMockResource("/libs/sub1/xy/sub2");
         Mockito.when(sub2Provider.getResource("/libs/sub1/xy/sub2", parent, null)).thenReturn(c5);
