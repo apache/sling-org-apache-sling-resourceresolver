@@ -150,7 +150,9 @@ public class ResourceMapperImpl implements ResourceMapper {
         if (nonDecoratedResource != null) {
             List<String> aliases = loadAliasesIfApplicable(nonDecoratedResource);
             // avoid duplicating the originally requested path
-            aliases.remove(mappedPath);
+            if ( aliases.contains(mappedPath) ) {
+                mappings.remove(mappedPath);
+            }
             // ensure that the first declared alias will be returned first
             Collections.reverse(aliases);
             
