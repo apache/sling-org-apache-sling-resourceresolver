@@ -110,7 +110,6 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
         resourceProvider.putResource("/parent", PROP_ALIAS, "alias-parent"); // parent has alias
         resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
-        resourceProvider.putResource("/parent/child/grandChild", PROP_ALIAS, "alias-grandChild"); // grandChild child has alias
         resourceProvider.putResource("/parent/child-multiple", PROP_ALIAS, "alias-child-1", "alias-child-2"); // child has multiple alias
         resourceProvider.putResource("/vain", "sling:vanityPath", "/vanity-a", "/vanity-b"); // vanity path
 
@@ -343,22 +342,16 @@ public class ResourceMapperImplTest {
     }
 
     /**
-     * Validates the mapping for a non-existing resource target with alias on parent, its child and grandchild
+     * Validates the mapping for a non-existing resource target with alias on parent and its child
      *
-     *
-     * @throws LoginException
      */
     @Test
     public void mapNestedAliasTarget() {
-        ExpectedMappings.nonExistingResource("/alias-parent/alias-child/alias-grandChild")
-                .singleMapping("/alias-parent/alias-child/alias-grandChild")
-                .singleMappingWithRequest("/app/alias-parent/alias-child/alias-grandChild")
-                .allMappings("/alias-parent/alias-child/alias-grandChild", "/parent/alias-child/alias-grandChild", "/alias-parent/child/alias-grandChild",
-                        "/parent/child/alias-grandChild", "/alias-parent/alias-child/grandChild", "/parent/alias-child/grandChild",
-                        "/alias-parent/child/grandChild")
-                .allMappingsWithRequest("/app/alias-parent/alias-child/alias-grandChild", "/app/parent/alias-child/alias-grandChild", "/app/alias-parent/child/alias-grandChild",
-                        "/app/parent/child/alias-grandChild", "/app/alias-parent/alias-child/grandChild", "/app/parent/alias-child/grandChild",
-                        "/app/alias-parent/child/grandChild")
+        ExpectedMappings.nonExistingResource("/alias-parent/alias-child")
+                .singleMapping("/alias-parent/alias-child")
+                .singleMappingWithRequest("/app/alias-parent/alias-child")
+                .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child")
+                .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child")
                 .verify(resolver, req);
     }
 

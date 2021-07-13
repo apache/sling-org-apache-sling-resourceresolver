@@ -137,29 +137,25 @@ public class ResourceMapperImpl implements ResourceMapper {
 
         final RequestContext requestContext = new RequestContext(request, resourcePath);
         ParsedParameters parsed = new ParsedParameters(mappedPath);
-        
-        // 2. add the requested path itself
-        if ( !mappedPath.isEmpty() )
-            mappings.add(mappedPath);
 
-        // 3. load mappings from the resource path
+        // 2. load mappings from the resource path
         populateMappingsFromMapEntries(mappings, Collections.singletonList(mappedPath), requestContext);
         
-        // 4. load aliases
+        // 3. load aliases
         final Resource nonDecoratedResource = resolver.resolveInternal(parsed.getRawPath(), parsed.getParameters());
         if (nonDecoratedResource != null) {
             List<String> aliases = loadAliasesIfApplicable(nonDecoratedResource);
-            // avoid duplicating the originally requested path
-            if ( aliases.contains(mappedPath) ) {
-                mappings.remove(mappedPath);
-            }
             // ensure that the first declared alias will be returned first
             Collections.reverse(aliases);
             
-            // 5. load mappings for alias
+            // 4. load mappings for alias
             mappings.addAll(aliases);
             populateMappingsFromMapEntries(mappings, aliases, requestContext);
         }
+
+        // 5. add the requested path itself, if not already populated
+        if ( !mappedPath.isEmpty() && !mappings.contains(mappedPath))
+            mappings.add(0, mappedPath);
         
         // 6. add vanity paths
         List<String> vanityPaths = mapEntries.getVanityPathMappings().getOrDefault(mappedPath, Collections.emptyList());
