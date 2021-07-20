@@ -250,11 +250,6 @@ public class MockedResourceResolverImplTest {
             }
 
             @Override
-            public String[] resource_resolver_map_observation() {
-                return new String[] {"/"};
-            }
-
-            @Override
             public String resource_resolver_map_location() {
                 return MapEntries.DEFAULT_MAP_ROOT;
             }

@@ -18,20 +18,15 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.*;
-
-
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.ResourceDecorator;
 import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
@@ -39,6 +34,7 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.ChangeListener;
 import org.apache.sling.resourceresolver.impl.providers.RuntimeServiceImpl;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
+import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -55,6 +51,22 @@ import org.osgi.service.event.EventAdmin;
 import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The <code>ResourceResolverFactoryActivator/code> keeps track of required services for the
@@ -126,14 +138,13 @@ public class ResourceResolverFactoryActivator {
     @SuppressWarnings("java:S3077")
     private volatile Set<String> allowedAliasLocations = Collections.emptySet();
 
-    /** Vanity path whitelist */
-    private volatile String[] vanityPathWhiteList;
+    /** Allowed vanity path locations */
+    @SuppressWarnings("java:S3077")
+    private volatile Set<String> allowedVanityPathLocations = Collections.emptySet();
 
-    /** Vanity path blacklist */
-    private volatile String[] vanityPathBlackList;
-
-    /** Observation paths */
-    private volatile Path[] observationPaths;
+    /** Excluded vanity path locations */
+    @SuppressWarnings("java:S3077")
+    private volatile Set<String> excludedVanityPathLocations = Collections.emptySet();
 
     private final FactoryPreconditions preconds = new FactoryPreconditions();
 
@@ -211,12 +222,14 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_log_unclosed();
     }
 
-    public String[] getVanityPathWhiteList() {
-        return this.vanityPathWhiteList;
+    @NotNull
+    public Set<String> getAllowedVanityPathLocations() {
+        return this.allowedVanityPathLocations;
     }
 
-    public String[] getVanityPathBlackList() {
-        return this.vanityPathBlackList;
+    @NotNull
+    public Set<String> getExcludedVanityPathLocations() {
+        return this.excludedVanityPathLocations;
     }
 
     public boolean hasVanityPathPrecedence() {
@@ -237,10 +250,6 @@ public class ResourceResolverFactoryActivator {
 
     public boolean shouldLogResourceResolverClosing() {
         return this.config.resource_resolver_log_closing();
-    }
-
-    public Path[] getObservationPaths() {
-        return this.observationPaths;
     }
 
     // ---------- SCR Integration ---------------------------------------------
@@ -300,12 +309,6 @@ public class ResourceResolverFactoryActivator {
         mapRoot = config.resource_resolver_map_location();
         mapRootPrefix = mapRoot + '/';
 
-        final String[] paths = config.resource_resolver_map_observation();
-        this.observationPaths = new Path[paths.length];
-        for(int i=0;i<paths.length;i++) {
-            this.observationPaths[i] = new Path(paths[i]);
-        }
-
         // optimize alias path allow list
         String[] aliasLocationsPrefix = config.resource_resolver_allowed_alias_locations();
         if ( aliasLocationsPrefix != null ) {
@@ -326,42 +329,16 @@ public class ResourceResolverFactoryActivator {
             }
         }
 
-        // vanity path white list
-        this.vanityPathWhiteList = null;
-        String[] vanityPathPrefixes = config.resource_resolver_vanitypath_whitelist();
-        if ( vanityPathPrefixes != null ) {
-            final List<String> prefixList = new ArrayList<>();
-            for(final String value : vanityPathPrefixes) {
-                if ( value.trim().length() > 0 ) {
-                    if ( value.trim().endsWith("/") ) {
-                        prefixList.add(value.trim());
-                    } else {
-                        prefixList.add(value.trim() + "/");
-                    }
-                }
-            }
-            if ( prefixList.size() > 0 ) {
-                this.vanityPathWhiteList = prefixList.toArray(new String[prefixList.size()]);
-            }
-        }
-        // vanity path black list
-        this.vanityPathBlackList = null;
-        vanityPathPrefixes = config.resource_resolver_vanitypath_blacklist();
-        if ( vanityPathPrefixes != null ) {
-            final List<String> prefixList = new ArrayList<>();
-            for(final String value : vanityPathPrefixes) {
-                if ( value.trim().length() > 0 ) {
-                    if ( value.trim().endsWith("/") ) {
-                        prefixList.add(value.trim());
-                    } else {
-                        prefixList.add(value.trim() + "/");
-                    }
-                }
-            }
-            if ( prefixList.size() > 0 ) {
-                this.vanityPathBlackList = prefixList.toArray(new String[prefixList.size()]);
-            }
-        }
+        this.allowedVanityPathLocations = Collections.unmodifiableSet(Arrays
+            .stream(ArrayUtils.nullToEmpty(config.resource_resolver_vanitypath_whitelist()))
+            .map(String::trim)
+            .map(value -> StringUtils.appendIfMissing(value, String.valueOf('/')))
+            .collect(Collectors.toSet()));
+        this.excludedVanityPathLocations = Collections.unmodifiableSet(Stream.concat(Arrays
+            .stream(ArrayUtils.nullToEmpty(config.resource_resolver_vanitypath_blacklist())), Stream.of("/jcr:system"))
+            .map(String::trim)
+            .map(value -> StringUtils.appendIfMissing(value, String.valueOf('/')))
+            .collect(Collectors.toSet()));
 
         // check for required property
         Set<String> requiredResourceProvidersLegacy = getStringSet(config.resource_resolver_required_providers());

@@ -96,17 +96,16 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
 
             @Override
             public Iterator<Resource> findResources(@NotNull ResolveContext<Void> ctx, String query, String language) {
-                
-                // we don't explicitly filter paths under jcr:system, but we don't expect to have such resources either
+// we don't explicitly filter paths under jcr:system, but we don't expect to have such resources either
                 // and this stub provider is not the proper location to test JCR queries
-                if  ( "SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,\"/jcr:system\")) AND sling:alias IS NOT NULL".equals(query) ) {
+                if ("SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,'/jcr:system')) AND sling:alias IS NOT NULL".equals(query)) {
                     return resourcesWithProperty(ctx, "sling:alias")
                         .iterator();
                 }
-                
-                if ( "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath IS NOT NULL".equals(query) ) {
+
+                if ("SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base AS page WHERE sling:vanityPath IS NOT NULL AND (NOT ISDESCENDANTNODE(page, '/jcr:system'))".equals(query)) {
                     return resourcesWithProperty(ctx, "sling:vanityPath")
-                        .iterator();                  
+                        .iterator();
                 }
 
                 throw new UnsupportedOperationException("Unsupported query: '" + query + "'");

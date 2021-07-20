@@ -16,37 +16,13 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.*;
-
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
-import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
-import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,6 +34,41 @@ import org.mockito.stubbing.Answer;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
@@ -89,33 +100,33 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        final List<VanityPathConfig> configs = new ArrayList<>();
-        configs.add(new VanityPathConfig("/libs/", false));
-        configs.add(new VanityPathConfig("/libs/denied", true));
-        configs.add(new VanityPathConfig("/foo/", false));
-        configs.add(new VanityPathConfig("/baa/", false));
-        configs.add(new VanityPathConfig("/justVanityPath", false));
-        configs.add(new VanityPathConfig("/justVanityPath2", false));
-        configs.add(new VanityPathConfig("/badVanityPath", false));
-        configs.add(new VanityPathConfig("/redirectingVanityPath", false));
-        configs.add(new VanityPathConfig("/redirectingVanityPath301", false));
-        configs.add(new VanityPathConfig("/vanityPathOnJcrContent", false));
+        final SortedSet<String> excludedVanityPathLocations = new TreeSet<>();
+        excludedVanityPathLocations.add("/libs/denied/");
+        excludedVanityPathLocations.add("/jcr:system/");
+        final SortedSet<String> allowedVanityPathLocations = new TreeSet<>();
+        allowedVanityPathLocations.add("/libs/");
+        allowedVanityPathLocations.add("/foo/");
+        allowedVanityPathLocations.add("/baa/");
+        allowedVanityPathLocations.add("/justVanityPath");
+        allowedVanityPathLocations.add("/justVanityPath2");
+        allowedVanityPathLocations.add("/badVanityPath");
+        allowedVanityPathLocations.add("/redirectingVanityPath");
+        allowedVanityPathLocations.add("/redirectingVanityPath301");
+        allowedVanityPathLocations.add("/vanityPathOnJcrContent");
 
-        Collections.sort(configs);
         vanityBloomFilterFile = new File("src/main/resourcesvanityBloomFilter.txt");
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
         when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
+        when(resourceResolverFactory.getExcludedVanityPathLocations()).thenReturn(excludedVanityPathLocations);
+        when(resourceResolverFactory.getAllowedVanityPathLocations()).thenReturn(allowedVanityPathLocations);
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
-                Collections.<Resource> emptySet().iterator());
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(Collections.emptyIterator());
         //when(resourceResolverFactory.getAliasPath()).thenReturn(Arrays.asList("/child"));
 
         Set<String> aliasPath = new TreeSet<>();
@@ -370,26 +381,32 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_vanity_path_registration_include_exclude() throws IOException {
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
-        final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
 
         final List<Resource> resources = new ArrayList<>();
         for(final String val : validPaths) {
             resources.add(getVanityPathResource(val));
         }
-        for(final String val : invalidPaths) {
-            resources.add(getVanityPathResource(val));
-        }
-
-
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
-
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
-                    return resources.iterator();
-                } else {
-                    return Collections.<Resource> emptySet().iterator();
-                }
+        // Note that it's *way* better to test these querys with a real query engine - Idea for Sling starter tests?
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            if (("SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base AS page" +
+                " WHERE sling:vanityPath IS NOT NULL" +
+                " AND" +
+                " (ISDESCENDANTNODE(page, '/baa')" +
+                " OR ISDESCENDANTNODE(page, '/badVanityPath')" +
+                " OR ISDESCENDANTNODE(page, '/foo')" +
+                " OR ISDESCENDANTNODE(page, '/justVanityPath')" +
+                " OR ISDESCENDANTNODE(page, '/justVanityPath2')" +
+                " OR ISDESCENDANTNODE(page, '/libs')" +
+                " OR ISDESCENDANTNODE(page, '/redirectingVanityPath')" +
+                " OR ISDESCENDANTNODE(page, '/redirectingVanityPath301')" +
+                " OR ISDESCENDANTNODE(page, '/vanityPathOnJcrContent')" +
+                ") AND " +
+                "(NOT ISDESCENDANTNODE(page, '/jcr:system')" +
+                " AND NOT ISDESCENDANTNODE(page, '/libs/denied')" +
+                ")").equals(invocation.getArguments()[0].toString())) {
+                return resources.iterator();
+            } else {
+                return Collections.emptyIterator();
             }
         });
 
@@ -1713,16 +1730,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_isValidVanityPath() throws Exception {
-        Method method = MapEntries.class.getDeclaredMethod("isValidVanityPath", String.class);
-        method.setAccessible(true);
-
-        assertFalse((Boolean)method.invoke(mapEntries, "/jcr:system/node"));
-
-        assertTrue((Boolean)method.invoke(mapEntries, "/justVanityPath"));
-    }
-
-    @Test
     //SLING-4847
     public void test_doNodeAdded1() throws Exception {
         final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
@@ -2182,7 +2189,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
                 String query = StringUtils.trim((String)invocation.getArguments()[0]);
-                assertEquals("SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,\"/jcr:system\")) AND sling:alias IS NOT NULL", query);
+                assertEquals("SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,'/jcr:system')) AND sling:alias IS NOT NULL", query);
                 return Collections.<Resource> emptySet().iterator();
             }
         });

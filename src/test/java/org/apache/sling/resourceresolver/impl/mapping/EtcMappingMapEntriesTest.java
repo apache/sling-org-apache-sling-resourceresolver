@@ -179,7 +179,6 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(activator.getBundleContext()).thenReturn(bundleContext);
         when(activator.getStringInterpolationProvider()).thenReturn(stringInterpolationProvider);
         when(activator.getMapRoot()).thenReturn("/etc/map");
-        when(activator.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         CommonResourceResolverFactoryImpl commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);

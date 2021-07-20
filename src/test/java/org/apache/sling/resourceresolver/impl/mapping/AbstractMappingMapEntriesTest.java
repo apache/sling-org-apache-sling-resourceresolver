@@ -97,16 +97,13 @@ public abstract class AbstractMappingMapEntriesTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        List<MapConfigurationProvider.VanityPathConfig> configs = getVanityPathConfigs();
         vanityBloomFilterFile = new File("target/test-classes/resourcesvanityBloomFilter.txt");
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
         when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
@@ -123,10 +120,6 @@ public abstract class AbstractMappingMapEntriesTest {
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);
         this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
-    }
-
-    List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {
-        return new ArrayList<>();
     }
 
     @After

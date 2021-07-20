@@ -112,11 +112,6 @@ public @interface ResourceResolverFactoryConfig {
                       "the ResourceResolver mapping. The default value is /etc/map.")
     String resource_resolver_map_location() default MapEntries.DEFAULT_MAP_ROOT;
 
-    @AttributeDefinition(name = "Mapping Observation",
-        description = "The paths where vanity paths or aliases can be found. These paths are used to " +
-                      "listen for resource events.")
-    String[] resource_resolver_map_observation() default "/";
-
     @AttributeDefinition(name = "Default Vanity Path Redirect Status",
         description = "The default status code used when a sling:vanityPath is configured to redirect " +
                     "and does not have a specific status code associated with it " +
