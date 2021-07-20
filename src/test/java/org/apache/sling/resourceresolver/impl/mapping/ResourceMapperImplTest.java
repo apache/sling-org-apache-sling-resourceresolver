@@ -341,6 +341,20 @@ public class ResourceMapperImplTest {
             .verify(resolver, req);
     }
 
+    /**
+     * Validates the mapping for a non-existing resource target with alias on parent and its child
+     *
+     */
+    @Test
+    public void mapNestedAliasTarget() {
+        ExpectedMappings.nonExistingResource("/alias-parent/alias-child")
+                .singleMapping("/alias-parent/alias-child")
+                .singleMappingWithRequest("/app/alias-parent/alias-child")
+                .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child")
+                .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child")
+                .verify(resolver, req);
+    }
+
     static class ExpectedMappings {
 
         public static ExpectedMappings existingResource(String path) {
