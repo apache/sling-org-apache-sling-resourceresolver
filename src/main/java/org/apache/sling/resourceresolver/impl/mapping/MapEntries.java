@@ -112,6 +112,7 @@ public class MapEntries implements
 
     @SuppressWarnings("java:S1075") // Content path
     private static final String JCR_SYSTEM_PATH = "/jcr:system";
+    private static final String JCR_SYSTEM_PATH_PREFIX = JCR_SYSTEM_PATH + '/';
 
     private static final String VANITY_PATH_BASE_QUERY_DEFAULT = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base AS page";
 
@@ -748,7 +749,7 @@ public class MapEntries implements
             log.debug("onChange, type={}, path={}", rc.getType(), path);
 
             // don't care for system area
-            if (path.startsWith(JCR_SYSTEM_PATH + '/')) {
+            if (path.startsWith(JCR_SYSTEM_PATH_PREFIX)) {
                 continue;
             }
 
