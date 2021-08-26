@@ -104,7 +104,7 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
                         .iterator();
                 }
                 
-                if ( "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath IS NOT NULL".equals(query) ) {
+                if ( "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE NOT isdescendantnode('/jcr:system') AND sling:vanityPath IS NOT NULL".equals(query) ) {
                     return resourcesWithProperty(ctx, "sling:vanityPath")
                         .iterator();                  
                 }
