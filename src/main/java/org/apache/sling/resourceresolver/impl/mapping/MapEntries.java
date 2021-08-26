@@ -86,7 +86,10 @@ public class MapEntries implements
 
     public static final int DEFAULT_DEFAULT_VANITY_PATH_REDIRECT_STATUS = HttpServletResponse.SC_FOUND;
 
-    private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
+    @SuppressWarnings("java:S1075") // Repository path
+    private static final String JCR_SYSTEM_PATH = "/jcr:system";
+
+    private static final String JCR_SYSTEM_PREFIX = JCR_SYSTEM_PATH + '/';
 
    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
 
@@ -816,8 +819,12 @@ public class MapEntries implements
         Map<String, List<MapEntry>> entryMap = new HashMap<>();
 
                 // sling:vanityPath (lowercase) is the property name
-        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath ="
-                + "'"+escapeIllegalXpathSearchChars(vanityPath).replaceAll("'", "''")+"' OR sling:vanityPath ="+ "'"+escapeIllegalXpathSearchChars(vanityPath.substring(1)).replaceAll("'", "''")+"' ORDER BY sling:vanityOrder DESC";
+        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" +
+            " FROM nt:base" +
+            " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "') and (" +
+            "sling:vanityPath ='"+escapeIllegalXpathSearchChars(vanityPath).replaceAll("'", "''")+"'" +
+            " OR sling:vanityPath ="+ "'"+escapeIllegalXpathSearchChars(vanityPath.substring(1)).replaceAll("'", "''")+"'" +
+            ") ORDER BY sling:vanityOrder DESC";
 
         ResourceResolver queryResolver = null;
 
@@ -1156,7 +1163,10 @@ public class MapEntries implements
     private Map <String, List<String>> loadVanityPaths(boolean createVanityBloomFilter) {
         // sling:vanityPath (lowercase) is the property name
         final Map <String, List<String>> targetPaths = new ConcurrentHashMap <>();
-        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE sling:vanityPath IS NOT NULL";
+        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" +
+            " FROM nt:base" +
+            " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "')" +
+            " AND sling:vanityPath IS NOT NULL";
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
 
         Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
