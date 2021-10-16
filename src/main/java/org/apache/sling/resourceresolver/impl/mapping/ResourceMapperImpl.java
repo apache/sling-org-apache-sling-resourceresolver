@@ -72,7 +72,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         
         Collection<String> mappings = getAllMappings(resourcePath, request);
         if ( mappings.isEmpty() )
-            return null;
+            return "";
         
         return mappings.iterator().next();
     }
@@ -154,7 +154,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         }
 
         // 5. add the requested path itself, if not already populated
-        if ( !mappedPath.isEmpty() && !mappings.contains(mappedPath))
+        if (!mappings.contains(mappedPath))
             mappings.add(0, mappedPath);
         
         // 6. add vanity paths
