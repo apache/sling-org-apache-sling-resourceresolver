@@ -154,7 +154,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         }
 
         // 5. add the requested path itself, if not already populated
-        if (!mappings.contains(mappedPath))
+        if ( !mappedPath.isEmpty() && !mappings.contains(mappedPath))
             mappings.add(0, mappedPath);
         
         // 6. add vanity paths
