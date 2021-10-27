@@ -32,11 +32,10 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.Nullable;
 import javax.jcr.Session;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.adapter.annotations.Adaptable;
 import org.apache.sling.adapter.annotations.Adapter;
 import org.apache.sling.api.SlingException;
@@ -64,6 +63,8 @@ import org.apache.sling.resourceresolver.impl.mapping.ResourceMapperImpl;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -987,6 +988,12 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         final Resource rsrc = this.control.create(this.context, path, properties);
         rsrc.getResourceMetadata().setResolutionPath(rsrc.getPath());
         return this.factory.getResourceDecoratorTracker().decorate(rsrc);
+    }
+
+    @Override
+    public boolean orderBefore(@NotNull Resource parent, @NotNull String name, @Nullable String followingSiblingName)
+            throws UnsupportedOperationException, PersistenceException, IllegalArgumentException {
+        return this.control.orderBefore(this.context, parent, name, followingSiblingName);
     }
 
     /**

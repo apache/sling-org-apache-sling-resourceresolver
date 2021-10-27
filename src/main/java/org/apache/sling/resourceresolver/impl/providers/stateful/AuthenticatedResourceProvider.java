@@ -44,9 +44,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This {@link AuthenticatedResourceProvider} implementation keeps a resource
- * provider and the authentication information (through the {@link ResolveContext}.
+ * provider and the authentication information (through the {@link ResolveContext}).
  *
- * The methods are similar to {@link ResourceProvider}.
+ * The methods are similar to those of {@link ResourceProvider}.
  */
 public class AuthenticatedResourceProvider {
 
@@ -81,7 +81,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#refresh(ResolveContext)}
+     * @see {@link ResourceProvider#refresh(ResolveContext)}
      */
     public void refresh() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -91,7 +91,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#isLive(ResolveContext)}
+     * @see {@link ResourceProvider#isLive(ResolveContext)}
      */
     public boolean isLive() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -102,7 +102,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#getParent(ResolveContext, Resource)}
+     * @see {@link ResourceProvider#getParent(ResolveContext, Resource)}
      */
     public Resource getParent(final Resource child) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -113,7 +113,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#getResource(ResolveContext, String, ResourceContext, Resource)}
+     * @see {@link ResourceProvider#getResource(ResolveContext, String, ResourceContext, Resource)}
      */
     public Resource getResource(final String path, final Resource parent, final Map<String, String> parameters) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -136,7 +136,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#listChildren(ResolveContext, Resource)}
+     * @see {@link ResourceProvider#listChildren(ResolveContext, Resource)}
      */
     public Iterator<Resource> listChildren(final Resource parent) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -147,7 +147,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#getAttributeNames(ResolveContext)}
+     * @see {@link ResourceProvider#getAttributeNames(ResolveContext)}
      */
     public void getAttributeNames(final Set<String> attributeNames) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -160,7 +160,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#getAttribute(ResolveContext, String)}
+     * @see {@link ResourceProvider#getAttribute(ResolveContext, String)}
      */
     public Object getAttribute(final String name) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -171,7 +171,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#create(ResolveContext, String, Map)}
+     * @see {@link ResourceProvider#create(ResolveContext, String, Map)}
      */
     public Resource create(final ResourceResolver resolver,
             final String path,
@@ -185,7 +185,20 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#delete(ResolveContext, Resource)}
+     * @see {@link ResourceProvider#orderBefore(ResolveContext, Resource, String, String)
+     */
+    public boolean orderBefore(final @NotNull Resource parent, final @NotNull String name, final @Nullable String followingSiblingName) 
+        throws PersistenceException {
+        final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
+        if (rp != null && this.canReorderChildren(parent)) {
+            return rp.orderBefore(this.resolveContext, parent, name, followingSiblingName);
+        } else {
+            throw new PersistenceException("Unable to order child resources of " + parent.getPath());
+        }
+    }
+    
+    /**
+     * @see {@link ResourceProvider#delete(ResolveContext, Resource)}
      */
     public void delete(final Resource resource) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -197,7 +210,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#revert(ResolveContext)}
+     * @see {@link ResourceProvider#revert(ResolveContext)}
      */
     public void revert() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -207,7 +220,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#commit(ResolveContext)}
+     * @see {@link ResourceProvider#commit(ResolveContext)}
      */
     public void commit() throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -217,7 +230,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#hasChanges(ResolveContext)}
+     * @see {@link ResourceProvider#hasChanges(ResolveContext)}
      */
     public boolean hasChanges() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -228,7 +241,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#getQueryLanguageProvider()}
+     * @see {@link ResourceProvider#getQueryLanguageProvider()}
      */
     private QueryLanguageProvider<Object> getQueryLanguageProvider() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -239,7 +252,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link QueryLanguageProvider#getSupportedLanguages(ResolveContext)}
+     * @see {@link QueryLanguageProvider#getSupportedLanguages(ResolveContext)}
      */
     public String[] getSupportedLanguages() {
         final QueryLanguageProvider<Object> jcrQueryProvider = getQueryLanguageProvider();
@@ -250,7 +263,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link QueryLanguageProvider}{@link #findResources(String, String)}
+     * @see {@link QueryLanguageProvider}{@link #findResources(String, String)}
      */
     public Iterator<Resource> findResources(final String query, final String language) {
         final QueryLanguageProvider<Object> jcrQueryProvider = getQueryLanguageProvider();
@@ -261,7 +274,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link QueryLanguageProvider#queryResources(ResolveContext, String, String)}
+     * @see {@link QueryLanguageProvider#queryResources(ResolveContext, String, String)}
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public Iterator<Map<String, Object>> queryResources(final String query, final String language) {
@@ -273,7 +286,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#adaptTo(ResolveContext, Class)}
+     * @see {@link ResourceProvider#adaptTo(ResolveContext, Class)}
      */
     public <AdapterType> AdapterType adaptTo(final Class<AdapterType> type) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -284,7 +297,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#copy(ResolveContext, String, String)}
+     * @see {@link ResourceProvider#copy(ResolveContext, String, String)}
      */
     public boolean copy(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -295,7 +308,7 @@ public class AuthenticatedResourceProvider {
     }
 
     /**
-     * #see {@link ResourceProvider#move(ResolveContext, String, String)}
+     * @see {@link ResourceProvider#move(ResolveContext, String, String)}
      */
     public boolean move(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -320,6 +333,26 @@ public class AuthenticatedResourceProvider {
             final ResourceAccessSecurity security = tracker.getApplicationResourceAccessSecurity();
             if (security != null) {
                 allowed = security.canCreate(path, resolver);
+            }
+        }
+        return allowed;
+    }
+
+    private boolean canReorderChildren(final Resource resource) {
+        boolean allowed = true;
+        if ( this.useRAS ) {
+            final ResourceAccessSecurity security = tracker.getProviderResourceAccessSecurity();
+            if ( security != null ) {
+                allowed = security.canReorderChildren(resource);
+            } else {
+                allowed = false;
+            }
+        }
+
+        if ( allowed ) {
+            final ResourceAccessSecurity security = tracker.getApplicationResourceAccessSecurity();
+            if (security != null) {
+                allowed = security.canReorderChildren(resource);
             }
         }
         return allowed;

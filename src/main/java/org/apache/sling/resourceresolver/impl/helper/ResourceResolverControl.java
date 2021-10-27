@@ -395,6 +395,34 @@ public class ResourceResolverControl {
         throw new UnsupportedOperationException("create '" + ResourceUtil.getName(path) + "' at " + ResourceUtil.getParent(path));
     }
 
+    /*
+     * @see ResourceResolver#orderBefore(Resource, String, String)
+     */
+    public boolean orderBefore(@NotNull final ResourceResolverContext context,  @NotNull final Resource parent, @NotNull final String name, @Nullable final String followingSiblingName)
+            throws UnsupportedOperationException, PersistenceException, IllegalArgumentException {
+        final AuthenticatedResourceProvider provider = getBestMatchingModifiableProvider(context, parent.getPath());
+        if (provider != null) {
+            // make sure all children are from the same provider and both names are valid
+            AuthenticatedResourceProvider childProvider = getBestMatchingModifiableProvider(context, parent.getPath() + "/" + name);
+            if (childProvider == null) {
+                throw new IllegalArgumentException("The given name '" + name + "' is not a valid child name in resource " + parent.getPath());
+            }
+            if (provider != childProvider) {
+                throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath() + " as children are not provided by the same provider as the parent resource");
+            }
+            if (followingSiblingName != null) {
+                childProvider = getBestMatchingModifiableProvider(context, parent.getPath() + "/" + followingSiblingName);
+                if (childProvider == null) {
+                    throw new IllegalArgumentException("The given name '" + followingSiblingName + "' is not a valid child name in resource " + parent.getPath());
+                }
+                if (provider != childProvider) {
+                    throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath() + " as sibling child resources are not provided by the same provider");
+                }
+            }
+            return provider.orderBefore(parent, name, followingSiblingName);
+        }
+        throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath());
+    }
     /**
      * Delete the resource. Iterate over all modifiable ResourceProviders
      * giving each an opportunity to delete the resource if they are able.
