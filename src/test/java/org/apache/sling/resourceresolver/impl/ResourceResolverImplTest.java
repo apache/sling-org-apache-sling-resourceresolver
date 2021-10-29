@@ -29,11 +29,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-
 import static org.mockito.Mockito.eq;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,12 +45,10 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.NonExistingResource;
-import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.SyntheticResource;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl.ResourceTypeInformation;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
@@ -497,7 +492,7 @@ public class ResourceResolverImplTest {
         try {
             this.resResolver.create(r, "a", null);
             fail("This should be unsupported.");
-        } catch (final PersistenceException uoe) {
+        } catch (final UnsupportedOperationException uoe) {
             // correct
         }
     }

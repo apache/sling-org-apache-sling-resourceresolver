@@ -190,7 +190,7 @@ public class AuthenticatedResourceProvider {
     public boolean orderBefore(final @NotNull Resource parent, final @NotNull String name, final @Nullable String followingSiblingName) 
         throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if (rp != null && this.canReorderChildren(parent)) {
+        if (rp != null && this.canOrderChildren(parent)) {
             return rp.orderBefore(this.resolveContext, parent, name, followingSiblingName);
         } else {
             throw new PersistenceException("Unable to order child resources of " + parent.getPath());
@@ -338,12 +338,12 @@ public class AuthenticatedResourceProvider {
         return allowed;
     }
 
-    private boolean canReorderChildren(final Resource resource) {
+    private boolean canOrderChildren(final Resource resource) {
         boolean allowed = true;
         if ( this.useRAS ) {
             final ResourceAccessSecurity security = tracker.getProviderResourceAccessSecurity();
             if ( security != null ) {
-                allowed = security.canReorderChildren(resource);
+                allowed = security.canOrderChildren(resource);
             } else {
                 allowed = false;
             }
@@ -352,7 +352,7 @@ public class AuthenticatedResourceProvider {
         if ( allowed ) {
             final ResourceAccessSecurity security = tracker.getApplicationResourceAccessSecurity();
             if (security != null) {
-                allowed = security.canReorderChildren(resource);
+                allowed = security.canOrderChildren(resource);
             }
         }
         return allowed;
