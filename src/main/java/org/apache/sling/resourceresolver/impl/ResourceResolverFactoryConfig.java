@@ -105,7 +105,7 @@ public @interface ResourceResolverFactoryConfig {
                     "applied in both directions. Mappings are applied in configuration order by " +
                     "comparing and replacing URL prefixes. Note: The use of \"-\" as the <op> value " +
                     "indicating a mapping in both directions is deprecated.")
-    String[] resource_resolver_mapping() default {"/:/", "/content/:/", "/system/docroot/:/"};
+    String[] resource_resolver_mapping() default {"/:/", "/content/:/"};
 
     @AttributeDefinition(name = "Mapping Location",
         description = "The path to the root of the configuration to setup and configure " +
