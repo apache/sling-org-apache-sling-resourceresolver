@@ -45,16 +45,20 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.NonExistingResource;
+import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.SyntheticResource;
+import org.apache.sling.api.security.ResourceAccessSecurity;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -71,6 +75,8 @@ public class ResourceResolverImplTest {
 
     private ResourceProviderTracker resourceProviderTracker;
 
+    private ResourceAccessSecurityTracker resourceAccessSecurityTracker;
+
     @Before public void setup() throws LoginException {
         ResourceProvider<?> rp = new ResourceProvider<Object>() {
 
@@ -85,13 +91,32 @@ public class ResourceResolverImplTest {
             }
         };
 
-        List<ResourceProviderHandler> handlers = asList(createRPHandler(rp, "rp1", 0, "/"));
+        ResourceProvider<?> rp2 = new ResourceProvider<Object>() {
+
+            @Override
+            public Resource getResource(ResolveContext<Object> ctx, String path, ResourceContext rCtx, Resource parent) {
+                return null;
+            }
+
+            @Override
+            public Iterator<Resource> listChildren(ResolveContext<Object> ctx, Resource parent) {
+                return null;
+            }
+
+            @Override
+            public boolean orderBefore(final @NotNull ResolveContext<Object> ctx, final @NotNull Resource parent, final @NotNull String name, final @Nullable String followingSiblingName)
+                    throws PersistenceException {
+                return true;
+            }
+        };
+        List<ResourceProviderHandler> handlers = asList(createRPHandler(rp, "rp", 0, "/"), createRPHandler(rp2, "rp2", 100, "/rp2"));
         resourceProviderTracker = mock(ResourceProviderTracker.class);
         ResourceProviderStorage storage = new ResourceProviderStorage(handlers);
         when(resourceProviderTracker.getResourceProviderStorage()).thenReturn(storage);
+        resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
         ResourceResolverFactoryActivator activator = new ResourceResolverFactoryActivator();
         activator.resourceProviderTracker = resourceProviderTracker;
-        activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
+        activator.resourceAccessSecurityTracker = resourceAccessSecurityTracker;
         commonFactory = new CommonResourceResolverFactoryImpl(activator);
         final Bundle usingBundle = mock(Bundle.class);
         resFac = new ResourceResolverFactoryImpl(commonFactory, usingBundle, null);
@@ -495,6 +520,39 @@ public class ResourceResolverImplTest {
         } catch (final UnsupportedOperationException uoe) {
             // correct
         }
+    }
+
+    @Test
+    public void testOrderBefore() throws PersistenceException {
+        //final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+        Resource root = resResolver.resolve("/");
+        // different RPs
+        try {
+            resResolver.orderBefore(root, "rp1", "rp2");
+            fail("Different resource providers should throw");
+        } catch (final UnsupportedOperationException uoe) {
+            // correct
+        }
+        try {
+            // same RP but not implementing orderBefore
+            assertTrue(resResolver.orderBefore(root, "rp1", "rp3"));
+        } catch (final UnsupportedOperationException uoe) {
+            // correct
+        }
+        // same RP supporting orderBefore
+        root = resResolver.resolve("/rp2");
+        assertTrue(resResolver.orderBefore(root, "test", "test2"));
+        // same RP supporting but not allowing orderBefore
+        ResourceAccessSecurity ras = mock(ResourceAccessSecurity.class);
+        resourceAccessSecurityTracker.applicationResourceAccessSecurity = ras;
+        try {
+            resResolver.orderBefore(root, "test", "test2");
+        } catch (final PersistenceException pe) {
+            // correct
+        }
+        // same RP supporting and allowing orderBefore
+        when(ras.canOrderChildren(Mockito.any())).thenReturn(true);
+        assertTrue(resResolver.orderBefore(root, "test", "test2"));
     }
 
     @Test public void test_getResourceSuperType() {

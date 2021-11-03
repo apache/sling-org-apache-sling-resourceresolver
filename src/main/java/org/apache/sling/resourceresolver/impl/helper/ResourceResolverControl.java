@@ -403,26 +403,35 @@ public class ResourceResolverControl {
         final AuthenticatedResourceProvider provider = getBestMatchingModifiableProvider(context, parent.getPath());
         if (provider != null) {
             // make sure all children are from the same provider and both names are valid
-            AuthenticatedResourceProvider childProvider = getBestMatchingModifiableProvider(context, parent.getPath() + "/" + name);
+            AuthenticatedResourceProvider childProvider = getBestMatchingModifiableProvider(context, createDescendantPath(parent.getPath(), name));
             if (childProvider == null) {
                 throw new IllegalArgumentException("The given name '" + name + "' is not a valid child name in resource " + parent.getPath());
             }
             if (provider != childProvider) {
-                throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath() + " as children are not provided by the same provider as the parent resource");
+                throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath() + " not supported as children are not provided by the same provider as the parent resource");
             }
             if (followingSiblingName != null) {
-                childProvider = getBestMatchingModifiableProvider(context, parent.getPath() + "/" + followingSiblingName);
+                childProvider = getBestMatchingModifiableProvider(context, createDescendantPath(parent.getPath(), followingSiblingName));
                 if (childProvider == null) {
                     throw new IllegalArgumentException("The given name '" + followingSiblingName + "' is not a valid child name in resource " + parent.getPath());
                 }
                 if (provider != childProvider) {
-                    throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath() + " as sibling child resources are not provided by the same provider");
+                    throw new UnsupportedOperationException("orderBefore '" + name + "', '" + followingSiblingName + "' at " + parent.getPath() + " not supported as sibling child resources are not provided by the same provider");
                 }
             }
             return provider.orderBefore(parent, name, followingSiblingName);
         }
         throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath());
     }
+
+    public static final String createDescendantPath(String path, String descendantName) {
+        if (path.endsWith("/")) {
+            return path + descendantName;
+        } else {
+            return path + "/" + descendantName;
+        }
+    }
+
     /**
      * Delete the resource. Iterate over all modifiable ResourceProviders
      * giving each an opportunity to delete the resource if they are able.
