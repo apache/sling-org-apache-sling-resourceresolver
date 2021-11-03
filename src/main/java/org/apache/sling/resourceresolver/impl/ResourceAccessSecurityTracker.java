@@ -40,13 +40,13 @@ public class ResourceAccessSecurityTracker {
                cardinality=ReferenceCardinality.OPTIONAL,
                policy=ReferencePolicy.DYNAMIC,
                target="(" + ResourceAccessSecurity.CONTEXT + "=" + ResourceAccessSecurity.APPLICATION_CONTEXT + ")")
-    private volatile ResourceAccessSecurity applicationResourceAccessSecurity;
+    volatile ResourceAccessSecurity applicationResourceAccessSecurity;
 
     @Reference(policyOption=ReferencePolicyOption.GREEDY,
             cardinality=ReferenceCardinality.OPTIONAL,
             policy=ReferencePolicy.DYNAMIC,
             target="(" + ResourceAccessSecurity.CONTEXT + "=" + ResourceAccessSecurity.PROVIDER_CONTEXT + ")")
-    private volatile ResourceAccessSecurity providerResourceAccessSecurity;
+    volatile ResourceAccessSecurity providerResourceAccessSecurity;
 
     public ResourceAccessSecurity getApplicationResourceAccessSecurity() {
         return this.applicationResourceAccessSecurity;
