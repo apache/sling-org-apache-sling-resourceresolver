@@ -30,7 +30,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -709,6 +713,29 @@ public class ResourceResolverImplTest {
         // this should throw a SlingException when detecting the cyclic hierarchy
         resolver.isResourceType(resource, "/types/unknown");
     }
+    
+    @Test public void testGetPropertyMap() throws IOException {
+        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+        
+        Object value1 = new String("value1");
+        Closeable value2 = Mockito.spy(new Closeable() {
+            @Override
+            public void close() {
+                // do nothing
+            }
+        });
+        assertNotNull(resolver.getPropertyMap());
+        resolver.getPropertyMap().put("key1", value1);
+        resolver.getPropertyMap().put("key2", value2);
+        
+        resolver.close();
+        assertNotNull(resolver.getPropertyMap());
+        assertTrue(resolver.getPropertyMap().isEmpty());
+        Mockito.verify(value2,Mockito.times(1)).close();
+        
+    }
+    
+    
 
     private PathBasedResourceResolverImpl getPathBasedResourceResolver() {
         return getPathBasedResourceResolver(new String[] {""});

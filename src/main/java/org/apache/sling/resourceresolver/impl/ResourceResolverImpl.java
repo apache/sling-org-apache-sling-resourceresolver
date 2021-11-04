@@ -20,6 +20,8 @@ package org.apache.sling.resourceresolver.impl;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -96,6 +98,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     private final ResourceResolverContext context;
 
     protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
+    
+    protected Map<String,Object> propertyMap;
 
 
     private volatile Exception closedResolverException;
@@ -180,7 +184,24 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if (factory.shouldLogResourceResolverClosing()) {
             closedResolverException = new Exception("Stack Trace");
         }
+        clearPropertyMap();
         this.factory.unregister(this, this.control);
+    }
+    
+    
+    protected void clearPropertyMap() {
+        if (propertyMap != null) {
+            for (Object value : propertyMap.values()) {
+                if (value instanceof Closeable) {
+                    try {
+                        ((Closeable) value).close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
+            }
+            propertyMap.clear();
+        }
     }
 
     /**
@@ -1146,6 +1167,13 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             rsrc = this.factory.getResourceDecoratorTracker().decorate(rsrc);
         }
         return rsrc;
+    }
+    
+    public Map<String,Object> getPropertyMap() {
+        if (propertyMap == null) {
+            propertyMap = new HashMap<>();
+        }
+        return propertyMap;
     }
 
 
