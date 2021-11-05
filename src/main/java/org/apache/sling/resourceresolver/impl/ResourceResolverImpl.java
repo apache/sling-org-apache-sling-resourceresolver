@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -99,7 +100,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
     
-    protected Map<String,Object> propertyMap;
+    private Map<String,Object> propertyMap;
 
 
     private volatile Exception closedResolverException;
@@ -187,16 +188,15 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         clearPropertyMap();
         this.factory.unregister(this, this.control);
     }
-    
-    
-    protected void clearPropertyMap() {
+
+    private void clearPropertyMap(){
         if (propertyMap != null) {
-            for (Object value : propertyMap.values()) {
-                if (value instanceof Closeable) {
+            for (Entry<String, Object> entry : propertyMap.entrySet()) {
+                if (entry.getValue()  instanceof Closeable) {
                     try {
-                        ((Closeable) value).close();
-                    } catch (IOException e) {
-                        // ignore
+                        ((Closeable) entry.getValue()).close();
+                    } catch (Exception e) {
+                        logger.warn("ignoring exception while closing the value for key [{}] ", entry.getKey(),e);
                     }
                 }
             }
