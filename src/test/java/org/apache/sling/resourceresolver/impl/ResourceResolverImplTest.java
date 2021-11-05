@@ -715,8 +715,12 @@ public class ResourceResolverImplTest {
     }
     
     @Test public void testGetPropertyMap() throws IOException {
-        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+        // not having a map must not change the behavior
+        PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+        resolver.close();
         
+        // use the propertyMap
+        resolver = getPathBasedResourceResolver();
         Object value1 = new String("value1");
         Closeable value2 = Mockito.spy(new Closeable() {
             @Override
@@ -724,14 +728,22 @@ public class ResourceResolverImplTest {
                 // do nothing
             }
         });
+        Closeable valueWithException = Mockito.spy(new Closeable() {
+            @Override
+            public void close() {
+                throw new RuntimeException ("RuntimeExceptions in close must be handled");
+            }
+        });
         assertNotNull(resolver.getPropertyMap());
         resolver.getPropertyMap().put("key1", value1);
         resolver.getPropertyMap().put("key2", value2);
+        resolver.getPropertyMap().put("key3", valueWithException);
         
         resolver.close();
         assertNotNull(resolver.getPropertyMap());
         assertTrue(resolver.getPropertyMap().isEmpty());
         Mockito.verify(value2,Mockito.times(1)).close();
+        Mockito.verify(valueWithException,Mockito.times(1)).close();
         
     }
     
