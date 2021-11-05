@@ -20,6 +20,8 @@ package org.apache.sling.resourceresolver.impl;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -96,6 +99,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     private final ResourceResolverContext context;
 
     protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
+    
+    private Map<String,Object> propertyMap;
 
 
     private volatile Exception closedResolverException;
@@ -180,7 +185,23 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if (factory.shouldLogResourceResolverClosing()) {
             closedResolverException = new Exception("Stack Trace");
         }
+        clearPropertyMap();
         this.factory.unregister(this, this.control);
+    }
+
+    private void clearPropertyMap(){
+        if (propertyMap != null) {
+            for (Entry<String, Object> entry : propertyMap.entrySet()) {
+                if (entry.getValue()  instanceof Closeable) {
+                    try {
+                        ((Closeable) entry.getValue()).close();
+                    } catch (Exception e) {
+                        logger.warn("ignoring exception while closing the value for key [{}] ", entry.getKey(),e);
+                    }
+                }
+            }
+            propertyMap.clear();
+        }
     }
 
     /**
@@ -1146,6 +1167,13 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             rsrc = this.factory.getResourceDecoratorTracker().decorate(rsrc);
         }
         return rsrc;
+    }
+    
+    public Map<String,Object> getPropertyMap() {
+        if (propertyMap == null) {
+            propertyMap = new HashMap<>();
+        }
+        return propertyMap;
     }
 
 
