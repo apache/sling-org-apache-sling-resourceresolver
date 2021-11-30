@@ -53,15 +53,10 @@ public class ResourceResolverMetricsTest {
         assertThat(vanityPaths.getValue(),is(0L));
         assertThat(aliases.getValue(),is(0L));
         
-        metrics.setNumberOfAliasesSupplier(() -> {return 3L;});
-        metrics.setNumberOfVanityPathsSupplier(() -> {return 2L;});
+        metrics.setNumberOfAliasesSupplier(() -> 3L);
+        metrics.setNumberOfVanityPathsSupplier(() -> 2L);
         assertThat(vanityPaths.getValue(),is(2L));
         assertThat(aliases.getValue(),is(3L));
-        
-    }
-    
-    @Test
-    public void testCounter() {
         
     }
     

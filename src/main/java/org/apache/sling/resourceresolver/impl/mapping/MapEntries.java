@@ -105,7 +105,7 @@ public class MapEntries implements
 
     private volatile EventAdmin eventAdmin;
     
-    private volatile ResourceResolverMetrics metrics;
+    private ResourceResolverMetrics metrics;
 
     private volatile ServiceRegistration<ResourceChangeListener> registration;
 
@@ -168,8 +168,8 @@ public class MapEntries implements
 
         this.vanityBloomFilterFile = bundleContext.getDataFile(VANITY_BLOOM_FILTER_NAME);
         initializeVanityPaths();
-        metrics.setNumberOfVanityPathsSupplier(() -> { return vanityCounter.get();});
-        metrics.setNumberOfAliasesSupplier(() -> { return (long) aliasMap.size();});
+        this.metrics.setNumberOfVanityPathsSupplier(vanityCounter::get);
+        this.metrics.setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
     }
 
     /**
