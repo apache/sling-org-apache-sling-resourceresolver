@@ -85,6 +85,9 @@ public class EtcMappingResourceResolverTest {
 
     @Mock
     EventAdmin eventAdmin;
+    
+    @Mock
+    ResourceResolverMetrics metrics;
 
     @Mock
     ResourceResolver resourceResolver;
@@ -128,6 +131,8 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("mapRoot", activator, "/etc/map");
         setInaccessibleField("mapRootPrefix", activator, "/etc/map");
         setInaccessibleField("observationPaths", activator, new Path[] {new Path("/")});
+        setInaccessibleField("metrics", activator, metrics);
+        
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);
         setInaccessibleField("serviceUserMapper", activator, serviceUserMapper);
         commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));

@@ -23,6 +23,7 @@ import org.apache.sling.resourceresolver.impl.CommonResourceResolverFactoryImpl;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryImpl;
+import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
@@ -31,6 +32,7 @@ import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
@@ -180,6 +182,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(activator.getStringInterpolationProvider()).thenReturn(stringInterpolationProvider);
         when(activator.getMapRoot()).thenReturn("/etc/map");
         when(activator.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
+        when(activator.getResourceResolverMetrics()).thenReturn(Mockito.mock(ResourceResolverMetrics.class));
         CommonResourceResolverFactoryImpl commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);

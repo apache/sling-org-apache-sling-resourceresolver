@@ -113,6 +113,9 @@ public class ResourceResolverFactoryActivator {
 
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
+    
+    @Reference
+    private ResourceResolverMetrics metrics;
 
     volatile ResourceProviderTracker resourceProviderTracker;
 
@@ -158,6 +161,10 @@ public class ResourceResolverFactoryActivator {
     public StringInterpolationProvider getStringInterpolationProvider() {
         return stringInterpolationProvider;
     }
+    
+    public ResourceResolverMetrics getResourceResolverMetrics() {
+        return this.metrics;
+    }
 
     /**
      * This method is called from {@link MapEntries}
@@ -187,7 +194,7 @@ public class ResourceResolverFactoryActivator {
     }
 
     public boolean isMapConfiguration(String path) {
-        return path.equals(this.mapRoot)
+        return path.equals(this.getMapRoot())
                || path.startsWith(this.mapRootPrefix);
     }
 
@@ -526,7 +533,7 @@ public class ResourceResolverFactoryActivator {
                         }
                         final ResourceResolverFactoryImpl r = new ResourceResolverFactoryImpl(
                                 local.commonFactory, bundle,
-                            ResourceResolverFactoryActivator.this.serviceUserMapper);
+                            ResourceResolverFactoryActivator.this.getServiceUserMapper());
                         return r;
                     }
 
@@ -548,7 +555,7 @@ public class ResourceResolverFactoryActivator {
      * @return The runtime service
      */
     public RuntimeService getRuntimeService() {
-        return new RuntimeServiceImpl(this.resourceProviderTracker);
+        return new RuntimeServiceImpl(this.getResourceProviderTracker());
     }
 
     public ServiceUserMapper getServiceUserMapper() {
@@ -563,7 +570,7 @@ public class ResourceResolverFactoryActivator {
      * Check the preconditions and if it changed, either register factory or unregister
      */
     private void checkFactoryPreconditions(final String unavailableName, final String unavailableServicePid) {
-        final BundleContext localContext = this.bundleContext;
+        final BundleContext localContext = this.getBundleContext();
         if ( localContext != null ) {
             final boolean result = this.preconds.checkPreconditions(unavailableName, unavailableServicePid);
             if ( result && this.factoryRegistration == null ) {

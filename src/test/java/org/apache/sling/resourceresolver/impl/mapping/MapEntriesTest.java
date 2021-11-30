@@ -46,6 +46,7 @@ import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.junit.After;
 import org.junit.Before;
@@ -73,6 +74,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Mock
     private Bundle bundle;
+    
+    @Mock
+    private ResourceResolverMetrics metrics;
 
     @Mock
     private ResourceResolver resourceResolver;
@@ -125,7 +129,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         }
         when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(aliasPath);
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);
 
@@ -817,7 +821,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -842,7 +846,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         addResource.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -867,7 +871,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.setAccessible(true);
 
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -2195,7 +2199,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         // initialize with having vanity path disabled - must not throw errors here or on disposal
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(false);
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         mapEntries.doInit();
     }

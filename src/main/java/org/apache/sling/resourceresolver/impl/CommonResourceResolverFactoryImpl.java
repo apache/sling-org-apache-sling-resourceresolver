@@ -101,7 +101,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
                 while (isLive()) {
                     try {
                         final ResolverReference ref = (ResolverReference) resolverReferenceQueue.remove();
-                        ref.close();
+                        ref.close(activator.getResourceResolverMetrics());
                     } catch ( final InterruptedException ie) {
                         Thread.currentThread().interrupt();
                     }
@@ -315,7 +315,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         }
         // set up the map entries from configuration
         try {
-            mapEntries = new MapEntries(this, bundleContext, this.activator.getEventAdmin(), this.activator.getStringInterpolationProvider());
+            mapEntries = new MapEntries(this, bundleContext, this.activator.getEventAdmin(), this.activator.getStringInterpolationProvider(), this.activator.getResourceResolverMetrics());
         } catch (final Exception e) {
             logger.error("activate: Cannot access repository, failed setting up Mapping Support", e);
         }
@@ -345,7 +345,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         final Collection<ResolverReference> references = new ArrayList<>(refs.values());
         refs.clear();
         for(final ResolverReference ref : references) {
-            ref.close();
+            ref.close(activator.getResourceResolverMetrics());
         }
     }
 
@@ -538,11 +538,12 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
             this.openingException = factory.logUnclosedResolvers && LOG.isInfoEnabled() ? new Exception("Opening Stacktrace") : null;
         }
 
-        public void close() {
+        public void close(ResourceResolverMetrics metrics) {
             try {
                 if (factory.unregisterControl(this.control) && factory.logUnclosedResolvers) {
                     if (factory.isLive()) {
                         LOG.warn("Closed unclosed ResourceResolver. The creation stacktrace is available on info log level.");
+                        metrics.reportUnclosedResourceResolver();
                     } else {
                         LOG.warn("Forced close of ResourceResolver because the ResourceResolverFactory is shutting down.");
                     }
