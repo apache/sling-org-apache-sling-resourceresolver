@@ -41,7 +41,7 @@ public class ResourceResolverMetrics {
     @Reference
     MetricsService metricsService;
     
-    private static Supplier<Long> ZERO_SUPPLIER = () -> 0L;
+    private static final Supplier<Long> ZERO_SUPPLIER = () -> 0L;
     
     // number of vanity paths
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathsGauge;
@@ -101,7 +101,7 @@ public class ResourceResolverMetrics {
     private ServiceRegistration<Gauge<Long>> registerGauge(BundleContext context, String name, Supplier<Supplier<Long>> supplier) {
 
         ResourceResolverGauge gauge = new ResourceResolverGauge(supplier);
-        @SuppressWarnings("rawtypes,java:S1149")
+        @SuppressWarnings("all")
         Dictionary props = new Hashtable();
         props.put(Gauge.NAME, name);
         return context.registerService(Gauge.class, gauge, props);
