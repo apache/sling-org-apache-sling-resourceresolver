@@ -41,15 +41,15 @@ public class ResourceResolverMetrics {
     @Reference
     MetricsService metricsService;
     
-    Supplier<Long> NULL_SUPPLIER = () -> 0L;
+    private static Supplier<Long> ZERO_SUPPLIER = () -> 0L;
     
     // number of vanity paths
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathsGauge;
-    private Supplier<Long> numberOfVanityPathsSupplier = NULL_SUPPLIER;
+    private Supplier<Long> numberOfVanityPathsSupplier = ZERO_SUPPLIER;
     
     // number of aliases
     private ServiceRegistration<Gauge<Long>> numberOfAliasesGauge;
-    private Supplier<Long> numberOfAliasesSupplier = NULL_SUPPLIER;
+    private Supplier<Long> numberOfAliasesSupplier = ZERO_SUPPLIER;
     
     private Counter unclosedResourceResolvers;
     
@@ -101,7 +101,7 @@ public class ResourceResolverMetrics {
     private ServiceRegistration<Gauge<Long>> registerGauge(BundleContext context, String name, Supplier<Supplier<Long>> supplier) {
 
         ResourceResolverGauge gauge = new ResourceResolverGauge(supplier);
-        @SuppressWarnings("rawtypes")
+        @SuppressWarnings("rawtypes,java:S1149")
         Dictionary props = new Hashtable();
         props.put(Gauge.NAME, name);
         return context.registerService(Gauge.class, gauge, props);
