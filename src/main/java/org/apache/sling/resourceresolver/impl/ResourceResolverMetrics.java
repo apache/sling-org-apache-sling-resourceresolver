@@ -36,6 +36,8 @@ import org.osgi.service.component.annotations.Reference;
 @Component(service=ResourceResolverMetrics.class, immediate=true)
 public class ResourceResolverMetrics {
     
+    protected static final String METRICS_PREFIX = "org.apache.sling.resourceresolver";
+    
     @Reference
     MetricsService metricsService;
     
@@ -55,9 +57,9 @@ public class ResourceResolverMetrics {
     @Activate
     protected void activate(ComponentContext context) {
         BundleContext bundleContext = context.getBundleContext();
-        numberOfVanityPathsGauge = registerGauge(bundleContext, "numberOfVanityPaths", () -> numberOfVanityPathsSupplier );
-        numberOfAliasesGauge = registerGauge(bundleContext, "numberOfAliases", () -> numberOfAliasesSupplier );
-        unclosedResourceResolvers = metricsService.counter("unclosedResourceResolvers");
+        numberOfVanityPathsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPaths", () -> numberOfVanityPathsSupplier );
+        numberOfAliasesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfAliases", () -> numberOfAliasesSupplier );
+        unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX  + ".unclosedResourceResolvers");
     }
     
     @Deactivate

@@ -48,8 +48,8 @@ public class ResourceResolverMetricsTest {
     
     @Test
     public void testGauges() {
-        Gauge<Long> vanityPaths =  getGauge("numberOfVanityPaths");
-        Gauge<Long> aliases = getGauge("numberOfAliases");
+        Gauge<Long> vanityPaths =  getGauge(ResourceResolverMetrics.METRICS_PREFIX + ".numberOfVanityPaths");
+        Gauge<Long> aliases = getGauge(ResourceResolverMetrics.METRICS_PREFIX + ".numberOfAliases");
         assertThat(vanityPaths.getValue(),is(0L));
         assertThat(aliases.getValue(),is(0L));
         
