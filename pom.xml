@@ -153,6 +153,7 @@
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.commons.metrics</artifactId>
             <version>1.2.8</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- For the Console Plugin of the ResourceResolverFactoryImpl -->
