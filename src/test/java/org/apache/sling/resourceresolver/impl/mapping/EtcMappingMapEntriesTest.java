@@ -40,6 +40,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 import static java.util.Arrays.asList;
 import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
@@ -182,7 +183,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(activator.getStringInterpolationProvider()).thenReturn(stringInterpolationProvider);
         when(activator.getMapRoot()).thenReturn("/etc/map");
         when(activator.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
-        when(activator.getResourceResolverMetrics()).thenReturn(Mockito.mock(ResourceResolverMetrics.class));
+        when(activator.getResourceResolverMetrics()).thenReturn(Optional.of(Mockito.mock(ResourceResolverMetrics.class)));
         CommonResourceResolverFactoryImpl commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);

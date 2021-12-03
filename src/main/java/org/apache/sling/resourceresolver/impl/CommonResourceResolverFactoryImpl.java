@@ -538,12 +538,14 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
             this.openingException = factory.logUnclosedResolvers && LOG.isInfoEnabled() ? new Exception("Opening Stacktrace") : null;
         }
 
-        public void close(ResourceResolverMetrics metrics) {
+        public void close(Optional<ResourceResolverMetrics> metrics) {
             try {
                 if (factory.unregisterControl(this.control) && factory.logUnclosedResolvers) {
                     if (factory.isLive()) {
                         LOG.warn("Closed unclosed ResourceResolver. The creation stacktrace is available on info log level.");
-                        metrics.reportUnclosedResourceResolver();
+                        if (metrics.isPresent()) {
+                            metrics.get().reportUnclosedResourceResolver();
+                        }
                     } else {
                         LOG.warn("Forced close of ResourceResolver because the ResourceResolverFactory is shutting down.");
                     }

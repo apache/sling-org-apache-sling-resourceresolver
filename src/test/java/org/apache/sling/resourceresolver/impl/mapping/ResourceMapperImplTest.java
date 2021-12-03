@@ -95,7 +95,6 @@ public class ResourceMapperImplTest {
     @Before
     public void prepare() throws LoginException {
 
-        ctx.registerService(ResourceResolverMetrics.class, Mockito.mock(ResourceResolverMetrics.class));
         ctx.registerInjectActivateService(new ServiceUserMapperImpl());
         ctx.registerInjectActivateService(new ResourceAccessSecurityTracker());
         ctx.registerInjectActivateService(new StringInterpolationProviderImpl());

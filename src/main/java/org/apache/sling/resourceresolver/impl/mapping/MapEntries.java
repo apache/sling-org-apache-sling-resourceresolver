@@ -92,7 +92,7 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = JCR_SYSTEM_PATH + '/';
 
-   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
+    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -105,7 +105,7 @@ public class MapEntries implements
 
     private volatile EventAdmin eventAdmin;
     
-    private ResourceResolverMetrics metrics;
+    private Optional<ResourceResolverMetrics> metrics;
 
     private volatile ServiceRegistration<ResourceChangeListener> registration;
 
@@ -137,12 +137,13 @@ public class MapEntries implements
             final BundleContext bundleContext, 
             final EventAdmin eventAdmin, 
             final StringInterpolationProvider stringInterpolationProvider, 
-            final ResourceResolverMetrics metrics) throws LoginException, IOException {
+            final Optional<ResourceResolverMetrics> metrics) 
+                    throws LoginException, IOException {
 
     	this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
         this.factory = factory;
         this.eventAdmin = eventAdmin;
-        this.metrics = metrics;
+
 
 
         this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, Collections.emptyList());
@@ -168,8 +169,11 @@ public class MapEntries implements
 
         this.vanityBloomFilterFile = bundleContext.getDataFile(VANITY_BLOOM_FILTER_NAME);
         initializeVanityPaths();
-        this.metrics.setNumberOfVanityPathsSupplier(vanityCounter::get);
-        this.metrics.setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
+        this.metrics = metrics;
+        if (metrics.isPresent()) {
+            this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
+            this.metrics.get().setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
+        }
     }
 
     /**

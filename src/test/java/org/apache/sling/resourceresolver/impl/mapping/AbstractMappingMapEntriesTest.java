@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -78,8 +79,7 @@ public abstract class AbstractMappingMapEntriesTest {
     @Mock
     EventAdmin eventAdmin;
     
-    @Mock
-    ResourceResolverMetrics metrics;
+    Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
     @Mock
     ResourceResolver resourceResolver;

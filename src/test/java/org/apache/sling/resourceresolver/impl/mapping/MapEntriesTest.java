@@ -74,9 +74,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Mock
     private Bundle bundle;
-    
-    @Mock
-    private ResourceResolverMetrics metrics;
 
     @Mock
     private ResourceResolver resourceResolver;
@@ -128,6 +125,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
           aliasPath.add("/parent"+i);
         }
         when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(aliasPath);
+        
+        Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");

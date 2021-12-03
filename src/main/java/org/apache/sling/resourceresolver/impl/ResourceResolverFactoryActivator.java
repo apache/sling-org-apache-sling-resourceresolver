@@ -51,6 +51,7 @@ import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
@@ -114,7 +115,7 @@ public class ResourceResolverFactoryActivator {
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
     
-    @Reference
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY)
     private ResourceResolverMetrics metrics;
 
     volatile ResourceProviderTracker resourceProviderTracker;
@@ -162,8 +163,8 @@ public class ResourceResolverFactoryActivator {
         return stringInterpolationProvider;
     }
     
-    public ResourceResolverMetrics getResourceResolverMetrics() {
-        return this.metrics;
+    public Optional<ResourceResolverMetrics> getResourceResolverMetrics() {
+        return Optional.ofNullable(this.metrics);
     }
 
     /**
