@@ -27,13 +27,22 @@ import org.apache.sling.commons.metrics.Gauge;
 import org.apache.sling.commons.metrics.MetricsService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 
-@Component(service=ResourceResolverMetrics.class, immediate=true)
+/**
+ *  Export metrics for the resource resolver bundle:
+ *  
+ *  org.apache.sling.resourceresolver.numberOfVanityPaths - the total number of vanity paths
+ *  org.apache.sling.resourceresolver.numberOfAliases  -- the total number of aliases
+ *  org.apache.sling.resourceresolver.unclosedResourceResolvers  -- the total number of unclosed resource resolvers
+ *
+ */
+
+
+@Component(service=ResourceResolverMetrics.class)
 public class ResourceResolverMetrics {
     
     protected static final String METRICS_PREFIX = "org.apache.sling.resourceresolver";
@@ -55,8 +64,7 @@ public class ResourceResolverMetrics {
     
     
     @Activate
-    protected void activate(ComponentContext context) {
-        BundleContext bundleContext = context.getBundleContext();
+    protected void activate(BundleContext bundleContext) {
         numberOfVanityPathsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPaths", () -> numberOfVanityPathsSupplier );
         numberOfAliasesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfAliases", () -> numberOfAliasesSupplier );
         unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX  + ".unclosedResourceResolvers");
@@ -84,6 +92,9 @@ public class ResourceResolverMetrics {
         numberOfAliasesSupplier = supplier;
     }
     
+    /**
+     * Increment the counter for the number of unresolved resource resolvers
+     */
     public void reportUnclosedResourceResolver() {
         unclosedResourceResolvers.increment();
     }
