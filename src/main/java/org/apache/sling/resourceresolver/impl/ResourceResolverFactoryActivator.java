@@ -115,6 +115,7 @@ public class ResourceResolverFactoryActivator {
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
     
+    @SuppressWarnings("java:S3077")
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY, policy = ReferencePolicy.DYNAMIC)
     private volatile ResourceResolverMetrics metrics;
 
