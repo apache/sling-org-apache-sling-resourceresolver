@@ -115,8 +115,8 @@ public class ResourceResolverFactoryActivator {
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
     
-    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY)
-    private ResourceResolverMetrics metrics;
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY, policy = ReferencePolicy.DYNAMIC)
+    private volatile ResourceResolverMetrics metrics;
 
     volatile ResourceProviderTracker resourceProviderTracker;
 
