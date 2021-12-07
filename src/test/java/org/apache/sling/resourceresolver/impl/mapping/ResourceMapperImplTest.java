@@ -42,6 +42,7 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
+import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -52,6 +53,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
 
 /**
  * Validates that the {@link ResourceMapperImpl} correctly queries all sources of mappings
@@ -78,8 +80,7 @@ public class ResourceMapperImplTest {
     public static Object[] data() {
         return new Object[] { false, true};
     }
-
-
+    
     @Rule
     public final OsgiContext ctx = new OsgiContext();
 

@@ -51,6 +51,7 @@ import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
@@ -113,6 +114,10 @@ public class ResourceResolverFactoryActivator {
 
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
+    
+    @SuppressWarnings("java:S3077")
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY, policy = ReferencePolicy.DYNAMIC)
+    private volatile ResourceResolverMetrics metrics;
 
     volatile ResourceProviderTracker resourceProviderTracker;
 
@@ -158,6 +163,10 @@ public class ResourceResolverFactoryActivator {
     public StringInterpolationProvider getStringInterpolationProvider() {
         return stringInterpolationProvider;
     }
+    
+    public Optional<ResourceResolverMetrics> getResourceResolverMetrics() {
+        return Optional.ofNullable(this.metrics);
+    }
 
     /**
      * This method is called from {@link MapEntries}
@@ -187,7 +196,7 @@ public class ResourceResolverFactoryActivator {
     }
 
     public boolean isMapConfiguration(String path) {
-        return path.equals(this.mapRoot)
+        return path.equals(this.getMapRoot())
                || path.startsWith(this.mapRootPrefix);
     }
 
@@ -526,7 +535,7 @@ public class ResourceResolverFactoryActivator {
                         }
                         final ResourceResolverFactoryImpl r = new ResourceResolverFactoryImpl(
                                 local.commonFactory, bundle,
-                            ResourceResolverFactoryActivator.this.serviceUserMapper);
+                            ResourceResolverFactoryActivator.this.getServiceUserMapper());
                         return r;
                     }
 
@@ -548,7 +557,7 @@ public class ResourceResolverFactoryActivator {
      * @return The runtime service
      */
     public RuntimeService getRuntimeService() {
-        return new RuntimeServiceImpl(this.resourceProviderTracker);
+        return new RuntimeServiceImpl(this.getResourceProviderTracker());
     }
 
     public ServiceUserMapper getServiceUserMapper() {
@@ -563,7 +572,7 @@ public class ResourceResolverFactoryActivator {
      * Check the preconditions and if it changed, either register factory or unregister
      */
     private void checkFactoryPreconditions(final String unavailableName, final String unavailableServicePid) {
-        final BundleContext localContext = this.bundleContext;
+        final BundleContext localContext = this.getBundleContext();
         if ( localContext != null ) {
             final boolean result = this.preconds.checkPreconditions(unavailableName, unavailableServicePid);
             if ( result && this.factoryRegistration == null ) {

@@ -23,6 +23,7 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
+import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.junit.After;
 import org.junit.Before;
 import org.mockito.Mock;
@@ -41,6 +42,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -76,6 +78,8 @@ public abstract class AbstractMappingMapEntriesTest {
 
     @Mock
     EventAdmin eventAdmin;
+    
+    Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
     @Mock
     ResourceResolver resourceResolver;
@@ -118,7 +122,7 @@ public abstract class AbstractMappingMapEntriesTest {
 
         stringInterpolationProviderConfiguration = createStringInterpolationProviderConfiguration();
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {});
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);

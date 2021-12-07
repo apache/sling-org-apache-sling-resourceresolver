@@ -1,5 +1,6 @@
 Import-Package:\
   javax.jcr;resolution:=optional,\
+  org.apache.sling.commons.metrics;resolution:=optional,\
   *
 
 Provide-Capability:\

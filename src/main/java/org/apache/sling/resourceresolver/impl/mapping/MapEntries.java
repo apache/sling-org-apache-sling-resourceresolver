@@ -26,6 +26,7 @@ import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -91,7 +92,7 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = JCR_SYSTEM_PATH + '/';
 
-   static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
+    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
 
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -103,6 +104,8 @@ public class MapEntries implements
     private volatile ResourceResolver resolver;
 
     private volatile EventAdmin eventAdmin;
+    
+    private Optional<ResourceResolverMetrics> metrics;
 
     private volatile ServiceRegistration<ResourceChangeListener> registration;
 
@@ -130,12 +133,18 @@ public class MapEntries implements
 
     private final boolean useOptimizeAliasResolution;
 
-    public MapEntries(final MapConfigurationProvider factory, final BundleContext bundleContext, final EventAdmin eventAdmin, final StringInterpolationProvider stringInterpolationProvider)
-        throws LoginException, IOException {
+    public MapEntries(final MapConfigurationProvider factory, 
+            final BundleContext bundleContext, 
+            final EventAdmin eventAdmin, 
+            final StringInterpolationProvider stringInterpolationProvider, 
+            final Optional<ResourceResolverMetrics> metrics) 
+                    throws LoginException, IOException {
 
     	this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
         this.factory = factory;
         this.eventAdmin = eventAdmin;
+
+
 
         this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, Collections.emptyList());
         this.mapMaps = Collections.<MapEntry> emptyList();
@@ -157,8 +166,14 @@ public class MapEntries implements
         this.registration = bundleContext.registerService(ResourceChangeListener.class, this, props);
 
         this.vanityCounter = new AtomicLong(0);
+
         this.vanityBloomFilterFile = bundleContext.getDataFile(VANITY_BLOOM_FILTER_NAME);
         initializeVanityPaths();
+        this.metrics = metrics;
+        if (metrics.isPresent()) {
+            this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
+            this.metrics.get().setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
+        }
     }
 
     /**
