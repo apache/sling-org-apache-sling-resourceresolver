@@ -54,6 +54,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.internal.util.reflection.FieldSetter;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.Bundle;
@@ -128,7 +129,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         
         Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics));
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
         aliasMapField.setAccessible(true);
 
@@ -368,6 +369,66 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.getResource(parent.getPath())).thenReturn(null);
         mapEntries.onChange(Arrays.asList(new ResourceChange(ChangeType.REMOVED, parent.getPath(), false)));
         assertTrue( mapEntries.getResolveMaps().isEmpty());
+    }
+    
+    @Test
+    public void test_vanity_path_updates_do_not_reload_multiple_times() throws IOException {
+        Resource parent = mock(Resource.class, "parent");
+        when(parent.getPath()).thenReturn("/foo/parent");
+        when(parent.getName()).thenReturn("parent");
+        when(parent.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/found1"));
+        when(resourceResolver.getResource(parent.getPath())).thenReturn(parent);
+
+        Resource child = mock(Resource.class, "jcrcontent");
+        when(child.getPath()).thenReturn("/foo/parent/jcr:content");
+        when(child.getName()).thenReturn("jcr:content");
+        when(child.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/found2"));
+        when(child.getParent()).thenReturn(parent);
+        when(parent.getChild(child.getName())).thenReturn(child);
+        when(resourceResolver.getResource(child.getPath())).thenReturn(child);
+        
+        Resource child2 = mock(Resource.class, "child2");
+        when(child2.getPath()).thenReturn("/foo/parent/child2");
+        when(child2.getName()).thenReturn("child2");
+        when(child2.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/found3"));
+        when(child2.getParent()).thenReturn(parent);
+        when(parent.getChild(child2.getName())).thenReturn(child2);
+        when(resourceResolver.getResource(child2.getPath())).thenReturn(child2);
+        
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+
+            @Override
+            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+                return Collections.<Resource> emptySet().iterator();
+            }
+        });
+        
+        mapEntries.doInit();
+        mapEntries.initializeVanityPaths();
+
+        // map entries should have no alias atm
+        assertTrue( mapEntries.getResolveMaps().isEmpty());
+        // till now we already have 2 events being sent
+        Mockito.verify(eventAdmin,Mockito.times(2)).postEvent(Mockito.anyObject());
+
+        // 2 updates at the same onChange call
+        mapEntries.onChange(Arrays.asList(
+                new ResourceChange(ChangeType.ADDED, parent.getPath(), false),
+                new ResourceChange(ChangeType.ADDED, child.getPath(), false),
+                new ResourceChange(ChangeType.ADDED, child2.getPath(), false)
+                ));
+        
+        // two entries for the vanity path
+        List<MapEntry> entries = mapEntries.getResolveMaps();
+        assertEquals(6, entries.size());
+        
+        assertTrue(entries.stream().anyMatch(e -> e.getPattern().contains("/target/found1")));
+        assertTrue(entries.stream().anyMatch(e -> e.getPattern().contains("/target/found2")));
+        assertTrue(entries.stream().anyMatch(e -> e.getPattern().contains("/target/found3")));
+        
+        // a single event is sent for all 3 added vanity paths
+        Mockito.verify(eventAdmin,Mockito.times(3)).postEvent(Mockito.anyObject());
+        
     }
 
     @Test
