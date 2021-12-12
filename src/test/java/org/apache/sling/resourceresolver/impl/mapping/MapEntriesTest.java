@@ -411,14 +411,14 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         // till now we already have 2 events being sent
         Mockito.verify(eventAdmin,Mockito.times(2)).postEvent(Mockito.anyObject());
 
-        // 2 updates at the same onChange call
+        // 3 updates at the same onChange call
         mapEntries.onChange(Arrays.asList(
                 new ResourceChange(ChangeType.ADDED, parent.getPath(), false),
                 new ResourceChange(ChangeType.ADDED, child.getPath(), false),
                 new ResourceChange(ChangeType.ADDED, child2.getPath(), false)
                 ));
         
-        // two entries for the vanity path
+        // 6 entries for the vanity path
         List<MapEntry> entries = mapEntries.getResolveMaps();
         assertEquals(6, entries.size());
         
