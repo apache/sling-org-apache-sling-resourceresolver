@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,6 +43,8 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
@@ -80,7 +83,7 @@ public class ResourceMapperImplTest {
     public static Object[] data() {
         return new Object[] { false, true};
     }
-    
+
     @Rule
     public final OsgiContext ctx = new OsgiContext();
 
@@ -356,6 +359,31 @@ public class ResourceMapperImplTest {
                 .verify(resolver, req);
     }
 
+    /**
+     * Validates that mappings for an empty path
+     *
+     * @throws LoginException
+     */
+    @Test
+    public void mapEmptyPathWithNonExistingResource() {
+        MapEntriesHandler mapEntriesHandler = mock(MapEntriesHandler.class);
+        when(mapEntriesHandler.getVanityPathMappings()).thenReturn(Collections.emptyMap());
+
+        ResourceResolverImpl resolver = mock(ResourceResolverImpl.class);
+        when(resolver.resolveInternal(any(), any())).thenReturn(null);
+        when(resolver.getResource("")).thenReturn(this.resolver.getResource(""));
+        when(resolver.adaptTo(ResourceMapper.class)).thenReturn(new ResourceMapperImpl(resolver, mock(ResourceDecoratorTracker.class),
+                mapEntriesHandler, mock(Object.class)));
+
+        ExpectedMappings.nonExistingResource("")
+                .singleMapping("")
+                .singleMappingWithRequest("")
+                .allMappings("")
+                .allMappingsWithRequest("")
+                .testingEmptyPathWithNonExistingResource(true)
+                .verify(resolver, req);
+    }
+
     static class ExpectedMappings {
 
         public static ExpectedMappings existingResource(String path) {
@@ -373,10 +401,17 @@ public class ResourceMapperImplTest {
         private String singleMappingWithRequest;
         private Set<String> allMappings;
         private Set<String> allMappingsWithRequest;
+        private boolean testingEmptyPathWithNonExistingResource = false;
 
         private ExpectedMappings(String path, boolean exists) {
             this.path = path;
             this.exists = exists;
+        }
+
+        public ExpectedMappings testingEmptyPathWithNonExistingResource(boolean testingEmptyPathWithNonExistingResource) {
+            this.testingEmptyPathWithNonExistingResource = testingEmptyPathWithNonExistingResource;
+
+            return this;
         }
 
         public ExpectedMappings singleMapping(String singleMapping) {
@@ -420,7 +455,8 @@ public class ResourceMapperImplTest {
             assertThat("Single mapping without request", mapper.getMapping(path), is(singleMapping));
             if ( !path.isEmpty() ) // an empty path is invalid, hence not testing with a request
                 assertThat("Single mapping with request", mapper.getMapping(path, request), is(singleMappingWithRequest));
-            assertThat("All mappings without request", mapper.getAllMappings(path), is(allMappings));
+            if(!testingEmptyPathWithNonExistingResource)
+                assertThat("All mappings without request", mapper.getAllMappings(path), is(allMappings));
             if ( !path.isEmpty() ) // an empty path is invalid, hence not testing with a request
                 assertThat("All mappings with request", mapper.getAllMappings(path, request), is(allMappingsWithRequest));
         }
