@@ -718,6 +718,9 @@ public class MapEntries implements
     public void onChange(final List<ResourceChange> changes) {
         final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
 
+        // send the change event only once
+        boolean sendEvent = false;
+        
         // the config needs to be reloaded only once
         final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
         for(final ResourceChange rc : changes) {
@@ -765,12 +768,14 @@ public class MapEntries implements
                         changed |= updateResource(path, resolverRefreshed);
                     }
                 }
-
             }
 
             if ( changed ) {
-                this.sendChangeEvent();
+                sendEvent = true;
             }
+        }
+        if (sendEvent) {
+            this.sendChangeEvent();
         }
     }
 
