@@ -55,6 +55,8 @@ public class ResourceDecoratorTracker {
 
     /**
      * Decorate a resource.
+     * @param resource The resource
+     * @return The decorated resource or the original
      */
     public Resource decorate(final Resource resource) {
         Resource result = resource;
@@ -75,6 +77,8 @@ public class ResourceDecoratorTracker {
 
     /**
      * Bind a resource decorator.
+     * @param decorator The decorator
+     * @param props The service properties
      */
     public void bindResourceDecorator(final ResourceDecorator decorator,
             final Map<String, Object> props) {
@@ -88,6 +92,8 @@ public class ResourceDecoratorTracker {
 
     /**
      * Unbind a resouce decorator.
+     * @param decorator The decorator
+     * @param props The service properties
      */
     public void unbindResourceDecorator(final ResourceDecorator decorator,
             final Map<String, Object> props) {

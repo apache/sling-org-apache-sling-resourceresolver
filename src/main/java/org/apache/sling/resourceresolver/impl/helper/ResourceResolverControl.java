@@ -93,6 +93,9 @@ public class ResourceResolverControl {
 
     /**
      * Create a new resource resolver context.
+     * @param isAdmin Admin resource resolver?
+     * @param authenticationInfo The auth info
+     * @param resourceProviderTracker Tracker for all providers
      */
     public ResourceResolverControl(final boolean isAdmin,
             final Map<String, Object> authenticationInfo,
@@ -148,6 +151,7 @@ public class ResourceResolverControl {
 
     /**
      * Refreshes all refreshable providers as well as the resolver used for resource types.
+     * @param context The context
      */
     public void refresh(@NotNull final ResourceResolverContext context) {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllUsedRefreshable()) {
@@ -160,6 +164,8 @@ public class ResourceResolverControl {
 
     /**
      * Returns {@code true} if all providers are live.
+     * @param context The context
+     * @return {@code true} if all providers are live
      */
     public boolean isLive(@NotNull final ResourceResolverContext context) {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllAuthenticated()) {
@@ -177,6 +183,10 @@ public class ResourceResolverControl {
      * In some cases the {@link SyntheticResource} can be returned if no
      * resource provider returns parent for this child. See
      * {@link #getResource(ResourceResolverContext, String, Resource, Map, boolean)} for more details
+     * @param context The context
+     * @param parentPath The parent path
+     * @param child The child resource
+     * @return The parent or {@code null}
      */
     public Resource getParent(@NotNull final ResourceResolverContext context, @NotNull final String parentPath, @NotNull final Resource child) {
         final AuthenticatedResourceProvider childProvider = getBestMatchingProvider(context, child.getPath());
@@ -214,6 +224,12 @@ public class ResourceResolverControl {
      * The same behaviour occurs in {@link #getParent(ResourceResolverContext, String, Resource)} and
      * {@link #listChildren(ResourceResolverContext, Resource)}.
      * </p>
+     * @param context The context
+     * @param path Resource path
+     * @param parent Parent resource
+     * @param parameters Additional parameters
+     * @param isResolve Whether this is a resolve or get call
+     * @return The resource or {@code null}
      */
     public Resource getResource(final ResourceResolverContext context,
             String path, Resource parent, Map<String, String> parameters,
@@ -246,6 +262,11 @@ public class ResourceResolverControl {
         return null;
     }
 
+    /**
+     * Helper method to check for intermediate paths
+     * @param fullPath The full path
+     * @return {@code true} if it is an intermediate path
+     */
     private boolean isIntermediatePath(final String fullPath) {
         return getResourceProviderStorage().getTree().getNode(fullPath) != null;
     }
@@ -257,6 +278,9 @@ public class ResourceResolverControl {
      * filters out the duplicates and returns the resulting iterator. All
      * transformations are done lazily, during the {@link Iterator#hasNext()}
      * invocation on the result.
+     * @param context The context
+     * @param parent The parent resource
+     * @return Iterator
      */
     public Iterator<Resource> listChildren(final ResourceResolverContext context, final Resource parent) {
         final String parentPath = parent.getPath();
@@ -274,6 +298,14 @@ public class ResourceResolverControl {
         return listChildrenInternal(context, getResourceProviderStorage().getTree().getNode(parentPath), parent, realChildren);
     }
 
+    /**
+     * Internal method
+     * @param context The context
+     * @param node The node
+     * @param parent The parent
+     * @param realChildren The children
+     * @return The children
+     */
     @SuppressWarnings("unchecked")
     public Iterator<Resource> listChildrenInternal(final ResourceResolverContext context, 
         final Node<ResourceProviderHandler> node,
@@ -338,6 +370,8 @@ public class ResourceResolverControl {
 
     /**
      * Returns the union of all attribute names.
+     * @param context The context
+     * @return The attribute names
      */
     public Collection<String> getAttributeNames(final ResourceResolverContext context) {
         final Set<String> names = new LinkedHashSet<>();
@@ -357,6 +391,9 @@ public class ResourceResolverControl {
      * Returns the first non-null result of the
      * {@link AuthenticatedResourceProvider#getAttribute(String)} invocation on
      * the providers.
+     * @param context The context
+     * @param name Attribute name
+     * @return Attribute value or {@code null}
      */
     public Object getAttribute(final ResourceResolverContext context, final String name) {
         for(final String key : FORBIDDEN_ATTRIBUTES) {
@@ -376,11 +413,14 @@ public class ResourceResolverControl {
     /**
      * Create a resource.
      *
+     * @param context The context
+     * @param path The resource path
+     * @param properties The resource properties
+     * @return The new resource
      * @throws UnsupportedOperationException
      *             If creation is not allowed/possible
      * @throws PersistenceException
      *             If creation fails
-     * @return The new resource
      */
     public Resource create(final ResourceResolverContext context,
             final String path, final Map<String, Object> properties)
@@ -395,7 +435,16 @@ public class ResourceResolverControl {
         throw new UnsupportedOperationException("create '" + ResourceUtil.getName(path) + "' at " + ResourceUtil.getParent(path));
     }
 
-    /*
+    /**
+     * Order resources
+     * @param context The context
+     * @param parent The parent
+     * @param name Resource name
+     * @param followingSiblingName Following sibling name
+     * @return {@code true} if ordering succeeded
+     * @throws UnsupportedOperationException If the operation is not supported#
+     * @throws PersistenceException If ordering fails
+     * @throws IllegalArgumentException If input parameters are wrong
      * @see ResourceResolver#orderBefore(Resource, String, String)
      */
     public boolean orderBefore(@NotNull final ResourceResolverContext context,  @NotNull final Resource parent, @NotNull final String name, @Nullable final String followingSiblingName)
@@ -424,6 +473,12 @@ public class ResourceResolverControl {
         throw new UnsupportedOperationException("orderBefore '" + name + "' at " + parent.getPath());
     }
 
+    /**
+     * Create a child path
+     * @param path Path
+     * @param descendantName Child name
+     * @return Path
+     */
     public static final String createDescendantPath(String path, String descendantName) {
         if (path.endsWith("/")) {
             return path + descendantName;
@@ -436,6 +491,8 @@ public class ResourceResolverControl {
      * Delete the resource. Iterate over all modifiable ResourceProviders
      * giving each an opportunity to delete the resource if they are able.
      *
+     * @param context The context
+     * @param resource The resource to delete
      * @throws NullPointerException
      *             if resource is null
      * @throws UnsupportedOperationException
@@ -455,6 +512,7 @@ public class ResourceResolverControl {
 
     /**
      * Revert changes on all modifiable ResourceProviders.
+     * @param context The context
      */
     public void revert(final ResourceResolverContext context) {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllUsedModifiable()) {
@@ -464,6 +522,8 @@ public class ResourceResolverControl {
 
     /**
      * Commit changes on all modifiable ResourceProviders.
+     * @param context The context
+     * @throws PersistenceException If operation fails
      */
     public void commit(final ResourceResolverContext context) throws PersistenceException {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllUsedModifiable()) {
@@ -473,6 +533,8 @@ public class ResourceResolverControl {
 
     /**
      * Check if any modifiable ResourceProvider has uncommited changes.
+     * @param context The context
+     * @return {@code true} if there are uncommited changes
      */
     public boolean hasChanges(final ResourceResolverContext context) {
         for (final AuthenticatedResourceProvider p : context.getProviderManager().getAllUsedModifiable()) {
@@ -485,6 +547,8 @@ public class ResourceResolverControl {
 
     /**
      * Return the union of query languages supported by the providers.
+     * @param context The context
+     * @return The supported query languages
      */
     public String[] getSupportedLanguages(final ResourceResolverContext context) {
         final Set<String> supportedLanguages = new LinkedHashSet<>();
@@ -496,6 +560,10 @@ public class ResourceResolverControl {
 
     /**
      * Queries all resource providers and combines the results.
+     * @param context The context
+     * @param query The query
+     * @param language The language
+     * @return The result
      */
     public Iterator<Resource> findResources(final ResourceResolverContext context,
             final String query, final String language) {
@@ -521,6 +589,10 @@ public class ResourceResolverControl {
 
     /**
      * Queries all resource providers and combines the results.
+     * @param context The context
+     * @param query The query
+     * @param language The language
+     * @return The result
      */
     public Iterator<Map<String, Object>> queryResources(final ResourceResolverContext context,
             final String query, final String language) {
@@ -535,6 +607,10 @@ public class ResourceResolverControl {
     /**
      * Returns the first non-null result of the adaptTo() method invoked on the
      * providers.
+     * @param context The context
+     * @param type The type to adapt to
+     * @param <AdapterType> The type to adapt to
+     * @return The object or {@code null}
      */
     @SuppressWarnings("unchecked")
     public <AdapterType> AdapterType adaptTo(final ResourceResolverContext context, Class<AdapterType> type) {
@@ -569,6 +645,14 @@ public class ResourceResolverControl {
         return provider;
     }
 
+    /**
+     * Check source and destination for operations
+     * @param context The context
+     * @param srcAbsPath The source
+     * @param destAbsPath The destination
+     * @return The responsible provider or {@code null}
+     * @throws PersistenceException If something goes wrong
+     */
     public AuthenticatedResourceProvider checkSourceAndDest(final ResourceResolverContext context,
             final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         // check source
@@ -622,6 +706,11 @@ public class ResourceResolverControl {
      * Tries to find a resource provider accepting both paths and invokes
      * {@link AuthenticatedResourceProvider#copy(String, String)} method on it.
      * Returns false if there's no such provider.
+     * @param context The context
+     * @param srcAbsPath The source
+     * @param destAbsPath The destination
+     * @return The copied resources
+     * @throws PersistenceException if operation fails
      */
     public Resource copy(final ResourceResolverContext context,
             final String srcAbsPath, final String destAbsPath) throws PersistenceException {
@@ -650,6 +739,11 @@ public class ResourceResolverControl {
      * Tries to find a resource provider accepting both paths and invokes
      * {@link AuthenticatedResourceProvider#move(String, String)} method on it.
      * Returns false if there's no such provider.
+     * @param context The context
+     * @param srcAbsPath The source
+     * @param destAbsPath The destination
+     * @return The moved resource
+     * @throws PersistenceException if operation fails
      */
     public Resource move(final ResourceResolverContext context,
             String srcAbsPath, String destAbsPath) throws PersistenceException {
@@ -674,13 +768,19 @@ public class ResourceResolverControl {
         }
     }
 
+    /**
+     * Get the provider storage
+     * @return The provider storage
+     */
     public ResourceProviderStorage getResourceProviderStorage() {
         return this.resourceProviderTracker.getResourceProviderStorage();
     }
 
     /**
-     * @param path
-     * @return
+     * Get best matching provider
+     * @param context The context
+     * @param path The path
+     * @return The best matching provider or {@code null}
      */
     private @Nullable AuthenticatedResourceProvider getBestMatchingProvider(final ResourceResolverContext context,
             final String path) {
@@ -694,7 +794,9 @@ public class ResourceResolverControl {
     }
 
     /**
-     * @param path
+     * Get best modifiable matching provider
+     * @param context The context
+     * @param path The path
      * @return The modifiable provider or {@code null}
      */
     private @Nullable AuthenticatedResourceProvider getBestMatchingModifiableProvider(
@@ -757,6 +859,10 @@ public class ResourceResolverControl {
     /**
      * Get the parent resource type
      *
+     * @param factory The factory
+     * @param resolver The resolver
+     * @param resourceType The type
+     * @return The parent resource type
      * @see org.apache.sling.api.resource.ResourceResolver#getParentResourceType(java.lang.String)
      */
     public String getParentResourceType(
@@ -808,6 +914,7 @@ public class ResourceResolverControl {
      * @param res The resource to access the property from
      * @param propName The name of the property to access
      * @param type The type into which to convert the property
+     * @param <Type> The type
      * @return The property converted to the requested {@code type} or
      *         {@code null} if the property does not exist or cannot be
      *         converted into the requested {@code type}
@@ -834,11 +941,19 @@ public class ResourceResolverControl {
         return null;
     }
 
+    /**
+     * Register authetnticated provider
+     * @param handler The handler
+     * @param providerState The state
+     */
     public void registerAuthenticatedProvider(@NotNull ResourceProviderHandler handler,
             @Nullable Object providerState) {
         this.authenticatedProviders.put(handler, providerState);
     }
 
+    /**
+     * Clear all authenticated providers
+     */
     public void clearAuthenticatedProviders() {
         this.authenticatedProviders.clear();
     }

@@ -74,7 +74,9 @@ public class ProviderManager {
     /**
      * Get the context
      * @param handler The resource handler
+     * @param control The control
      * @return The resource context or {@code null} if authentication failed previously.
+     * @throws LoginException If login fails
      */
     public @Nullable AuthenticatedResourceProvider getOrCreateProvider(@NotNull final ResourceProviderHandler handler,
             @NotNull final ResourceResolverControl control)
@@ -106,7 +108,9 @@ public class ProviderManager {
     /**
      * Get the context
      * @param handler The resource handler
+     * @param control The control
      * @return The resource context or {@code null}.
+     * @throws LoginException If authentication fails to one provider
      */
     public @Nullable ResolveContext<Object> getOrCreateResolveContext(@NotNull final ResourceProviderHandler handler,
             @NotNull final ResourceResolverControl control)
@@ -147,6 +151,7 @@ public class ProviderManager {
     /**
      * Authenticate a single resource provider (handler)
      * @param handler The resource provider handler
+     * @param provider The provider
      * @param control The resource control
      * @return The resolve context
      * @throws LoginException If authentication fails

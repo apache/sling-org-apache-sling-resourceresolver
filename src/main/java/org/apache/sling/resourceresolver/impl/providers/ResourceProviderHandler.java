@@ -120,7 +120,7 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
 
     /**
      * Check whether this provider has been used.
-     * @return
+     * @return {@code true} if used
      */
     public boolean isUsed() {
         return this.isUsed;

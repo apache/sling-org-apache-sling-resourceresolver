@@ -710,7 +710,7 @@ public class MapEntries implements
 
     /**
      * Handles the change to any of the node properties relevant for vanity URL
-     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider)}
+     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider, Optional)}
      * constructor makes sure the event listener is registered to only get
      * appropriate events.
      */
