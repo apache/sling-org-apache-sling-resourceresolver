@@ -1090,9 +1090,7 @@ public class MapEntries implements
         }
 
         baseQuery.append(" AND sling:alias IS NOT NULL");
-        String aliasQuery = baseQuery.toString();
-
-        return aliasQuery;
+        return baseQuery.toString();
     }
 
     /**
