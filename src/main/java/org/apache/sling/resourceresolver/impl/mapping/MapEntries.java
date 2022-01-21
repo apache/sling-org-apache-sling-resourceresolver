@@ -1185,7 +1185,10 @@ public class MapEntries implements
             " FROM nt:base" +
             " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "')" +
             " AND sling:vanityPath IS NOT NULL";
+
+        log.debug("start alias query: {}", queryString);
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+        log.debug("end alias query");
 
         Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
         while (i.hasNext() && (createVanityBloomFilter || isCacheComplete.get())) {
