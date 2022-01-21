@@ -95,7 +95,7 @@ public class MapEntries implements
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /** default log */
-    private static final Logger log = LoggerFactory.getLogger(MapEntries.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MapEntries.class);
 
     private volatile MapConfigurationProvider factory;
 
@@ -158,7 +158,7 @@ public class MapEntries implements
             paths[i] = factory.getObservationPaths()[i].getPath();
         }
         props.put(ResourceChangeListener.PATHS, paths);
-        log.info("Registering for {}", Arrays.toString(factory.getObservationPaths()));
+        LOG.info("Registering for {}", Arrays.toString(factory.getObservationPaths()));
         props.put(Constants.SERVICE_DESCRIPTION, "Apache Sling Map Entries Observation");
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
         this.registration = bundleContext.registerService(ResourceChangeListener.class, this, props);
@@ -239,7 +239,7 @@ public class MapEntries implements
                 }
                 boolean createVanityBloomFilter = false;
                 if (!vanityBloomFilterFile.exists()) {
-                    log.debug("creating bloom filter file {}",
+                    LOG.debug("creating bloom filter file {}",
                             vanityBloomFilterFile.getAbsolutePath());
                     vanityBloomFilter = createVanityBloomFilter();
                     updateBloomFilterFile.set(true);
@@ -445,7 +445,7 @@ public class MapEntries implements
     }
 
     private boolean doAddVanity(final Resource resource) {
-        log.debug("doAddVanity getting {}", resource.getPath());
+        LOG.debug("doAddVanity getting {}", resource.getPath());
 
         boolean needsUpdate = false;
         if (isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
@@ -574,7 +574,7 @@ public class MapEntries implements
 
         try {
             if (!initLocked) {
-                log.warn("dispose: Could not acquire initialization lock within 10 seconds; ongoing intialization may fail");
+                LOG.warn("dispose: Could not acquire initialization lock within 10 seconds; ongoing intialization may fail");
             }
 
             // immediately set the resolver field to null to indicate
@@ -586,7 +586,7 @@ public class MapEntries implements
             if (oldResolver != null) {
                 oldResolver.close();
             } else {
-                log.warn("dispose: ResourceResolver has already been cleared before; duplicate call to dispose ?");
+                LOG.warn("dispose: ResourceResolver has already been cleared before; duplicate call to dispose ?");
             }
         } finally {
             if (initLocked) {
@@ -724,7 +724,7 @@ public class MapEntries implements
         for(final ResourceChange rc : changes) {
 
             final String path = rc.getPath();
-            log.debug("onChange, type={}, path={}", rc.getType(), path);
+            LOG.debug("onChange, type={}, path={}", rc.getType(), path);
 
             // don't care for system area
             if (path.startsWith(JCR_SYSTEM_PREFIX)) {
@@ -847,7 +847,7 @@ public class MapEntries implements
         try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
             long totalCount = 0;
             long totalValid = 0;
-            log.debug("start vanityPath query: {}", queryString);
+            LOG.debug("start vanityPath query: {}", queryString);
 
             final Iterator<Resource> i = queryResolver.findResources(queryString, "sql");
             while (i.hasNext()) {
@@ -871,9 +871,9 @@ public class MapEntries implements
                     }
                 }
             }
-            log.debug("read {} ({} valid) vanityPaths", totalCount, totalValid);
+            LOG.debug("read {} ({} valid) vanityPaths", totalCount, totalValid);
         } catch (LoginException e) {
-            log.error("Exception while obtaining queryResolver", e);
+            LOG.error("Exception while obtaining queryResolver", e);
         }
         return entryMap;
     }
@@ -890,7 +890,7 @@ public class MapEntries implements
 
         // ignore system tree
         if (path.startsWith(JCR_SYSTEM_PREFIX)) {
-            log.debug("isValidVanityPath: not valid {}", path);
+            LOG.debug("isValidVanityPath: not valid {}", path);
             return false;
         }
 
@@ -904,7 +904,7 @@ public class MapEntries implements
                 }
             }
             if ( !allowed ) {
-                log.debug("isValidVanityPath: not valid as not in white list {}", path);
+                LOG.debug("isValidVanityPath: not valid as not in white list {}", path);
                 return false;
             }
         }
@@ -924,7 +924,7 @@ public class MapEntries implements
     private String getMapEntryRedirect(final  MapEntry mapEntry) {
         String[] redirect = mapEntry.getRedirect();
         if (redirect.length > 1) {
-            log.warn("something went wrong, please restart the bundle");
+            LOG.warn("something went wrong, please restart the bundle");
             return null;
         }
 
@@ -996,7 +996,7 @@ public class MapEntries implements
                 childResolveEntry=MapEntry.createResolveEntry(childPath, child, trailingSlash);
             }catch (IllegalArgumentException iae){
                 //ignore this entry
-                log.debug("ignored entry due exception ",iae);
+                LOG.debug("ignored entry due exception ",iae);
             }
             if (childResolveEntry != null) {
                 entries.add(childResolveEntry);
@@ -1131,11 +1131,11 @@ public class MapEntries implements
             final String[] aliasArray = props.get(ResourceResolverImpl.PROP_ALIAS, String[].class);
 
             if ( aliasArray != null ) {
-                log.debug("Found alias, total size {}", aliasArray.length);
+                LOG.debug("Found alias, total size {}", aliasArray.length);
                 Map<String, String> parentMap = map.get(parentPath);
                 for (final String alias : aliasArray) {
                     if (parentMap != null && parentMap.containsKey(alias)) {
-                        log.warn("Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.", new Object[] {
+                        LOG.warn("Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.", new Object[] {
                                 alias,
                                 parentPath,
                                 parentMap.get(alias),
@@ -1154,7 +1154,7 @@ public class MapEntries implements
                             }
                         }
                         if ( invalid ) {
-                            log.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.",
+                            LOG.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.",
                                     alias, parentPath);
                         } else {
                             if (parentMap == null) {
@@ -1183,9 +1183,9 @@ public class MapEntries implements
             " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "')" +
             " AND sling:vanityPath IS NOT NULL";
 
-        log.debug("start vanityPath query: {}", queryString);
+        LOG.debug("start vanityPath query: {}", queryString);
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-        log.debug("end vanityPath query");
+        LOG.debug("end vanityPath query");
         long count = 0;
 
         Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
@@ -1197,7 +1197,7 @@ public class MapEntries implements
                 loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get(), createVanityBloomFilter);
             }
         }
-        log.debug("read {} vanityPaths", count);
+        LOG.debug("read {} vanityPaths", count);
 
         return targetPaths;
     }
@@ -1317,7 +1317,7 @@ public class MapEntries implements
                         prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
                         path = u.getPath();
                     } catch (final MalformedURLException e) {
-                        log.warn("Ignoring malformed vanity path {}", pVanityPath);
+                        LOG.warn("Ignoring malformed vanity path {}", pVanityPath);
                     }
                 } else {
                     prefix = "^" + ANY_SCHEME_HOST;
@@ -1334,7 +1334,7 @@ public class MapEntries implements
                     final int firstDot = path.indexOf('.', lastSlash + 1);
                     if (firstDot != -1) {
                         path = path.substring(0, firstDot);
-                        log.warn("Removing extension from vanity path {}", pVanityPath);
+                        LOG.warn("Removing extension from vanity path {}", pVanityPath);
                     }
                     result = new String[] { prefix, path };
                 }
@@ -1449,11 +1449,11 @@ public class MapEntries implements
 
     private void logDisableAliasOptimization(final Exception e) {
         if ( e != null ) {
-            log.error("Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.", e);
+            LOG.error("Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.", e);
         } else {
             final long now = System.currentTimeMillis();
             if ( now - lastTimeLogged.getAndSet(now) > LOGGING_ERROR_PERIOD) {
-                log.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
+                LOG.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
             }
         }
 
@@ -1582,7 +1582,7 @@ public class MapEntries implements
             mapEntry = new MapEntry(url, status, trailingSlash, 0, redirect);
         }catch (IllegalArgumentException iae){
             //ignore this entry
-            log.debug("ignored entry due exception ",iae);
+            LOG.debug("ignored entry due exception ",iae);
         }
         return mapEntry;
     }
@@ -1595,7 +1595,7 @@ public class MapEntries implements
             mapEntry = new MapEntry(url, status, trailingSlash, order, redirect);
         }catch (IllegalArgumentException iae){
             //ignore this entry
-            log.debug("ignored entry due exception ",iae);
+            LOG.debug("ignored entry due exception ",iae);
         }
         return mapEntry;
     }
