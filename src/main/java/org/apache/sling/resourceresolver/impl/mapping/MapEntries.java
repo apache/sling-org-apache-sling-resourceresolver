@@ -845,8 +845,13 @@ public class MapEntries implements
             ") ORDER BY sling:vanityOrder DESC";
 
         try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
+            long totalCount = 0;
+            long totalValid = 0;
+            log.debug("start vanityPath query: {}", queryString);
+
             final Iterator<Resource> i = queryResolver.findResources(queryString, "sql");
             while (i.hasNext()) {
+                totalCount += 1;
                 final Resource resource = i.next();
                 boolean isValid = false;
                 for(final Path sPath : this.factory.getObservationPaths()) {
@@ -856,6 +861,7 @@ public class MapEntries implements
                     }
                 }
                 if ( isValid ) {
+                    totalValid += 1;
                     if (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true, false);
                         entryMap = resolveMapsMap;
@@ -865,6 +871,7 @@ public class MapEntries implements
                     }
                 }
             }
+            log.debug("read {} ({} valid) vanityPaths", totalCount, totalValid);
         } catch (LoginException e) {
             log.error("Exception while obtaining queryResolver", e);
         }
