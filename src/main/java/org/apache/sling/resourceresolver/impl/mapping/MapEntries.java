@@ -844,10 +844,7 @@ public class MapEntries implements
             " OR sling:vanityPath ="+ "'"+escapeIllegalXpathSearchChars(vanityPath.substring(1)).replaceAll("'", "''")+"'" +
             ") ORDER BY sling:vanityOrder DESC";
 
-        ResourceResolver queryResolver = null;
-
-        try {
-            queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
+        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
             final Iterator<Resource> i = queryResolver.findResources(queryString, "sql");
             while (i.hasNext()) {
                 final Resource resource = i.next();
@@ -870,10 +867,6 @@ public class MapEntries implements
             }
         } catch (LoginException e) {
             log.error("Exception while obtaining queryResolver", e);
-        } finally {
-            if (queryResolver != null) {
-                queryResolver.close();
-            }
         }
         return entryMap;
     }
