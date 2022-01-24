@@ -78,8 +78,6 @@ public class MapEntries implements
 
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
-    private final Logger logger = LoggerFactory.getLogger(MapEntries.class);
-
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -97,7 +95,7 @@ public class MapEntries implements
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /** default log */
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private static Logger log = LoggerFactory.getLogger(MapEntries.class);
 
     private volatile MapConfigurationProvider factory;
 
@@ -838,7 +836,7 @@ public class MapEntries implements
 
         Map<String, List<MapEntry>> entryMap = new HashMap<>();
 
-                // sling:vanityPath (lowercase) is the property name
+        // sling:vanityPath (lowercase) is the property name
         final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" +
             " FROM nt:base" +
             " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "') and (" +
@@ -846,12 +844,14 @@ public class MapEntries implements
             " OR sling:vanityPath ="+ "'"+escapeIllegalXpathSearchChars(vanityPath.substring(1)).replaceAll("'", "''")+"'" +
             ") ORDER BY sling:vanityOrder DESC";
 
-        ResourceResolver queryResolver = null;
-
-        try {
-            queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
+        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
+            long totalCount = 0;
+            long totalValid = 0;
+            log.debug("start vanityPath query: {}", queryString);
             final Iterator<Resource> i = queryResolver.findResources(queryString, "sql");
+            log.debug("end vanityPath query");
             while (i.hasNext()) {
+                totalCount += 1;
                 final Resource resource = i.next();
                 boolean isValid = false;
                 for(final Path sPath : this.factory.getObservationPaths()) {
@@ -861,6 +861,7 @@ public class MapEntries implements
                     }
                 }
                 if ( isValid ) {
+                    totalValid += 1;
                     if (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true, false);
                         entryMap = resolveMapsMap;
@@ -870,12 +871,9 @@ public class MapEntries implements
                     }
                 }
             }
+            log.debug("read {} ({} valid) vanityPaths", totalCount, totalValid);
         } catch (LoginException e) {
             log.error("Exception while obtaining queryResolver", e);
-        } finally {
-            if (queryResolver != null) {
-                queryResolver.close();
-            }
         }
         return entryMap;
     }
@@ -1048,11 +1046,16 @@ public class MapEntries implements
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
         final String queryString = updateAliasQuery();
+        log.debug("start alias query: {}", queryString);
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-		     while (i.hasNext()) {
-		            final Resource resource = i.next();
-		            loadAlias(resource, map);
-		        }
+        log.debug("end alias query");
+        long count = 0;
+        while (i.hasNext()) {
+            count += 1;
+            final Resource resource = i.next();
+            loadAlias(resource, map);
+        }
+        log.debug("read {} aliases", count);
         return map;
     }
 
@@ -1087,10 +1090,7 @@ public class MapEntries implements
         }
 
         baseQuery.append(" AND sling:alias IS NOT NULL");
-        String aliasQuery = baseQuery.toString();
-        logger.debug("Query to fetch alias [{}] ", aliasQuery);
-
-        return aliasQuery;
+        return baseQuery.toString();
     }
 
     /**
@@ -1136,7 +1136,7 @@ public class MapEntries implements
             final String[] aliasArray = props.get(ResourceResolverImpl.PROP_ALIAS, String[].class);
 
             if ( aliasArray != null ) {
-                logger.debug("Found alias, total size {}", aliasArray.length);
+                log.debug("Found alias, total size {}", aliasArray.length);
                 Map<String, String> parentMap = map.get(parentPath);
                 for (final String alias : aliasArray) {
                     if (parentMap != null && parentMap.containsKey(alias)) {
@@ -1187,16 +1187,22 @@ public class MapEntries implements
             " FROM nt:base" +
             " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "')" +
             " AND sling:vanityPath IS NOT NULL";
+
+        log.debug("start vanityPath query: {}", queryString);
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+        log.debug("end vanityPath query");
+        long count = 0;
 
         Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
         while (i.hasNext() && (createVanityBloomFilter || isCacheComplete.get())) {
+            count += 1;
             final Resource resource = i.next();
             final String resourcePath = resource.getPath();
             if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
                 loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get(), createVanityBloomFilter);
             }
         }
+        log.debug("read {} vanityPaths", count);
 
         return targetPaths;
     }
