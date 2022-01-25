@@ -95,7 +95,7 @@ public class MapEntries implements
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /** default log */
-    private static Logger log = LoggerFactory.getLogger(MapEntries.class);
+    private final Logger log = LoggerFactory.getLogger(MapEntries.class);
 
     private volatile MapConfigurationProvider factory;
 
