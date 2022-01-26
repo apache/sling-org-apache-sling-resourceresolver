@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,9 +42,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.osgi.framework.ServiceReference;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-
 public class BasicObservationReporterTest {
 
     private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] { "/apps/", "/libs/" });
@@ -56,7 +54,7 @@ public class BasicObservationReporterTest {
         ResourceChangeListenerInfo globListener = resourceChangeListenerInfo("glob:/apps/**/*.html");
 
         BasicObservationReporter underTest = new BasicObservationReporter(SEARCH_PATHS,
-                ImmutableList.of(allPathListener, appsPathListener, appsApp2PathListener, globListener),
+                Collections.unmodifiableList(Arrays.asList(allPathListener, appsPathListener, appsApp2PathListener, globListener)),
                 new Path("/"), PathSet.EMPTY_SET);
 
         underTest.reportChanges(changes("/apps/app1/path1.html"), false);
@@ -76,7 +74,7 @@ public class BasicObservationReporterTest {
         ResourceChangeListenerInfo globListener = resourceChangeListenerInfo("glob:/apps/**/*.html");
 
         BasicObservationReporter underTest = new BasicObservationReporter(SEARCH_PATHS,
-                ImmutableList.of(allPathListener, appsPathListener, appsApp2PathListener, globListener),
+                Collections.unmodifiableList(Arrays.asList(allPathListener, appsPathListener, appsApp2PathListener, globListener)),
                 new Path("/apps/app1"), PathSet.EMPTY_SET);
 
         underTest.reportChanges(changes("/apps/app1/path1.html"), false);
@@ -106,7 +104,7 @@ public class BasicObservationReporterTest {
 
     @SuppressWarnings("unchecked")
     private static void assertListener(ResourceChangeListenerInfo info, String... paths) {
-        Set<String> expectedPaths = ImmutableSet.copyOf(paths);
+        Set<String> expectedPaths = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(paths)));
         ArgumentCaptor<List<ResourceChange>> argument = (ArgumentCaptor)ArgumentCaptor.forClass(List.class);
         if (paths.length == 0) {
             verifyNoMoreInteractions(info.getListener());
