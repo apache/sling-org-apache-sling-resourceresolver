@@ -1202,8 +1202,9 @@ public class MapEntries implements
     }
 
     /**
-     * Load vanity paths Search for all nodes inheriting the sling:VanityPath
-     * mixin
+     * Load vanity paths
+     * 
+     * Search for all nodes with non-null sling:vanityPath property outside system storage
      */
     private Map <String, List<String>> loadVanityPaths(boolean createVanityBloomFilter) {
         // sling:vanityPath (lowercase) is the property name
