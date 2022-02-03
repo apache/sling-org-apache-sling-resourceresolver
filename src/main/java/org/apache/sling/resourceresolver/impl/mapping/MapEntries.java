@@ -443,10 +443,8 @@ public class MapEntries implements
             // fill up the bloom filter
             needsUpdate = loadVanityPath(resource, resolveMapsMap, vanityTargets, false);
         }
-        if ( needsUpdate ) {
-            return true;
-        }
-        return false;
+
+        return needsUpdate;
     }
 
     private boolean doRemoveVanity(final String path) {
