@@ -27,13 +27,25 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
-
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,7 +66,6 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.internal.util.reflection.FieldSetter;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.Bundle;
@@ -64,8 +75,6 @@ import org.osgi.service.event.EventAdmin;
 public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private MapEntries mapEntries;
-
-    File vanityBloomFilterFile;
 
     @Mock
     private MapConfigurationProvider resourceResolverFactory;
@@ -104,10 +113,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         configs.add(new VanityPathConfig("/vanityPathOnJcrContent", false));
 
         Collections.sort(configs);
-        vanityBloomFilterFile = new File("src/main/resourcesvanityBloomFilter.txt");
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
@@ -140,7 +147,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     @After
     public void tearDown() throws Exception {
         mapEntries.dispose();
-        vanityBloomFilterFile.delete();
     }
 
 
@@ -2022,9 +2028,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths", boolean.class);
+        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths");
         method.setAccessible(true);
-        method.invoke(mapEntries, false);
+        method.invoke(mapEntries);
 
         Field vanityCounter = MapEntries.class.getDeclaredField("vanityCounter");
         vanityCounter.setAccessible(true);
@@ -2054,9 +2060,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths", boolean.class);
+        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths");
         method.setAccessible(true);
-        method.invoke(mapEntries, false);
+        method.invoke(mapEntries);
 
         Field vanityCounter = MapEntries.class.getDeclaredField("vanityCounter");
         vanityCounter.setAccessible(true);
