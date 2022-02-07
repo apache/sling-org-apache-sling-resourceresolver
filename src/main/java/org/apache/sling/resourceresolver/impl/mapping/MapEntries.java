@@ -60,7 +60,6 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.Timer;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Map.Entry;
@@ -139,8 +138,6 @@ public class MapEntries implements
     private final AtomicLong vanityCounter;
 
     private byte[] vanityBloomFilter;
-
-    private Timer timer;
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
@@ -527,10 +524,6 @@ public class MapEntries implements
      * Cleans up this class.
      */
     public void dispose() {
-
-        if (timer != null) {
-            timer.cancel();
-        }
 
         if (this.registration != null) {
             this.registration.unregister();
