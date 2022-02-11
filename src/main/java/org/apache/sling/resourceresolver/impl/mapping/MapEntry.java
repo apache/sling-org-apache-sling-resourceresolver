@@ -303,7 +303,7 @@ public class MapEntry implements Comparable<MapEntry> {
             		log.debug("Exception while replacing, ignoring entry {} ", redirects[i], ex);
                 }
             }
-            return results.size() > 0 ? results.toArray(new String[0]) : null;
+            return !results.isEmpty() ? results.toArray(new String[0]) : null;
         }
 
         return null;
