@@ -17,9 +17,11 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
+import static org.apache.sling.resourceresolver.util.MockTestUtil.getInaccessibleField;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.getResourceName;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -325,6 +327,11 @@ public class MockedResourceResolverImplTest {
         for (String path : activator.getAllowedAliasLocations()) {
             assertFalse("Path must not end with '/': " + path, StringUtils.endsWith(path, "/"));
         }
+
+        // ensure mappings are set
+        assertNotEquals("Mappings unavailable",
+            MapEntries.EMPTY,
+            getInaccessibleField("commonFactory",rrf,CommonResourceResolverFactoryImpl.class).getMapEntries());
     }
 
     public static ResourceProviderHandler createRPHandler(ResourceProvider<?> rp, String pid, long ranking,
@@ -541,6 +548,7 @@ public class MockedResourceResolverImplTest {
         Mockito.when(request.getScheme()).thenReturn("http");
         Mockito.when(request.getServerPort()).thenReturn(80);
         Mockito.when(request.getServerName()).thenReturn("localhost");
+
         String path = resourceResolver.map(request,"/single/test?q=123123");
         Assert.assertEquals("/single/test?q=123123", path);
         buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
