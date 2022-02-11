@@ -66,7 +66,7 @@ public class Mapping {
     // Regular expression to split mapping configuration strings into three
     // groups:
     // 1 - external path prefix
-    // 2 - direction (Outbound (>), Bidirectional (:), Inbound (>))
+    // 2 - direction (Outbound (<), Bidirectional (:), Inbound (>))
     // 3 - internap path prefix
     private static final Pattern CONFIG_SPLITTER = Pattern
             .compile("(.+)([:<>])(.+)");

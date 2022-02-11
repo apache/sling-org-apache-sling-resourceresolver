@@ -104,6 +104,7 @@ public class EtcMappingResourceResolverTest {
 
     CommonResourceResolverFactoryImpl commonFactory;
 
+    Resource content;
     Resource etc;
     Resource map;
     Resource http;
@@ -148,6 +149,7 @@ public class EtcMappingResourceResolverTest {
         etc = buildResource("/etc", null, resourceResolver, resourceProvider);
         map = buildResource("/etc/map", etc, resourceResolver, resourceProvider);
         http = buildResource("/etc/map/http", map, resourceResolver, resourceProvider);
+        content = buildResource("/content", null, resourceResolver, resourceProvider);
     }
 
     List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {
@@ -322,6 +324,25 @@ public class EtcMappingResourceResolverTest {
         HttpServletRequest request = createRequestFromUrl("http://test-simple-match:80/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
         checkRedirectResource(resolvedResource, "/content/simple-match/", 302);
+    }
+
+    @Test
+    public void match_un_normalized_path() throws Exception {
+        buildResource("test-node", http, resourceResolver, resourceProvider,
+            PROP_REG_EXP, "domain.\\d+",
+            PROP_REDIRECT_INTERNAL, new String[] { "/", "/content/simple-match" }
+        );
+        Resource simpleMatch = buildResource("/content/simple-match", content, resourceResolver, resourceProvider);
+        Resource en = buildResource("/content/simple-match/en", simpleMatch, resourceResolver, resourceProvider);
+
+        refreshMapEntries("/etc/map", true);
+
+        HttpServletRequest request = createRequestFromUrl("http://domain:80/");
+
+        Resource resolvedResource = resourceResolver.resolve(request, "/en.html");
+        checkInternalResource(resolvedResource, "/content/simple-match/en");
+        resolvedResource = resourceResolver.resolve(request, "/etc.clientlibs/foobar.js");
+        checkInternalResource(resolvedResource, "/etc");
     }
 
     /**

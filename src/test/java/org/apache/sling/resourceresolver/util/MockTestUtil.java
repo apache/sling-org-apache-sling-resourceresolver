@@ -132,7 +132,7 @@ public class MockTestUtil {
      * @return Mock Resource able to handle addition of children later on
      */
     @SuppressWarnings("unchecked")
-    public static Resource buildResource(String fullPath, Resource parent, ResourceResolver resourceResolver, ResourceProvider<?> provider, String... properties) {
+    public static Resource buildResource(String fullPath, Resource parent, ResourceResolver resourceResolver, ResourceProvider<?> provider, Object... properties) {
         if (properties != null && properties.length % 2 != 0) {
             throw new IllegalArgumentException("List of Resource Properties must be an even number: " + asList(properties));
         }
@@ -172,8 +172,8 @@ public class MockTestUtil {
         if (properties != null) {
             ValueMap vm = new SimpleValueMapImpl();
             for (int i = 0; i < properties.length; i += 2) {
-                resourceMetadata.put(properties[i], properties[i + 1]);
-                vm.put(properties[i], properties[i + 1]);
+                resourceMetadata.put((String) properties[i], properties[i + 1]);
+                vm.put((String) properties[i], properties[i + 1]);
             }
             when(resource.getValueMap()).thenReturn(vm);
             when(resource.adaptTo(Mockito.eq(ValueMap.class))).thenReturn(vm);

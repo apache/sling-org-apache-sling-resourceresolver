@@ -256,8 +256,13 @@ public class MockedResourceResolverImplTest {
 
             @Override
             public String[] resource_resolver_mapping() {
-                return new String[] { "/:/",
-                        "/content/:/", "/system/docroot/:/", "/content.html-/$" };
+                return new String[] {
+                    "/:/",
+                    "/content/:/",
+                    "/system/docroot/:/",
+                    "/content.html-/$",
+                    "/>/inbound"
+                };
             }
 
             @Override
@@ -431,7 +436,11 @@ public class MockedResourceResolverImplTest {
         Resource resource = mock(Resource.class);
         Mockito.when(resource.getName()).thenReturn(getResourceName(fullpath));
         Mockito.when(resource.getPath()).thenReturn(fullpath);
-        ResourceMetadata resourceMetadata = new ResourceMetadata();
+        ResourceMetadata resourceMetadata = new ResourceMetadata() {
+            @Override public void lock() {
+                // noop, make sure the mock resources can be returned multiple times
+            }
+        };
         Mockito.when(resource.getResourceMetadata()).thenReturn(resourceMetadata);
         Mockito.when(resource.listChildren()).thenReturn(children.iterator());
         Mockito.when(resource.getResourceResolver()).thenReturn(resourceResolver);
@@ -583,6 +592,30 @@ public class MockedResourceResolverImplTest {
         Assert.assertEquals("/single/test.html", path);
     }
 
+    @Test
+    public void testResolve() throws LoginException {
+        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
+        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+        buildResource("/content/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Mockito.when(request.getScheme()).thenReturn("http");
+        Mockito.when(request.getServerPort()).thenReturn(80);
+        Mockito.when(request.getServerName()).thenReturn("localhost");
+
+        Resource resource = resourceResolver.resolve(request,"/single/test");
+        assertEquals("/single/test", resource.getPath());
+
+        resource = resourceResolver.resolve(request,"/content/test");
+        assertEquals("/content/test", resource.getPath());
+
+        resource = resourceResolver.resolve(request,"/test");
+        assertEquals("/content/test", resource.getPath());
+
+        // the mapping />/inbound is actually broken, it should be />/inbound/
+        resource = resourceResolver.resolve(request, "/inbound/content/test");
+        assertEquals("/content/test", resource.getPath());
+    }
 
     /**
      * Tests list children via the resource (NB, this doesn't really test the
