@@ -105,7 +105,7 @@ public class ResourceMapperImplTest {
 
         InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider();
 
-        if(!testName.getMethodName().contains("mapEmptyPathWithNonExistingResource")) {
+        if(!testName.getMethodName().contains("mapEmptyPathWithUnreadableRoot")) {
             resourceProvider.putResource("/"); // root
         }
         resourceProvider.putResource("/here"); // regular page
@@ -165,11 +165,11 @@ public class ResourceMapperImplTest {
     public void mapNonExistingEmptyPath() throws LoginException {
 
         ExpectedMappings.nonExistingResource("")
-                .singleMapping("/")
-                .singleMappingWithRequest("/app/")
-                .allMappings("/")
-                .allMappingsWithRequest("/app/")
-                .verify(resolver, req);
+            .singleMapping("/")
+            .singleMappingWithRequest("/app/")
+            .allMappings("/")
+            .allMappingsWithRequest("/app/")
+            .verify(resolver, req);
     }
 
     /**
@@ -181,11 +181,11 @@ public class ResourceMapperImplTest {
     public void mapNonExistingPath() throws LoginException {
 
         ExpectedMappings.nonExistingResource("/not-here")
-                .singleMapping("/not-here")
-                .singleMappingWithRequest("/app/not-here")
-                .allMappings("/not-here")
-                .allMappingsWithRequest("/app/not-here")
-                .verify(resolver, req);
+            .singleMapping("/not-here")
+            .singleMappingWithRequest("/app/not-here")
+            .allMappings("/not-here")
+            .allMappingsWithRequest("/app/not-here")
+            .verify(resolver, req);
     }
 
     /**
@@ -197,11 +197,11 @@ public class ResourceMapperImplTest {
     public void mapExistingPath() throws LoginException {
 
         ExpectedMappings.existingResource("/here")
-                .singleMapping("/here")
-                .singleMappingWithRequest("/app/here")
-                .allMappings("/here")
-                .allMappingsWithRequest("/app/here")
-                .verify(resolver, req);
+            .singleMapping("/here")
+            .singleMappingWithRequest("/app/here")
+            .allMappings("/here")
+            .allMappingsWithRequest("/app/here")
+            .verify(resolver, req);
     }
 
     /**
@@ -229,11 +229,11 @@ public class ResourceMapperImplTest {
     public void mapResourceWithMultivaluedAlias() {
 
         ExpectedMappings.existingResource("/there-multiple")
-                .singleMapping("/alias-value-3")
-                .singleMappingWithRequest("/app/alias-value-3")
-                .allMappings("/alias-value-3", "/alias-value-4", "/there-multiple")
-                .allMappingsWithRequest("/app/alias-value-3", "/app/alias-value-4", "/app/there-multiple")
-                .verify(resolver, req);
+            .singleMapping("/alias-value-3")
+            .singleMappingWithRequest("/app/alias-value-3")
+            .allMappings("/alias-value-3", "/alias-value-4", "/there-multiple")
+            .allMappingsWithRequest("/app/alias-value-3", "/app/alias-value-4", "/app/there-multiple")
+            .verify(resolver, req);
     }
 
     /**
@@ -262,11 +262,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapResourceWithAliasOnParent() {
         ExpectedMappings.existingResource("/there/that")
-                .singleMapping("/alias-value/that")
-                .singleMappingWithRequest("/app/alias-value/that")
-                .allMappings("/alias-value/that", "/there/that")
-                .allMappingsWithRequest("/app/alias-value/that","/app/there/that")
-                .verify(resolver, req);
+            .singleMapping("/alias-value/that")
+            .singleMappingWithRequest("/app/alias-value/that")
+            .allMappings("/alias-value/that", "/there/that")
+            .allMappingsWithRequest("/app/alias-value/that","/app/there/that")
+            .verify(resolver, req);
     }
 
     @Test
@@ -280,11 +280,11 @@ public class ResourceMapperImplTest {
         when(req.getPathInfo()).thenReturn(null);
 
         ExpectedMappings.existingResource("/content/virtual/foo")
-                .singleMapping("http://virtual.host.com/foo")
-                .singleMappingWithRequest("/foo")
-                .allMappings("http://virtual.host.com/foo", "/content/virtual/foo")
-                .allMappingsWithRequest("/foo", "/content/virtual/foo")
-                .verify(resolver, req);
+            .singleMapping("http://virtual.host.com/foo")
+            .singleMappingWithRequest("/foo")
+            .allMappings("http://virtual.host.com/foo", "/content/virtual/foo")
+            .allMappingsWithRequest("/foo", "/content/virtual/foo")
+            .verify(resolver, req);
 
     }
 
@@ -297,11 +297,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapResourceWithNestedAlias() {
         ExpectedMappings.existingResource("/parent/child")
-                .singleMapping("/alias-parent/alias-child")
-                .singleMappingWithRequest("/app/alias-parent/alias-child")
-                .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child", "/parent/child")
-                .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child", "/app/parent/child")
-                .verify(resolver, req);
+            .singleMapping("/alias-parent/alias-child")
+            .singleMappingWithRequest("/app/alias-parent/alias-child")
+            .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child", "/parent/child")
+            .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child", "/app/parent/child")
+            .verify(resolver, req);
     }
 
     /**
@@ -312,11 +312,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapResourceWithNestedMultipleAlias() {
         ExpectedMappings.existingResource("/parent/child-multiple")
-                .singleMapping("/alias-parent/alias-child-1")
-                .singleMappingWithRequest("/app/alias-parent/alias-child-1")
-                .allMappings("/alias-parent/alias-child-1", "/alias-parent/alias-child-2", "/alias-parent/child-multiple", "/parent/alias-child-1", "/parent/alias-child-2", "/parent/child-multiple")
-                .allMappingsWithRequest("/app/alias-parent/alias-child-1", "/app/alias-parent/alias-child-2", "/app/alias-parent/child-multiple", "/app/parent/alias-child-1", "/app/parent/alias-child-2", "/app/parent/child-multiple")
-                .verify(resolver, req);
+            .singleMapping("/alias-parent/alias-child-1")
+            .singleMappingWithRequest("/app/alias-parent/alias-child-1")
+            .allMappings("/alias-parent/alias-child-1", "/alias-parent/alias-child-2", "/alias-parent/child-multiple", "/parent/alias-child-1", "/parent/alias-child-2", "/parent/child-multiple")
+            .allMappingsWithRequest("/app/alias-parent/alias-child-1", "/app/alias-parent/alias-child-2", "/app/alias-parent/child-multiple", "/app/parent/alias-child-1", "/app/parent/alias-child-2", "/app/parent/child-multiple")
+            .verify(resolver, req);
     }
 
     /**
@@ -328,11 +328,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapResourceWithVanityPaths() {
         ExpectedMappings.existingResource("/vain")
-                .singleMapping("/vain")
-                .singleMappingWithRequest("/app/vain")
-                .allMappings("/vanity-a", "/vanity-b", "/vain")
-                .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
-                .verify(resolver, req);
+            .singleMapping("/vain")
+            .singleMappingWithRequest("/app/vain")
+            .allMappings("/vanity-a", "/vanity-b", "/vain")
+            .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
+            .verify(resolver, req);
     }
 
     /**
@@ -342,11 +342,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapAliasTarget() {
         ExpectedMappings.nonExistingResource("/alias-value")
-                .singleMapping("/alias-value")
-                .singleMappingWithRequest("/app/alias-value")
-                .allMappings("/alias-value")
-                .allMappingsWithRequest("/app/alias-value")
-                .verify(resolver, req);
+            .singleMapping("/alias-value")
+            .singleMappingWithRequest("/app/alias-value")
+            .allMappings("/alias-value")
+            .allMappingsWithRequest("/app/alias-value")
+            .verify(resolver, req);
     }
 
     /**
@@ -356,11 +356,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapNestedAliasTarget() {
         ExpectedMappings.nonExistingResource("/alias-parent/alias-child")
-                .singleMapping("/alias-parent/alias-child")
-                .singleMappingWithRequest("/app/alias-parent/alias-child")
-                .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child")
-                .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child")
-                .verify(resolver, req);
+            .singleMapping("/alias-parent/alias-child")
+            .singleMappingWithRequest("/app/alias-parent/alias-child")
+            .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child")
+            .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child")
+            .verify(resolver, req);
     }
 
     /**
@@ -369,15 +369,15 @@ public class ResourceMapperImplTest {
      * @throws LoginException
      */
     @Test
-    public void mapEmptyPathWithNonExistingResource() {
+    public void mapEmptyPathWithUnreadableRoot() {
         String [] expectedAllMappings = new String[0];
 
         ExpectedMappings.nonExistingResource("")
-                .singleMapping("")
-                .singleMappingWithRequest("")
-                .allMappings(expectedAllMappings)
-                .allMappingsWithRequest(expectedAllMappings)
-                .verify(resolver, req);
+            .singleMapping("")
+            .singleMappingWithRequest("")
+            .allMappings(expectedAllMappings)
+            .allMappingsWithRequest(expectedAllMappings)
+            .verify(resolver, req);
     }
 
     static class ExpectedMappings {
