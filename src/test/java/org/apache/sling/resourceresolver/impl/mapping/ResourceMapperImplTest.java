@@ -25,7 +25,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -43,8 +42,6 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
-import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
@@ -53,6 +50,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -85,7 +83,10 @@ public class ResourceMapperImplTest {
     }
 
     @Rule
-    public final OsgiContext ctx = new OsgiContext();
+    public OsgiContext ctx = new OsgiContext();
+
+    @Rule
+    public TestName testName = new TestName();
 
     private final boolean optimiseAliasResolution;
     private HttpServletRequest req;
@@ -103,7 +104,10 @@ public class ResourceMapperImplTest {
         ctx.registerInjectActivateService(new StringInterpolationProviderImpl());
 
         InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider();
-        resourceProvider.putResource("/"); // root
+
+        if(!testName.getMethodName().contains("mapEmptyPathWithNonExistingResource")) {
+            resourceProvider.putResource("/"); // root
+        }
         resourceProvider.putResource("/here"); // regular page
         resourceProvider.putResource("/there", PROP_ALIAS, "alias-value"); // with alias
         resourceProvider.putResource("/there-multiple", PROP_ALIAS, "alias-value-3", "alias-value-4"); // with multivalued alias
@@ -161,11 +165,11 @@ public class ResourceMapperImplTest {
     public void mapNonExistingEmptyPath() throws LoginException {
 
         ExpectedMappings.nonExistingResource("")
-            .singleMapping("/")
-            .singleMappingWithRequest("/app/")
-            .allMappings("/")
-            .allMappingsWithRequest("/app/")
-            .verify(resolver, req);
+                .singleMapping("/")
+                .singleMappingWithRequest("/app/")
+                .allMappings("/")
+                .allMappingsWithRequest("/app/")
+                .verify(resolver, req);
     }
 
     /**
@@ -177,11 +181,11 @@ public class ResourceMapperImplTest {
     public void mapNonExistingPath() throws LoginException {
 
         ExpectedMappings.nonExistingResource("/not-here")
-            .singleMapping("/not-here")
-            .singleMappingWithRequest("/app/not-here")
-            .allMappings("/not-here")
-            .allMappingsWithRequest("/app/not-here")
-            .verify(resolver, req);
+                .singleMapping("/not-here")
+                .singleMappingWithRequest("/app/not-here")
+                .allMappings("/not-here")
+                .allMappingsWithRequest("/app/not-here")
+                .verify(resolver, req);
     }
 
     /**
@@ -193,11 +197,11 @@ public class ResourceMapperImplTest {
     public void mapExistingPath() throws LoginException {
 
         ExpectedMappings.existingResource("/here")
-            .singleMapping("/here")
-            .singleMappingWithRequest("/app/here")
-            .allMappings("/here")
-            .allMappingsWithRequest("/app/here")
-            .verify(resolver, req);
+                .singleMapping("/here")
+                .singleMappingWithRequest("/app/here")
+                .allMappings("/here")
+                .allMappingsWithRequest("/app/here")
+                .verify(resolver, req);
     }
 
     /**
@@ -209,11 +213,11 @@ public class ResourceMapperImplTest {
     public void mapResourceWithAlias() {
 
         ExpectedMappings.existingResource("/there")
-            .singleMapping("/alias-value")
-            .singleMappingWithRequest("/app/alias-value")
-            .allMappings("/alias-value", "/there")
-            .allMappingsWithRequest("/app/alias-value", "/app/there")
-            .verify(resolver, req);
+                .singleMapping("/alias-value")
+                .singleMappingWithRequest("/app/alias-value")
+                .allMappings("/alias-value", "/there")
+                .allMappingsWithRequest("/app/alias-value", "/app/there")
+                .verify(resolver, req);
     }
 
     /**
@@ -242,11 +246,11 @@ public class ResourceMapperImplTest {
     public void mapResourceWithAliasAndEtcMap() {
 
         ExpectedMappings.existingResource("/somewhere")
-            .singleMapping("/alias-value-2")
-            .singleMappingWithRequest("/app/alias-value-2")
-            .allMappings("/alias-value-2", "http://localhost:8080/everywhere", "/somewhere")
-            .allMappingsWithRequest("/app/alias-value-2", "/app/everywhere", "/app/somewhere")
-            .verify(resolver, req);
+                .singleMapping("/alias-value-2")
+                .singleMappingWithRequest("/app/alias-value-2")
+                .allMappings("/alias-value-2", "http://localhost:8080/everywhere", "/somewhere")
+                .allMappingsWithRequest("/app/alias-value-2", "/app/everywhere", "/app/somewhere")
+                .verify(resolver, req);
     }
 
     /**
@@ -258,11 +262,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapResourceWithAliasOnParent() {
         ExpectedMappings.existingResource("/there/that")
-            .singleMapping("/alias-value/that")
-            .singleMappingWithRequest("/app/alias-value/that")
-            .allMappings("/alias-value/that", "/there/that")
-            .allMappingsWithRequest("/app/alias-value/that","/app/there/that")
-            .verify(resolver, req);
+                .singleMapping("/alias-value/that")
+                .singleMappingWithRequest("/app/alias-value/that")
+                .allMappings("/alias-value/that", "/there/that")
+                .allMappingsWithRequest("/app/alias-value/that","/app/there/that")
+                .verify(resolver, req);
     }
 
     @Test
@@ -276,11 +280,11 @@ public class ResourceMapperImplTest {
         when(req.getPathInfo()).thenReturn(null);
 
         ExpectedMappings.existingResource("/content/virtual/foo")
-            .singleMapping("http://virtual.host.com/foo")
-            .singleMappingWithRequest("/foo")
-            .allMappings("http://virtual.host.com/foo", "/content/virtual/foo")
-            .allMappingsWithRequest("/foo", "/content/virtual/foo")
-            .verify(resolver, req);
+                .singleMapping("http://virtual.host.com/foo")
+                .singleMappingWithRequest("/foo")
+                .allMappings("http://virtual.host.com/foo", "/content/virtual/foo")
+                .allMappingsWithRequest("/foo", "/content/virtual/foo")
+                .verify(resolver, req);
 
     }
 
@@ -324,11 +328,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapResourceWithVanityPaths() {
         ExpectedMappings.existingResource("/vain")
-            .singleMapping("/vain")
-            .singleMappingWithRequest("/app/vain")
-            .allMappings("/vanity-a", "/vanity-b", "/vain")
-            .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
-            .verify(resolver, req);
+                .singleMapping("/vain")
+                .singleMappingWithRequest("/app/vain")
+                .allMappings("/vanity-a", "/vanity-b", "/vain")
+                .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
+                .verify(resolver, req);
     }
 
     /**
@@ -338,11 +342,11 @@ public class ResourceMapperImplTest {
     @Test
     public void mapAliasTarget() {
         ExpectedMappings.nonExistingResource("/alias-value")
-            .singleMapping("/alias-value")
-            .singleMappingWithRequest("/app/alias-value")
-            .allMappings("/alias-value")
-            .allMappingsWithRequest("/app/alias-value")
-            .verify(resolver, req);
+                .singleMapping("/alias-value")
+                .singleMappingWithRequest("/app/alias-value")
+                .allMappings("/alias-value")
+                .allMappingsWithRequest("/app/alias-value")
+                .verify(resolver, req);
     }
 
     /**
@@ -366,21 +370,13 @@ public class ResourceMapperImplTest {
      */
     @Test
     public void mapEmptyPathWithNonExistingResource() {
-        MapEntriesHandler mapEntriesHandler = mock(MapEntriesHandler.class);
-        when(mapEntriesHandler.getVanityPathMappings()).thenReturn(Collections.emptyMap());
-
-        ResourceResolverImpl resolver = mock(ResourceResolverImpl.class);
-        when(resolver.resolveInternal(any(), any())).thenReturn(null);
-        when(resolver.getResource("")).thenReturn(this.resolver.getResource(""));
-        when(resolver.adaptTo(ResourceMapper.class)).thenReturn(new ResourceMapperImpl(resolver, mock(ResourceDecoratorTracker.class),
-                mapEntriesHandler, mock(Object.class)));
+        String [] expectedAllMappings = new String[0];
 
         ExpectedMappings.nonExistingResource("")
                 .singleMapping("")
                 .singleMappingWithRequest("")
-                .allMappings("")
-                .allMappingsWithRequest("")
-                .testingEmptyPathWithNonExistingResource(true)
+                .allMappings(expectedAllMappings)
+                .allMappingsWithRequest(expectedAllMappings)
                 .verify(resolver, req);
     }
 
@@ -401,17 +397,10 @@ public class ResourceMapperImplTest {
         private String singleMappingWithRequest;
         private Set<String> allMappings;
         private Set<String> allMappingsWithRequest;
-        private boolean testingEmptyPathWithNonExistingResource = false;
 
         private ExpectedMappings(String path, boolean exists) {
             this.path = path;
             this.exists = exists;
-        }
-
-        public ExpectedMappings testingEmptyPathWithNonExistingResource(boolean testingEmptyPathWithNonExistingResource) {
-            this.testingEmptyPathWithNonExistingResource = testingEmptyPathWithNonExistingResource;
-
-            return this;
         }
 
         public ExpectedMappings singleMapping(String singleMapping) {
@@ -455,7 +444,6 @@ public class ResourceMapperImplTest {
             assertThat("Single mapping without request", mapper.getMapping(path), is(singleMapping));
             if ( !path.isEmpty() ) // an empty path is invalid, hence not testing with a request
                 assertThat("Single mapping with request", mapper.getMapping(path, request), is(singleMappingWithRequest));
-            if(!testingEmptyPathWithNonExistingResource)
                 assertThat("All mappings without request", mapper.getAllMappings(path), is(allMappings));
             if ( !path.isEmpty() ) // an empty path is invalid, hence not testing with a request
                 assertThat("All mappings with request", mapper.getAllMappings(path, request), is(allMappingsWithRequest));
