@@ -174,9 +174,11 @@ public class ResourceMapperImpl implements ResourceMapper {
             mappings.replaceAll(path -> path.concat(fragmentQuery));
         }
 
-        mappings.forEach( path ->
-            logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath)    
-        );
+        if (logger.isDebugEnabled()) {
+            mappings.forEach(path ->
+                logger.debug("map: Returning URL {} as mapping for path {}", path, resourcePath)
+            );
+        }
         
         Collections.reverse(mappings);
         

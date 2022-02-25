@@ -279,7 +279,7 @@ public class MapEntry implements Comparable<MapEntry> {
         final Matcher m = urlPattern.matcher(value);
         if (m.find()) {
             final String[] redirects = getRedirect();
-            final String[] results = new String[redirects.length];
+            final List<String> results = new ArrayList<>(redirects.length);
             for (int i = 0; i < redirects.length; i++) {
             	try {
             		String redirect = redirects[i];
@@ -298,14 +298,12 @@ public class MapEntry implements Comparable<MapEntry> {
             				}
             			}
             		}
-            		results[i] = m.replaceFirst(redirect);
-            	} catch (final StringIndexOutOfBoundsException siob){
-            		log.debug("Exception while replacing, ignoring entry {} ", redirects[i], siob);
-                } catch (final IllegalArgumentException iae){
-                    log.debug("Exception while replacing, ignoring entry {} ", redirects[i], iae);
-             	}
+            		results.add(m.replaceFirst(redirect));
+            	} catch (final StringIndexOutOfBoundsException | IllegalArgumentException ex){
+            		log.debug("Exception while replacing, ignoring entry {} ", redirects[i], ex);
+                }
             }
-            return results;
+            return !results.isEmpty() ? results.toArray(new String[0]) : null;
         }
 
         return null;
