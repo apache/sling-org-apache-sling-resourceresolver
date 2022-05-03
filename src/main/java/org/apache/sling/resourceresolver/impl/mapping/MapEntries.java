@@ -763,7 +763,7 @@ public class MapEntries implements
     }
 
     private static String queryStringLiteral(String input) {
-        return input.replaceAll("'", "''");
+        return input.replace("'", "''");
     }
 
     /**
