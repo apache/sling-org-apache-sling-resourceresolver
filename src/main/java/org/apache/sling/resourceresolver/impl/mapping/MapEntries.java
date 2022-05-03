@@ -762,30 +762,8 @@ public class MapEntries implements
         return this.factory.getMaxCachedVanityPathEntries() == -1;
     }
 
-    /**
-     * Escapes illegal XPath search characters at the end of a string.
-     * <p>
-     * Example:<br>
-     * A search string like 'test?' will run into a ParseException documented in
-     * http://issues.apache.org/jira/browse/JCR-1248
-     *
-     * @param s
-     *            the string to encode
-     * @return the escaped string
-     */
-    private static String escapeIllegalXpathSearchChars(String s) {
-        StringBuilder sb = new StringBuilder();
-        if (s != null && s.length() > 1) {
-            sb.append(s.substring(0, (s.length() - 1)));
-            char c = s.charAt(s.length() - 1);
-            // NOTE: keep this in sync with _ESCAPED_CHAR below!
-            if (c == '!' || c == '(' || c == ':' || c == '^' || c == '['
-                    || c == ']' || c == '{' || c == '}' || c == '?') {
-                sb.append('\\');
-            }
-            sb.append(c);
-        }
-        return sb.toString();
+    private static String queryStringLiteral(String input) {
+        return input.replace("'", "''");
     }
 
     /**
@@ -795,13 +773,11 @@ public class MapEntries implements
 
         Map<String, List<MapEntry>> entryMap = new HashMap<>();
 
-        // sling:vanityPath (lowercase) is the property name
-        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" +
-            " FROM nt:base" +
-            " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "') and (" +
-            "sling:vanityPath ='"+escapeIllegalXpathSearchChars(vanityPath).replaceAll("'", "''")+"'" +
-            " OR sling:vanityPath ="+ "'"+escapeIllegalXpathSearchChars(vanityPath.substring(1)).replaceAll("'", "''")+"'" +
-            ") ORDER BY sling:vanityOrder DESC";
+        final String queryString = String.format(
+                "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base "
+                        + "WHERE NOT isdescendantnode('%s') AND (sling:vanityPath='%s' OR sling:vanityPath='%s') "
+                        + "ORDER BY sling:vanityOrder DESC",
+                JCR_SYSTEM_PATH, queryStringLiteral(vanityPath), queryStringLiteral(vanityPath.substring(1)));
 
         try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
             long totalCount = 0;
