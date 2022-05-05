@@ -762,7 +762,8 @@ public class MapEntries implements
         return this.factory.getMaxCachedVanityPathEntries() == -1;
     }
 
-    private static String queryStringLiteral(String input) {
+    // escapes string for use as literal in JCR SQL within single quotes
+    private static String queryLiteral(String input) {
         return input.replace("'", "''");
     }
 
@@ -777,7 +778,7 @@ public class MapEntries implements
                 "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base "
                         + "WHERE NOT isdescendantnode('%s') AND (sling:vanityPath='%s' OR sling:vanityPath='%s') "
                         + "ORDER BY sling:vanityOrder DESC",
-                JCR_SYSTEM_PATH, queryStringLiteral(vanityPath), queryStringLiteral(vanityPath.substring(1)));
+                JCR_SYSTEM_PATH, queryLiteral(vanityPath), queryLiteral(vanityPath.substring(1)));
 
         try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
             long totalCount = 0;
@@ -975,52 +976,52 @@ public class MapEntries implements
     }
 
     /**
-     * Load aliases Search for all nodes inheriting the sling:alias
-     * property
+     * Load aliases - Search for all nodes (except under /jcr:system) below
+     * configured alias locations having the sling:alias property
      */
     private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
-        final String queryString = updateAliasQuery();
+        final String queryString = generateAliasQuery();
+
         log.debug("start alias query: {}", queryString);
+        long queryStart = System.nanoTime();
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-        log.debug("end alias query");
+        long queryElapsed = System.nanoTime() - queryStart;
+        log.debug("end alias query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+
         long count = 0;
+        long processStart = System.nanoTime();
         while (i.hasNext()) {
             count += 1;
-            final Resource resource = i.next();
-            loadAlias(resource, map);
+            loadAlias(i.next(), map);
         }
-        log.debug("read {} aliases", count);
+        long processElapsed = System.nanoTime() - processStart;
+        log.debug("processed {} aliases in {}ms", count, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+
         return map;
     }
 
-
     /*
-    * Update alias query based on configured alias locations
-    */
-    private String updateAliasQuery(){
+     * generate alias query based on configured alias locations
+     */
+    private String generateAliasQuery() {
         final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
         StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
         baseQuery.append(" ").append("WHERE");
 
-        if(allowedLocations.isEmpty()){
+        if (allowedLocations.isEmpty()) {
             String jcrSystemPath = StringUtils.removeEnd(JCR_SYSTEM_PREFIX, "/");
-            baseQuery.append(" ").append("(").append("NOT ISDESCENDANTNODE(page,")
-                    .append("\"").append(jcrSystemPath).append("\"").append("))");
-
-        }else{
+            baseQuery.append(" (").append("NOT ISDESCENDANTNODE(page,'").append(queryLiteral(jcrSystemPath)).append("'))");
+        } else {
             Iterator<String> pathIterator = allowedLocations.iterator();
             baseQuery.append("(");
-            while(pathIterator.hasNext()){
+            String sep = "";
+            while (pathIterator.hasNext()) {
                 String prefix = pathIterator.next();
-                baseQuery.append(" ").append("ISDESCENDANTNODE(page,")
-                        .append("\"").append(prefix).append("\"")
-                        .append(")").append(" ").append("OR");
+                baseQuery.append(sep).append("ISDESCENDANTNODE(page,'").append(queryLiteral(prefix)).append("')");
+                sep = " OR ";
             }
-            //Remove last "OR" keyword
-            int orLastIndex = baseQuery.lastIndexOf("OR");
-            baseQuery.delete(orLastIndex,baseQuery.length());
             baseQuery.append(")");
         }
 
@@ -1112,23 +1113,25 @@ public class MapEntries implements
     }
 
     /**
-     * Load vanity paths Search for all nodes inheriting the sling:VanityPath
-     * mixin
+     * Load vanity paths - search for all nodes (except under /jcr:system)
+     * having a sling:vanityPath property
      */
-    private Map <String, List<String>> loadVanityPaths() {
-        // sling:vanityPath (lowercase) is the property name
-        final Map <String, List<String>> targetPaths = new ConcurrentHashMap <>();
-        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" +
-            " FROM nt:base" +
-            " WHERE NOT isdescendantnode('" + JCR_SYSTEM_PATH + "')" +
-            " AND sling:vanityPath IS NOT NULL";
+    private Map<String, List<String>> loadVanityPaths() {
+        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
+        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" + " FROM nt:base"
+                + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
+                + " AND sling:vanityPath IS NOT NULL";
 
         log.debug("start vanityPath query: {}", queryString);
+        long queryStart = System.nanoTime();
         final Iterator<Resource> i = resolver.findResources(queryString, "sql");
-        log.debug("end vanityPath query");
-        long count = 0;
+        long queryElapsed = System.nanoTime() - queryStart;
+        log.debug("end vanityPath query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
 
-        Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+        long count = 0;
+        long processStart = System.nanoTime();
+        Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached()
+                || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
         while (i.hasNext() && isCacheComplete.get()) {
             count += 1;
             final Resource resource = i.next();
@@ -1137,7 +1140,8 @@ public class MapEntries implements
                 loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get());
             }
         }
-        log.debug("read {} vanityPaths", count);
+        long processElapsed = System.nanoTime() - processStart;
+        log.debug("processed {} vanityPaths in {}ms", count, TimeUnit.NANOSECONDS.toMillis(processElapsed));
 
         return targetPaths;
     }
