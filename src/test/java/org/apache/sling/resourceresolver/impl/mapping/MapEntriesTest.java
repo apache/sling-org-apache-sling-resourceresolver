@@ -2239,7 +2239,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
                 String query = StringUtils.trim((String)invocation.getArguments()[0]);
-                assertEquals("SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,\"/jcr:system\")) AND sling:alias IS NOT NULL", query);
+                assertEquals("SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,'/jcr:system')) AND sling:alias IS NOT NULL", query);
                 return Collections.<Resource> emptySet().iterator();
             }
         });
