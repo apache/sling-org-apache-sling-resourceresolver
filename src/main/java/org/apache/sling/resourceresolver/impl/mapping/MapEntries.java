@@ -696,20 +696,36 @@ public class MapEntries implements
         
         // the config needs to be reloaded only once
         final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
         for(final ResourceChange rc : changes) {
 
+            final ResourceChange.ChangeType type = rc.getType();
             final String path = rc.getPath();
-            log.debug("onChange, type={}, path={}", rc.getType(), path);
+
+            log.debug("onChange, type={}, path={}", type, path);
 
             // don't care for system area
             if (path.startsWith(JCR_SYSTEM_PREFIX)) {
                 continue;
             }
 
-            boolean changed = false;
-            // removal of a resource is handled differently
-            if (rc.getType() == ResourceChange.ChangeType.REMOVED ) {
+            boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
 
+            if (changed) {
+                sendEvent = true;
+            }
+        }
+        if (sendEvent) {
+            this.sendChangeEvent();
+        }
+    }
+
+    private boolean handleResourceChange(ResourceChange.ChangeType type, String path, AtomicBoolean resolverRefreshed,
+            AtomicBoolean hasReloadedConfig) {
+            boolean changed = false;
+
+        // removal of a resource is handled differently
+        if (type == ResourceChange.ChangeType.REMOVED) {
                 final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, true);
                 if ( result != null ) {
                     if ( result ) {
@@ -718,10 +734,8 @@ public class MapEntries implements
                         changed |= removeResource(path, resolverRefreshed);
                     }
                 }
-
             //session.move() is handled differently see also SLING-3713 and
-            } else if (rc.getType() == ResourceChange.ChangeType.ADDED ) {
-
+        } else if (type == ResourceChange.ChangeType.ADDED) {
                 final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
                 if ( result != null ) {
                     if ( result ) {
@@ -730,9 +744,7 @@ public class MapEntries implements
                         changed |= addResource(path, resolverRefreshed);
                     }
                 }
-
-            } else if (rc.getType() == ResourceChange.ChangeType.CHANGED ) {
-
+        } else if (type == ResourceChange.ChangeType.CHANGED) {
                 final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
                 if ( result != null ) {
                     if ( result ) {
@@ -743,13 +755,7 @@ public class MapEntries implements
                 }
             }
 
-            if ( changed ) {
-                sendEvent = true;
-            }
-        }
-        if (sendEvent) {
-            this.sendChangeEvent();
-        }
+        return changed;
     }
 
     // ---------- internal
