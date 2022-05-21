@@ -177,7 +177,7 @@ public class MapEntries implements
     private ServiceRegistration<ResourceChangeListener> registerResourceChangeListener(final BundleContext bundleContext) {
         final Dictionary<String, Object> props = new Hashtable<>(); // NOSONAR - required by OSGi APIs
         final String[] paths = new String[factory.getObservationPaths().length];
-        for(int i=0 ; i < paths.length; i++) {
+        for (int i = 0; i < paths.length; i++) {
             paths[i] = factory.getObservationPaths()[i].getPath();
         }
         props.put(ResourceChangeListener.PATHS, paths);
