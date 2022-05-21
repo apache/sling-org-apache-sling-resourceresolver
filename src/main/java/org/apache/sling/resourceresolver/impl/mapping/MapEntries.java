@@ -698,16 +698,16 @@ public class MapEntries implements
 
         // send the change event only once
         boolean sendEvent = false;
-        
+
         // the config needs to be reloaded only once
         final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
 
-        for(final ResourceChange rc : changes) {
+        for (final ResourceChange rc : changes) {
 
             final ResourceChange.ChangeType type = rc.getType();
             final String path = rc.getPath();
 
-            log.debug("onChange, type={}, path={}", type, path);
+            log.debug("onChange, type={}, path={}", rc.getType(), path);
 
             // don't care for system area
             if (path.startsWith(JCR_SYSTEM_PREFIX)) {
@@ -727,38 +727,38 @@ public class MapEntries implements
 
     private boolean handleResourceChange(ResourceChange.ChangeType type, String path, AtomicBoolean resolverRefreshed,
             AtomicBoolean hasReloadedConfig) {
-            boolean changed = false;
+        boolean changed = false;
 
         // removal of a resource is handled differently
         if (type == ResourceChange.ChangeType.REMOVED) {
-                final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, true);
-                if ( result != null ) {
-                    if ( result ) {
-                        changed = true;
-                    } else {
-                        changed |= removeResource(path, resolverRefreshed);
-                    }
-                }
-            //session.move() is handled differently see also SLING-3713 and
-        } else if (type == ResourceChange.ChangeType.ADDED) {
-                final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
-                if ( result != null ) {
-                    if ( result ) {
-                        changed = true;
-                    } else {
-                        changed |= addResource(path, resolverRefreshed);
-                    }
-                }
-        } else if (type == ResourceChange.ChangeType.CHANGED) {
-                final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
-                if ( result != null ) {
-                    if ( result ) {
-                        changed = true;
-                    } else {
-                        changed |= updateResource(path, resolverRefreshed);
-                    }
+            final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, true);
+            if (result != null) {
+                if (result) {
+                    changed = true;
+                } else {
+                    changed |= removeResource(path, resolverRefreshed);
                 }
             }
+            // session.move() is handled differently see also SLING-3713 and
+        } else if (type == ResourceChange.ChangeType.ADDED) {
+            final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
+            if (result != null) {
+                if (result) {
+                    changed = true;
+                } else {
+                    changed |= addResource(path, resolverRefreshed);
+                }
+            }
+        } else if (type == ResourceChange.ChangeType.CHANGED) {
+            final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
+            if (result != null) {
+                if (result) {
+                    changed = true;
+                } else {
+                    changed |= updateResource(path, resolverRefreshed);
+                }
+            }
+        }
 
         return changed;
     }
