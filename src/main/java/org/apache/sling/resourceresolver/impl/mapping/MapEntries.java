@@ -162,25 +162,30 @@ public class MapEntries implements
 
         this.useOptimizeAliasResolution = doInit();
 
+        this.registration = registerResourceChangeListener(bundleContext);
+
+        this.vanityCounter = new AtomicLong(0);
+        initializeVanityPaths();
+
+        this.metrics = metrics;
+        if (metrics.isPresent()) {
+            this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
+            this.metrics.get().setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
+        }
+    }
+
+    private ServiceRegistration<ResourceChangeListener> registerResourceChangeListener(final BundleContext bundleContext) {
         final Dictionary<String, Object> props = new Hashtable<>(); // NOSONAR - required by OSGi APIs
         final String[] paths = new String[factory.getObservationPaths().length];
         for(int i=0 ; i < paths.length; i++) {
             paths[i] = factory.getObservationPaths()[i].getPath();
         }
         props.put(ResourceChangeListener.PATHS, paths);
-        log.info("Registering for {}", Arrays.toString(factory.getObservationPaths()));
         props.put(Constants.SERVICE_DESCRIPTION, "Apache Sling Map Entries Observation");
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
-        this.registration = bundleContext.registerService(ResourceChangeListener.class, this, props);
+        log.info("Registering for {}", Arrays.toString(factory.getObservationPaths()));
 
-        this.vanityCounter = new AtomicLong(0);
-
-        initializeVanityPaths();
-        this.metrics = metrics;
-        if (metrics.isPresent()) {
-            this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
-            this.metrics.get().setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
-        }
+        return bundleContext.registerService(ResourceChangeListener.class, this, props);
     }
 
     /**
