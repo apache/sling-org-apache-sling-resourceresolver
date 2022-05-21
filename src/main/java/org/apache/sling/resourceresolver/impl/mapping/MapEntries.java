@@ -18,37 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BooleanSupplier;
-import java.util.stream.Stream;
-
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.LoginException;
@@ -70,6 +39,37 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class MapEntries implements
     MapEntriesHandler,
@@ -120,7 +120,7 @@ public class MapEntries implements
     private volatile ResourceResolver resolver;
 
     private volatile EventAdmin eventAdmin;
-
+    
     private Optional<ResourceResolverMetrics> metrics;
 
     private volatile ServiceRegistration<ResourceChangeListener> registration;
@@ -138,8 +138,6 @@ public class MapEntries implements
     private final AtomicLong vanityCounter;
 
     private byte[] vanityBloomFilter;
-
-    private boolean vanityPathsProcessed;
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
@@ -243,41 +241,13 @@ public class MapEntries implements
         this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
-                this.vanityBloomFilter = MapEntries.this.createVanityBloomFilter();
-                Thread vpinit = new Thread(new VanityPathInitializer(this.factory), "VanityPathInitializer");
-                vpinit.start();
+                this.vanityBloomFilter = createVanityBloomFilter();
+                this.vanityTargets = loadVanityPaths();
             }
         } finally {
             this.initializing.unlock();
         }
-    }
 
-    private class VanityPathInitializer implements Runnable {
-
-        private MapConfigurationProvider factory;
-
-        public VanityPathInitializer(MapConfigurationProvider factory) {
-            this.factory = factory;
-        }
-
-        @Override
-        public void run() {
-            try (ResourceResolver resolver = factory
-                    .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
-                MapEntries.this.log.debug("vanity path init - start");
-                try {
-                    Thread.sleep(120000);
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-                MapEntries.this.vanityTargets = loadVanityPaths(resolver);
-                MapEntries.this.vanityPathsProcessed = true;
-                MapEntries.this.log.debug("vanity path init - end");
-            } catch (LoginException ex) {
-                MapEntries.this.log.error("VanityPath init failed", ex);
-            }
-        }
     }
 
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
@@ -461,8 +431,16 @@ public class MapEntries implements
     private boolean doAddVanity(final Resource resource) {
         log.debug("doAddVanity getting {}", resource.getPath());
 
-        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache);
+        boolean needsUpdate = false;
+        if (isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
+            // fill up the cache and the bloom filter
+            needsUpdate = loadVanityPath(resource, resolveMapsMap, vanityTargets, true);
+        } else {
+            // fill up the bloom filter
+            needsUpdate = loadVanityPath(resource, resolveMapsMap, vanityTargets, false);
+        }
+
+        return needsUpdate;
     }
 
     private boolean doRemoveVanity(final String path) {
@@ -643,7 +621,7 @@ public class MapEntries implements
     private List<MapEntry> getMapEntryList(String vanityPath){
         List<MapEntry> mapEntries = null;
 
-        if (!vanityPathsProcessed || BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath)) {
+        if (BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath)) {
             mapEntries = this.resolveMapsMap.get(vanityPath);
             if (mapEntries == null) {
                 Map<String, List<MapEntry>>  mapEntry = getVanityPaths(vanityPath);
@@ -776,7 +754,7 @@ public class MapEntries implements
 
     // ---------- internal
 
-    private byte[] createVanityBloomFilter() {
+    private byte[] createVanityBloomFilter() throws IOException {
         return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
     }
 
@@ -820,7 +798,7 @@ public class MapEntries implements
                 }
                 if ( isValid ) {
                     totalValid += 1;
-                    if (this.vanityPathsProcessed && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
+                    if (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries()) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true);
                         entryMap = resolveMapsMap;
                     } else {
@@ -1138,7 +1116,7 @@ public class MapEntries implements
      * Load vanity paths - search for all nodes (except under /jcr:system)
      * having a sling:vanityPath property
      */
-    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
+    private Map<String, List<String>> loadVanityPaths() {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
         final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" + " FROM nt:base"
                 + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
@@ -1152,15 +1130,14 @@ public class MapEntries implements
 
         long count = 0;
         long processStart = System.nanoTime();
-        BooleanSupplier isCacheComplete = () -> isAllVanityPathEntriesCached()
+        Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached()
                 || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-
-        while (i.hasNext() && isCacheComplete.getAsBoolean()) {
+        while (i.hasNext() && isCacheComplete.get()) {
             count += 1;
             final Resource resource = i.next();
             final String resourcePath = resource.getPath();
             if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
-                loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.getAsBoolean());
+                loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get());
             }
         }
         long processElapsed = System.nanoTime() - processStart;
@@ -1421,7 +1398,6 @@ public class MapEntries implements
         }
 
     }
-
     private final class MapEntryIterator implements Iterator<MapEntry> {
 
         private final Map<String, List<MapEntry>> resolveMapsMap;
@@ -1492,11 +1468,11 @@ public class MapEntries implements
                     }
 
                     final List<MapEntry> special;
-                    if (MapEntries.this.isAllVanityPathEntriesCached() && MapEntries.this.vanityPathsProcessed) {
+                    if (MapEntries.this.isAllVanityPathEntriesCached()) {
                         special = this.resolveMapsMap.get(key);
                     } else {
-                        special = MapEntries.this.getMapEntryList(key); 
-                    }
+                        special = MapEntries.this.getMapEntryList(key)
+;                    }
                     if (special != null) {
                         specialIterator = special.iterator();
                     }
