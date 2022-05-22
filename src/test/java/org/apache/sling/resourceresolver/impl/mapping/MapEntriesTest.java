@@ -2015,9 +2015,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths");
+        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class);
         method.setAccessible(true);
-        method.invoke(mapEntries);
+        method.invoke(mapEntries, resourceResolver);
 
         Field vanityCounter = MapEntries.class.getDeclaredField("vanityCounter");
         vanityCounter.setAccessible(true);
@@ -2047,9 +2047,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths");
+        Method method = MapEntries.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class);
         method.setAccessible(true);
-        method.invoke(mapEntries);
+        method.invoke(mapEntries, resourceResolver);
 
         Field vanityCounter = MapEntries.class.getDeclaredField("vanityCounter");
         vanityCounter.setAccessible(true);

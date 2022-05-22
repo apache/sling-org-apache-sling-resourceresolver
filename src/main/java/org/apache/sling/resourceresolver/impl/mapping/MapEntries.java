@@ -45,6 +45,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -54,6 +55,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -120,12 +122,14 @@ public class MapEntries implements
     private volatile ResourceResolver resolver;
 
     private volatile EventAdmin eventAdmin;
-    
+
     private Optional<ResourceResolverMetrics> metrics;
 
     private volatile ServiceRegistration<ResourceChangeListener> registration;
 
     private Map<String, List<MapEntry>> resolveMapsMap;
+
+    private List<Map.Entry<String, ResourceChange.ChangeType>> resourceChangeQueue;
 
     private Collection<MapEntry> mapMaps;
 
@@ -138,6 +142,8 @@ public class MapEntries implements
     private final AtomicLong vanityCounter;
 
     private byte[] vanityBloomFilter;
+
+    private boolean vanityPathsProcessed;
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
@@ -185,6 +191,7 @@ public class MapEntries implements
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
         log.info("Registering for {}", Arrays.toString(factory.getObservationPaths()));
 
+        this.resourceChangeQueue = Collections.synchronizedList(new LinkedList<>());
         return bundleContext.registerService(ResourceChangeListener.class, this, props);
     }
 
@@ -246,13 +253,75 @@ public class MapEntries implements
         this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
-                this.vanityBloomFilter = createVanityBloomFilter();
-                this.vanityTargets = loadVanityPaths();
+                this.vanityBloomFilter = MapEntries.this.createVanityBloomFilter();
+                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
+                vpi.load();
             }
         } finally {
             this.initializing.unlock();
         }
+    }
 
+    private class VanityPathInitializer {
+
+        private MapConfigurationProvider factory;
+
+        public VanityPathInitializer(MapConfigurationProvider factory) {
+            this.factory = factory;
+        }
+
+        public void load() {
+            execute();
+        }
+
+        private void drainQueue(List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
+            final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+
+            // send the change event only once
+            boolean sendEvent = false;
+
+            // the config needs to be reloaded only once
+            final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
+            while (!queue.isEmpty()) {
+                Map.Entry<String, ResourceChange.ChangeType> entry = queue.remove(0);
+                final ResourceChange.ChangeType type = entry.getValue();
+                final String path = entry.getKey();
+
+                log.trace("drain type={}, path={}", type, path);
+                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
+
+                if (changed) {
+                    sendEvent = true;
+                }
+            }
+
+            if (sendEvent) {
+                sendChangeEvent();
+            }
+        }
+
+        private void execute() {
+            try (ResourceResolver resolver = factory
+                    .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
+
+                log.debug("vanity path init - start");
+
+                vanityTargets = loadVanityPaths(resolver);
+
+                // process pending event
+                drainQueue(resourceChangeQueue);
+
+                vanityPathsProcessed = true;
+
+                // drain once more in case more events have arrived
+                drainQueue(resourceChangeQueue);
+
+                log.debug("vanity path init - end");
+            } catch (LoginException ex) {
+                log.error("VanityPath init failed", ex);
+            }
+        }
     }
 
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
@@ -714,6 +783,17 @@ public class MapEntries implements
                 continue;
             }
 
+            // during startup: just enqueue the events
+            if (!vanityPathsProcessed) {
+                if (type == ResourceChange.ChangeType.REMOVED || type == ResourceChange.ChangeType.ADDED
+                        || type == ResourceChange.ChangeType.CHANGED) {
+                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
+                    log.trace("enqueue: {}", entry);
+                    resourceChangeQueue.add(entry);
+                }
+                break;
+            }
+
             boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
 
             if (changed) {
@@ -1127,7 +1207,7 @@ public class MapEntries implements
      * Load vanity paths - search for all nodes (except under /jcr:system)
      * having a sling:vanityPath property
      */
-    private Map<String, List<String>> loadVanityPaths() {
+    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
         final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" + " FROM nt:base"
                 + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
