@@ -253,7 +253,7 @@ public class MapEntries implements
         this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
-                this.vanityBloomFilter = MapEntries.this.createVanityBloomFilter();
+                this.vanityBloomFilter = createVanityBloomFilter();
                 VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
                 vpi.load();
             }
