@@ -143,7 +143,7 @@ public class MapEntries implements
 
     private byte[] vanityBloomFilter;
 
-    private boolean vanityPathsProcessed;
+    private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
@@ -312,7 +312,7 @@ public class MapEntries implements
                 // process pending event
                 drainQueue(resourceChangeQueue);
 
-                vanityPathsProcessed = true;
+                vanityPathsProcessed.set(true);
 
                 // drain once more in case more events have arrived
                 drainQueue(resourceChangeQueue);
@@ -763,6 +763,9 @@ public class MapEntries implements
      */
     @Override
     public void onChange(final List<ResourceChange> changes) {
+
+        final boolean inStartup = !vanityPathsProcessed.get();
+
         final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
 
         // send the change event only once
@@ -784,22 +787,22 @@ public class MapEntries implements
             }
 
             // during startup: just enqueue the events
-            if (!vanityPathsProcessed) {
+            if (inStartup) {
                 if (type == ResourceChange.ChangeType.REMOVED || type == ResourceChange.ChangeType.ADDED
                         || type == ResourceChange.ChangeType.CHANGED) {
                     Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
                     log.trace("enqueue: {}", entry);
                     resourceChangeQueue.add(entry);
                 }
-                break;
-            }
+            } else {
+                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
 
-            boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
-
-            if (changed) {
-                sendEvent = true;
+                if (changed) {
+                    sendEvent = true;
+                }
             }
         }
+
         if (sendEvent) {
             this.sendChangeEvent();
         }
