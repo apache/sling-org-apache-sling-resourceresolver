@@ -299,6 +299,11 @@ public class MockedResourceResolverImplTest {
             public boolean resource_resolver_log_unclosed() {
                 return true;
             }
+
+            @Override
+            public boolean resource_resolver_vanitypath_cache_in_background() {
+                return false;
+            }
         });
 
         // configure using Bundle

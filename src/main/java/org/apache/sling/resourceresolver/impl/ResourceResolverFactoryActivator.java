@@ -208,6 +208,10 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_enable_vanitypath();
     }
 
+    public boolean isVanityPathCacheInitInBackground() {
+        return this.config.resource_resolver_vanitypath_cache_in_background();
+    }
+
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.config.resource_resolver_optimize_alias_resolution();
     }

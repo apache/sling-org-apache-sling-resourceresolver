@@ -128,6 +128,10 @@ public @interface ResourceResolverFactoryConfig {
                             "are processed and added to the mappoing table.")
     boolean resource_resolver_enable_vanitypath() default true;
 
+    @AttributeDefinition(name = "Vanity Path Cache Init In Background",
+        description = "This flag controls whether the vanity path cache will be initialized immediately or later as a background task.")
+    boolean resource_resolver_vanitypath_cache_in_background() default false;
+
     @AttributeDefinition(name = "Maximum number of cached vanity path entries",
         description = "The maximum number of cached vanity path entries. " +
                     "Default is -1 (no limit)")
