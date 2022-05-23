@@ -18,6 +18,7 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.LoginException;
@@ -58,13 +59,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -129,7 +130,11 @@ public class MapEntries implements
 
     private Map<String, List<MapEntry>> resolveMapsMap;
 
+    // Temporary cache for use while doing async vanity path query
+    private Map<String, List<MapEntry>> temporaryResolveMapsMap;
     private List<Map.Entry<String, ResourceChange.ChangeType>> resourceChangeQueue;
+    private AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
+    private AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
     private Collection<MapEntry> mapMaps;
 
@@ -260,7 +265,7 @@ public class MapEntries implements
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
                     vpinit.start();
                 } else {
-                    vpi.load();
+                    vpi.run();
                 }
             }
         } finally {
@@ -270,6 +275,8 @@ public class MapEntries implements
 
     private class VanityPathInitializer implements Runnable {
 
+        private int SIZELIMIT = 10000;
+
         private MapConfigurationProvider factory;
 
         public VanityPathInitializer(MapConfigurationProvider factory) {
@@ -278,10 +285,7 @@ public class MapEntries implements
 
         @Override
         public void run() {
-            execute();
-        }
-
-        public void load() {
+            temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
             execute();
         }
 
@@ -331,6 +335,10 @@ public class MapEntries implements
                 log.debug("vanity path init - end");
             } catch (LoginException ex) {
                 log.error("VanityPath init failed", ex);
+            } finally {
+                log.debug("dropping temporary resolver map - {}/{} entries, {} hits, {} misses", temporaryResolveMapsMap.size(),
+                        SIZELIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
+                temporaryResolveMapsMap = null;
             }
         }
     }
@@ -692,6 +700,9 @@ public class MapEntries implements
         return Collections.unmodifiableMap(vanityTargets);
     }
 
+    // special singleton entry for negative cache entries
+    private static final List<MapEntry> NO_MAP_ENTRIES = Collections.emptyList();
+
     /**
      * get the MapEntry list containing all the nodes having a specific vanityPath
      */
@@ -701,12 +712,27 @@ public class MapEntries implements
         if (!vanityPathsProcessed.get() || BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath)) {
             mapEntries = this.resolveMapsMap.get(vanityPath);
             if (mapEntries == null) {
-                Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
-                mapEntries = mapEntry.get(vanityPath);
+                if (!vanityPathsProcessed.get() && temporaryResolveMapsMap != null) {
+                    mapEntries = temporaryResolveMapsMap.get(vanityPath);
+                    if (mapEntries != null) {
+                        temporaryResolveMapsMapHits.incrementAndGet();
+                        log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
+                    } else {
+                        temporaryResolveMapsMapMisses.incrementAndGet();
+                    }
+                }
+                if (mapEntries == null) {
+                    Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
+                    mapEntries = mapEntry.get(vanityPath);
+                    if (!vanityPathsProcessed.get() && temporaryResolveMapsMap != null) {
+                        log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
+                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? NO_MAP_ENTRIES : mapEntries);
+                    }
+                }
             }
         }
 
-        return mapEntries;
+        return mapEntries == NO_MAP_ENTRIES ? null : mapEntries;
     }
 
     /**
