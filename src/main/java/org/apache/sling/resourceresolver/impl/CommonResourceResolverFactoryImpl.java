@@ -391,7 +391,12 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
         return this.activator.getDefaultVanityPathRedirectStatus();
     }
 
-    /**
+    @Override
+    public boolean isVanityPathCacheInitInBackground() {
+        return this.activator.isVanityPathCacheInitInBackground();
+    }
+
+   /**
      * get's the ServiceTracker of the ResourceAccessSecurity service
      */
     public ResourceAccessSecurityTracker getResourceAccessSecurityTracker () {
