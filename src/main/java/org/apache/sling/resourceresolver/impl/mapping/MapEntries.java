@@ -265,7 +265,7 @@ public class MapEntries implements
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
                     vpinit.start();
                 } else {
-                    vpi.load();
+                    vpi.run();
                 }
             }
         } finally {
@@ -285,17 +285,6 @@ public class MapEntries implements
 
         @Override
         public void run() {
-            temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
-//            try {
-//                Thread.sleep(300000);
-//            } catch (InterruptedException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
-            execute();
-        }
-
-        public void load() {
             temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
             execute();
         }
