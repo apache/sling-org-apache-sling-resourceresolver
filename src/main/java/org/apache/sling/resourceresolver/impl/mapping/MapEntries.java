@@ -1077,25 +1077,28 @@ public class MapEntries implements
      */
     private boolean addEntry(final Map<String, List<MapEntry>> entryMap, final String key, final MapEntry entry) {
 
-        if (entry==null){
+        if (entry == null) {
+            log.trace("trying to add null entry for {}", key);
             return false;
-        }
-
-        List<MapEntry> entries = entryMap.get(key);
-        if (entries == null) {
-            entries = new ArrayList<>();
-            entries.add(entry);
-            // and finally sort list
-            Collections.sort(entries);
-            entryMap.put(key, entries);
         } else {
-            List<MapEntry> entriesCopy =new ArrayList<>(entries);
-            entriesCopy.add(entry);
-            // and finally sort list
-            Collections.sort( entriesCopy);
-            entryMap.put(key, entriesCopy);
+            List<MapEntry> entries = entryMap.get(key);
+            if (entries == null) {
+                entries = new ArrayList<>();
+                entries.add(entry);
+                entryMap.put(key, Collections.synchronizedList(entries));
+            } else {
+                entries.add(entry);
+                // and finally sort list
+                Collections.sort(entries);
+                int size = entries.size();
+                if (size == 10) {
+                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
+                } else if (size == 100) {
+                    log.info(">= 100 MapEntries for {} - check your configuration", key);
+                }
+            }
+            return true;
         }
-        return true;
     }
 
     /**
