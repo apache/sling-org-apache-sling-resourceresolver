@@ -1085,12 +1085,14 @@ public class MapEntries implements
             if (entries == null) {
                 entries = new ArrayList<>();
                 entries.add(entry);
-                entryMap.put(key, Collections.synchronizedList(entries));
+                entryMap.put(key, entries);
             } else {
-                entries.add(entry);
+                List<MapEntry> entriesCopy = new ArrayList<>(entries);
+                entriesCopy.add(entry);
                 // and finally sort list
-                Collections.sort(entries);
-                int size = entries.size();
+                Collections.sort(entriesCopy);
+                entryMap.put(key, entriesCopy);
+                int size = entriesCopy.size();
                 if (size == 10) {
                     log.debug(">= 10 MapEntries for {} - check your configuration", key);
                 } else if (size == 100) {
