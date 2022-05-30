@@ -34,10 +34,13 @@ import org.osgi.service.component.annotations.Reference;
 
 /**
  *  Export metrics for the resource resolver bundle:
- *  
- *  org.apache.sling.resourceresolver.numberOfVanityPaths - the total number of vanity paths
- *  org.apache.sling.resourceresolver.numberOfAliases  -- the total number of aliases
- *  org.apache.sling.resourceresolver.unclosedResourceResolvers  -- the total number of unclosed resource resolvers
+ *
+ *  org.apache.sling.resourceresolver.numberOfVanityPaths -- the total number of vanity paths
+ *  org.apache.sling.resourceresolver.numberOfVanityPathLookups -- the total number of vanity path lookups
+ *  org.apache.sling.resourceresolver.numberOfVanityPathBloomNegatives -- the total number of vanity path lookups filtered by the bloom filter
+ *  org.apache.sling.resourceresolver.numberOfVanityPathBloomFalsePositives -- the total number of vanity path lookup that passed the bloom filter but were false positives
+ *  org.apache.sling.resourceresolver.numberOfAliases -- the total number of aliases
+ *  org.apache.sling.resourceresolver.unclosedResourceResolvers -- the total number of unclosed resource resolvers
  *
  */
 
@@ -55,7 +58,19 @@ public class ResourceResolverMetrics {
     // number of vanity paths
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathsGauge;
     private Supplier<Long> numberOfVanityPathsSupplier = ZERO_SUPPLIER;
-    
+
+    // total number of vanity path lookups
+    private ServiceRegistration<Gauge<Long>> numberOfVanityPathLookupsGauge;
+    private Supplier<Long> numberOfVanityPathLookupsSupplier = ZERO_SUPPLIER;
+
+    // number of vanity path lookups filtered by Bloom filter
+    private ServiceRegistration<Gauge<Long>> numberOfVanityPathBloomNegativeGauge;
+    private Supplier<Long> numberOfVanityPathBloomNegativeSupplier = ZERO_SUPPLIER;
+
+    // number of vanity path lookups passing the Bloom filter but being false positives
+    private ServiceRegistration<Gauge<Long>> numberOfVanityPathBloomFalsePositiveGauge;
+    private Supplier<Long> numberOfVanityPathBloomFalsePositiveSupplier = ZERO_SUPPLIER;
+
     // number of aliases
     private ServiceRegistration<Gauge<Long>> numberOfAliasesGauge;
     private Supplier<Long> numberOfAliasesSupplier = ZERO_SUPPLIER;
@@ -66,16 +81,22 @@ public class ResourceResolverMetrics {
     @Activate
     protected void activate(BundleContext bundleContext) {
         numberOfVanityPathsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPaths", () -> numberOfVanityPathsSupplier );
+        numberOfVanityPathLookupsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathLookups", () -> numberOfVanityPathLookupsSupplier );
+        numberOfVanityPathBloomNegativeGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomNegatives", () -> numberOfVanityPathBloomNegativeSupplier );
+        numberOfVanityPathBloomFalsePositiveGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomFalsePositives", () -> numberOfVanityPathBloomFalsePositiveSupplier );
         numberOfAliasesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfAliases", () -> numberOfAliasesSupplier );
         unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX  + ".unclosedResourceResolvers");
     }
-    
+
     @Deactivate
     protected void deactivate() {
         numberOfVanityPathsGauge.unregister();
+        numberOfVanityPathLookupsGauge.unregister();
+        numberOfVanityPathBloomNegativeGauge.unregister();
+        numberOfVanityPathBloomFalsePositiveGauge.unregister();
         numberOfAliasesGauge.unregister();
     }
-    
+
     /**
      * Set the number of vanity paths in the system
      * @param supplier a supplier returning the number of vanity paths
@@ -83,7 +104,31 @@ public class ResourceResolverMetrics {
     public void setNumberOfVanityPathsSupplier(Supplier<Long> supplier) {
         numberOfVanityPathsSupplier = supplier;
     }
-    
+
+    /**
+     * Set the number of vanity path lookups in the system
+     * @param supplier a supplier returning the number of vanity path lookups
+     */
+    public void setNumberOfVanityPathLookupsSupplier(Supplier<Long> supplier) {
+        numberOfVanityPathLookupsSupplier = supplier;
+    }
+
+    /**
+     * Set the number of vanity path lookups in the system that were filtered
+     * @param supplier a supplier returning the number of vanity path lookups
+     */
+    public void setNumberOfVanityPathBloomNegativeSupplier(Supplier<Long> supplier) {
+        numberOfVanityPathBloomNegativeSupplier = supplier;
+    }
+
+    /**
+     * Set the number of vanity path lookups in the system that were not catched by the Bloom filter
+     * @param supplier a supplier returning the number of vanity path lookups
+     */
+    public void setNumberOfVanityPathBloomFalsePositiveSupplier(Supplier<Long> supplier) {
+        numberOfVanityPathBloomFalsePositiveSupplier = supplier;
+    }
+
     /**
      * Set the number of aliases in the system
      * @param supplier a supplier returning the number of aliases
