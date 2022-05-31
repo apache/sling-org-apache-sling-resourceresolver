@@ -35,7 +35,7 @@ import org.osgi.service.component.annotations.Reference;
 /**
  *  Export metrics for the resource resolver bundle:
  *
- *  org.apache.sling.resourceresolver.numberOfVanityPaths -- the total number of vanity paths
+ *  org.apache.sling.resourceresolver.numberOfVanityPaths -- the total number of vanity paths in the cache
  *  org.apache.sling.resourceresolver.numberOfVanityPathLookups -- the total number of vanity path lookups
  *  org.apache.sling.resourceresolver.numberOfVanityPathBloomNegatives -- the total number of vanity path lookups filtered by the bloom filter
  *  org.apache.sling.resourceresolver.numberOfVanityPathBloomFalsePositives -- the total number of vanity path lookup that passed the bloom filter but were false positives
