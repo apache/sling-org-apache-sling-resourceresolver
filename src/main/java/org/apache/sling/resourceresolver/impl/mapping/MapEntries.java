@@ -1256,7 +1256,7 @@ public class MapEntries implements
         Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached()
                 || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
 
-        while (i.hasNext() && isCacheComplete.get()) {
+        while (i.hasNext()) {
             count += 1;
             final Resource resource = i.next();
             final String resourcePath = resource.getPath();
