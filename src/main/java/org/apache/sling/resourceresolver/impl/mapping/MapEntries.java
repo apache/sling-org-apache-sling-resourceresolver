@@ -1156,70 +1156,51 @@ public class MapEntries implements
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
-        // ignore system tree
-        if(resource.getPath() == null){
+
+        if (resource.getPath() == null) {
             throw new IllegalArgumentException("Unexpected null path");
         }
 
-        final String resourceName;
-        final String parentPath;
+        // resource containing the alias
+        final Resource containingResource;
+
         if (JCR_CONTENT.equals(resource.getName())) {
-            final Resource containingResource = resource.getParent();
-            if ( containingResource != null ) {
-                final Resource parent = containingResource.getParent();
-                if ( parent != null ) {
-                    parentPath = parent.getPath();
-                    resourceName = containingResource.getName();
-                } else {
-                    parentPath = null;
-                    resourceName = null;
-                }
-            } else {
-                parentPath = null;
-                resourceName = null;
-            }
+            containingResource = resource.getParent();
         } else {
-            final Resource parent = resource.getParent();
-            if ( parent != null ) {
-                parentPath = parent.getPath();
-                resourceName = resource.getName();
-            } else {
-                parentPath = null;
-                resourceName = null;
-            }
+            containingResource = resource;
         }
-        boolean hasAlias = false;
-        if ( parentPath != null ) {
+
+        final Resource parent = containingResource.getParent();
+
+        if (parent == null) {
+            log.debug("parent is null for alias on {}.", resource.getName());
+            return false;
+        }
+        else {
+            // resource the alias is for
+            String resourceName = containingResource.getName();
+
+            // parent path of that resource
+            String parentPath = parent.getPath();
+
+            boolean hasAlias = false;
+
             // require properties
             final ValueMap props = resource.getValueMap();
             final String[] aliasArray = props.get(ResourceResolverImpl.PROP_ALIAS, String[].class);
 
-            if ( aliasArray != null ) {
+            if (aliasArray != null) {
                 log.debug("Found alias, total size {}", aliasArray.length);
-                Map<String, String> parentMap = map.get(parentPath);
                 for (final String alias : aliasArray) {
-                    if (parentMap != null && parentMap.containsKey(alias)) {
-                        log.warn("Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.", new Object[] {
-                                alias,
-                                parentPath,
-                                parentMap.get(alias),
-                                resourceName
-                        });
+                    if (isAliasValid(alias)) {
+                        log.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.", alias, parentPath);
                     } else {
-                        // check alias
-                        boolean invalid = alias.equals("..") || alias.equals(".");
-                        if ( !invalid ) {
-                            for(final char c : alias.toCharArray()) {
-                                // invalid if / or # or a ?
-                                if ( c == '/' || c == '#' || c == '?' ) {
-                                    invalid = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if ( invalid ) {
-                            log.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.",
-                                    alias, parentPath);
+                        Map<String, String> parentMap = map.get(parentPath);
+
+                        if (parentMap != null && parentMap.containsKey(alias)) {
+                            log.warn(
+                                    "Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.",
+                                    new Object[] { alias, parentPath, parentMap.get(alias), resourceName });
                         } else {
                             if (parentMap == null) {
                                 parentMap = new LinkedHashMap<>();
@@ -1231,8 +1212,26 @@ public class MapEntries implements
                     }
                 }
             }
+
+            return hasAlias;
         }
-        return hasAlias;
+    }
+
+    /**
+     * Check alias syntax
+     */
+    private static boolean isAliasValid(String alias) {
+        boolean invalid = alias.equals("..") || alias.equals(".");
+        if (!invalid) {
+            for (final char c : alias.toCharArray()) {
+                // invalid if / or # or a ?
+                if (c == '/' || c == '#' || c == '?') {
+                    invalid = true;
+                    break;
+                }
+            }
+        }
+        return invalid;
     }
 
     /**
