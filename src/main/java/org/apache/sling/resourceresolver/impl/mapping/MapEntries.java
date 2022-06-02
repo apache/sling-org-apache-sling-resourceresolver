@@ -1197,15 +1197,17 @@ public class MapEntries implements
                     } else {
                         Map<String, String> parentMap = map.get(parentPath);
 
-                        if (parentMap != null && parentMap.containsKey(alias)) {
+                        if (parentMap == null) {
+                            parentMap = new LinkedHashMap<>();
+                            map.put(parentPath, parentMap);
+                        }
+
+                        String current = parentMap.get(alias);
+                        if (current != null) {
                             log.warn(
                                     "Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.",
-                                    new Object[] { alias, parentPath, parentMap.get(alias), resourceName });
+                                    alias, parentPath, current, resourceName);
                         } else {
-                            if (parentMap == null) {
-                                parentMap = new LinkedHashMap<>();
-                                map.put(parentPath, parentMap);
-                            }
                             parentMap.put(alias, resourceName);
                             hasAlias = true;
                         }
