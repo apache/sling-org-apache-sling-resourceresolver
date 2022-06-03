@@ -1157,10 +1157,6 @@ public class MapEntries implements
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
 
-        if (resource.getPath() == null) {
-            throw new IllegalArgumentException("Unexpected null path");
-        }
-
         // resource containing the alias
         final Resource containingResource;
 
