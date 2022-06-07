@@ -71,7 +71,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class MapEntries implements
@@ -1253,15 +1252,15 @@ public class MapEntries implements
 
         long count = 0;
         long processStart = System.nanoTime();
-        Supplier<Boolean> isCacheComplete = () -> isAllVanityPathEntriesCached()
-                || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
 
-        while (i.hasNext() && isCacheComplete.get()) {
+        while (i.hasNext()) {
             count += 1;
             final Resource resource = i.next();
             final String resourcePath = resource.getPath();
             if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
-                loadVanityPath(resource, resolveMapsMap, targetPaths, isCacheComplete.get());
+                final boolean addToCache = isAllVanityPathEntriesCached()
+                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
