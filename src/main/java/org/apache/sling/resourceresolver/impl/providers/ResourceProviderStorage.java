@@ -68,7 +68,8 @@ public class ResourceProviderStorage {
                 this.languageQueryableHandlers.add(h);
             }
         }
-        Collections.sort(this.adaptableHandlers, new Comparator<ResourceProviderHandler>() {
+        // sort all lists for consistency
+        final Comparator<ResourceProviderHandler> comp = new Comparator<ResourceProviderHandler>() {
 
             @Override
             public int compare(final ResourceProviderHandler o1, final ResourceProviderHandler o2) {
@@ -82,7 +83,11 @@ public class ResourceProviderStorage {
                 }
                 return i2.getServiceReference().compareTo(i1.getServiceReference());
             }
-        });
+        };
+        Collections.sort(this.authRequiredHandlers, comp);
+        Collections.sort(this.adaptableHandlers, comp);
+        Collections.sort(this.attributableHandlers, comp);
+        Collections.sort(this.languageQueryableHandlers, comp);
         this.handlersTree = new PathTree<>(handlers);
     }
 
