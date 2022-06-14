@@ -51,13 +51,20 @@ public class Fixture {
 
     public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, 
             AuthType authType, int serviceRanking) throws InvalidSyntaxException {
-        
-        Dictionary<String, Object> props = new Hashtable<>();
+        return registerResourceProvider(rp, root, authType, serviceRanking, true, null);
+    }
+
+    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, 
+    AuthType authType, int serviceRanking, boolean modifiable, ResourceProviderInfo.Mode mode) throws InvalidSyntaxException {
+            Dictionary<String, Object> props = new Hashtable<>();
         props.put(ResourceProvider.PROPERTY_ROOT, root);
         props.put(ResourceProvider.PROPERTY_AUTHENTICATE, authType.name());
-        props.put(ResourceProvider.PROPERTY_MODIFIABLE, Boolean.TRUE.toString());
+        props.put(ResourceProvider.PROPERTY_MODIFIABLE, modifiable);
         if (serviceRanking != 0) {
             props.put(Constants.SERVICE_RANKING, serviceRanking);
+        }
+        if ( mode != null ) {
+            props.put(ResourceProviderInfo.PROP_MODE, mode.name());
         }
         
         ServiceRegistration registration = bc.registerService(ResourceProvider.class.getName(), rp, props);

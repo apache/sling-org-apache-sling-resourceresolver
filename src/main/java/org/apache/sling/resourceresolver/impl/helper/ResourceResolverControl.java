@@ -800,7 +800,7 @@ public class ResourceResolverControl {
      * @param path The path
      * @return The modifiable provider or {@code null}
      */
-    private @Nullable AuthenticatedResourceProvider getBestMatchingModifiableProvider(
+    @Nullable AuthenticatedResourceProvider getBestMatchingModifiableProvider(
             final ResourceResolverContext context,
             final String path)  {
         String resourcePath = path;

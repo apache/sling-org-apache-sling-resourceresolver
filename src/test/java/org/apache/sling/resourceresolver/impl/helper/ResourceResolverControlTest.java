@@ -61,6 +61,7 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.stateful.AuthenticatedResourceProvider;
 import org.apache.sling.resourceresolver.impl.providers.stateful.ProviderManager;
 import org.apache.sling.resourceresolver.impl.providers.tree.PathTree;
@@ -491,11 +492,11 @@ public class ResourceResolverControlTest {
         int count = 0;
 
         while ( resources.hasNext() ) {
-            assertThat("resources[0].path", resources.next().getPath(), equalTo("/some/path/object"));
+            assertEquals("resources[0].path", "/some/path/object", resources.next().getPath());
             count++;
         }
 
-        assertThat("query result count", count, Matchers.equalTo(1));
+        assertEquals("query result count", 1, count);
     }
 
     @Test
@@ -663,5 +664,43 @@ public class ResourceResolverControlTest {
         public Iterator<Resource> findResources(ResolveContext<Object> ctx, String query, String language) {
             throw new UnsupportedOperationException();
         }
+    }
+
+    @Test public void testGetBestMatchingModifiableResourceProviderPassthrough() throws Exception {
+        BundleContext bc = MockOsgi.newBundleContext();
+
+        Fixture fixture = new Fixture(bc);
+
+        // root provider
+        final ResourceProvider<?> rootProvider = Mockito.mock(ResourceProvider.class);
+        ResourceProviderInfo info = fixture.registerResourceProvider(rootProvider, "/", AuthType.required);
+        ResourceProviderHandler handler = new ResourceProviderHandler(bc, info);
+        // sub provider
+        ResourceProvider<?> subProvider = Mockito.mock(ResourceProvider.class);
+        ResourceProviderInfo subInfo = fixture.registerResourceProvider(subProvider, "/libs", AuthType.required, 0, false, ResourceProviderInfo.Mode.PASSTHROUGH);
+        ResourceProviderHandler subHandler = new ResourceProviderHandler(bc, subInfo);
+
+        handler.activate();
+        subHandler.activate();
+
+        ResourceResolver rr = mock(ResourceResolver.class);
+        ResourceAccessSecurityTracker securityTracker = Mockito.mock(ResourceAccessSecurityTracker.class);
+        authInfo = getAuthInfo();
+
+        handlers = Arrays.asList(handler, subHandler);
+        final ResourceProviderStorage storage = new ResourceProviderStorage(handlers);
+
+        final ResourceResolverControl control = new ResourceResolverControl(false, getAuthInfo(), new ResourceProviderStorageProvider() {
+
+            @Override
+            public ResourceProviderStorage getResourceProviderStorage() {
+                return storage;
+            }
+        });
+        final ResourceResolverContext rrContext = new ResourceResolverContext(rr, securityTracker);
+
+        final AuthenticatedResourceProvider p = control.getBestMatchingModifiableProvider(rrContext, "/libs/foo");
+        p.create(rr, "/foo", null);
+        Mockito.verify(rootProvider).create(Mockito.any(), Mockito.eq("/foo"), Mockito.isNull(Map.class));
     }
 }
