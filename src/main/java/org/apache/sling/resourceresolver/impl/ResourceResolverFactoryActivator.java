@@ -90,7 +90,7 @@ public class ResourceResolverFactoryActivator {
     private volatile Mapping[] mappings;
 
     /** The fake URLs */
-    private volatile BidiMap virtualURLMap;
+    private volatile BidiMap<String, String> virtualURLMap;
 
     /** the search path for ResourceResolver.getResource(String) */
     private volatile List<String> searchPath = Collections.emptyList();
@@ -171,7 +171,7 @@ public class ResourceResolverFactoryActivator {
     /**
      * This method is called from {@link MapEntries}
      */
-    public BidiMap getVirtualURLMap() {
+    public BidiMap<String, String> getVirtualURLMap() {
         return virtualURLMap;
     }
 
@@ -266,7 +266,7 @@ public class ResourceResolverFactoryActivator {
         this.bundleContext = bundleContext;
         this.config = config;
 
-        final BidiMap virtuals = new TreeBidiMap();
+        final BidiMap<String, String> virtuals = new TreeBidiMap<>();
         for (int i = 0; config.resource_resolver_virtual() != null && i < config.resource_resolver_virtual().length; i++) {
             final String[] parts = Mapping.split(config.resource_resolver_virtual()[i]);
             virtuals.put(parts[0], parts[2]);
