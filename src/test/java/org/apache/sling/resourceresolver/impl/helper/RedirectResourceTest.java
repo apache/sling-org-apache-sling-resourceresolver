@@ -28,7 +28,6 @@ import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.ValueMap;
 import org.junit.Test;
 
-@SuppressWarnings("deprecation")
 public class RedirectResourceTest {
 
     @Test public void testRedirectResource() {

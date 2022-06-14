@@ -18,18 +18,12 @@
  */
 package org.apache.sling.resourceresolver.impl.helper;
 
-import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -61,7 +55,6 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
-import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.stateful.AuthenticatedResourceProvider;
 import org.apache.sling.resourceresolver.impl.providers.stateful.ProviderManager;
 import org.apache.sling.resourceresolver.impl.providers.tree.PathTree;
@@ -70,7 +63,6 @@ import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.MockOsgi;
-import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -268,7 +260,7 @@ public class ResourceResolverControlTest {
      */
     @Test
     public void getResource_missing() {
-        assertThat(crp.getResource(context, "/nothing", null, null, false), nullValue());
+        assertNull(crp.getResource(context, "/nothing", null, null, false));
     }
 
     /**
@@ -276,8 +268,8 @@ public class ResourceResolverControlTest {
      */
     @Test
     public void getResource_found() {
-        assertThat(crp.getResource(context, "/something", null, null, false), not(nullValue()));
-        assertThat(crp.getResource(context, "/some/path/object", null, null, false), not(nullValue()));
+        assertNotNull(crp.getResource(context, "/something", null, null, false));
+        assertNotNull(crp.getResource(context, "/some/path/object", null, null, false));
     }
 
 
@@ -287,8 +279,8 @@ public class ResourceResolverControlTest {
     @Test
     public void getParent_found() {
         Resource parent = crp.getParent(context, ResourceUtil.getParent(somethingResource.getPath()), somethingResource);
-        assertThat(parent, notNullValue());
-        assertThat("parent.path", parent.getPath(), equalTo("/"));
+        assertNotNull(parent);
+        assertEquals("parent.path", "/", parent.getPath());
     }
 
 
@@ -299,7 +291,7 @@ public class ResourceResolverControlTest {
     @Test
     public void getParent_synthetic() {
         Resource parent = crp.getParent(context, ResourceUtil.getParent(subProviderResource.getPath()), subProviderResource);
-        assertThat(parent, notNullValue());
+        assertNotNull(parent);
         assertTrue("parent is a synthetic resource", ResourceUtil.isSyntheticResource(parent));
     }
 
@@ -339,10 +331,10 @@ public class ResourceResolverControlTest {
             all.put(child.getPath(), child);
         }
 
-        assertThat(all.entrySet(), Matchers.hasSize(3));
-        assertThat("Resource at /something", all.get("/something"), not(nullValue()));
-        assertThat("Resource at /some", all.get("/some"), not(nullValue()));
-        assertThat("Resource at /foo", all.get("/foo"), not(nullValue()));
+        assertEquals(3, all.entrySet().size());
+        assertNotNull("Resource at /something", all.get("/something"));
+        assertNotNull("Resource at /some", all.get("/some"));
+        assertNotNull("Resource at /foo", all.get("/foo"));
     }
 
     /**
@@ -360,8 +352,8 @@ public class ResourceResolverControlTest {
             all.put(child.getPath(), child);
         }
 
-        assertThat(all.entrySet(), Matchers.hasSize(1));
-        assertThat("Resource at /some/path", all.get("/some/path"), not(nullValue()));
+        assertEquals(1, all.entrySet().size());
+        assertNotNull("Resource at /some/path", all.get("/some/path"));
         assertSame(somePathResource, all.get("/some/path"));
     }
 
@@ -397,8 +389,7 @@ public class ResourceResolverControlTest {
 
         Resource resource = crp.copy(context, "/some/path/object", "/some/path/new");
 
-
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
     }
 
     /**
@@ -415,7 +406,7 @@ public class ResourceResolverControlTest {
 
         Resource resource = crp.copy(context, "/some/path/object", "/");
 
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
     }
 
     /**
@@ -433,7 +424,7 @@ public class ResourceResolverControlTest {
 
         Resource resource = crp.move(context, "/some/path/object", "/some/path/new");
 
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
     }
 
     /**
@@ -449,7 +440,7 @@ public class ResourceResolverControlTest {
 
         Resource resource = crp.move(context, "/some/path/object", "/");
 
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
 
         verify(subProvider).delete(mockContext(), Mockito.eq(subProviderResource));
     }
@@ -459,8 +450,11 @@ public class ResourceResolverControlTest {
      */
     @Test
     public void queryLanguages() throws PersistenceException {
-
-        assertThat(crp.getSupportedLanguages(context), arrayContainingInAnyOrder(QL_NOOP, QL_MOCK, QL_ANOTHER_MOCK));
+        final List<String> result = Arrays.asList(crp.getSupportedLanguages(context));
+        assertEquals(3, result.size());
+        assertTrue(result.contains(QL_NOOP));
+        assertTrue(result.contains(QL_MOCK));
+        assertTrue(result.contains(QL_ANOTHER_MOCK));
     }
 
     /**
@@ -474,11 +468,11 @@ public class ResourceResolverControlTest {
         int count = 0;
 
         while ( queryResources.hasNext() ) {
-            assertThat("ValueMap returned from query", queryResources.next(), hasEntry("key", (Object) "value"));
+            assertEquals("ValueMap returned from query", "value", queryResources.next().get("key"));
             count++;
         }
 
-        assertThat("query result count", count, Matchers.equalTo(1));
+        assertEquals("query result count", 1, count);
     }
 
     /**
