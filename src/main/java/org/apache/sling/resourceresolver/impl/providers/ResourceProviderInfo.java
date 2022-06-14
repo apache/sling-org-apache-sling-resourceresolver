@@ -30,6 +30,18 @@ import org.slf4j.LoggerFactory;
  */
 public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
+    /** mode for the resource resolver (should move to api) */
+    public static final String PROP_MODE = "provider.mode";
+    /** Default mode */
+    public static final String MODE_OVERLAY = "overlay";
+    /** Passthrough mode */
+    public static final String MODE_PASSTHROUGH = "passthrough";
+    
+    public enum Mode {
+        OVERLAY,
+        PASSTHROUGH
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(ResourceProviderInfo.class);
 
     private final ServiceReference ref;
@@ -50,6 +62,8 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
     private final boolean attributable;
 
+    private final Mode mode;
+
     public ResourceProviderInfo(final ServiceReference ref) {
         this.ref = ref;
         this.path = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_ROOT), "");
@@ -67,6 +81,14 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
         this.adaptable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE), false);
         this.refreshable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE), false);
         this.attributable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE), false);
+        final String modeValue = PropertiesUtil.toString(ref.getProperty(PROP_MODE), MODE_OVERLAY).toUpperCase();
+        Mode mode = null;
+        try {
+            mode = Mode.valueOf(modeValue);
+        } catch ( final IllegalArgumentException iae) {
+            logger.error("Illegal mode {} for resource provider {}", modeValue, name);
+        }
+        this.mode = mode;
     }
 
     public boolean isValid() {
@@ -79,6 +101,10 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
             logger.debug("ResourceProvider has null authType, invalid");
             return false;
         }
+        if ( this.mode == null ) {
+            logger.debug("ResourceProvider has null mode, invalid");
+            return false;
+        }
         return true;
     }
 
@@ -88,6 +114,10 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
     public String getPath() {
         return this.path;
+    }
+
+    public Mode getMode() {
+        return this.mode;
     }
 
     @Override

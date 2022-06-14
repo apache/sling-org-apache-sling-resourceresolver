@@ -47,6 +47,7 @@ import org.apache.sling.api.resource.path.PathBuilder;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo.Mode;
 import org.apache.sling.resourceresolver.impl.providers.stateful.AuthenticatedResourceProvider;
 import org.apache.sling.resourceresolver.impl.providers.tree.Node;
 import org.apache.sling.resourceresolver.impl.providers.tree.PathTree;
@@ -802,15 +803,23 @@ public class ResourceResolverControl {
     private @Nullable AuthenticatedResourceProvider getBestMatchingModifiableProvider(
             final ResourceResolverContext context,
             final String path)  {
-        final Node<ResourceProviderHandler> node = resourceProviderTracker.getResourceProviderStorage().getTree().getBestMatchingNode(path);
-        if ( node != null && node.getValue().getInfo().isModifiable() ) {
-            try {
-                return context.getProviderManager().getOrCreateProvider(node.getValue(), this);
-            } catch ( final LoginException le ) {
-                // ignore
-                return null;
+        String resourcePath = path;
+        do {
+            final Node<ResourceProviderHandler> node = resourceProviderTracker.getResourceProviderStorage().getTree().getBestMatchingNode(resourcePath);
+            if ( node.getValue().getInfo().isModifiable() ) {
+                try {
+                    return context.getProviderManager().getOrCreateProvider(node.getValue(), this);
+                } catch ( final LoginException le ) {
+                    // ignore
+                    return null;
+                }    
             }
-        }
+            if ( node.getValue().getInfo().getMode() == Mode.PASSTHROUGH ) {
+                resourcePath = ResourceUtil.getParent(resourcePath);
+            } else {
+                resourcePath = null;
+            }
+        } while ( resourcePath != null );
         return null;
     }
 
