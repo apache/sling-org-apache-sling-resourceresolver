@@ -44,7 +44,8 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
     private static final Logger logger = LoggerFactory.getLogger(ResourceProviderInfo.class);
 
-    private final ServiceReference ref;
+    @SuppressWarnings("rawtypes")
+    private final ServiceReference<ResourceProvider> ref;
 
     private final String path;
 
@@ -64,7 +65,8 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
     private final Mode mode;
 
-    public ResourceProviderInfo(final ServiceReference ref) {
+    @SuppressWarnings("rawtypes")
+    public ResourceProviderInfo(final ServiceReference<ResourceProvider> ref) {
         this.ref = ref;
         this.path = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_ROOT), "");
         this.name = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_NAME), null);
@@ -108,7 +110,8 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
         return true;
     }
 
-    public ServiceReference getServiceReference() {
+    @SuppressWarnings("rawtypes")
+    public ServiceReference<ResourceProvider> getServiceReference() {
         return this.ref;
     }
 
