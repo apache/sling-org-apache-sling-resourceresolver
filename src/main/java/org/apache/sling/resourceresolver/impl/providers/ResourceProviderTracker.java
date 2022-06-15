@@ -486,12 +486,12 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
         final Set<String> excludedPaths = new HashSet<>();
         final Path handlerPath = new Path(handler.getPath());
 
-        for(final String otherPath : handlers.keySet()) {
-            if ( handler.getInfo().getMode() == Mode.PASSTHROUGH ) {
+        for(final Map.Entry<String, List<ResourceProviderHandler>> entry : handlers.entrySet()) {
+            if ( entry.getValue().get(0).getInfo().getMode() == Mode.PASSTHROUGH ) {
                 continue;
             }
-            if ( !handler.getPath().equals(otherPath) && handlerPath.matches(otherPath) ) {
-                excludedPaths.add(otherPath);
+            if ( !handler.getPath().equals(entry.getKey()) && handlerPath.matches(entry.getKey()) ) {
+                excludedPaths.add(entry.getKey());
             }
         }
 
