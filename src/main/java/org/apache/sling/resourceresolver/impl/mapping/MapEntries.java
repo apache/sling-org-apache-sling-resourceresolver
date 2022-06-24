@@ -1251,6 +1251,7 @@ public class MapEntries implements
         log.debug("end vanityPath query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
 
         long count = 0;
+        long countInScope = 0;
         long processStart = System.nanoTime();
 
         while (i.hasNext()) {
@@ -1258,13 +1259,21 @@ public class MapEntries implements
             final Resource resource = i.next();
             final String resourcePath = resource.getPath();
             if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
+                countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
                 loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} vanityPaths in {}ms", count, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        log.debug("processed {} vanityPaths (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        if (!isAllVanityPathEntriesCached()) {
+            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
+                log.warn("Number of vanity paths in scope ({}) exceeds configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
+                log.info("Number of vanity paths in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            }
+        }
 
         return targetPaths;
     }
