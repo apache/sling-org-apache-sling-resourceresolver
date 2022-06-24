@@ -1269,7 +1269,7 @@ public class MapEntries implements
         log.debug("processed {} vanityPaths (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
         if (!isAllVanityPathEntriesCached()) {
             if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of vanity paths in scope ({}) exceeds configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+                log.warn("Number of vanity paths in scope ({}) exceeds configured cache size ({}); this and any following vanity path will be much slower. Consider increasing the cache size or decrease the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
             } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
                 log.info("Number of vanity paths in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
             }
