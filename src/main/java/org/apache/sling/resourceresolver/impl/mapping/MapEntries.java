@@ -726,11 +726,9 @@ public class MapEntries implements
             long current = this.vanityPathLookups.incrementAndGet();
             if (current >= Long.MAX_VALUE - 100000) {
                 // reset counters when we get close the limit
-                synchronized (this) {
-                    this.vanityPathLookups.set(1);
-                    this.vanityPathBloomNegative.set(0);
-                    this.vanityPathBloomFalsePositive.set(0);
-                }
+                this.vanityPathLookups.set(1);
+                this.vanityPathBloomNegative.set(0);
+                this.vanityPathBloomFalsePositive.set(0);
                 log.info("Vanity Path metrics reset to 0");
             }
 
