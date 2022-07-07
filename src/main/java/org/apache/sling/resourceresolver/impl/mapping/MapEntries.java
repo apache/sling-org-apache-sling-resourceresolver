@@ -144,6 +144,9 @@ public class MapEntries implements
     private final ReentrantLock initializing = new ReentrantLock();
 
     private final AtomicLong vanityCounter;
+    private final AtomicLong vanityPathLookups;
+    private final AtomicLong vanityPathBloomNegative;
+    private final AtomicLong vanityPathBloomFalsePositive;
 
     private byte[] vanityBloomFilter;
 
@@ -175,11 +178,17 @@ public class MapEntries implements
         this.registration = registerResourceChangeListener(bundleContext);
 
         this.vanityCounter = new AtomicLong(0);
+        this.vanityPathLookups = new AtomicLong(0);
+        this.vanityPathBloomNegative = new AtomicLong(0);
+        this.vanityPathBloomFalsePositive = new AtomicLong(0);
         initializeVanityPaths();
 
         this.metrics = metrics;
         if (metrics.isPresent()) {
             this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
+            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
+            this.metrics.get().setNumberOfVanityPathBloomNegativeSupplier(vanityPathBloomNegative::get);
+            this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
             this.metrics.get().setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
         }
     }
@@ -708,10 +717,36 @@ public class MapEntries implements
     private List<MapEntry> getMapEntryList(String vanityPath) {
         List<MapEntry> mapEntries = null;
 
-        if (!vanityPathsProcessed.get() || BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath)) {
+        boolean initFinished = vanityPathsProcessed.get();
+        boolean probablyPresent = false;
+
+        if (initFinished) {
+            // total number of lookups after init (and when cache not complete)
+            long current = this.vanityPathLookups.incrementAndGet();
+            if (current >= Long.MAX_VALUE - 100000) {
+                // reset counters when we get close the limit
+                this.vanityPathLookups.set(1);
+                this.vanityPathBloomNegative.set(0);
+                this.vanityPathBloomFalsePositive.set(0);
+                log.info("Vanity Path metrics reset to 0");
+            }
+
+            // init is done - check the bloom filter
+            probablyPresent = BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath);
+            log.trace("bloom filter lookup for {} -> {}", vanityPath, probablyPresent);
+
+            if (!probablyPresent) {
+                // filtered by Bloom filter
+                this.vanityPathBloomNegative.incrementAndGet();
+            }
+        }
+
+        if (!initFinished || probablyPresent) {
+
             mapEntries = this.resolveMapsMap.get(vanityPath);
+
             if (mapEntries == null) {
-                if (!vanityPathsProcessed.get() && temporaryResolveMapsMap != null) {
+                if (!initFinished && temporaryResolveMapsMap != null) {
                     mapEntries = temporaryResolveMapsMap.get(vanityPath);
                     if (mapEntries != null) {
                         temporaryResolveMapsMapHits.incrementAndGet();
@@ -723,11 +758,15 @@ public class MapEntries implements
                 if (mapEntries == null) {
                     Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
                     mapEntries = mapEntry.get(vanityPath);
-                    if (!vanityPathsProcessed.get() && temporaryResolveMapsMap != null) {
+                    if (!initFinished && temporaryResolveMapsMap != null) {
                         log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
                         temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? NO_MAP_ENTRIES : mapEntries);
                     }
                 }
+            }
+            if (mapEntries == null && probablyPresent) {
+                // Bloom filter had a false positive
+                this.vanityPathBloomFalsePositive.incrementAndGet();
             }
         }
 
