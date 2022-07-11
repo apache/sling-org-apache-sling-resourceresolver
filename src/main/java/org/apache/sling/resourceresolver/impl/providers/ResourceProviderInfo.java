@@ -30,13 +30,6 @@ import org.slf4j.LoggerFactory;
  */
 public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
-    /** mode for the resource resolver (should move to api) */
-    public static final String PROP_MODE = "provider.mode";
-    /** Default mode */
-    public static final String MODE_OVERLAY = "overlay";
-    /** Passthrough mode */
-    public static final String MODE_PASSTHROUGH = "passthrough";
-    
     public enum Mode {
         OVERLAY,
         PASSTHROUGH
@@ -83,7 +76,7 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
         this.adaptable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE), false);
         this.refreshable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE), false);
         this.attributable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE), false);
-        final String modeValue = PropertiesUtil.toString(ref.getProperty(PROP_MODE), MODE_OVERLAY).toUpperCase();
+        final String modeValue = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_MODE), ResourceProvider.MODE_OVERLAY).toUpperCase();
         Mode mode = null;
         try {
             mode = Mode.valueOf(modeValue);

@@ -64,7 +64,7 @@ public class Fixture {
             props.put(Constants.SERVICE_RANKING, serviceRanking);
         }
         if ( mode != null ) {
-            props.put(ResourceProviderInfo.PROP_MODE, mode.name());
+            props.put(ResourceProvider.PROPERTY_MODE, mode.name());
         }
         
         ServiceRegistration registration = bc.registerService(ResourceProvider.class.getName(), rp, props);
