@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceDecorator;
+import org.apache.sling.commons.osgi.Order;
 import org.apache.sling.commons.osgi.ServiceUtil;
 
 /**
@@ -84,7 +85,7 @@ public class ResourceDecoratorTracker {
             final Map<String, Object> props) {
         synchronized (this.resourceDecorators) {
             this.resourceDecorators.add(new ResourceDecoratorEntry(decorator,
-                    ServiceUtil.getComparableForServiceRanking(props)));
+                    ServiceUtil.getComparableForServiceRanking(props, Order.ASCENDING)));
             Collections.sort(this.resourceDecorators);
             updateResourceDecoratorsArray();
         }

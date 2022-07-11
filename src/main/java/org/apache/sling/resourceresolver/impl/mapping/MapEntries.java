@@ -1458,11 +1458,11 @@ public class MapEntries implements
 
     private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
         // virtual uris
-        final Map<?, ?> virtuals = factory.getVirtualURLMap();
+        final Map<String, String> virtuals = factory.getVirtualURLMap();
         if (virtuals != null) {
-            for (final Entry<?, ?> virtualEntry : virtuals.entrySet()) {
-                final String extPath = (String) virtualEntry.getKey();
-                final String intPath = (String) virtualEntry.getValue();
+            for (final Entry<String, String> virtualEntry : virtuals.entrySet()) {
+                final String extPath = virtualEntry.getKey();
+                final String intPath = virtualEntry.getValue();
                 if (!extPath.equals(intPath)) {
                     // this regular expression must match the whole URL !!
                     final String url = "^" + ANY_SCHEME_HOST + extPath + "$";
@@ -1520,11 +1520,11 @@ public class MapEntries implements
         }
 
         // virtual uris
-        final Map<?, ?> virtuals = factory.getVirtualURLMap();
+        final Map<String, String> virtuals = factory.getVirtualURLMap();
         if (virtuals != null) {
-            for (final Entry<?, ?> virtualEntry : virtuals.entrySet()) {
-                final String extPath = (String) virtualEntry.getKey();
-                final String intPath = (String) virtualEntry.getValue();
+            for (final Entry<String, String> virtualEntry : virtuals.entrySet()) {
+                final String extPath = virtualEntry.getKey();
+                final String intPath = virtualEntry.getValue();
                 if (!extPath.equals(intPath)) {
                     // this regular expression must match the whole URL !!
                     final String path = "^" + intPath + "$";

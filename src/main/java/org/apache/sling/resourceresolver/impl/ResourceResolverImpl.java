@@ -21,7 +21,6 @@ package org.apache.sling.resourceresolver.impl;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
