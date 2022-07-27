@@ -114,7 +114,7 @@ public abstract class AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(
             Collections.<Resource> emptySet().iterator());
 
         map = setupEtcMapResource("/etc", "map");

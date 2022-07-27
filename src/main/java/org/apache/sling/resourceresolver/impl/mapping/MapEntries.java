@@ -936,16 +936,16 @@ public class MapEntries implements
         Map<String, List<MapEntry>> entryMap = new HashMap<>();
 
         final String queryString = String.format(
-                "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base "
-                        + "WHERE NOT isdescendantnode('%s') AND (sling:vanityPath='%s' OR sling:vanityPath='%s') "
-                        + "ORDER BY sling:vanityOrder DESC",
+                "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] "
+                        + "WHERE NOT isdescendantnode('%s') AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
+                        + "ORDER BY [sling:vanityOrder] DESC",
                 JCR_SYSTEM_PATH, queryLiteral(vanityPath), queryLiteral(vanityPath.substring(1)));
 
         try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
             long totalCount = 0;
             long totalValid = 0;
             log.debug("start vanityPath query: {}", queryString);
-            final Iterator<Resource> i = queryResolver.findResources(queryString, "sql");
+            final Iterator<Resource> i = queryResolver.findResources(queryString, "JCR-SQL2");
             log.debug("end vanityPath query");
             while (i.hasNext()) {
                 totalCount += 1;
@@ -1281,13 +1281,13 @@ public class MapEntries implements
      */
     private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String queryString = "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus" + " FROM nt:base"
+        final String queryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
                 + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
-                + " AND sling:vanityPath IS NOT NULL";
+                + " AND [sling:vanityPath] IS NOT NULL";
 
         log.debug("start vanityPath query: {}", queryString);
         long queryStart = System.nanoTime();
-        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+        final Iterator<Resource> i = resolver.findResources(queryString, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
         log.debug("end vanityPath query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
 

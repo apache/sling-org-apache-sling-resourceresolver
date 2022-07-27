@@ -38,19 +38,18 @@ import org.osgi.service.component.annotations.Component;
 
 @Component(service = ResourceProvider.class)
 public class InMemoryResourceProvider extends ResourceProvider<Void>{
-    
+
     private final Map<String, Map<String, Object>> resources = new HashMap<>();
 
     @Override
     public Resource getResource(ResolveContext<Void> ctx, String path, ResourceContext resourceContext,
             Resource parent) {
-        
+
         Map<String, Object> vals = resources.get(path);
         if ( vals == null )
             return null;
-        
+
         return new InMemoryResource(path, ctx.getResourceResolver(), vals);
-            
     }
 
     @Override
@@ -80,33 +79,33 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
         props.put(key2, value2);
         putResource(path, props);
     }
-    
+
     public void putResource(String path, Map<String, Object> props) {
         resources.put(path, props);
     }
-    
+
     @Override
     public QueryLanguageProvider<Void> getQueryLanguageProvider() {
         return new QueryLanguageProvider<Void>() {
 
             @Override
             public String[] getSupportedLanguages(@NotNull ResolveContext<Void> ctx) {
-                return new String[] { "sql" };
+                return new String[] { "sql", "JCR-SQL2" };
             }
 
             @Override
             public Iterator<Resource> findResources(@NotNull ResolveContext<Void> ctx, String query, String language) {
-                
+
                 // we don't explicitly filter paths under jcr:system, but we don't expect to have such resources either
                 // and this stub provider is not the proper location to test JCR queries
-                if  ( "SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,\"/jcr:system\")) AND sling:alias IS NOT NULL".equals(query) ) {
+                if  ( "sql".equals(language) && "SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,\"/jcr:system\")) AND sling:alias IS NOT NULL".equals(query) ) {
                     return resourcesWithProperty(ctx, "sling:alias")
                         .iterator();
                 }
-                
-                if ( "SELECT sling:vanityPath, sling:redirect, sling:redirectStatus FROM nt:base WHERE NOT isdescendantnode('/jcr:system') AND sling:vanityPath IS NOT NULL".equals(query) ) {
+
+                if ( "JCR-SQL2".equals(language) && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL".equals(query) ) {
                     return resourcesWithProperty(ctx, "sling:vanityPath")
-                        .iterator();                  
+                        .iterator();
                 }
 
                 throw new UnsupportedOperationException("Unsupported query: '" + query + "'");

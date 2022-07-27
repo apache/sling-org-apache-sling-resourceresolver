@@ -112,6 +112,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.<Resource> emptySet().iterator());
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(
+                Collections.<Resource> emptySet().iterator());
         //when(resourceResolverFactory.getAliasPath()).thenReturn(Arrays.asList("/child"));
 
         Set<String> aliasPath = new TreeSet<>();
@@ -251,7 +253,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(vanityPathOnJcrContent.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
         resources.add(vanityPathOnJcrContent);
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -308,7 +310,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(parent.getChild(child.getName())).thenReturn(child);
         when(resourceResolver.getResource(child.getPath())).thenReturn(child);
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -388,7 +390,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(parent.getChild(child2.getName())).thenReturn(child2);
         when(resourceResolver.getResource(child2.getPath())).thenReturn(child2);
         
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -438,7 +440,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         }
 
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -1816,7 +1818,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -1845,7 +1847,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath2.getName()).thenReturn("justVanityPath2");
         when(justVanityPath2.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath","sling:vanityOrder", 100));
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -1874,7 +1876,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -1909,7 +1911,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -1944,7 +1946,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getName()).thenReturn("justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -1974,7 +1976,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath2.getName()).thenReturn("justVanityPath2");
         when(justVanityPath2.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath","sling:vanityOrder", 100));
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -2003,7 +2005,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getName()).thenReturn("justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -2035,7 +2037,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getName()).thenReturn("justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -2078,7 +2080,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(),
-                eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+                eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
                     @Override
                     public Iterator<Resource> answer(InvocationOnMock invocation)
@@ -2127,7 +2129,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -2235,7 +2237,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     public void testLoadAliases_ValidAbsolutePath_DefaultPaths() {
         when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(Collections.emptySet());
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
                 String query = StringUtils.trim((String)invocation.getArguments()[0]);
