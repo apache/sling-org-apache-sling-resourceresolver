@@ -84,7 +84,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         this.runtimeService = runtimeService;
         this.bundleContext = context;
 
-        Dictionary<String, Object> props = new Hashtable<String, Object>();
+        Dictionary<String, Object> props = new Hashtable<>();
         props.put(Constants.SERVICE_DESCRIPTION,
                 "Apache Sling Resource Resolver Web Console Plugin");
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
@@ -326,7 +326,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         pw.println("<th class='content'>Redirect</th>");
         pw.println("</tr>");
 
-        final Set<String> usedPatterns = new HashSet<String>();
+        final Set<String> usedPatterns = new HashSet<>();
 
         for (final MapEntry entry : list) {
             final String pattern = entry.getPattern();
