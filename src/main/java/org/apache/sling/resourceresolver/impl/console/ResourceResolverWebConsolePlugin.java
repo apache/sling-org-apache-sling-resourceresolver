@@ -26,12 +26,15 @@ import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import javax.jcr.Session;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -40,12 +43,16 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.request.ResponseUtil;
+import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.api.resource.runtime.dto.ResourceProviderDTO;
 import org.apache.sling.api.resource.runtime.dto.ResourceProviderFailureDTO;
 import org.apache.sling.api.resource.runtime.dto.RuntimeDTO;
+import org.apache.sling.auth.core.AuthenticationSupport;
+import org.apache.sling.jcr.resource.api.JcrResourceConstants;
 import org.apache.sling.resourceresolver.impl.CommonResourceResolverFactoryImpl;
 import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
@@ -63,11 +70,12 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
     private static final long serialVersionUID = 0;
 
     private static final String ATTR_TEST = "plugin.test";
-
     private static final String ATTR_SUBMIT = "plugin.submit";
+    private static final String ATTR_USER = "plugin.user";
 
     private static final String PAR_MSG = "msg";
     private static final String PAR_TEST = "test";
+    private static final String PAR_USER = "user";
 
     private final transient CommonResourceResolverFactoryImpl resolverFactory;
 
@@ -116,6 +124,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         } else {
             test = null;
         }
+        final String user = request.getParameter(PAR_USER);
 
         final PrintWriter pw = response.getWriter();
 
@@ -160,14 +169,22 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                         + "clearly marked, and the others listed for completeness.");
 
         pw.println("<tr class='content'>");
-        pw.println("<td class='content'>Test</td>");
         pw.print("<td class='content' colspan='2'>");
-        pw.print("<form method='post'>");
+        pw.println("<form method='post'>");
+        pw.print("Test ");
         pw.print("<input type='text' name='" + ATTR_TEST + "' value='");
         if (test != null) {
             pw.print(ResponseUtil.escapeXml(test));
         }
-        pw.println("' class='input' size='50'>");
+        pw.println("' class='input' size='20'>");
+        pw.print("User (optional)");
+        pw.print("<input type='text' name='" + ATTR_USER + "' value='");
+        if ( user != null ) {
+            pw.print(ResponseUtil.escapeXml(user));
+        }
+        pw.println("' class='input' size='20'>");
+        pw.println("</td>");
+        pw.print("<td class='content'>");
         pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT
                 + "' value='Resolve' class='submit'>");
         pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT
@@ -213,6 +230,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
             HttpServletResponse response) throws ServletException, IOException {
 
         final String test = request.getParameter(ATTR_TEST);
+        final String user = request.getParameter(ATTR_USER);
         String msg = null;
         if (test != null) {
 
@@ -221,7 +239,12 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                 // prepare the request for the resource resolver
                 HttpServletRequest helper = new ResolverRequest(request, test);
 
-                resolver = resolverFactory.getServiceResourceResolver(this.resolverFactory.getServiceUserAuthenticationInfo("console"));
+                // impersonate if asked
+                if ( user != null && user.length() > 0 ) {
+                    resolver = getImpersonatedResourceResolver(request, user);
+                } else {
+                    resolver = resolverFactory.getServiceResourceResolver(this.resolverFactory.getServiceUserAuthenticationInfo("console"));
+                }
 
                 // map or resolve as instructed
                 Object result;
@@ -255,14 +278,37 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         // finally redirect
         final String path = request.getContextPath() + request.getServletPath()
         + request.getPathInfo();
-        final String redirectTo;
+        String redirectTo;
         if (msg == null) {
             redirectTo = path;
         } else {
             redirectTo = path + '?' + PAR_MSG + '=' + encodeParam(msg) + '&'
                     + PAR_TEST + '=' + encodeParam(test);
+                if ( user != null && user.length() > 0 ) {
+                    redirectTo += '&' + PAR_USER + '=' + encodeParam(user);
+                }
         }
         response.sendRedirect(redirectTo);
+    }
+
+    private ResourceResolver getImpersonatedResourceResolver(HttpServletRequest request, final String user)
+            throws LoginException {
+
+        // resolver is set by the auth.core bundle in case of successful authentication, so it should
+        // always be there
+        Object resolverAttribute = request.getAttribute(AuthenticationSupport.REQUEST_ATTRIBUTE_RESOLVER);
+        if ( !(resolverAttribute instanceof ResourceResolver) ) {
+            throw new IllegalArgumentException("No " + ResourceResolver.class.getSimpleName() + " found in request, unable to proceed with impersonation");
+        }
+
+        @SuppressWarnings("resource") // not a leak, we don't own this resolver
+        ResourceResolver currentResolver = (ResourceResolver) resolverAttribute;
+
+        Map<String, Object> authenticationInfo = new HashMap<>();
+        authenticationInfo.put(ResourceResolverFactory.USER_IMPERSONATION, user);
+        authenticationInfo.put(JcrResourceConstants.AUTHENTICATION_INFO_SESSION, currentResolver.adaptTo(Session.class));
+
+        return resolverFactory.getResourceResolver(authenticationInfo);
     }
 
     private static String mappingsToString(Collection<String> allMappings) {
