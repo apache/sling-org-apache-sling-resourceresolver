@@ -214,7 +214,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
 
         final String test = request.getParameter(ATTR_TEST);
         String msg = null;
-        if (test != null && test.length() > 0) {
+        if (test != null) {
 
             ResourceResolver resolver = null;
             try {
@@ -267,7 +267,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
 
     private static String mappingsToString(Collection<String> allMappings) {
         if ( allMappings.size() == 0 )
-            return ""; // should not happen
+            return "(no mappings)"; // should not happen
         if ( allMappings.size() == 1)
             return allMappings.iterator().next();
 
@@ -630,7 +630,10 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         @Override
         public String getPathInfo() {
             try {
-                return uri.getPath();
+                String path = uri.getPath();
+                if ( path == null )
+                    path = "";
+                return path;
             } catch (URIException ue) {
                 return "";
             }
