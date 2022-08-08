@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.jcr.Session;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
@@ -70,7 +69,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(value = Session.class, condition = "If the JCR Resource Provider is loaded"), @Adapter(ResourceMapper.class) })
+@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(ResourceMapper.class) })
 public class ResourceResolverImpl extends SlingAdaptable implements ResourceResolver {
 
     /** Default logger */
