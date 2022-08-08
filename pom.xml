@@ -61,6 +61,10 @@
                         <goals>
                             <goal>generate-adapter-metadata</goal>
                         </goals>
+                        <configuration>
+                            <!-- relying on https://issues.apache.org/jira/browse/MNG-5001 until https://issues.apache.org/jira/browse/SLING-10022 -->
+                            <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
