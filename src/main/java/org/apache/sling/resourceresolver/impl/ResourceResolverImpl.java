@@ -70,7 +70,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(Session.class), @Adapter(ResourceMapper.class) })
+@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(value = Session.class, condition = "If the JCR Resource Provider is loaded"), @Adapter(ResourceMapper.class) })
 public class ResourceResolverImpl extends SlingAdaptable implements ResourceResolver {
 
     /** Default logger */
