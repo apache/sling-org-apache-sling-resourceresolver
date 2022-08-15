@@ -22,6 +22,7 @@ import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -533,7 +534,7 @@ public class MapEntries implements
         log.debug("doAddVanity getting {}", resource.getPath());
 
         boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache);
+        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache);
     }
 
     private boolean doRemoveVanity(final String path) {
@@ -963,7 +964,7 @@ public class MapEntries implements
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true);
                         entryMap = resolveMapsMap;
                     } else {
-                        final Map <String, List<String>> targetPaths = new HashMap <>();
+                        final Map <String, List<String>> targetPaths = new HashMap<>();
                         loadVanityPath(resource, entryMap, targetPaths, true);
                     }
                 }
@@ -1275,25 +1276,40 @@ public class MapEntries implements
         return invalid;
     }
 
+    private Iterator<Resource> queryAllVanityPaths(String query) {
+        log.debug("start vanityPath query: {}", query);
+        long queryStart = System.nanoTime();
+        final Iterator<Resource> i = resolver.findResources(query, "JCR-SQL2");
+        long queryElapsed = System.nanoTime() - queryStart;
+        log.debug("end vanityPath query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        return i;
+    }
+
     /**
      * Load vanity paths - search for all nodes (except under /jcr:system)
      * having a sling:vanityPath property
      */
     private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String queryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
+        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
                 + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
                 + " AND [sling:vanityPath] IS NOT NULL";
+        final String queryStringWithSort = baseQueryString + " ORDER BY FIRST([sling:vanityPath]), [jcr:path]";
 
-        log.debug("start vanityPath query: {}", queryString);
-        long queryStart = System.nanoTime();
-        final Iterator<Resource> i = resolver.findResources(queryString, "JCR-SQL2");
-        long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end vanityPath query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        boolean supportsSort = true;
+        Iterator<Resource> i;
+        try {
+            i = queryAllVanityPaths(queryStringWithSort);
+        } catch (QuerySyntaxException ex) {
+            log.debug("sort with first() not supported, falling back to base query");
+            supportsSort = false;
+            i = queryAllVanityPaths(baseQueryString);
+        }
 
         long count = 0;
         long countInScope = 0;
         long processStart = System.nanoTime();
+        String previousVanityPath = null;
 
         while (i.hasNext()) {
             count += 1;
@@ -1303,7 +1319,13 @@ public class MapEntries implements
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
+                String firstVanityPath = loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
+                if (supportsSort && firstVanityPath != null) {
+                    if (previousVanityPath != null && firstVanityPath.compareTo(previousVanityPath) < 0) {
+                        log.error("Sorting by first(vanityPath) does not appear to work; got " + firstVanityPath + " after " + previousVanityPath);
+                    }
+                    previousVanityPath = firstVanityPath;
+               }
             }
         }
         long processElapsed = System.nanoTime() - processStart;
@@ -1321,11 +1343,13 @@ public class MapEntries implements
 
     /**
      * Load vanity path given a resource
+     * 
+     * @return first vanity path or {@code null}
      */
-    private boolean loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache) {
+    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache) {
 
         if (!isValidVanityPath(resource.getPath())) {
-            return false;
+            return null;
         }
 
         final ValueMap props = resource.getValueMap();
@@ -1397,7 +1421,7 @@ public class MapEntries implements
                 }
             }
         }
-        return hasVanityPath;
+        return hasVanityPath ? pVanityPaths[0] : null;
     }
 
     private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
