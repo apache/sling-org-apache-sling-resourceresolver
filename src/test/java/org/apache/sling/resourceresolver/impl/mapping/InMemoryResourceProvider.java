@@ -103,7 +103,7 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
                         .iterator();
                 }
 
-                if ( "JCR-SQL2".equals(language) && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL".equals(query) ) {
+                if ( "JCR-SQL2".equals(language) && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL ORDER BY FIRST([sling:vanityPath]), [jcr:path]".equals(query) ) {
                     return resourcesWithProperty(ctx, "sling:vanityPath")
                         .iterator();
                 }
