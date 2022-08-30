@@ -1359,6 +1359,10 @@ public class MapEntries implements
         // what is stored in the sling:vanityPath property
         boolean hasVanityPath = false;
         final String[] pVanityPaths = props.get(PROP_VANITY_PATH, new String[0]);
+        if (log.isTraceEnabled()) {
+            log.trace("vanity paths on {}: {}", resource.getPath(), Arrays.asList(pVanityPaths));
+        }
+
         for (final String pVanityPath : pVanityPaths) {
             final String[] result = this.getVanityPathDefinition(pVanityPath);
             if (result != null) {
