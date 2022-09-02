@@ -1279,10 +1279,10 @@ public class MapEntries implements
     private Iterator<Resource> queryAllVanityPaths(String query) {
         log.debug("start vanityPath query: {}", query);
         long queryStart = System.nanoTime();
-        final Iterator<Resource> i = resolver.findResources(query, "JCR-SQL2");
+        final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
         log.debug("end vanityPath query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
-        return i;
+        return it;
     }
 
     /**
@@ -1297,13 +1297,13 @@ public class MapEntries implements
         final String queryStringWithSort = baseQueryString + " ORDER BY FIRST([sling:vanityPath]), [jcr:path]";
 
         boolean supportsSort = true;
-        Iterator<Resource> i;
+        Iterator<Resource> it;
         try {
-            i = queryAllVanityPaths(queryStringWithSort);
+            it = queryAllVanityPaths(queryStringWithSort);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query");
             supportsSort = false;
-            i = queryAllVanityPaths(baseQueryString);
+            it = queryAllVanityPaths(baseQueryString);
         }
 
         long count = 0;
@@ -1311,9 +1311,9 @@ public class MapEntries implements
         long processStart = System.nanoTime();
         String previousVanityPath = null;
 
-        while (i.hasNext()) {
+        while (it.hasNext()) {
             count += 1;
-            final Resource resource = i.next();
+            final Resource resource = it.next();
             final String resourcePath = resource.getPath();
             if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
                 countInScope += 1;
