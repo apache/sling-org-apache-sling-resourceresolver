@@ -164,7 +164,7 @@ public class MapEntries implements
             final Optional<ResourceResolverMetrics> metrics) 
                     throws LoginException, IOException {
 
-    	this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
+        this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
         this.factory = factory;
         this.eventAdmin = eventAdmin;
 
@@ -1306,7 +1306,7 @@ public class MapEntries implements
             String tquery = String.format(query, queryLiteral(lastPath));
             log.debug("start vanityPath query (page {}): {}", page, tquery);
             long queryStart = System.nanoTime();
-            this.it = resolver.findResources(query, "JCR-SQL2");
+            this.it = resolver.findResources(tquery, "JCR-SQL2");
             long queryElapsed = System.nanoTime() - queryStart;
             log.debug("end vanityPath query (page {}); elapsed {}ms", page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
             page += 1;
@@ -1329,7 +1329,6 @@ public class MapEntries implements
                     log.error(message);
                     throw new RuntimeException(message);
                 }
-                log.trace("GOT " + count + " " + p);
                 // start next page?
                 if (count > pageSize && !p.equals(lastPath)) {
                     lastPath = p;
