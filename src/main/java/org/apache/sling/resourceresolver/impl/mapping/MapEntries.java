@@ -1285,6 +1285,63 @@ public class MapEntries implements
         return it;
     }
 
+    private class PagedQueryIterator implements Iterator<Resource> {
+
+        private ResourceResolver resolver;
+        private String query;
+        private String lastPath = "";
+        private Iterator<Resource> it;
+        private int count = 0;
+        private int page = 0;
+        private int pageSize = Integer.getInteger("sling.vanityPath.pageSize", 1000);;
+
+        public PagedQueryIterator(ResourceResolver resolver, String query) {
+            this.resolver = resolver;
+            this.query = query;
+            nextPage();
+        }
+
+        private void nextPage() {
+            count = 0;
+            String tquery = String.format(query, queryLiteral(lastPath));
+            log.debug("start vanityPath query (page {}): {}", page, tquery);
+            long queryStart = System.nanoTime();
+            this.it = resolver.findResources(query, "JCR-SQL2");
+            long queryElapsed = System.nanoTime() - queryStart;
+            log.debug("end vanityPath query (page {}); elapsed {}ms", page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+            page += 1;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return it.hasNext();
+        }
+
+        @Override
+        public Resource next() {
+            Resource resource = it.next();
+            count += 1;
+            final String[] paths = resource.getValueMap().get(PROP_VANITY_PATH, new String[0]);
+            if (paths.length > 0) {
+                String p = paths[0];
+                if (p.compareTo(lastPath) < 0) {
+                    String message = String.format("unexpected query result in page %d, vanity path of '%s' despite querying for > '%s'", page, p, lastPath);
+                    log.error(message);
+                    throw new RuntimeException(message);
+                }
+                log.trace("GOT " + count + " " + p);
+                // start next page?
+                if (count > pageSize && !p.equals(lastPath)) {
+                    lastPath = p;
+                    nextPage();
+                    return next();
+                }
+            }
+
+            return resource;
+        }
+    }
+
     /**
      * Load vanity paths - search for all nodes (except under /jcr:system)
      * having a sling:vanityPath property
@@ -1294,12 +1351,12 @@ public class MapEntries implements
         final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
                 + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
                 + " AND [sling:vanityPath] IS NOT NULL";
-        final String queryStringWithSort = baseQueryString + " ORDER BY FIRST([sling:vanityPath]), [jcr:path]";
 
         boolean supportsSort = true;
         Iterator<Resource> it;
         try {
-            it = queryAllVanityPaths(queryStringWithSort);
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) > '%s' ORDER BY FIRST([sling:vanityPath])";
+            it = new PagedQueryIterator(resolver, queryStringWithSort);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query");
             supportsSort = false;
