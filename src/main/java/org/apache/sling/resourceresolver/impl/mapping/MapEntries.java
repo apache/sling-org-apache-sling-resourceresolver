@@ -1313,7 +1313,7 @@ public class MapEntries implements
             page += 1;
         }
 
-        private Resource getNext() {
+        private Resource getNext() throws NoSuchElementException {
             Resource resource = it.next();
             count += 1;
             final String[] paths = resource.getValueMap().get(PROP_VANITY_PATH, new String[0]);
@@ -1351,7 +1351,7 @@ public class MapEntries implements
         }
 
         @Override
-        public Resource next() {
+        public Resource next() throws NoSuchElementException {
             Resource result = next != null ? next : getNext();
             next = null;
             return result;
