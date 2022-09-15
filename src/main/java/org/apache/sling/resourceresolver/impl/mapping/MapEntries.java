@@ -1293,7 +1293,8 @@ public class MapEntries implements
         private Iterator<Resource> it;
         private int count = 0;
         private int page = 0;
-        private int pageSize = Integer.getInteger("sling.vanityPath.pageSize", 1000);;
+        private int pageSize = Integer.getInteger("sling.vanityPath.pageSize", 2000);
+        private Resource next = null;
 
         public PagedQueryIterator(ResourceResolver resolver, String query) {
             this.resolver = resolver;
@@ -1312,20 +1313,16 @@ public class MapEntries implements
             page += 1;
         }
 
-        @Override
-        public boolean hasNext() {
-            return it.hasNext();
-        }
-
-        @Override
-        public Resource next() {
+        private Resource getNext() {
             Resource resource = it.next();
             count += 1;
             final String[] paths = resource.getValueMap().get(PROP_VANITY_PATH, new String[0]);
             if (paths.length > 0) {
                 String p = paths[0];
                 if (p.compareTo(lastPath) < 0) {
-                    String message = String.format("unexpected query result in page %d, vanity path of '%s' despite querying for > '%s'", page, p, lastPath);
+                    String message = String.format(
+                            "unexpected query result in page %d, vanity path of '%s' despite querying for > '%s'", (page - 1), p,
+                            lastPath);
                     log.error(message);
                     throw new RuntimeException(message);
                 }
@@ -1333,11 +1330,31 @@ public class MapEntries implements
                 if (count > pageSize && !p.equals(lastPath)) {
                     lastPath = p;
                     nextPage();
-                    return next();
+                    return getNext();
                 }
             }
 
             return resource;
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (next == null) {
+                try {
+                    next = getNext();
+                } catch (NoSuchElementException ex) {
+                    // there are no more
+                    next = null;
+                }
+            }
+            return next != null;
+        }
+
+        @Override
+        public Resource next() {
+            Resource result = next != null ? next : getNext();
+            next = null;
+            return result;
         }
     }
 
