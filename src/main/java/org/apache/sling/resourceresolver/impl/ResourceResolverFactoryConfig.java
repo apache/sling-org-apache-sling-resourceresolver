@@ -174,7 +174,7 @@ public @interface ResourceResolverFactoryConfig {
 
     @AttributeDefinition(name = "Vanity Path Precedence",
         description ="This flag controls whether vanity paths" +
-                     " will have precedence over existing /etc/map mapping")
+                     " will have precedence over existing /etc/map mapping when resolving paths to resources")
     boolean resource_resolver_vanity_precedence() default false;
 
     @AttributeDefinition(name = "Paranoid Provider Handling",
