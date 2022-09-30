@@ -329,7 +329,8 @@ public class MapEntries implements
             try (ResourceResolver resolver = factory
                     .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
 
-                log.debug("vanity path init - start");
+                long initStart = System.nanoTime();
+                log.info("vanity path initialization - start");
 
                 vanityTargets = loadVanityPaths(resolver);
 
@@ -341,7 +342,8 @@ public class MapEntries implements
                 // drain once more in case more events have arrived
                 drainQueue(resourceChangeQueue);
 
-                log.debug("vanity path init - end");
+                long initElapsed = System.nanoTime() - initStart;
+                log.info("vanity path initialization - end, elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(initElapsed));
             } catch (LoginException ex) {
                 log.error("VanityPath init failed", ex);
             } finally {
