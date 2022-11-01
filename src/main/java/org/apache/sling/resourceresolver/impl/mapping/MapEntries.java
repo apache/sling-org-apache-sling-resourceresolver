@@ -330,7 +330,7 @@ public class MapEntries implements
                     .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
 
                 long initStart = System.nanoTime();
-                log.info("vanity path initialization - start");
+                log.debug("vanity path initialization - start");
 
                 vanityTargets = loadVanityPaths(resolver);
 
