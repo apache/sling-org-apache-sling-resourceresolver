@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
@@ -40,6 +41,12 @@ import org.osgi.service.component.annotations.Component;
 public class InMemoryResourceProvider extends ResourceProvider<Void>{
 
     private final Map<String, Map<String, Object>> resources = new HashMap<>();
+
+    private final boolean supportsPagedQuery;
+
+    public InMemoryResourceProvider(boolean supportsPagedQuery) {
+        this.supportsPagedQuery = supportsPagedQuery;
+    }
 
     @Override
     public Resource getResource(ResolveContext<Void> ctx, String path, ResourceContext resourceContext,
@@ -60,7 +67,7 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
             .map( e -> (Resource) new InMemoryResource(e.getKey(), ctx.getResourceResolver(), e.getValue()) )
             .iterator();
     }
-    
+
     public void putResource(String path) {
         putResource(path, Collections.emptyMap());
     }
@@ -104,8 +111,18 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
                 }
 
                 if ( "JCR-SQL2".equals(language) && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) > '' ORDER BY FIRST([sling:vanityPath])".equals(query) ) {
-                    return resourcesWithProperty(ctx, "sling:vanityPath")
-                        .iterator();
+                    if (supportsPagedQuery) {
+                        return resourcesWithProperty(ctx, "sling:vanityPath")
+                                .iterator();
+                    }
+                    else {
+                        throw new QuerySyntaxException("paged queries not supported", query, language);
+                    }
+                }
+
+                if ( "JCR-SQL2".equals(language) && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL".equals(query) ) {
+                        return resourcesWithProperty(ctx, "sling:vanityPath")
+                                .iterator();
                 }
 
                 throw new UnsupportedOperationException("Unsupported query: '" + query + "'");
