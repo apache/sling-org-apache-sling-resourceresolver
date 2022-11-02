@@ -34,7 +34,6 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
 
-import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,7 +77,7 @@ public abstract class AbstractMappingMapEntriesTest {
 
     @Mock
     EventAdmin eventAdmin;
-    
+
     Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
     @Mock
@@ -89,7 +88,6 @@ public abstract class AbstractMappingMapEntriesTest {
     StringInterpolationProviderImpl stringInterpolationProvider = new StringInterpolationProviderImpl();
     MapEntries mapEntries;
 
-    File vanityBloomFilterFile;
 
     Resource map;
     Resource http;
@@ -102,10 +100,8 @@ public abstract class AbstractMappingMapEntriesTest {
         MockitoAnnotations.initMocks(this);
 
         List<MapConfigurationProvider.VanityPathConfig> configs = getVanityPathConfigs();
-        vanityBloomFilterFile = new File("target/test-classes/resourcesvanityBloomFilter.txt");
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
@@ -135,9 +131,7 @@ public abstract class AbstractMappingMapEntriesTest {
 
     @After
     public void tearDown() throws Exception {
-        vanityBloomFilterFile.delete();
     }
-
 
     // -------------------------- private methods ----------
 
