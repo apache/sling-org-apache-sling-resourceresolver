@@ -345,7 +345,7 @@ public class MapEntries implements
                 long initElapsed = System.nanoTime() - initStart;
                 log.info("vanity path initialization - end, elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(initElapsed));
             } catch (LoginException ex) {
-                log.error("VanityPath init failed", ex);
+                log.error("Vanity path init failed", ex);
             } finally {
                 log.debug("dropping temporary resolver map - {}/{} entries, {} hits, {} misses", temporaryResolveMapsMap.size(),
                         SIZELIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
