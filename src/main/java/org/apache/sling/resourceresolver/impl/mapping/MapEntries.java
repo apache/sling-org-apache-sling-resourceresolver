@@ -1305,11 +1305,11 @@ public class MapEntries implements
         private void nextPage() {
             count = 0;
             String tquery = String.format(query, queryLiteral(lastPath));
-            log.debug("start vanityPath query (page {}): {}", page, tquery);
+            log.debug("start vanity path query (page {}): {}", page, tquery);
             long queryStart = System.nanoTime();
             this.it = resolver.findResources(tquery, "JCR-SQL2");
             long queryElapsed = System.nanoTime() - queryStart;
-            log.debug("end vanityPath query (page {}); elapsed {}ms", page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+            log.debug("end vanity path query (page {}); elapsed {}ms", page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
             page += 1;
         }
 
