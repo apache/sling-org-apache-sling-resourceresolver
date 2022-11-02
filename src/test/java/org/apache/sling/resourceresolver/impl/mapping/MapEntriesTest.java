@@ -32,6 +32,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -64,6 +65,9 @@ import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.V
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -73,6 +77,7 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
 
+@RunWith(Parameterized.class)
 public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private MapEntries mapEntries;
@@ -95,10 +100,25 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     private Map<String, Map<String, String>> aliasMap;
     private int testSize = 5;
 
+    private int pageSize;
+    private int prevPageSize = 1000;
+
+    @Parameters(name = "page size -> {0}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] { { 1 }, { 1000 } });
+    }
+
+    public MapEntriesTest(int pageSize) {
+        this.pageSize = pageSize;
+    }
+
     @Override
     @SuppressWarnings({ "unchecked" })
     @Before
     public void setup() throws Exception {
+        prevPageSize = Integer.getInteger("sling.vanityPath.pageSize", 2000);
+        System.setProperty("sling.vanityPath.pageSize", Integer.toString(pageSize));
+
         MockitoAnnotations.initMocks(this);
 
         final List<VanityPathConfig> configs = new ArrayList<>();
@@ -149,6 +169,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     @Override
     @After
     public void tearDown() throws Exception {
+        System.setProperty("sling.vanityPath.pageSize", Integer.toString(prevPageSize));
         mapEntries.dispose();
     }
 
