@@ -1330,7 +1330,6 @@ public class MapEntries implements
                 if (count > pageSize && !p.equals(lastPath)) {
                     lastPath = p;
                     nextPage();
-                    return getNext();
                 }
             }
 

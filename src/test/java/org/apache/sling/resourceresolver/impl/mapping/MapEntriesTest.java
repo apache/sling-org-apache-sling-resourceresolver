@@ -30,9 +30,23 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
-
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -122,7 +136,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
           aliasPath.add("/parent"+i);
         }
         when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(aliasPath);
-        
+
         Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
         mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics));
@@ -229,7 +243,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
         resources.add(badVanityPath);
 
-
         Resource redirectingVanityPath = mock(Resource.class, "redirectingVanityPath");
         when(redirectingVanityPath.getPath()).thenReturn("/redirectingVanityPath");
         when(redirectingVanityPath.getName()).thenReturn("redirectingVanityPath");
@@ -257,7 +270,13 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+                String query = invocation.getArguments()[0].toString();
+                if (matchesPagedQuery(query)) {
+                    String path = extractStartPath(query);
+                    Collections.sort(resources, vanityResourceComparator);
+                    return resources.stream().filter(e -> getFirstVanityPath(e).compareTo(path) > 0).iterator();
+                } else
+                if (query.contains("sling:vanityPath")) {
                     return resources.iterator();
                 } else {
                     return Collections.<Resource> emptySet().iterator();
@@ -269,6 +288,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.initializeVanityPaths();
 
         List<MapEntry> entries = mapEntries.getResolveMaps();
+
         assertEquals(8, entries.size());
         for (MapEntry entry : entries) {
             if (entry.getPattern().contains("/target/redirectingVanityPath301")) {
@@ -291,7 +311,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         @SuppressWarnings("unchecked")
         Map<String, List<String>> vanityTargets = (Map<String, List<String>>) field.get(mapEntries);
         assertEquals(4, vanityTargets.size());
-
     }
 
     @Test
@@ -423,7 +442,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         
         // a single event is sent for all 3 added vanity paths
         Mockito.verify(eventAdmin,Mockito.times(3)).postEvent(Mockito.anyObject());
-        
     }
 
     @Test
@@ -444,7 +462,13 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+                String query = invocation.getArguments()[0].toString();
+                if (matchesPagedQuery(query)) {
+                    String path = extractStartPath(query);
+                    Collections.sort(resources, vanityResourceComparator);
+                    return resources.stream().filter(e -> getFirstVanityPath(e).compareTo(path) > 0).iterator();
+                } else
+                if (query.contains("sling:vanityPath")) {
                     return resources.iterator();
                 } else {
                     return Collections.<Resource> emptySet().iterator();
@@ -2259,4 +2283,31 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.doInit();
     }
 
+    // utilities for testing vanity path queries
+
+    private static String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) > '";
+    private static String VPQEND = "' ORDER BY FIRST([sling:vanityPath])";
+
+    private boolean matchesPagedQuery(String query) {
+        return query.startsWith(VPQSTART) && query.endsWith(VPQEND);
+    }
+
+    private String extractStartPath(String query) {
+        String remainder = query.substring(VPQSTART.length());
+        return remainder.substring(0, remainder.length() - VPQEND.length());
+    }
+
+    private String getFirstVanityPath(Resource r) {
+        String vp[] = r.getValueMap().get("sling:vanityPath", new String[0]);
+        return vp.length == 0 ? "": vp[0];
+    }
+
+    private Comparator<Resource> vanityResourceComparator = new Comparator<Resource>() {
+        @Override
+        public int compare(Resource o1, Resource o2) {
+            String s1 = getFirstVanityPath(o1);
+            String s2 = getFirstVanityPath(o2);
+            return s1.compareTo(s2);
+        }
+    };
 }
