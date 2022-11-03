@@ -296,8 +296,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                     String path = extractStartPath(query);
                     Collections.sort(resources, vanityResourceComparator);
                     return resources.stream().filter(e -> getFirstVanityPath(e).compareTo(path) > 0).iterator();
-                } else
-                if (query.contains("sling:vanityPath")) {
+                } else if (query.contains("sling:vanityPath")) {
                     return resources.iterator();
                 } else {
                     return Collections.<Resource> emptySet().iterator();
