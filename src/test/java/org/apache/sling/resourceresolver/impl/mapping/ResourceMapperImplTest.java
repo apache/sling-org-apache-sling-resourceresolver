@@ -29,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -42,7 +43,6 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
-import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -53,7 +53,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
 
 /**
  * Validates that the {@link ResourceMapperImpl} correctly queries all sources of mappings
@@ -76,20 +75,22 @@ import org.mockito.Mockito;
 @RunWith(Parameterized.class)
 public class ResourceMapperImplTest {
 
-    @Parameters(name="optimized alias resolution → {0}")
-    public static Object[] data() {
-        return new Object[] { false, true};
+    @Parameters(name = "optimized alias resolution / paged query support -> {0} / {1}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] { { false, false }, { false, true }, { true, false }, { true, true } });
     }
-    
+
     @Rule
     public final OsgiContext ctx = new OsgiContext();
 
     private final boolean optimiseAliasResolution;
+    private final boolean pagedQuerySupport;
     private HttpServletRequest req;
     private ResourceResolver resolver;
 
-    public ResourceMapperImplTest(boolean optimiseAliasResolution) {
+    public ResourceMapperImplTest(boolean optimiseAliasResolution, boolean pagedQuerySupport) {
         this.optimiseAliasResolution = optimiseAliasResolution;
+        this.pagedQuerySupport = pagedQuerySupport;
     }
 
     @Before
@@ -99,7 +100,7 @@ public class ResourceMapperImplTest {
         ctx.registerInjectActivateService(new ResourceAccessSecurityTracker());
         ctx.registerInjectActivateService(new StringInterpolationProviderImpl());
 
-        InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider();
+        InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider(pagedQuerySupport);
         resourceProvider.putResource("/"); // root
         resourceProvider.putResource("/here"); // regular page
         resourceProvider.putResource("/there", PROP_ALIAS, "alias-value"); // with alias
