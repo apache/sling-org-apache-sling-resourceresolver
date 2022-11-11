@@ -4,6 +4,7 @@
         "13-SNAPSHOT": {
            "jdks": [8,  11]
          }
-      }
+      },
+     "additionalMavenParams": "-DskipTests -DskipITs"
    }
 }
