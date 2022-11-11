@@ -5,6 +5,7 @@
            "jdks": [8,  11]
          }
       },
-     "additionalMavenParams": "-DskipTests -DskipITs"
+     "additionalMavenParams": "-DskipTests -DskipITs",
+     "sonarQubeEnabled": false
    }
 }
