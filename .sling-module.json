@@ -2,7 +2,7 @@
   "jenkins": {
      "starterITExecutions": {
         "13-SNAPSHOT": {
-           "jdks": [8,  11]
+           "jdks": [8, 11]
          }
       },
      "additionalMavenParams": "-DskipTests -DskipITs",
