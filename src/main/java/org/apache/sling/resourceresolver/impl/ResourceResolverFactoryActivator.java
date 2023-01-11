@@ -81,46 +81,6 @@ public class ResourceResolverFactoryActivator {
         public volatile CommonResourceResolverFactoryImpl commonFactory;
     }
 
-    private static final class VanityPathConfigurer {
-        private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-        void configureVanityPathPrefixes(String[] pathPrefixes, String[] pathPrefixesFallback,
-                                         String pathPrefixesPropertyName, String pathPrefixesFallbackPropertyName,
-                                         Consumer<String[]> filteredPathPrefixesConsumer) {
-            if (pathPrefixes != null) {
-                configureVanityPathPrefixes(pathPrefixes, filteredPathPrefixesConsumer);
-            } else {
-                logger.debug("The " + pathPrefixesPropertyName + " was null. Using the " +
-                    pathPrefixesFallbackPropertyName + " instead if defined.");
-                if (pathPrefixesFallback != null) {
-                    configureVanityPathPrefixes(pathPrefixesFallback, filteredPathPrefixesConsumer);
-                }
-            }
-        }
-
-        private static void configureVanityPathPrefixes(String[] pathPrefixes, Consumer<String[]> pathPrefixesConsumer) {
-            final List<String> filterVanityPaths = filterVanityPathPrefixes(pathPrefixes);
-            if (filterVanityPaths.size() > 0) {
-                pathPrefixesConsumer.accept(filterVanityPaths.toArray(new String[filterVanityPaths.size()]));
-            }
-        }
-
-        @NotNull
-        private static List<String> filterVanityPathPrefixes(String[] vanityPathPrefixes) {
-            final List<String> prefixList = new ArrayList<>();
-            for (final String value : vanityPathPrefixes) {
-                if (value.trim().length() > 0) {
-                    if (value.trim().endsWith("/")) {
-                        prefixList.add(value.trim());
-                    } else {
-                        prefixList.add(value.trim() + "/");
-                    }
-                }
-            }
-            return prefixList;
-        }
-    }
-
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -385,16 +345,16 @@ public class ResourceResolverFactoryActivator {
         // vanity path white list
         this.vanityPathWhiteList = null;
         vanityPathConfigurer.configureVanityPathPrefixes(config.resource_resolver_vanitypath_whitelist(),
-            config.resource_resolver_vanitypath_allowedlist(),
+            config.resource_resolver_vanitypath_allowlist(),
             "resource_resolver_vanitypath_whitelist",
-            "resource_resolver_vanitypath_allowedlist",
+            "resource_resolver_vanitypath_allowlist",
             filteredPrefixes -> this.vanityPathWhiteList = filteredPrefixes);
         // vanity path black list
         this.vanityPathBlackList = null;
         vanityPathConfigurer.configureVanityPathPrefixes(config.resource_resolver_vanitypath_blacklist(),
-            config.resource_resolver_vanitypath_deniedlist(),
+            config.resource_resolver_vanitypath_denylist(),
             "resource_resolver_vanitypath_blacklist",
-            "resource_resolver_vanitypath_deniedlist",
+            "resource_resolver_vanitypath_denylist",
             filteredPrefixes -> this.vanityPathBlackList = filteredPrefixes);
 
         // check for required property

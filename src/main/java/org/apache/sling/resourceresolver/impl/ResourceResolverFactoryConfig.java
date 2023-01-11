@@ -170,7 +170,7 @@ public @interface ResourceResolverFactoryConfig {
         description ="This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +
             "such a list is configured, only vanity paths from resources starting with this prefix " +
             " are considered. If the list is empty, all vanity paths are used.")
-    String[] resource_resolver_vanitypath_allowedlist();
+    String[] resource_resolver_vanitypath_allowlist();
 
     @AttributeDefinition(name = "Denied Vanity Path Location",
         description ="This setting can contain a list of path prefixes, e.g. /misc/. If " +
@@ -182,7 +182,7 @@ public @interface ResourceResolverFactoryConfig {
         description ="This setting can contain a list of path prefixes, e.g. /misc/. If " +
             "such a list is configured,vanity paths from resources starting with this prefix " +
             " are not considered. If the list is empty, all vanity paths are used.")
-    String[] resource_resolver_vanitypath_deniedlist();
+    String[] resource_resolver_vanitypath_denylist();
 
     @AttributeDefinition(name = "Vanity Path Precedence",
         description ="This flag controls whether vanity paths" +

@@ -195,11 +195,11 @@ public class MockedResourceResolverImplTest {
 
             @Override
             public String[] resource_resolver_vanitypath_whitelist() {
-                return resource_resolver_vanitypath_allowedlist();
+                return null;
             }
 
             @Override
-            public String[] resource_resolver_vanitypath_allowedlist() {
+            public String[] resource_resolver_vanitypath_allowlist() {
                 return null;
             }
 
@@ -220,11 +220,11 @@ public class MockedResourceResolverImplTest {
 
             @Override
             public String[] resource_resolver_vanitypath_blacklist() {
-                return resource_resolver_vanitypath_deniedlist();
+                return null;
             }
 
             @Override
-            public String[] resource_resolver_vanitypath_deniedlist() {
+            public String[] resource_resolver_vanitypath_denylist() {
                 return null;
             }
 
