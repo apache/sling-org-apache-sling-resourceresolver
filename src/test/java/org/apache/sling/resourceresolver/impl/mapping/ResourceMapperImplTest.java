@@ -114,7 +114,8 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
         resourceProvider.putResource("/parent/child-multiple", PROP_ALIAS, "alias-child-1", "alias-child-2"); // child has multiple alias
         resourceProvider.putResource("/vain", "sling:vanityPath", "/vanity-a", "/vanity-b"); // vanity path
-
+        // vanity path with URL shaped target, see SLING-11749
+        resourceProvider.putResource("/vain-url", "sling:vanityPath", /* "https://example.com", TODO: NPE*/ "https://example/", "https://example/foo"); 
         // build /etc/map structure
         resourceProvider.putResource("/etc");
         resourceProvider.putResource("/etc/map");
@@ -326,6 +327,22 @@ public class ResourceMapperImplTest {
             .singleMappingWithRequest("/app/vain")
             .allMappings("/vanity-a", "/vanity-b", "/vain")
             .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings, URL shaped variants (see see SLING-11749)
+     *
+     * <p>As vanity paths are alternate paths rather than variations so they will not be returned
+     * from the singleMapping() methods.</p>
+     */
+    @Test
+    public void mapResourceWithVanityPathsURLTarget() {
+        ExpectedMappings.existingResource("/vain-url")
+            .singleMapping("/vain-url")
+            .singleMappingWithRequest("/app/vain-url")
+            .allMappings("/vain-url", "/foo", "/")
+            .allMappingsWithRequest("/app/vain-url", "/app/foo", "/app/")
             .verify(resolver, req);
     }
 
