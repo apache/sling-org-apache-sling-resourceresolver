@@ -114,12 +114,14 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
         resourceProvider.putResource("/parent/child-multiple", PROP_ALIAS, "alias-child-1", "alias-child-2"); // child has multiple alias
         resourceProvider.putResource("/vain", "sling:vanityPath", "/vanity-a", "/vanity-b"); // vanity path
+
+        // Tests to complete coverage of vanity path formats; test expectations based on behavior as of Jan 2023, not necessarily common sense 
         resourceProvider.putResource("/vain-ext", "sling:vanityPath", "/vanity-a/foo.txt", "/vanity.bar/foo"); // vanity path with extensions
         resourceProvider.putResource("/vain-empty", "sling:vanityPath", ""); // vanity path empty
         resourceProvider.putResource("/vain-relative", "sling:vanityPath", "foobar"); // vanity path not absolute
-        // vanity path with URL shaped target, see SLING-11749
         resourceProvider.putResource("/vain-url", "sling:vanityPath", /* "https://example.com", TODO: NPE*/ "https://example.com/", "https://example.com/foo"); 
         resourceProvider.putResource("/vain-url-invalid", "sling:vanityPath", "://pathOfMalformed"); 
+
         // build /etc/map structure
         resourceProvider.putResource("/etc");
         resourceProvider.putResource("/etc/map");
