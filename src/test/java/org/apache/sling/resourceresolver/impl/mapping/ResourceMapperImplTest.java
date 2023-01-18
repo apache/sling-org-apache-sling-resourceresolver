@@ -118,7 +118,7 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/vain-empty", "sling:vanityPath", ""); // vanity path empty
         resourceProvider.putResource("/vain-relative", "sling:vanityPath", "foobar"); // vanity path not absolute
         // vanity path with URL shaped target, see SLING-11749
-        resourceProvider.putResource("/vain-url", "sling:vanityPath", /* "https://example.com", TODO: NPE*/ "https://example/", "https://example/foo"); 
+        resourceProvider.putResource("/vain-url", "sling:vanityPath", /* "https://example.com", TODO: NPE*/ "https://example.com/", "https://example.com/foo"); 
         resourceProvider.putResource("/vain-url-invalid", "sling:vanityPath", "://pathOfMalformed"); 
         // build /etc/map structure
         resourceProvider.putResource("/etc");
