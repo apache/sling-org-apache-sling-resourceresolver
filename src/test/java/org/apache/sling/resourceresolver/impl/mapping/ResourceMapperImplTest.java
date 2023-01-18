@@ -119,8 +119,9 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/vain-ext", "sling:vanityPath", "/vanity-a/foo.txt", "/vanity.bar/foo"); // vanity path with extensions
         resourceProvider.putResource("/vain-empty", "sling:vanityPath", ""); // vanity path empty
         resourceProvider.putResource("/vain-relative", "sling:vanityPath", "foobar"); // vanity path not absolute
-        resourceProvider.putResource("/vain-url", "sling:vanityPath", /* "https://example.com", TODO: NPE*/ "https://example.com/", "https://example.com/foo"); 
+        resourceProvider.putResource("/vain-url", "sling:vanityPath", "https://example.com/", "https://example.com/foo"); 
         resourceProvider.putResource("/vain-url-invalid", "sling:vanityPath", "://pathOfMalformed"); 
+        resourceProvider.putResource("/vain-url-nopath", "sling:vanityPath", "https://example.com"); 
 
         // build /etc/map structure
         resourceProvider.putResource("/etc");
@@ -377,9 +378,6 @@ public class ResourceMapperImplTest {
 
     /**
      * Validates that vanity paths are returned as mappings, URL shaped variants (see see SLING-11749)
-     *
-     * <p>As vanity paths are alternate paths rather than variations so they will not be returned
-     * from the singleMapping() methods.</p>
      */
     @Test
     public void mapResourceWithVanityPathsURLTarget() {
@@ -388,6 +386,19 @@ public class ResourceMapperImplTest {
             .singleMappingWithRequest("/app/vain-url")
             .allMappings("/vain-url", "/foo", "/")
             .allMappingsWithRequest("/app/vain-url", "/app/foo", "/app/")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings, URL shaped variants, empty path (see see SLING-11757)
+     */
+    @Test(expected = NullPointerException.class)
+    public void mapResourceWithVanityPathsURLTargetNoPath() {
+        ExpectedMappings.existingResource("/vain-url-nopath")
+            .singleMapping("/vain-url-nopath")
+            .singleMappingWithRequest("/app/vain-url-nopath")
+            .allMappings("/vain-url-nopath", "see SLING-11757")
+            .allMappingsWithRequest("/app/vain-url-nopath", "see SLING-11757")
             .verify(resolver, req);
     }
 
