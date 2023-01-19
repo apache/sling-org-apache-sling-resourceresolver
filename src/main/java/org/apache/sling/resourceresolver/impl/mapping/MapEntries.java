@@ -1438,7 +1438,7 @@ public class MapEntries implements
         }
 
         for (final String pVanityPath : pVanityPaths) {
-            final String[] result = this.getVanityPathDefinition(pVanityPath);
+            final String[] result = this.getVanityPathDefinition(resource.getPath(), pVanityPath);
             if (result != null) {
                 hasVanityPath = true;
                 final String url = result[0] + result[1];
@@ -1518,17 +1518,17 @@ public class MapEntries implements
      * Create the vanity path definition. String array containing:
      * {protocol}/{host}[.port] {absolute path}
      */
-    private String[] getVanityPathDefinition(final String pVanityPath) {
+    private String[] getVanityPathDefinition(final String sourcePath, final String vanityPath) {
 
-        if (pVanityPath == null) {
-            log.trace("getVanityPathDefinition: null vanity path");
+        if (vanityPath == null) {
+            log.trace("getVanityPathDefinition: null vanity path on {}", sourcePath);
             return null;
         }
 
-        String info = pVanityPath.trim();
+        String info = vanityPath.trim();
 
         if (info.isEmpty()) {
-            log.trace("getVanityPathDefinition: empty vanity path");
+            log.trace("getVanityPathDefinition: empty vanity path on {}", sourcePath);
             return null;
         }
 
@@ -1542,7 +1542,7 @@ public class MapEntries implements
                 prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
                 path = u.getPath();
             } catch (final MalformedURLException e) {
-                log.warn("Ignoring malformed vanity path {}", info);
+                log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
                 return null;
             }
         } else {
@@ -1560,7 +1560,7 @@ public class MapEntries implements
         int firstDot = path.indexOf('.', lastSlash + 1);
         if (firstDot != -1) {
             path = path.substring(0, firstDot);
-            log.warn("Removing extension from vanity path {}", info);
+            log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
         }
 
         return new String[] { prefix, path };
