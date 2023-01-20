@@ -1438,7 +1438,7 @@ public class MapEntries implements
         }
 
         for (final String pVanityPath : pVanityPaths) {
-            final String[] result = this.getVanityPathDefinition(pVanityPath);
+            final String[] result = this.getVanityPathDefinition(resource.getPath(), pVanityPath);
             if (result != null) {
                 hasVanityPath = true;
                 final String url = result[0] + result[1];
@@ -1518,44 +1518,52 @@ public class MapEntries implements
      * Create the vanity path definition. String array containing:
      * {protocol}/{host}[.port] {absolute path}
      */
-    private String[] getVanityPathDefinition(final String pVanityPath) {
-        String[] result = null;
-        if (pVanityPath != null) {
-            final String info = pVanityPath.trim();
-            if (info.length() > 0) {
-                String prefix = null;
-                String path = null;
-                // check for url
-                if (info.indexOf(":/") > -1) {
-                    try {
-                        final URL u = new URL(info);
-                        prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
-                        path = u.getPath();
-                    } catch (final MalformedURLException e) {
-                        log.warn("Ignoring malformed vanity path {}", pVanityPath);
-                    }
-                } else {
-                    prefix = "^" + ANY_SCHEME_HOST;
-                    if (!info.startsWith("/")) {
-                        path = "/" + info;
-                    } else {
-                        path = info;
-                    }
-                }
+    private String[] getVanityPathDefinition(final String sourcePath, final String vanityPath) {
 
-                // remove extension
-                if (prefix != null) {
-                    final int lastSlash = path.lastIndexOf('/');
-                    final int firstDot = path.indexOf('.', lastSlash + 1);
-                    if (firstDot != -1) {
-                        path = path.substring(0, firstDot);
-                        log.warn("Removing extension from vanity path {}", pVanityPath);
-                    }
-                    result = new String[] { prefix, path };
-                }
+        if (vanityPath == null) {
+            log.trace("getVanityPathDefinition: null vanity path on {}", sourcePath);
+            return null;
+        }
+
+        String info = vanityPath.trim();
+
+        if (info.isEmpty()) {
+            log.trace("getVanityPathDefinition: empty vanity path on {}", sourcePath);
+            return null;
+        }
+
+        String prefix = null;
+        String path = null;
+
+        // check for URL-shaped path
+        if (info.indexOf(":/") > -1) {
+            try {
+                final URL u = new URL(info);
+                prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
+                path = u.getPath();
+            } catch (final MalformedURLException e) {
+                log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
+                return null;
+            }
+        } else {
+            prefix = "^" + ANY_SCHEME_HOST;
+
+            if (!info.startsWith("/")) {
+                path = "/" + info;
+            } else {
+                path = info;
             }
         }
-        return result;
+
+        // remove extension
+        int lastSlash = path.lastIndexOf('/');
+        int firstDot = path.indexOf('.', lastSlash + 1);
+        if (firstDot != -1) {
+            path = path.substring(0, firstDot);
+            log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
+        }
+
+        return new String[] { prefix, path };
     }
 
     private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
