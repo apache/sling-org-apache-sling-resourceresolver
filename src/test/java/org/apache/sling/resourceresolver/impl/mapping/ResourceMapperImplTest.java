@@ -392,13 +392,13 @@ public class ResourceMapperImplTest {
     /**
      * Validates that vanity paths are returned as mappings, URL shaped variants, empty path (see see SLING-11757)
      */
-    @Test(expected = NullPointerException.class)
+    @Test
     public void mapResourceWithVanityPathsURLTargetNoPath() {
         ExpectedMappings.existingResource("/vain-url-nopath")
             .singleMapping("/vain-url-nopath")
             .singleMappingWithRequest("/app/vain-url-nopath")
-            .allMappings("/vain-url-nopath", "see SLING-11757")
-            .allMappingsWithRequest("/app/vain-url-nopath", "see SLING-11757")
+            .allMappings("/vain-url-nopath", "")
+            .allMappingsWithRequest("/app/vain-url-nopath", "")
             .verify(resolver, req);
     }
 
