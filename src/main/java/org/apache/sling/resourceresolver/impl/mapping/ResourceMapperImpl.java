@@ -364,7 +364,7 @@ public class ResourceMapperImpl implements ResourceMapper {
                 final URI uri = new URI(path, false);
 
                 // 1. mangle the namespaces in the path
-                path = mangleNamespaces(uri.getPath());
+                path = mangleNamespaces(uri.getPath() == null ? "" : uri.getPath());
 
                 // 2. prepend servlet context path if we have a request
                 if (req != null && req.getContextPath() != null && req.getContextPath().length() > 0) {
