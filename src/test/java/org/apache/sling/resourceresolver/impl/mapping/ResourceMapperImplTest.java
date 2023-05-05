@@ -397,8 +397,8 @@ public class ResourceMapperImplTest {
         ExpectedMappings.existingResource("/vain-url-nopath")
             .singleMapping("/vain-url-nopath")
             .singleMappingWithRequest("/app/vain-url-nopath")
-            .allMappings("/vain-url-nopath", "")
-            .allMappingsWithRequest("/app/vain-url-nopath", "")
+            .allMappings("/vain-url-nopath", "/")
+            .allMappingsWithRequest("/app/vain-url-nopath", "/app/")
             .verify(resolver, req);
     }
 

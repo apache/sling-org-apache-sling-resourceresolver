@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -132,6 +133,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         configs.add(new VanityPathConfig("/redirectingVanityPath", false));
         configs.add(new VanityPathConfig("/redirectingVanityPath301", false));
         configs.add(new VanityPathConfig("/vanityPathOnJcrContent", false));
+        configs.add(new VanityPathConfig("/vanityPathWithUrl", false));
+        configs.add(new VanityPathConfig("/vanityPathWithUrlNoPath", false));
+        configs.add(new VanityPathConfig("/vanityPathWithInvalidUrl", false));
 
         Collections.sort(configs);
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
@@ -2036,6 +2040,89 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         counter = (AtomicLong) vanityCounter.get(mapEntries);
         assertEquals(2, counter.longValue());
+    }
+
+    @Test
+    public void test_URLBasedVanityPaths() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        final Resource vanityPathWithUrl = mock(Resource.class, "vanityPathWithUrl");
+        when(resourceResolver.getResource("/vanityPathWithUrl")).thenReturn(vanityPathWithUrl);
+        when(vanityPathWithUrl.getPath()).thenReturn("/vanityPathWithUrl");
+        when(vanityPathWithUrl.getName()).thenReturn("vanityPathWithUrl");
+        when(vanityPathWithUrl.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", new String[] {"http://www.example.com/content", "http://www.example.com/"}));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
+            @Override
+            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+                if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+                    return Collections.singleton(vanityPathWithUrl).iterator();
+                } else {
+                    return Collections.<Resource> emptySet().iterator();
+                }
+            }
+        });
+
+        Method method = MapEntries.class.getDeclaredMethod("getVanityPaths", String.class);
+        method.setAccessible(true);
+        method.invoke(mapEntries, "/vanityPathWithUrl");
+        assertTrue(mapEntries.getVanityPathMappings().containsKey(vanityPathWithUrl.getPath()));
+        assertEquals(2, mapEntries.getVanityPathMappings().get(vanityPathWithUrl.getPath()).size());
+        assertTrue(mapEntries.getVanityPathMappings().get(vanityPathWithUrl.getPath()).contains("/content"));
+        assertTrue(mapEntries.getVanityPathMappings().get(vanityPathWithUrl.getPath()).contains("/"));
+
+    }
+
+    @Test
+    public void test_URLBasedVanityPathsNoPath() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        final Resource vanityPathWithUrlNoPath = mock(Resource.class, "vanityPathWithUrlNoPath");
+        when(resourceResolver.getResource("/vanityPathWithUrlNoPath")).thenReturn(vanityPathWithUrlNoPath);
+        when(vanityPathWithUrlNoPath.getPath()).thenReturn("/vanityPathWithUrlNoPath");
+        when(vanityPathWithUrlNoPath.getName()).thenReturn("vanityPathWithUrlNoPath");
+        when(vanityPathWithUrlNoPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "http://www.example.com"));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
+            @Override
+            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+                if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+                    return Collections.singleton(vanityPathWithUrlNoPath).iterator();
+                } else {
+                    return Collections.<Resource> emptySet().iterator();
+                }
+            }
+        });
+
+        Method method = MapEntries.class.getDeclaredMethod("getVanityPaths", String.class);
+        method.setAccessible(true);
+        method.invoke(mapEntries, "/vanityPathWithUrlNoPath");
+        assertTrue(mapEntries.getVanityPathMappings().containsKey(vanityPathWithUrlNoPath.getPath()));
+        assertEquals(1, mapEntries.getVanityPathMappings().get(vanityPathWithUrlNoPath.getPath()).size());
+        assertTrue(mapEntries.getVanityPathMappings().get(vanityPathWithUrlNoPath.getPath()).contains("/"));
+
+    }
+
+    @Test
+    public void test_URLBasedVanityPathsInvalidUrl() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        final Resource vanityPathWithInvalidUrl = mock(Resource.class, "vanityPathWithInvalidUrl");
+        when(resourceResolver.getResource("/vanityPathWithInvalidUrl")).thenReturn(vanityPathWithInvalidUrl);
+        when(vanityPathWithInvalidUrl.getPath()).thenReturn("/vanityPathWithInvalidUrl");
+        when(vanityPathWithInvalidUrl.getName()).thenReturn("vanityPathWithInvalidUrl");
+        when(vanityPathWithInvalidUrl.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "://www.example.com"));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
+            @Override
+            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+                if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+                    return Collections.singleton(vanityPathWithInvalidUrl).iterator();
+                } else {
+                    return Collections.<Resource> emptySet().iterator();
+                }
+            }
+        });
+
+        Method method = MapEntries.class.getDeclaredMethod("getVanityPaths", String.class);
+        method.setAccessible(true);
+        method.invoke(mapEntries, "/vanityPathWithUrlNoPath");
+        assertFalse(mapEntries.getVanityPathMappings().containsKey(vanityPathWithInvalidUrl.getPath()));
+
     }
 
     @Test

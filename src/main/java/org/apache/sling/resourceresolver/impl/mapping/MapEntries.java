@@ -1540,7 +1540,7 @@ public class MapEntries implements
             try {
                 final URL u = new URL(info);
                 prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
-                path = u.getPath();
+                path = u.getPath().isEmpty() ? "/" : u.getPath();
             } catch (final MalformedURLException e) {
                 log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
                 return null;
