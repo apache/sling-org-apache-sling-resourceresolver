@@ -49,13 +49,13 @@ class VanityPathConfigurer {
 
         final List<String> includes = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_allowlist(),
             deprecatedConfig == null ? null : deprecatedConfig.resource_resolver_vanitypath_whitelist(),
-            "resource_resolver_vanitypath_allowlist",
-            "resource_resolver_vanitypath_whitelist");
+            "resource.resolver.vanitypath.allowlist",
+            "resource.resolver.vanitypath.whitelist");
 
         final List<String> excludes = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_denylist(),
             deprecatedConfig == null ? null : deprecatedConfig.resource_resolver_vanitypath_blacklist(),
-            "resource_resolver_vanitypath_denylist",
-            "resource_resolver_vanitypath_blacklist");
+            "resource.resolver.vanitypath.denylist",
+            "resource.resolver.vanitypath.blacklist");
         if ( includes != null || excludes != null ) {
             this.vanityPathConfig = new ArrayList<>();
             if ( includes != null ) {
@@ -105,16 +105,21 @@ class VanityPathConfigurer {
         return this.config.resource_resolver_vanitypath_bloomfilter_maxBytes();
     }
 
+    private boolean isDefined(final String[] value) {
+        return value != null && value.length > 0;
+    }
+
     List<String> configureVanityPathPrefixes(final String[] pathPrefixes, final String[] pathPrefixesFallback,
                                      String pathPrefixesPropertyName, String pathPrefixesFallbackPropertyName) {
-        if (pathPrefixes != null && pathPrefixesFallback != null) {
-            logger.error("Both the " + pathPrefixesPropertyName + " and " + pathPrefixesFallbackPropertyName
-                + " were defined. Using " + pathPrefixesPropertyName + " for configuring vanity paths.");
+        if (isDefined(pathPrefixes) && isDefined(pathPrefixesFallback) ) {
+            logger.error("Both properties, " + pathPrefixesPropertyName + " and " + pathPrefixesFallbackPropertyName
+                + ", were defined. Using " + pathPrefixesPropertyName + " for configuring vanity paths. "
+                + "Please remove the other property from your configuration.");
             return filterVanityPathPrefixes(pathPrefixes);
-        } else if (pathPrefixes != null) {
+        } else if (isDefined(pathPrefixes)) {
             return filterVanityPathPrefixes(pathPrefixes);
-        } else if (pathPrefixesFallback != null) {
-            logger.warn("The " + pathPrefixesPropertyName + " was not set. Using the " +
+        } else if (isDefined(pathPrefixesFallback)) {
+            logger.warn("The property " + pathPrefixesPropertyName + " was not set. Using the " +
                 pathPrefixesFallbackPropertyName + " instead. Please update your configuration to use " + pathPrefixesPropertyName);
             return filterVanityPathPrefixes(pathPrefixesFallback);
         }
