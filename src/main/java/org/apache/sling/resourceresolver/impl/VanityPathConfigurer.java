@@ -20,8 +20,6 @@ package org.apache.sling.resourceresolver.impl;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,28 +29,23 @@ class VanityPathConfigurer {
     private volatile ResourceResolverFactoryConfig config;
 
     /** Vanity path allow list */
-    private volatile String[] vanityPathAllowList;
+    private volatile List<String> vanityPathAllowList;
 
     /** Vanity path deny list */
-    private volatile String[] vanityPathDenyList;
+    private volatile List<String> vanityPathDenyList;
 
     public void setConfiguration(final ResourceResolverFactoryConfig c) {
         this.config = c;
-        // vanity path white list
-        this.vanityPathAllowList = null;
-        this.configureVanityPathPrefixes(config.resource_resolver_vanitypath_whitelist(),
-            config.resource_resolver_vanitypath_allowlist(),
-            "resource_resolver_vanitypath_whitelist",
-            "resource_resolver_vanitypath_allowlist",
-            filteredPrefixes -> this.vanityPathAllowList = filteredPrefixes);
-        // vanity path black list
-        this.vanityPathDenyList = null;
-        this.configureVanityPathPrefixes(config.resource_resolver_vanitypath_blacklist(),
-            config.resource_resolver_vanitypath_denylist(),
-            "resource_resolver_vanitypath_blacklist",
-            "resource_resolver_vanitypath_denylist",
-            filteredPrefixes -> this.vanityPathDenyList = filteredPrefixes);
 
+        this.vanityPathAllowList = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_allowlist(),
+            c.resource_resolver_vanitypath_whitelist(),
+            "resource_resolver_vanitypath_allowlist",
+            "resource_resolver_vanitypath_whitelist");
+
+        this.vanityPathDenyList = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_denylist(),
+            c.resource_resolver_vanitypath_blacklist(),
+            "resource_resolver_vanitypath_denylist",
+            "resource_resolver_vanitypath_blacklist");
     }
 
     public int getDefaultVanityPathRedirectStatus() {
@@ -67,11 +60,11 @@ class VanityPathConfigurer {
         return this.config.resource_resolver_vanitypath_cache_in_background();
     }
 
-    public String[] getVanityPathAllowList() {
+    public List<String> getVanityPathAllowList() {
         return this.vanityPathAllowList;
     }
 
-    public String[] getVanityPathDenyList() {
+    public List<String> getVanityPathDenyList() {
         return this.vanityPathDenyList;
     }
 
@@ -91,43 +84,33 @@ class VanityPathConfigurer {
         return this.config.resource_resolver_vanitypath_bloomfilter_maxBytes();
     }
 
-    void configureVanityPathPrefixes(String[] pathPrefixes, String[] pathPrefixesFallback,
-                                     String pathPrefixesPropertyName, String pathPrefixesFallbackPropertyName,
-                                     Consumer<String[]> filteredPathPrefixesConsumer) {
+    List<String> configureVanityPathPrefixes(final String[] pathPrefixes, final String[] pathPrefixesFallback,
+                                     String pathPrefixesPropertyName, String pathPrefixesFallbackPropertyName) {
         if (pathPrefixes != null && pathPrefixesFallback != null) {
-            logger.warn("Both the " + pathPrefixesPropertyName + " and " + pathPrefixesFallbackPropertyName
+            logger.error("Both the " + pathPrefixesPropertyName + " and " + pathPrefixesFallbackPropertyName
                 + " were defined. Using " + pathPrefixesPropertyName + " for configuring vanity paths.");
-            configureVanityPathPrefixes(pathPrefixes, filteredPathPrefixesConsumer);
+            return filterVanityPathPrefixes(pathPrefixes);
         } else if (pathPrefixes != null) {
-            configureVanityPathPrefixes(pathPrefixes, filteredPathPrefixesConsumer);
-        } else {
-            logger.debug("The " + pathPrefixesPropertyName + " was null. Using the " +
-                pathPrefixesFallbackPropertyName + " instead if defined.");
-            if (pathPrefixesFallback != null) {
-                configureVanityPathPrefixes(pathPrefixesFallback, filteredPathPrefixesConsumer);
-            }
+            return filterVanityPathPrefixes(pathPrefixes);
+        } else if (pathPrefixesFallback != null) {
+            logger.warn("The " + pathPrefixesPropertyName + " was not set. Using the " +
+                pathPrefixesFallbackPropertyName + " instead. Please update your configuration to use " + pathPrefixesPropertyName);
+            return filterVanityPathPrefixes(pathPrefixesFallback);
         }
+        return null;
     }
 
-    private static void configureVanityPathPrefixes(String[] pathPrefixes, Consumer<String[]> pathPrefixesConsumer) {
-        final List<String> filterVanityPaths = filterVanityPathPrefixes(pathPrefixes);
-        if (filterVanityPaths.size() > 0) {
-            pathPrefixesConsumer.accept(filterVanityPaths.toArray(new String[filterVanityPaths.size()]));
-        }
-    }
-
-    @NotNull
-    private static List<String> filterVanityPathPrefixes(String[] vanityPathPrefixes) {
+    private static List<String> filterVanityPathPrefixes(final String[] vanityPathPrefixes) {
         final List<String> prefixList = new ArrayList<>();
         for (final String value : vanityPathPrefixes) {
             if (value.trim().length() > 0) {
                 if (value.trim().endsWith("/")) {
                     prefixList.add(value.trim());
                 } else {
-                    prefixList.add(value.trim() + "/");
+                    prefixList.add(value.trim().concat("/"));
                 }
             }
         }
-        return prefixList;
+        return prefixList.isEmpty() ? null : prefixList;
     }
 }

@@ -450,8 +450,8 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     @Override
     public List<VanityPathConfig> getVanityPathConfig() {
-        final String[] includes = this.activator.getVanityPathConfigurer().getVanityPathAllowList();
-        final String[] excludes = this.activator.getVanityPathConfigurer().getVanityPathDenyList();
+        final List<String> includes = this.activator.getVanityPathConfigurer().getVanityPathAllowList();
+        final List<String> excludes = this.activator.getVanityPathConfigurer().getVanityPathDenyList();
         if ( includes == null && excludes == null ) {
             return null;
         }

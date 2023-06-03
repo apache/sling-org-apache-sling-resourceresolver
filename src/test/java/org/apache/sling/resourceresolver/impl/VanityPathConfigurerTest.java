@@ -20,7 +20,9 @@ package org.apache.sling.resourceresolver.impl;
 
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+
+import java.util.List;
 
 public class VanityPathConfigurerTest {
     private VanityPathConfigurer vanityPathConfigurer;
@@ -35,10 +37,9 @@ public class VanityPathConfigurerTest {
         String[] pathPrefixes = {"/some/path/"};
         String[] pathPrefixesFallback = {"/some/fallback/path/"};
 
-        vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
-            "resource_resolver_vanitypath_whitelist",
-            "resource_resolver_vanitypath_allowlist",
-            actualResults -> verifyResults(actualResults, pathPrefixes));
+        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
+            "original", "fallback");
+        verifyResults(result, pathPrefixes);
     }
 
     @Test
@@ -46,10 +47,9 @@ public class VanityPathConfigurerTest {
         String[] pathPrefixes = {"/some/path/"};
         String[] pathPrefixesFallback = null;
 
-        vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
-            "resource_resolver_vanitypath_whitelist",
-            "resource_resolver_vanitypath_allowlist",
-            actualResults -> verifyResults(actualResults, pathPrefixes));
+        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
+            "original", "fallback");
+        verifyResults(result, pathPrefixes);
     }
 
     @Test
@@ -57,14 +57,16 @@ public class VanityPathConfigurerTest {
         String[] pathPrefixes = null;
         String[] pathPrefixesFallback = {"/some/fallback/path/"};
 
-        vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
-            "resource_resolver_vanitypath_whitelist",
-            "resource_resolver_vanitypath_allowlist",
-            actualResults -> verifyResults(actualResults, pathPrefixesFallback));
+        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
+            "original", "fallback");
+        verifyResults(result, pathPrefixesFallback);
     }
 
-    private void verifyResults(String[] actualResults, String[] expectedResults) {
-        assertArrayEquals(expectedResults, actualResults);
+    private void verifyResults(List<String> actualResult, String[] expectedResults) {
+        assertEquals(expectedResults.length, actualResult.size());
+        for(int i=0; i<expectedResults.length; i++) {
+            assertEquals(expectedResults[i], actualResult.get(i));
+        }
     }
 
 }
