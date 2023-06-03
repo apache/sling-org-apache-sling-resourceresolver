@@ -27,23 +27,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class VanityPathConfigurer {
+
+    public @interface DeprecatedVanityConfig {
+
+        /** This is the deprecated fallback configuration for resource_resolver_vanitypath_allowlist() */
+        String[] resource_resolver_vanitypath_whitelist();
+
+        /** This is the deprecated fallback configuration for resource_resolver_vanitypath_denylist() */
+        String[] resource_resolver_vanitypath_blacklist();
+    }
+
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private volatile ResourceResolverFactoryConfig config;
 
     private volatile List<VanityPathConfig> vanityPathConfig;
 
-    public void setConfiguration(final ResourceResolverFactoryConfig c) {
+    public void setConfiguration(final ResourceResolverFactoryConfig c, final DeprecatedVanityConfig deprecatedConfig) {
         this.config = c;
         this.vanityPathConfig = null;
 
         final List<String> includes = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_allowlist(),
-            c.resource_resolver_vanitypath_whitelist(),
+            deprecatedConfig == null ? null : deprecatedConfig.resource_resolver_vanitypath_whitelist(),
             "resource_resolver_vanitypath_allowlist",
             "resource_resolver_vanitypath_whitelist");
 
         final List<String> excludes = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_denylist(),
-            c.resource_resolver_vanitypath_blacklist(),
+            deprecatedConfig == null ? null : deprecatedConfig.resource_resolver_vanitypath_blacklist(),
             "resource_resolver_vanitypath_denylist",
             "resource_resolver_vanitypath_blacklist");
         if ( includes != null || excludes != null ) {

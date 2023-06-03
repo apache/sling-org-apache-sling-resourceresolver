@@ -147,7 +147,7 @@ public class ResourceResolverFactoryActivator {
 
     private final VanityPathConfigurer vanityPathConfigurer = new VanityPathConfigurer();
     {
-        vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG);
+        vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG, null);
     }
 
     /**
@@ -235,8 +235,10 @@ public class ResourceResolverFactoryActivator {
      * Activates this component (called by SCR before)
      */
     @Activate
-    protected void activate(final BundleContext bundleContext, final ResourceResolverFactoryConfig config) {
-        this.vanityPathConfigurer.setConfiguration(config);
+    protected void activate(final BundleContext bundleContext, 
+        final ResourceResolverFactoryConfig config,
+        final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
+        this.vanityPathConfigurer.setConfiguration(config, deprecatedVanityConfig);
         this.bundleContext = bundleContext;
         this.config = config;
 
@@ -391,9 +393,11 @@ public class ResourceResolverFactoryActivator {
      * Modifies this component (called by SCR to update this component)
      */
     @Modified
-    protected void modified(final BundleContext bundleContext, final ResourceResolverFactoryConfig config) {
+    protected void modified(final BundleContext bundleContext, 
+        final ResourceResolverFactoryConfig config,
+        final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
         this.deactivate();
-        this.activate(bundleContext, config);
+        this.activate(bundleContext, config, deprecatedVanityConfig);
     }
 
     /**
@@ -405,6 +409,7 @@ public class ResourceResolverFactoryActivator {
 
         this.bundleContext = null;
         this.config = DEFAULT_CONFIG;
+        this.vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG, null);
         this.changeListenerWhiteboard.deactivate();
         this.changeListenerWhiteboard = null;
         this.resourceProviderTracker.deactivate();

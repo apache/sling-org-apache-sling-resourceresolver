@@ -159,18 +159,11 @@ public @interface ResourceResolverFactoryConfig {
                  "are considered. If the list is empty, all paths are used.)")
     String[] resource_resolver_allowed_alias_locations();
 
-
-    /** This is the deprecated fallback configuration for resource_resolver_vanitypath_allowlist() */
-    String[] resource_resolver_vanitypath_whitelist();
-
     @AttributeDefinition(name = "Allowed Vanity Path Location",
         description ="This setting can contain a list of path prefixes, e.g. /libs/, /content/. If " +
             "such a list is configured, only vanity paths from resources starting with this prefix " +
             " are considered. If the list is empty, all vanity paths are used.")
     String[] resource_resolver_vanitypath_allowlist();
-
-    /** This is the deprecated fallback configuration for resource_resolver_vanitypath_denylist() */
-    String[] resource_resolver_vanitypath_blacklist();
 
     @AttributeDefinition(name = "Denied Vanity Path Location",
         description ="This setting can contain a list of path prefixes, e.g. /misc/. If " +
