@@ -994,7 +994,7 @@ public class MapEntries implements
             return false;
         }
 
-        // check white list
+        // check allow/deny list
         if ( this.factory.getVanityPathConfig() != null ) {
             boolean allowed = false;
             for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
@@ -1004,7 +1004,7 @@ public class MapEntries implements
                 }
             }
             if ( !allowed ) {
-                log.debug("isValidVanityPath: not valid as not in white list {}", path);
+                log.debug("isValidVanityPath: not valid as not in allow list {}", path);
                 return false;
             }
         }
