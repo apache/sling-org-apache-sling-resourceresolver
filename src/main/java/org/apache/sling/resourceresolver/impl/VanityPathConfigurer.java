@@ -19,7 +19,10 @@
 package org.apache.sling.resourceresolver.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,24 +31,35 @@ class VanityPathConfigurer {
 
     private volatile ResourceResolverFactoryConfig config;
 
-    /** Vanity path allow list */
-    private volatile List<String> vanityPathAllowList;
-
-    /** Vanity path deny list */
-    private volatile List<String> vanityPathDenyList;
+    private volatile List<VanityPathConfig> vanityPathConfig;
 
     public void setConfiguration(final ResourceResolverFactoryConfig c) {
         this.config = c;
+        this.vanityPathConfig = null;
 
-        this.vanityPathAllowList = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_allowlist(),
+        final List<String> includes = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_allowlist(),
             c.resource_resolver_vanitypath_whitelist(),
             "resource_resolver_vanitypath_allowlist",
             "resource_resolver_vanitypath_whitelist");
 
-        this.vanityPathDenyList = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_denylist(),
+        final List<String> excludes = this.configureVanityPathPrefixes(c.resource_resolver_vanitypath_denylist(),
             c.resource_resolver_vanitypath_blacklist(),
             "resource_resolver_vanitypath_denylist",
             "resource_resolver_vanitypath_blacklist");
+        if ( includes != null || excludes != null ) {
+            this.vanityPathConfig = new ArrayList<>();
+            if ( includes != null ) {
+                for(final String val : includes) {
+                    this.vanityPathConfig.add(new VanityPathConfig(val, false));
+                }
+            }
+            if ( excludes != null ) {
+                for(final String val : excludes) {
+                    this.vanityPathConfig.add(new VanityPathConfig(val, true));
+                }
+            }
+            Collections.sort(this.vanityPathConfig);
+        }
     }
 
     public int getDefaultVanityPathRedirectStatus() {
@@ -60,13 +74,10 @@ class VanityPathConfigurer {
         return this.config.resource_resolver_vanitypath_cache_in_background();
     }
 
-    public List<String> getVanityPathAllowList() {
-        return this.vanityPathAllowList;
+    public List<VanityPathConfig> getVanityPathConfig() {
+        return this.vanityPathConfig;
     }
 
-    public List<String> getVanityPathDenyList() {
-        return this.vanityPathDenyList;
-    }
 
     public boolean hasVanityPathPrecedence() {
         return this.config.resource_resolver_vanity_precedence();
