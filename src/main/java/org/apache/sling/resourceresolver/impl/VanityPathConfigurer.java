@@ -28,6 +28,69 @@ import org.slf4j.LoggerFactory;
 class VanityPathConfigurer {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    private volatile ResourceResolverFactoryConfig config;
+
+    /** Vanity path allow list */
+    private volatile String[] vanityPathAllowList;
+
+    /** Vanity path deny list */
+    private volatile String[] vanityPathDenyList;
+
+    public void setConfiguration(final ResourceResolverFactoryConfig c) {
+        this.config = c;
+        // vanity path white list
+        this.vanityPathAllowList = null;
+        this.configureVanityPathPrefixes(config.resource_resolver_vanitypath_whitelist(),
+            config.resource_resolver_vanitypath_allowlist(),
+            "resource_resolver_vanitypath_whitelist",
+            "resource_resolver_vanitypath_allowlist",
+            filteredPrefixes -> this.vanityPathAllowList = filteredPrefixes);
+        // vanity path black list
+        this.vanityPathDenyList = null;
+        this.configureVanityPathPrefixes(config.resource_resolver_vanitypath_blacklist(),
+            config.resource_resolver_vanitypath_denylist(),
+            "resource_resolver_vanitypath_blacklist",
+            "resource_resolver_vanitypath_denylist",
+            filteredPrefixes -> this.vanityPathDenyList = filteredPrefixes);
+
+    }
+
+    public int getDefaultVanityPathRedirectStatus() {
+        return config.resource_resolver_default_vanity_redirect_status();
+    }
+
+    public boolean isVanityPathEnabled() {
+        return this.config.resource_resolver_enable_vanitypath();
+    }
+
+    public boolean isVanityPathCacheInitInBackground() {
+        return this.config.resource_resolver_vanitypath_cache_in_background();
+    }
+
+    public String[] getVanityPathAllowList() {
+        return this.vanityPathAllowList;
+    }
+
+    public String[] getVanityPathDenyList() {
+        return this.vanityPathDenyList;
+    }
+
+    public boolean hasVanityPathPrecedence() {
+        return this.config.resource_resolver_vanity_precedence();
+    }
+
+    public long getMaxCachedVanityPathEntries() {
+        return this.config.resource_resolver_vanitypath_maxEntries();
+    }
+
+    public boolean isMaxCachedVanityPathEntriesStartup() {
+        return this.config.resource_resolver_vanitypath_maxEntries_startup();
+    }
+
+    public int getVanityBloomFilterMaxBytes() {
+        return this.config.resource_resolver_vanitypath_bloomfilter_maxBytes();
+    }
+
     void configureVanityPathPrefixes(String[] pathPrefixes, String[] pathPrefixesFallback,
                                      String pathPrefixesPropertyName, String pathPrefixesFallbackPropertyName,
                                      Consumer<String[]> filteredPathPrefixesConsumer) {

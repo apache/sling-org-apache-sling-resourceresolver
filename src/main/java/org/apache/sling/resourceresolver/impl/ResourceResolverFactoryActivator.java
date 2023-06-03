@@ -21,10 +21,17 @@ package org.apache.sling.resourceresolver.impl;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 
-
-import java.util.function.Consumer;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.commons.lang3.StringUtils;
@@ -40,7 +47,6 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.ChangeListener;
 import org.apache.sling.resourceresolver.impl.providers.RuntimeServiceImpl;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
-import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -69,7 +75,6 @@ import org.slf4j.LoggerFactory;
 @Designate(ocd = ResourceResolverFactoryConfig.class)
 @Component(name = "org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl")
 public class ResourceResolverFactoryActivator {
-
 
     private static final class FactoryRegistration {
         /** Registration .*/
@@ -132,12 +137,6 @@ public class ResourceResolverFactoryActivator {
     @SuppressWarnings("java:S3077")
     private volatile Set<String> allowedAliasLocations = Collections.emptySet();
 
-    /** Vanity path whitelist */
-    private volatile String[] vanityPathWhiteList;
-
-    /** Vanity path blacklist */
-    private volatile String[] vanityPathBlackList;
-
     /** Observation paths */
     private volatile Path[] observationPaths;
 
@@ -147,6 +146,9 @@ public class ResourceResolverFactoryActivator {
     private volatile FactoryRegistration factoryRegistration;
 
     private final VanityPathConfigurer vanityPathConfigurer = new VanityPathConfigurer();
+    {
+        vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG);
+    }
 
     /**
      * Get the resource decorator tracker.
@@ -203,18 +205,6 @@ public class ResourceResolverFactoryActivator {
                || path.startsWith(this.mapRootPrefix);
     }
 
-    public int getDefaultVanityPathRedirectStatus() {
-        return config.resource_resolver_default_vanity_redirect_status();
-    }
-
-    public boolean isVanityPathEnabled() {
-        return this.config.resource_resolver_enable_vanitypath();
-    }
-
-    public boolean isVanityPathCacheInitInBackground() {
-        return this.config.resource_resolver_vanitypath_cache_in_background();
-    }
-
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
@@ -227,36 +217,16 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_log_unclosed();
     }
 
-    public String[] getVanityPathWhiteList() {
-        return this.vanityPathWhiteList;
-    }
-
-    public String[] getVanityPathBlackList() {
-        return this.vanityPathBlackList;
-    }
-
-    public boolean hasVanityPathPrecedence() {
-        return this.config.resource_resolver_vanity_precedence();
-    }
-
-    public long getMaxCachedVanityPathEntries() {
-        return this.config.resource_resolver_vanitypath_maxEntries();
-    }
-
-    public boolean isMaxCachedVanityPathEntriesStartup() {
-        return this.config.resource_resolver_vanitypath_maxEntries_startup();
-    }
-
-    public int getVanityBloomFilterMaxBytes() {
-        return this.config.resource_resolver_vanitypath_bloomfilter_maxBytes();
-    }
-
     public boolean shouldLogResourceResolverClosing() {
         return this.config.resource_resolver_log_closing();
     }
 
     public Path[] getObservationPaths() {
         return this.observationPaths;
+    }
+
+    public VanityPathConfigurer getVanityPathConfigurer() {
+        return this.vanityPathConfigurer;
     }
 
     // ---------- SCR Integration ---------------------------------------------
@@ -266,6 +236,7 @@ public class ResourceResolverFactoryActivator {
      */
     @Activate
     protected void activate(final BundleContext bundleContext, final ResourceResolverFactoryConfig config) {
+        this.vanityPathConfigurer.setConfiguration(config);
         this.bundleContext = bundleContext;
         this.config = config;
 
@@ -341,21 +312,6 @@ public class ResourceResolverFactoryActivator {
                 this.allowedAliasLocations = Collections.unmodifiableSet(prefixSet);
             }
         }
-
-        // vanity path white list
-        this.vanityPathWhiteList = null;
-        vanityPathConfigurer.configureVanityPathPrefixes(config.resource_resolver_vanitypath_whitelist(),
-            config.resource_resolver_vanitypath_allowlist(),
-            "resource_resolver_vanitypath_whitelist",
-            "resource_resolver_vanitypath_allowlist",
-            filteredPrefixes -> this.vanityPathWhiteList = filteredPrefixes);
-        // vanity path black list
-        this.vanityPathBlackList = null;
-        vanityPathConfigurer.configureVanityPathPrefixes(config.resource_resolver_vanitypath_blacklist(),
-            config.resource_resolver_vanitypath_denylist(),
-            "resource_resolver_vanitypath_blacklist",
-            "resource_resolver_vanitypath_denylist",
-            filteredPrefixes -> this.vanityPathBlackList = filteredPrefixes);
 
         // check for required property
         Set<String> requiredResourceProvidersLegacy = getStringSet(config.resource_resolver_required_providers());
