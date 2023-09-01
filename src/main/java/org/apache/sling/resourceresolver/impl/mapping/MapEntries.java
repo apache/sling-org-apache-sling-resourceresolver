@@ -1375,7 +1375,11 @@ public class MapEntries implements
             final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) > '%s' ORDER BY FIRST([sling:vanityPath])";
             it = new PagedQueryIterator(resolver, queryStringWithSort);
         } catch (QuerySyntaxException ex) {
-            log.debug("sort with first() not supported, falling back to base query");
+            log.debug("sort with first() not supported, falling back to base query", ex);
+            supportsSort = false;
+            it = queryAllVanityPaths(baseQueryString);
+        } catch (UnsupportedOperationException ex) {
+            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
             supportsSort = false;
             it = queryAllVanityPaths(baseQueryString);
         }
