@@ -1422,7 +1422,7 @@ public class MapEntries implements
             if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
                 log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
             } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of resources with sling:vanityPath properties in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
             }
         }
 
