@@ -35,6 +35,8 @@ import org.osgi.service.component.annotations.Reference;
 /**
  *  Export metrics for the resource resolver bundle:
  *
+ *  org.apache.sling.resourceresolver.numberOfResourcesWithAliasesOnStartup -- the total number of resources with sling:alias properties found on startup
+ *  org.apache.sling.resourceresolver.numberOfResourcesWithVanityPathsOnStartup -- the total number of resources with sling:vanityPath properties found on startup
  *  org.apache.sling.resourceresolver.numberOfVanityPaths -- the total number of vanity paths in the cache
  *  org.apache.sling.resourceresolver.numberOfVanityPathLookups -- the total number of vanity path lookups
  *  org.apache.sling.resourceresolver.numberOfVanityPathBloomNegatives -- the total number of vanity path lookups filtered by the bloom filter
@@ -47,17 +49,21 @@ import org.osgi.service.component.annotations.Reference;
 
 @Component(service=ResourceResolverMetrics.class)
 public class ResourceResolverMetrics {
-    
+
     protected static final String METRICS_PREFIX = "org.apache.sling.resourceresolver";
-    
+
     @Reference
     MetricsService metricsService;
-    
+
     private static final Supplier<Long> ZERO_SUPPLIER = () -> 0L;
-    
+
     // number of vanity paths
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathsGauge;
     private Supplier<Long> numberOfVanityPathsSupplier = ZERO_SUPPLIER;
+
+    // number of resources with vanity paths on startup
+    private ServiceRegistration<Gauge<Long>> numberOfResourcesWithVanityPathsOnStartupGauge;
+    private Supplier<Long> numberOfResourcesWithVanityPathsOnStartupSupplier = ZERO_SUPPLIER;
 
     // total number of vanity path lookups
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathLookupsGauge;
@@ -74,26 +80,34 @@ public class ResourceResolverMetrics {
     // number of aliases
     private ServiceRegistration<Gauge<Long>> numberOfAliasesGauge;
     private Supplier<Long> numberOfAliasesSupplier = ZERO_SUPPLIER;
-    
+
+    // number of aliases
+    private ServiceRegistration<Gauge<Long>> numberOfResourcesWithAliasesOnStartupGauge;
+    private Supplier<Long> numberOfResourcesWithAliasesOnStartupSupplier = ZERO_SUPPLIER;
+
     private Counter unclosedResourceResolvers;
-    
-    
+
+
     @Activate
     protected void activate(BundleContext bundleContext) {
         numberOfVanityPathsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPaths", () -> numberOfVanityPathsSupplier );
+        numberOfResourcesWithVanityPathsOnStartupGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfResourcesWithVanityPathsOnStartup", () -> numberOfResourcesWithVanityPathsOnStartupSupplier );
         numberOfVanityPathLookupsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathLookups", () -> numberOfVanityPathLookupsSupplier );
         numberOfVanityPathBloomNegativeGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomNegatives", () -> numberOfVanityPathBloomNegativeSupplier );
         numberOfVanityPathBloomFalsePositiveGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomFalsePositives", () -> numberOfVanityPathBloomFalsePositiveSupplier );
         numberOfAliasesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfAliases", () -> numberOfAliasesSupplier );
+        numberOfResourcesWithAliasesOnStartupGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfResourcesWithAliasesOnStartup", () -> numberOfResourcesWithAliasesOnStartupSupplier );
         unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX  + ".unclosedResourceResolvers");
     }
 
     @Deactivate
     protected void deactivate() {
         numberOfVanityPathsGauge.unregister();
+        numberOfResourcesWithVanityPathsOnStartupGauge.unregister();
         numberOfVanityPathLookupsGauge.unregister();
         numberOfVanityPathBloomNegativeGauge.unregister();
         numberOfVanityPathBloomFalsePositiveGauge.unregister();
+        numberOfResourcesWithAliasesOnStartupGauge.unregister();
         numberOfAliasesGauge.unregister();
     }
 
@@ -103,6 +117,14 @@ public class ResourceResolverMetrics {
      */
     public void setNumberOfVanityPathsSupplier(Supplier<Long> supplier) {
         numberOfVanityPathsSupplier = supplier;
+    }
+
+    /**
+     * Set the supplier for the number of resources with vanity paths on startup
+     * @param supplier a supplier returning number of resources with vanity paths on startup
+     */
+    public void setNumberOfResourcesWithVanityPathsOnStartupSupplier(Supplier<Long> supplier) {
+        numberOfResourcesWithVanityPathsOnStartupSupplier = supplier;
     }
 
     /**
@@ -136,7 +158,15 @@ public class ResourceResolverMetrics {
     public void setNumberOfAliasesSupplier(Supplier<Long> supplier) {
         numberOfAliasesSupplier = supplier;
     }
-    
+
+    /**
+     * Set the supplier for the number of resources with aliases on startup
+     * @param supplier a supplier returning the number of resources with aliases on startup
+     */
+    public void setNumberOfResourcesWithAliasesOnStartupSupplier(Supplier<Long> supplier) {
+        numberOfResourcesWithAliasesOnStartupSupplier = supplier;
+    }
+
     /**
      * Increment the counter for the number of unresolved resource resolvers
      */

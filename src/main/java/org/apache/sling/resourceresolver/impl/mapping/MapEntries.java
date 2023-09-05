@@ -142,9 +142,12 @@ public class MapEntries implements
 
     private Map<String, Map<String, String>> aliasMap;
 
+    private final AtomicLong aliasResourcesOnStartup;
+
     private final ReentrantLock initializing = new ReentrantLock();
 
     private final AtomicLong vanityCounter;
+    private final AtomicLong vanityResourcesOnStartup;
     private final AtomicLong vanityPathLookups;
     private final AtomicLong vanityPathBloomNegative;
     private final AtomicLong vanityPathBloomFalsePositive;
@@ -174,11 +177,14 @@ public class MapEntries implements
         this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
+        this.aliasResourcesOnStartup = new AtomicLong(0);
+
         this.useOptimizeAliasResolution = doInit();
 
         this.registration = registerResourceChangeListener(bundleContext);
 
         this.vanityCounter = new AtomicLong(0);
+        this.vanityResourcesOnStartup = new AtomicLong(0);
         this.vanityPathLookups = new AtomicLong(0);
         this.vanityPathBloomNegative = new AtomicLong(0);
         this.vanityPathBloomFalsePositive = new AtomicLong(0);
@@ -187,10 +193,12 @@ public class MapEntries implements
         this.metrics = metrics;
         if (metrics.isPresent()) {
             this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
+            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityResourcesOnStartup::get);
             this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
             this.metrics.get().setNumberOfVanityPathBloomNegativeSupplier(vanityPathBloomNegative::get);
             this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
             this.metrics.get().setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
+            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
         }
     }
 
@@ -1165,7 +1173,9 @@ public class MapEntries implements
             loadAlias(i.next(), map);
         }
         long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} aliases in {}ms", count, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        log.debug("processed {} resources with sling:alias properties in {}ms", count, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+
+        this.aliasResourcesOnStartup.set(count);
 
         return map;
     }
@@ -1407,14 +1417,16 @@ public class MapEntries implements
             }
         }
         long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} vanityPaths (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
         if (!isAllVanityPathEntriesCached()) {
             if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of vanity paths in scope ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
+                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
             } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of vanity paths in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
             }
         }
+
+        this.vanityResourcesOnStartup.set(count);
 
         return targetPaths;
     }
