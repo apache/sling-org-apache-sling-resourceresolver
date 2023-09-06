@@ -26,6 +26,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -151,13 +154,20 @@ public class MockedResourceResolverImplTest {
 
     @SuppressWarnings("unchecked")
     @Before
-    public void before() throws LoginException {
+    public void before() throws LoginException, InterruptedException {
         activator = new ResourceResolverFactoryActivator();
 
         // system bundle access
         final Bundle systemBundle = mock(Bundle.class);
         Mockito.when(systemBundle.getState()).thenReturn(Bundle.ACTIVE);
         Mockito.when(bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION)).thenReturn(systemBundle);
+        CountDownLatch factoryRegistrationDone = new CountDownLatch(1);
+        Mockito.when(bundleContext.registerService(same(ResourceResolverFactory.class), any(ServiceFactory.class), any(Dictionary.class)))
+                .thenAnswer(invocation -> {
+                    factoryRegistrationDone.countDown();
+                    return mock(ServiceReference.class);
+                });
+
         activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
         activator.resourceProviderTracker = resourceProviderTracker;
         activator.changeListenerWhiteboard = resourceChangeListenerWhiteboard;
@@ -312,14 +322,17 @@ public class MockedResourceResolverImplTest {
         Mockito.when(usingBundle.getBundleContext()).thenReturn(usingBundleContext);
         Mockito.when(usingBundleContext.getBundle()).thenReturn(usingBundle);
 
+        factoryRegistrationDone.await(5, TimeUnit.SECONDS);
+
         // extract any services that were registered into a map.
         ArgumentCaptor<Class> classesCaptor = ArgumentCaptor.forClass(Class.class);
         ArgumentCaptor<ServiceFactory> serviceCaptor = ArgumentCaptor.forClass(ServiceFactory.class);
         @SuppressWarnings("rawtypes")
         ArgumentCaptor<Dictionary> propertiesCaptor = ArgumentCaptor.forClass(Dictionary.class);
         Mockito.verify(bundleContext, Mockito.atLeastOnce()).registerService(
-            (Class<ResourceResolverFactory>)classesCaptor.capture(), (ServiceFactory<ResourceResolverFactory>)serviceCaptor.capture(),
-            propertiesCaptor.capture());
+                (Class<ResourceResolverFactory>) classesCaptor.capture(),
+                (ServiceFactory<ResourceResolverFactory>)serviceCaptor.capture(),
+                propertiesCaptor.capture());
 
         int si = 0;
         List<ServiceFactory> serviceList = serviceCaptor.getAllValues();
