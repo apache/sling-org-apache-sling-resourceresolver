@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -74,6 +75,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.Invocation;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -119,10 +121,6 @@ public class MockedResourceResolverImplTest {
     @SuppressWarnings("rawtypes")
     @Mock
     private QueryLanguageProvider queryProvider;
-
-    private Map<String, Object> services = new HashMap<String, Object>();
-
-    private Map<String, Object> serviceProperties = new HashMap<String, Object>();
 
     private ResourceResolverFactoryImpl resourceResolverFactory;
 
@@ -324,32 +322,18 @@ public class MockedResourceResolverImplTest {
 
         factoryRegistrationDone.await(5, TimeUnit.SECONDS);
 
-        // extract any services that were registered into a map.
-        ArgumentCaptor<Class> classesCaptor = ArgumentCaptor.forClass(Class.class);
-        ArgumentCaptor<ServiceFactory> serviceCaptor = ArgumentCaptor.forClass(ServiceFactory.class);
-        @SuppressWarnings("rawtypes")
-        ArgumentCaptor<Dictionary> propertiesCaptor = ArgumentCaptor.forClass(Dictionary.class);
+        ArgumentCaptor<ServiceFactory<ResourceResolverFactory>> serviceCaptor = argumentCaptorForClass(ServiceFactory.class);
         Mockito.verify(bundleContext, Mockito.atLeastOnce()).registerService(
-                (Class<ResourceResolverFactory>) classesCaptor.capture(),
-                (ServiceFactory<ResourceResolverFactory>)serviceCaptor.capture(),
-                propertiesCaptor.capture());
+                same(ResourceResolverFactory.class),
+                serviceCaptor.capture(),
+                any(Dictionary.class));
 
-        int si = 0;
-        List<ServiceFactory> serviceList = serviceCaptor.getAllValues();
-        @SuppressWarnings({ "unused", "rawtypes" })
-        List<Dictionary> servicePropertiesList = propertiesCaptor.getAllValues();
-        for (Class serviceClass : classesCaptor.getAllValues()) {
-            services.put(serviceClass.getName(), serviceList.get(si));
-            serviceProperties.put(serviceClass.getName(), serviceProperties.get(si));
-            si++;
-        }
         // verify that a ResourceResolverFactoryImpl was created and registered.
-        Assert.assertNotNull("" + services, services.get(ResourceResolverFactory.class.getName()));
-        Object rrf = services.get(ResourceResolverFactory.class.getName());
-        if (rrf instanceof ServiceFactory) {
-            rrf = ((ServiceFactory) rrf).getService(usingBundle, null);
-        }
-        Assert.assertTrue(rrf instanceof ResourceResolverFactoryImpl);
+        ServiceFactory<ResourceResolverFactory> rrfServiceFactory = serviceCaptor.getValue();
+        Assert.assertNotNull("ServiceFactory<ResourceResolverFactory>", rrfServiceFactory);
+        final ResourceResolverFactory rrf = rrfServiceFactory.getService(usingBundle, null);
+        assertNotNull("ResourceResolverFactory", rrf);
+        assertTrue("ResourceResolverFactoryImpl", rrf instanceof ResourceResolverFactoryImpl);
         resourceResolverFactory = (ResourceResolverFactoryImpl) rrf;
 
         // ensure allowed alias locations are *not* ending with a slash (invalid absolut path)
@@ -361,6 +345,11 @@ public class MockedResourceResolverImplTest {
         assertNotEquals("Mappings unavailable",
             MapEntries.EMPTY,
             getInaccessibleField("commonFactory",rrf,CommonResourceResolverFactoryImpl.class).getMapEntries());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> ArgumentCaptor<T> argumentCaptorForClass(Class<?> clazz) {
+        return (ArgumentCaptor<T>) ArgumentCaptor.forClass(clazz);
     }
 
     public static ResourceProviderHandler createRPHandler(ResourceProvider<?> rp, String pid, long ranking,
