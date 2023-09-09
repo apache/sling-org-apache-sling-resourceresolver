@@ -57,8 +57,8 @@ import static org.apache.sling.resourceresolver.util.MockTestUtil.createRequestF
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;

@@ -157,9 +157,9 @@ public class ResourceResolverControlTest {
         somePathRootResource = configureResourceAt(rootProvider, "/some/path");
 
         // configure query at '/'
-        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq(root))).thenReturn(Arrays.asList(somethingResource, someRootResource).iterator());
-        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq(someRootResource))).thenReturn(Arrays.asList(somePathRootResource).iterator());
-        when(rootProvider.getResource((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq("/some/path"), Mockito.anyObject(), Mockito.anyObject())).thenReturn(somePathResource);
+        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.any(), Mockito.eq(root))).thenReturn(Arrays.asList(somethingResource, someRootResource).iterator());
+        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.any(), Mockito.eq(someRootResource))).thenReturn(Arrays.asList(somePathRootResource).iterator());
+        when(rootProvider.getResource((ResolveContext<Object>) Mockito.any(), Mockito.eq("/some/path"), Mockito.any(), Mockito.any())).thenReturn(somePathResource);
 
         ResourceResolver rr = mock(ResourceResolver.class);
         ResourceAccessSecurityTracker securityTracker = Mockito.mock(ResourceAccessSecurityTracker.class);
@@ -301,11 +301,11 @@ public class ResourceResolverControlTest {
     public void getParent_differentProviders() {
         final Resource childResource = mock(Resource.class);
         when(childResource.getPath()).thenReturn("/some/path");
-        when(subProvider.getResource((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq("/some/path"), (ResourceContext) Mockito.anyObject(), (Resource)Mockito.eq(null))).thenReturn(childResource);
+        when(subProvider.getResource((ResolveContext<Object>) Mockito.any(), Mockito.eq("/some/path"), (ResourceContext) Mockito.any(), (Resource)Mockito.eq(null))).thenReturn(childResource);
 
         final Resource parentResource = mock(Resource.class);
         when(parentResource.getPath()).thenReturn("/some");
-        when(rootProvider.getResource((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq("/some"), (ResourceContext) Mockito.anyObject(), (Resource)Mockito.eq(null))).thenReturn(parentResource);
+        when(rootProvider.getResource((ResolveContext<Object>) Mockito.any(), Mockito.eq("/some"), (ResourceContext) Mockito.any(), (Resource)Mockito.eq(null))).thenReturn(parentResource);
 
         Resource child = crp.getResource(context, "/some/path", null, null, false);
         assertNotNull(child);
