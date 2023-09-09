@@ -216,11 +216,11 @@ public abstract class AbstractMappingMapEntriesTest {
      * so that we can add children to them and create the iterators after
      * everything is setup
      */
-    static interface ResourceDecorator {
+    public static interface ResourceDecorator {
         public List<Resource> getChildrenList();
     }
 
-    static class DataFuture {
+    public static class DataFuture {
         public Future<Iterator<?>> future;
 
         public DataFuture(Future<Iterator<?>> future) {

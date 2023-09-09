@@ -346,7 +346,7 @@ public class MockTestUtil {
      * so that we can add children to them and create the iterators after
      * everything is setup
      */
-    static interface ResourceChildrenAccessor {
+    public static interface ResourceChildrenAccessor {
         public List<Resource> getChildrenList();
     }
 
