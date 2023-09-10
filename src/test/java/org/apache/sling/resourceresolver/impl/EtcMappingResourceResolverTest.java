@@ -57,8 +57,7 @@ import static org.apache.sling.resourceresolver.util.MockTestUtil.createRequestF
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -133,7 +132,7 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("serviceUserMapper", activator, serviceUserMapper);
         commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
-        when(serviceUserMapper.getServiceUserID(any(Bundle.class),anyString())).thenReturn("mapping");
+        when(serviceUserMapper.getServiceUserID(nullable(Bundle.class),nullable(String.class))).thenReturn("mapping");
         // Activate method is package private so we use reflection to to call it
         callInaccessibleMethod("activate", null, commonFactory, BundleContext.class, bundleContext);
         final Bundle usingBundle = mock(Bundle.class);

@@ -77,6 +77,7 @@ import org.mockito.stubbing.Answer;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
+import org.osgi.service.event.Event;
 
 @RunWith(Parameterized.class)
 public class MapEntriesTest extends AbstractMappingMapEntriesTest {
@@ -444,7 +445,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         // map entries should have no alias atm
         assertTrue( mapEntries.getResolveMaps().isEmpty());
         // till now we already have 2 events being sent
-        Mockito.verify(eventAdmin,Mockito.times(2)).postEvent(ArgumentMatchers.any());
+        Mockito.verify(eventAdmin,Mockito.times(2)).postEvent(ArgumentMatchers.any(Event.class));
 
         // 3 updates at the same onChange call
         mapEntries.onChange(Arrays.asList(
@@ -462,7 +463,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertTrue(entries.stream().anyMatch(e -> e.getPattern().contains("/target/found3")));
         
         // a single event is sent for all 3 added vanity paths
-        Mockito.verify(eventAdmin,Mockito.times(3)).postEvent(Mockito.any());
+        Mockito.verify(eventAdmin,Mockito.times(3)).postEvent(ArgumentMatchers.any(Event.class));
     }
 
     @Test

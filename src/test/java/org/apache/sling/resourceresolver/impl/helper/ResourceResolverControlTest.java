@@ -67,6 +67,9 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.osgi.framework.BundleContext;
 
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.ArgumentMatchers.any;
+
 @SuppressWarnings("unchecked")
 public class ResourceResolverControlTest {
 
@@ -157,9 +160,9 @@ public class ResourceResolverControlTest {
         somePathRootResource = configureResourceAt(rootProvider, "/some/path");
 
         // configure query at '/'
-        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.any(), Mockito.eq(root))).thenReturn(Arrays.asList(somethingResource, someRootResource).iterator());
-        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.any(), Mockito.eq(someRootResource))).thenReturn(Arrays.asList(somePathRootResource).iterator());
-        when(rootProvider.getResource((ResolveContext<Object>) Mockito.any(), Mockito.eq("/some/path"), Mockito.any(), Mockito.any())).thenReturn(somePathResource);
+        when(rootProvider.listChildren((ResolveContext<Object>) nullable(ResolveContext.class), Mockito.eq(root))).thenReturn(Arrays.asList(somethingResource, someRootResource).iterator());
+        when(rootProvider.listChildren((ResolveContext<Object>) any(ResolveContext.class), Mockito.eq(someRootResource))).thenReturn(Arrays.asList(somePathRootResource).iterator());
+        when(rootProvider.getResource((ResolveContext<Object>) any(ResolveContext.class), Mockito.eq("/some/path"), any(), any())).thenReturn(somePathResource);
 
         ResourceResolver rr = mock(ResourceResolver.class);
         ResourceAccessSecurityTracker securityTracker = Mockito.mock(ResourceAccessSecurityTracker.class);
@@ -201,7 +204,7 @@ public class ResourceResolverControlTest {
 
         Resource mockResource = newMockResource(path);
 
-        when(provider.getResource((ResolveContext<T>) Mockito.any(), Mockito.eq(path), (ResourceContext) Mockito.any(), (Resource) Mockito.any()))
+        when(provider.getResource((ResolveContext<T>) nullable(ResolveContext.class), Mockito.eq(path), nullable(ResourceContext.class), nullable(Resource.class)))
             .thenReturn(mockResource);
 
         return mockResource;
@@ -239,7 +242,7 @@ public class ResourceResolverControlTest {
     }
 
     private ResolveContext<Object> mockContext() {
-        return (ResolveContext<Object>) Mockito.any();
+        return (ResolveContext<Object>) nullable(ResolveContext.class);
     }
 
     /**
@@ -301,11 +304,11 @@ public class ResourceResolverControlTest {
     public void getParent_differentProviders() {
         final Resource childResource = mock(Resource.class);
         when(childResource.getPath()).thenReturn("/some/path");
-        when(subProvider.getResource((ResolveContext<Object>) Mockito.any(), Mockito.eq("/some/path"), (ResourceContext) Mockito.any(), (Resource)Mockito.eq(null))).thenReturn(childResource);
+        when(subProvider.getResource((ResolveContext<Object>) nullable(ResolveContext.class), Mockito.eq("/some/path"), nullable(ResourceContext.class), (Resource)Mockito.eq(null))).thenReturn(childResource);
 
         final Resource parentResource = mock(Resource.class);
         when(parentResource.getPath()).thenReturn("/some");
-        when(rootProvider.getResource((ResolveContext<Object>) Mockito.any(), Mockito.eq("/some"), (ResourceContext) Mockito.any(), (Resource)Mockito.eq(null))).thenReturn(parentResource);
+        when(rootProvider.getResource((ResolveContext<Object>) nullable(ResolveContext.class), Mockito.eq("/some"), nullable(ResourceContext.class), (Resource)Mockito.eq(null))).thenReturn(parentResource);
 
         Resource child = crp.getResource(context, "/some/path", null, null, false);
         assertNotNull(child);
@@ -400,7 +403,7 @@ public class ResourceResolverControlTest {
     public void copy_differentProvider() throws PersistenceException {
 
         Resource newRes = newMockResource("/object");
-        when(rootProvider.create(mockContext(), Mockito.eq("/object"), Mockito.anyMap()))
+        when(rootProvider.create(mockContext(), Mockito.eq("/object"), nullable(Map.class)))
             .thenReturn(newRes);
 
         Resource resource = crp.copy(context, "/some/path/object", "/");
@@ -435,7 +438,7 @@ public class ResourceResolverControlTest {
     public void move_differentProvider() throws PersistenceException {
 
         Resource newRes = newMockResource("/object");
-        when(rootProvider.create(mockContext(), Mockito.eq("/object"), Mockito.anyMap())).thenReturn(newRes);
+        when(rootProvider.create(mockContext(), Mockito.eq("/object"), nullable(Map.class))).thenReturn(newRes);
 
         Resource resource = crp.move(context, "/some/path/object", "/");
 
@@ -694,6 +697,6 @@ public class ResourceResolverControlTest {
 
         final AuthenticatedResourceProvider p = control.getBestMatchingModifiableProvider(rrContext, "/libs/foo");
         p.create(rr, "/foo", null);
-        Mockito.verify(rootProvider).create(Mockito.any(), Mockito.eq("/foo"), Mockito.isNull(Map.class));
+        Mockito.verify(rootProvider).create(nullable(ResolveContext.class), Mockito.eq("/foo"), Mockito.isNull(Map.class));
     }
 }
