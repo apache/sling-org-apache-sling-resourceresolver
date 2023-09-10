@@ -50,10 +50,10 @@ import java.util.concurrent.Semaphore;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -216,11 +216,11 @@ public abstract class AbstractMappingMapEntriesTest {
      * so that we can add children to them and create the iterators after
      * everything is setup
      */
-    static interface ResourceDecorator {
+    public static interface ResourceDecorator {
         public List<Resource> getChildrenList();
     }
 
-    static class DataFuture {
+    public static class DataFuture {
         public Future<Iterator<?>> future;
 
         public DataFuture(Future<Iterator<?>> future) {

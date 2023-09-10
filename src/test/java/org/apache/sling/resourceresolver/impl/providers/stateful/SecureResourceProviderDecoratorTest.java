@@ -134,7 +134,7 @@ public class SecureResourceProviderDecoratorTest {
             // correct
         }
 
-        Mockito.verifyZeroInteractions(rp);
+        Mockito.verifyNoInteractions(rp);
     }
 
     @Test

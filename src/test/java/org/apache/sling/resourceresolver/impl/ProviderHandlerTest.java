@@ -42,6 +42,8 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.mockito.ArgumentMatchers.nullable;
+
 public class ProviderHandlerTest {
 
     @SuppressWarnings("unchecked")
@@ -56,7 +58,7 @@ public class ProviderHandlerTest {
         });
 
         final ResourceProvider<?> leaveProvider = Mockito.mock(ResourceProvider.class);
-        Mockito.when(leaveProvider.getResource(Mockito.any(ResolveContext.class), Mockito.eq(servletpath), Mockito.any(ResourceContext.class), Mockito.any(Resource.class))).thenReturn(servletResource);
+        Mockito.when(leaveProvider.getResource(nullable(ResolveContext.class), Mockito.eq(servletpath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(servletResource);
         final ResourceProviderHandler h = createRPHandler(leaveProvider, "my-pid", 0, servletpath);
         ResourceResolverFactoryActivator activator = new ResourceResolverFactoryActivator();
         activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
