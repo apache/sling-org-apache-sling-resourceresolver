@@ -48,8 +48,8 @@ import static org.apache.sling.resourceresolver.impl.ResourceResolverImpl.PROP_R
 import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.PROP_REDIRECT_EXTERNAL;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.ExpectedEtcMapping;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;

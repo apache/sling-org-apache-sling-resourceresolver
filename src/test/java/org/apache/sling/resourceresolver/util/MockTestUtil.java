@@ -53,6 +53,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import static org.mockito.ArgumentMatchers.nullable;
+
 public class MockTestUtil {
 
     static final String PROP_SLING_TARGET = "sling:target";
@@ -161,13 +163,13 @@ public class MockTestUtil {
 
         // register the resource with the provider
         if (provider != null) {
-            when(provider.listChildren(Mockito.any(ResolveContext.class), Mockito.eq(resource))).thenAnswer(new Answer<Iterator<Resource>>() {
+            when(provider.listChildren(nullable(ResolveContext.class), Mockito.eq(resource))).thenAnswer(new Answer<Iterator<Resource>>() {
                 @Override
                 public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
                     return childrenList.iterator();
                 }
             });
-            when(provider.getResource(Mockito.any(ResolveContext.class), Mockito.eq(fullPath), Mockito.any(ResourceContext.class), Mockito.any(Resource.class))).thenReturn(resource);
+            when(provider.getResource(nullable(ResolveContext.class), Mockito.eq(fullPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(resource);
         }
         if (properties != null) {
             ValueMap vm = new SimpleValueMapImpl();
@@ -346,7 +348,7 @@ public class MockTestUtil {
      * so that we can add children to them and create the iterators after
      * everything is setup
      */
-    static interface ResourceChildrenAccessor {
+    public static interface ResourceChildrenAccessor {
         public List<Resource> getChildrenList();
     }
 

@@ -24,8 +24,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -76,6 +76,8 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceReference;
+
+import static org.mockito.ArgumentMatchers.nullable;
 
 /**
  * This tests the ResourceResolver using mocks. The Unit test is in addition to
@@ -176,7 +178,7 @@ public class MockedResourceResolverImplTest {
         Mockito.when(resourceProviderTracker.getResourceProviderStorage()).thenReturn(storage);
 
         activator.serviceUserMapper = mock(ServiceUserMapper.class);
-        when(activator.serviceUserMapper.getServicePrincipalNames(any(), any())).thenReturn(Collections.singletonList("user"));
+        when(activator.serviceUserMapper.getServicePrincipalNames(nullable(Bundle.class), nullable(String.class))).thenReturn(Collections.singletonList("user"));
 
         activator.stringInterpolationProvider = mock(StringInterpolationProvider.class);
         when(activator.stringInterpolationProvider.substitute(anyString())).thenAnswer(inv -> (String) inv.getArguments()[0]);
@@ -382,7 +384,7 @@ public class MockedResourceResolverImplTest {
         mappingChildren.add(buildResource(path+"/http/localhost_any", localHostAnyList, resourceResolver, provider,"sling:match", "localhost\\.\\d*", "sling:internalRedirect", "/content"));
 
         Resource etcMapResource = buildResource(path+"/http", mappingChildren);
-        Mockito.when(provider.getResource(Mockito.any(ResolveContext.class), Mockito.eq(path), Mockito.any(ResourceContext.class), Mockito.any(Resource.class))).thenReturn(etcMapResource);
+        Mockito.when(provider.getResource(Mockito.nullable(ResolveContext.class), Mockito.eq(path), Mockito.nullable(ResourceContext.class), Mockito.nullable(Resource.class))).thenReturn(etcMapResource);
         return etcMapResource;
     }
 
@@ -443,8 +445,8 @@ public class MockedResourceResolverImplTest {
 
         // register the resource with the provider
         if ( provider != null ) {
-            Mockito.when(provider.listChildren(Mockito.any(ResolveContext.class), Mockito.eq(resource))).thenReturn(children.iterator());
-            Mockito.when(provider.getResource(Mockito.any(ResolveContext.class), Mockito.eq(fullpath), Mockito.any(ResourceContext.class), Mockito.any(Resource.class))).thenReturn(resource);
+            Mockito.when(provider.listChildren(Mockito.nullable(ResolveContext.class), Mockito.eq(resource))).thenReturn(children.iterator());
+            Mockito.when(provider.getResource(Mockito.nullable(ResolveContext.class), Mockito.eq(fullpath), Mockito.nullable(ResourceContext.class), Mockito.nullable(Resource.class))).thenReturn(resource);
         }
         if ( properties != null ) {
             ValueMap vm = new SimpleValueMapImpl();
@@ -668,8 +670,8 @@ public class MockedResourceResolverImplTest {
     public void testQueryResources() throws LoginException {
         final int n = 3;
         String[] languages = new String[] {FAKE_QUERY_LANGUAGE};
-        Mockito.when(queryProvider.getSupportedLanguages(Mockito.any(ResolveContext.class))).thenReturn(languages);
-        Mockito.when(queryProvider.queryResources(Mockito.any(ResolveContext.class), Mockito.any(String.class), Mockito.any(String.class)))
+        Mockito.when(queryProvider.getSupportedLanguages(Mockito.nullable(ResolveContext.class))).thenReturn(languages);
+        Mockito.when(queryProvider.queryResources(Mockito.nullable(ResolveContext.class), Mockito.nullable(String.class), Mockito.nullable(String.class)))
         .thenReturn(buildValueMapCollection(n, "A_").iterator());
 
         final ResourceResolver rr = resourceResolverFactory.getResourceResolver(null);

@@ -66,7 +66,6 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.osgi.framework.Bundle;
 
 public class ResourceResolverImplTest {
@@ -241,7 +240,7 @@ public class ResourceResolverImplTest {
         ResourceResolverFactoryConfig config = mock(ResourceResolverFactoryConfig.class);
         when(config.resource_resolver_log_closing()).thenReturn(true);
         ResourceResolverFactoryActivator rrfa = spy(new ResourceResolverFactoryActivator());
-        Whitebox.setInternalState(rrfa, "config", config);
+        setField(rrfa, "config", config);
         CommonResourceResolverFactoryImpl crrfi = new CommonResourceResolverFactoryImpl(rrfa);
         final ResourceResolver rr = new ResourceResolverImpl(crrfi, false, null, resourceProviderTracker);
         assertTrue(rr.isLive());
@@ -824,4 +823,12 @@ public class ResourceResolverImplTest {
 
     }
 
+    public static void setField(Object o, String name, Object value) throws Exception {
+    	Field f = o.getClass().getDeclaredField(name);
+    	f.setAccessible(true);
+    	f.set(o, value);
+    }
+
+
+    
 }
