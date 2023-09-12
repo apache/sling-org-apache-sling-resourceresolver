@@ -39,7 +39,7 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
 
     Path[] getObservationPaths();
 
-    Map<?, ?> getVirtualURLMap();
+    Map<String, String> getVirtualURLMap();
 
     Mapping[] getMappings();
 
@@ -72,7 +72,7 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
 
         @Override
         public int compareTo(VanityPathConfig o2) {
-            return new Integer(o2.prefix.length()).compareTo(this.prefix.length());
+            return Integer.valueOf(o2.prefix.length()).compareTo(this.prefix.length());
         }
     }
 

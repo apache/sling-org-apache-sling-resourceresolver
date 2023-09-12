@@ -18,11 +18,8 @@
  */
 package org.apache.sling.resourceresolver.impl.providers;
 
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -86,11 +83,11 @@ public class ResourceProviderTrackerTest {
 
         // since the OSGi mocks are asynchronous we don't have to wait for the changes to propagate
 
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(2));
+        assertEquals(2, tracker.getResourceProviderStorage().getAllHandlers().size());
 
         fixture.unregisterResourceProvider(rp2Info);
 
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(1));
+        assertEquals(1, tracker.getResourceProviderStorage().getAllHandlers().size());
     }
 
     @Test
@@ -99,7 +96,7 @@ public class ResourceProviderTrackerTest {
 
         tracker.deactivate();
 
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers(), hasSize(0));
+        assertTrue(tracker.getResourceProviderStorage().getAllHandlers().isEmpty());
     }
 
     @Test
@@ -139,7 +136,7 @@ public class ResourceProviderTrackerTest {
         assertFalse(removedCalled.get());
 
         // verify a single provider
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(1));
+        assertEquals(1, tracker.getResourceProviderStorage().getAllHandlers().size());
 
         // reset boolean markers
         addedCalled.set(false);
@@ -153,7 +150,7 @@ public class ResourceProviderTrackerTest {
         assertFalse(addedCalled.get());
 
         // no provider anymore
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(0));
+        assertTrue(tracker.getResourceProviderStorage().getAllHandlers().isEmpty());
     }
 
     @Test
@@ -193,7 +190,7 @@ public class ResourceProviderTrackerTest {
         assertFalse(removedCalled.get());
 
         // verify a single provider
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(1));
+        assertEquals(1, tracker.getResourceProviderStorage().getAllHandlers().size());
 
         // reset boolean markers
         addedCalled.set(false);
@@ -209,7 +206,7 @@ public class ResourceProviderTrackerTest {
         assertTrue(removedCalled.get());
 
         // verify a single provider
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(1));
+        assertEquals(1, tracker.getResourceProviderStorage().getAllHandlers().size());
 
         // reset boolean markers
         addedCalled.set(false);
@@ -223,7 +220,7 @@ public class ResourceProviderTrackerTest {
         assertTrue(removedCalled.get());
 
         // verify a single provider
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(1));
+        assertEquals(1, tracker.getResourceProviderStorage().getAllHandlers().size());
 
         // reset boolean markers
         addedCalled.set(false);
@@ -237,7 +234,7 @@ public class ResourceProviderTrackerTest {
         assertFalse(addedCalled.get());
 
         // verify no provider
-        assertThat(tracker.getResourceProviderStorage().getAllHandlers().size(), equalTo(0));
+        assertTrue(tracker.getResourceProviderStorage().getAllHandlers().isEmpty());
     }
 
     @Test
@@ -248,8 +245,8 @@ public class ResourceProviderTrackerTest {
 
         tracker.fill(dto);
 
-        assertThat( dto.providers, arrayWithSize(2));
-        assertThat( dto.failedProviders, arrayWithSize(1));
+        assertEquals(2, dto.providers.length);
+        assertEquals(1, dto.failedProviders.length);
     }
 
     static final class NoDothingObservationReporter implements ObservationReporter {

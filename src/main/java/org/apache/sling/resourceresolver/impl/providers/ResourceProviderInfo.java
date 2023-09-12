@@ -30,9 +30,15 @@ import org.slf4j.LoggerFactory;
  */
 public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
+    public enum Mode {
+        OVERLAY,
+        PASSTHROUGH
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(ResourceProviderInfo.class);
 
-    private final ServiceReference ref;
+    @SuppressWarnings("rawtypes")
+    private final ServiceReference<ResourceProvider> ref;
 
     private final String path;
 
@@ -50,7 +56,10 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
     private final boolean attributable;
 
-    public ResourceProviderInfo(final ServiceReference ref) {
+    private final Mode mode;
+
+    @SuppressWarnings("rawtypes")
+    public ResourceProviderInfo(final ServiceReference<ResourceProvider> ref) {
         this.ref = ref;
         this.path = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_ROOT), "");
         this.name = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_NAME), null);
@@ -67,6 +76,14 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
         this.adaptable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE), false);
         this.refreshable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE), false);
         this.attributable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE), false);
+        final String modeValue = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_MODE), ResourceProvider.MODE_OVERLAY).toUpperCase();
+        Mode mode = null;
+        try {
+            mode = Mode.valueOf(modeValue);
+        } catch ( final IllegalArgumentException iae) {
+            logger.error("Illegal mode {} for resource provider {}", modeValue, name);
+        }
+        this.mode = mode;
     }
 
     public boolean isValid() {
@@ -79,15 +96,24 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
             logger.debug("ResourceProvider has null authType, invalid");
             return false;
         }
+        if ( this.mode == null ) {
+            logger.debug("ResourceProvider has null mode, invalid");
+            return false;
+        }
         return true;
     }
 
-    public ServiceReference getServiceReference() {
+    @SuppressWarnings("rawtypes")
+    public ServiceReference<ResourceProvider> getServiceReference() {
         return this.ref;
     }
 
     public String getPath() {
         return this.path;
+    }
+
+    public Mode getMode() {
+        return this.mode;
     }
 
     @Override

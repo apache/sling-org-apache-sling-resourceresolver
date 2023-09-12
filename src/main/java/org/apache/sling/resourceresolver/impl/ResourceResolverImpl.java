@@ -21,7 +21,6 @@ package org.apache.sling.resourceresolver.impl;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +34,6 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.jcr.Session;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
@@ -71,7 +69,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(Session.class), @Adapter(ResourceMapper.class) })
+@Adaptable(adaptableClass = ResourceResolver.class, adapters = { @Adapter(ResourceMapper.class) })
 public class ResourceResolverImpl extends SlingAdaptable implements ResourceResolver {
 
     /** Default logger */

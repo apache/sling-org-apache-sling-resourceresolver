@@ -18,18 +18,11 @@
  */
 package org.apache.sling.resourceresolver.impl.helper;
 
-import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -69,11 +62,13 @@ import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.MockOsgi;
-import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.osgi.framework.BundleContext;
+
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.ArgumentMatchers.any;
 
 @SuppressWarnings("unchecked")
 public class ResourceResolverControlTest {
@@ -165,9 +160,9 @@ public class ResourceResolverControlTest {
         somePathRootResource = configureResourceAt(rootProvider, "/some/path");
 
         // configure query at '/'
-        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq(root))).thenReturn(Arrays.asList(somethingResource, someRootResource).iterator());
-        when(rootProvider.listChildren((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq(someRootResource))).thenReturn(Arrays.asList(somePathRootResource).iterator());
-        when(rootProvider.getResource((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq("/some/path"), Mockito.anyObject(), Mockito.anyObject())).thenReturn(somePathResource);
+        when(rootProvider.listChildren((ResolveContext<Object>) nullable(ResolveContext.class), Mockito.eq(root))).thenReturn(Arrays.asList(somethingResource, someRootResource).iterator());
+        when(rootProvider.listChildren((ResolveContext<Object>) any(ResolveContext.class), Mockito.eq(someRootResource))).thenReturn(Arrays.asList(somePathRootResource).iterator());
+        when(rootProvider.getResource((ResolveContext<Object>) any(ResolveContext.class), Mockito.eq("/some/path"), any(), any())).thenReturn(somePathResource);
 
         ResourceResolver rr = mock(ResourceResolver.class);
         ResourceAccessSecurityTracker securityTracker = Mockito.mock(ResourceAccessSecurityTracker.class);
@@ -209,7 +204,7 @@ public class ResourceResolverControlTest {
 
         Resource mockResource = newMockResource(path);
 
-        when(provider.getResource((ResolveContext<T>) Mockito.any(), Mockito.eq(path), (ResourceContext) Mockito.any(), (Resource) Mockito.any()))
+        when(provider.getResource((ResolveContext<T>) nullable(ResolveContext.class), Mockito.eq(path), nullable(ResourceContext.class), nullable(Resource.class)))
             .thenReturn(mockResource);
 
         return mockResource;
@@ -247,7 +242,7 @@ public class ResourceResolverControlTest {
     }
 
     private ResolveContext<Object> mockContext() {
-        return (ResolveContext<Object>) Mockito.any();
+        return (ResolveContext<Object>) nullable(ResolveContext.class);
     }
 
     /**
@@ -267,7 +262,7 @@ public class ResourceResolverControlTest {
      */
     @Test
     public void getResource_missing() {
-        assertThat(crp.getResource(context, "/nothing", null, null, false), nullValue());
+        assertNull(crp.getResource(context, "/nothing", null, null, false));
     }
 
     /**
@@ -275,8 +270,8 @@ public class ResourceResolverControlTest {
      */
     @Test
     public void getResource_found() {
-        assertThat(crp.getResource(context, "/something", null, null, false), not(nullValue()));
-        assertThat(crp.getResource(context, "/some/path/object", null, null, false), not(nullValue()));
+        assertNotNull(crp.getResource(context, "/something", null, null, false));
+        assertNotNull(crp.getResource(context, "/some/path/object", null, null, false));
     }
 
 
@@ -286,8 +281,8 @@ public class ResourceResolverControlTest {
     @Test
     public void getParent_found() {
         Resource parent = crp.getParent(context, ResourceUtil.getParent(somethingResource.getPath()), somethingResource);
-        assertThat(parent, notNullValue());
-        assertThat("parent.path", parent.getPath(), equalTo("/"));
+        assertNotNull(parent);
+        assertEquals("parent.path", "/", parent.getPath());
     }
 
 
@@ -298,7 +293,7 @@ public class ResourceResolverControlTest {
     @Test
     public void getParent_synthetic() {
         Resource parent = crp.getParent(context, ResourceUtil.getParent(subProviderResource.getPath()), subProviderResource);
-        assertThat(parent, notNullValue());
+        assertNotNull(parent);
         assertTrue("parent is a synthetic resource", ResourceUtil.isSyntheticResource(parent));
     }
 
@@ -309,11 +304,11 @@ public class ResourceResolverControlTest {
     public void getParent_differentProviders() {
         final Resource childResource = mock(Resource.class);
         when(childResource.getPath()).thenReturn("/some/path");
-        when(subProvider.getResource((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq("/some/path"), (ResourceContext) Mockito.anyObject(), (Resource)Mockito.eq(null))).thenReturn(childResource);
+        when(subProvider.getResource((ResolveContext<Object>) nullable(ResolveContext.class), Mockito.eq("/some/path"), nullable(ResourceContext.class), (Resource)Mockito.eq(null))).thenReturn(childResource);
 
         final Resource parentResource = mock(Resource.class);
         when(parentResource.getPath()).thenReturn("/some");
-        when(rootProvider.getResource((ResolveContext<Object>) Mockito.anyObject(), Mockito.eq("/some"), (ResourceContext) Mockito.anyObject(), (Resource)Mockito.eq(null))).thenReturn(parentResource);
+        when(rootProvider.getResource((ResolveContext<Object>) nullable(ResolveContext.class), Mockito.eq("/some"), nullable(ResourceContext.class), (Resource)Mockito.eq(null))).thenReturn(parentResource);
 
         Resource child = crp.getResource(context, "/some/path", null, null, false);
         assertNotNull(child);
@@ -338,10 +333,10 @@ public class ResourceResolverControlTest {
             all.put(child.getPath(), child);
         }
 
-        assertThat(all.entrySet(), Matchers.hasSize(3));
-        assertThat("Resource at /something", all.get("/something"), not(nullValue()));
-        assertThat("Resource at /some", all.get("/some"), not(nullValue()));
-        assertThat("Resource at /foo", all.get("/foo"), not(nullValue()));
+        assertEquals(3, all.entrySet().size());
+        assertNotNull("Resource at /something", all.get("/something"));
+        assertNotNull("Resource at /some", all.get("/some"));
+        assertNotNull("Resource at /foo", all.get("/foo"));
     }
 
     /**
@@ -359,8 +354,8 @@ public class ResourceResolverControlTest {
             all.put(child.getPath(), child);
         }
 
-        assertThat(all.entrySet(), Matchers.hasSize(1));
-        assertThat("Resource at /some/path", all.get("/some/path"), not(nullValue()));
+        assertEquals(1, all.entrySet().size());
+        assertNotNull("Resource at /some/path", all.get("/some/path"));
         assertSame(somePathResource, all.get("/some/path"));
     }
 
@@ -396,8 +391,7 @@ public class ResourceResolverControlTest {
 
         Resource resource = crp.copy(context, "/some/path/object", "/some/path/new");
 
-
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
     }
 
     /**
@@ -409,12 +403,12 @@ public class ResourceResolverControlTest {
     public void copy_differentProvider() throws PersistenceException {
 
         Resource newRes = newMockResource("/object");
-        when(rootProvider.create(mockContext(), Mockito.eq("/object"), Mockito.anyMap()))
+        when(rootProvider.create(mockContext(), Mockito.eq("/object"), nullable(Map.class)))
             .thenReturn(newRes);
 
         Resource resource = crp.copy(context, "/some/path/object", "/");
 
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
     }
 
     /**
@@ -432,7 +426,7 @@ public class ResourceResolverControlTest {
 
         Resource resource = crp.move(context, "/some/path/object", "/some/path/new");
 
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
     }
 
     /**
@@ -444,11 +438,11 @@ public class ResourceResolverControlTest {
     public void move_differentProvider() throws PersistenceException {
 
         Resource newRes = newMockResource("/object");
-        when(rootProvider.create(mockContext(), Mockito.eq("/object"), Mockito.anyMap())).thenReturn(newRes);
+        when(rootProvider.create(mockContext(), Mockito.eq("/object"), nullable(Map.class))).thenReturn(newRes);
 
         Resource resource = crp.move(context, "/some/path/object", "/");
 
-        assertThat(resource, not(nullValue()));
+        assertNotNull(resource);
 
         verify(subProvider).delete(mockContext(), Mockito.eq(subProviderResource));
     }
@@ -458,8 +452,11 @@ public class ResourceResolverControlTest {
      */
     @Test
     public void queryLanguages() throws PersistenceException {
-
-        assertThat(crp.getSupportedLanguages(context), arrayContainingInAnyOrder(QL_NOOP, QL_MOCK, QL_ANOTHER_MOCK));
+        final List<String> result = Arrays.asList(crp.getSupportedLanguages(context));
+        assertEquals(3, result.size());
+        assertTrue(result.contains(QL_NOOP));
+        assertTrue(result.contains(QL_MOCK));
+        assertTrue(result.contains(QL_ANOTHER_MOCK));
     }
 
     /**
@@ -473,11 +470,11 @@ public class ResourceResolverControlTest {
         int count = 0;
 
         while ( queryResources.hasNext() ) {
-            assertThat("ValueMap returned from query", queryResources.next(), hasEntry("key", (Object) "value"));
+            assertEquals("ValueMap returned from query", "value", queryResources.next().get("key"));
             count++;
         }
 
-        assertThat("query result count", count, Matchers.equalTo(1));
+        assertEquals("query result count", 1, count);
     }
 
     /**
@@ -491,11 +488,11 @@ public class ResourceResolverControlTest {
         int count = 0;
 
         while ( resources.hasNext() ) {
-            assertThat("resources[0].path", resources.next().getPath(), equalTo("/some/path/object"));
+            assertEquals("resources[0].path", "/some/path/object", resources.next().getPath());
             count++;
         }
 
-        assertThat("query result count", count, Matchers.equalTo(1));
+        assertEquals("query result count", 1, count);
     }
 
     @Test
@@ -663,5 +660,43 @@ public class ResourceResolverControlTest {
         public Iterator<Resource> findResources(ResolveContext<Object> ctx, String query, String language) {
             throw new UnsupportedOperationException();
         }
+    }
+
+    @Test public void testGetBestMatchingModifiableResourceProviderPassthrough() throws Exception {
+        BundleContext bc = MockOsgi.newBundleContext();
+
+        Fixture fixture = new Fixture(bc);
+
+        // root provider
+        final ResourceProvider<?> rootProvider = Mockito.mock(ResourceProvider.class);
+        ResourceProviderInfo info = fixture.registerResourceProvider(rootProvider, "/", AuthType.required);
+        ResourceProviderHandler handler = new ResourceProviderHandler(bc, info);
+        // sub provider
+        ResourceProvider<?> subProvider = Mockito.mock(ResourceProvider.class);
+        ResourceProviderInfo subInfo = fixture.registerResourceProvider(subProvider, "/libs", AuthType.required, 0, false, ResourceProviderInfo.Mode.PASSTHROUGH);
+        ResourceProviderHandler subHandler = new ResourceProviderHandler(bc, subInfo);
+
+        handler.activate();
+        subHandler.activate();
+
+        ResourceResolver rr = mock(ResourceResolver.class);
+        ResourceAccessSecurityTracker securityTracker = Mockito.mock(ResourceAccessSecurityTracker.class);
+        authInfo = getAuthInfo();
+
+        handlers = Arrays.asList(handler, subHandler);
+        final ResourceProviderStorage storage = new ResourceProviderStorage(handlers);
+
+        final ResourceResolverControl control = new ResourceResolverControl(false, getAuthInfo(), new ResourceProviderStorageProvider() {
+
+            @Override
+            public ResourceProviderStorage getResourceProviderStorage() {
+                return storage;
+            }
+        });
+        final ResourceResolverContext rrContext = new ResourceResolverContext(rr, securityTracker);
+
+        final AuthenticatedResourceProvider p = control.getBestMatchingModifiableProvider(rrContext, "/libs/foo");
+        p.create(rr, "/foo", null);
+        Mockito.verify(rootProvider).create(nullable(ResolveContext.class), Mockito.eq("/foo"), Mockito.isNull(Map.class));
     }
 }

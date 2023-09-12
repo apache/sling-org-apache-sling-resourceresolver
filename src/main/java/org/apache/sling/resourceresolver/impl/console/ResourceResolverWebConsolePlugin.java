@@ -395,6 +395,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         }
     }
 
+    @SuppressWarnings("rawtypes")
     private ServiceReference<ResourceProvider<?>> getServiceReference(final long id) {
         try {
             final Collection<ServiceReference<ResourceProvider>> refs = this.bundleContext.getServiceReferences(ResourceProvider.class,

@@ -41,6 +41,7 @@ import org.apache.sling.api.resource.runtime.dto.ResourceProviderDTO;
 import org.apache.sling.api.resource.runtime.dto.ResourceProviderFailureDTO;
 import org.apache.sling.api.resource.runtime.dto.RuntimeDTO;
 import org.apache.sling.resourceresolver.impl.legacy.LegacyResourceProviderWhiteboard;
+import org.apache.sling.resourceresolver.impl.providers.ResourceProviderInfo.Mode;
 import org.apache.sling.spi.resource.provider.ObservationReporter;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.osgi.framework.BundleContext;
@@ -176,11 +177,7 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
 
            ResourceProviderHandler activate = null;
            synchronized ( this.handlers ) {
-               List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
-               if ( matchingHandlers == null ) {
-                   matchingHandlers = new ArrayList<>();
-                   this.handlers.put(info.getPath(), matchingHandlers);
-               }
+               final List<ResourceProviderHandler> matchingHandlers = this.handlers.computeIfAbsent(info.getPath(), key -> new ArrayList<>());
                final ResourceProviderHandler handler = new ResourceProviderHandler(bundleContext, info);
                matchingHandlers.add(handler);
                Collections.sort(matchingHandlers);
@@ -489,9 +486,12 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
         final Set<String> excludedPaths = new HashSet<>();
         final Path handlerPath = new Path(handler.getPath());
 
-        for(final String otherPath : handlers.keySet()) {
-            if ( !handler.getPath().equals(otherPath) && handlerPath.matches(otherPath) ) {
-                excludedPaths.add(otherPath);
+        for(final Map.Entry<String, List<ResourceProviderHandler>> entry : handlers.entrySet()) {
+            if ( entry.getValue().get(0).getInfo().getMode() == Mode.PASSTHROUGH ) {
+                continue;
+            }
+            if ( !handler.getPath().equals(entry.getKey()) && handlerPath.matches(entry.getKey()) ) {
+                excludedPaths.add(entry.getKey());
             }
         }
 

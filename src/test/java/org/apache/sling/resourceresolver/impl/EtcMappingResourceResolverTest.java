@@ -40,7 +40,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -58,8 +57,7 @@ import static org.apache.sling.resourceresolver.util.MockTestUtil.createRequestF
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -85,7 +83,7 @@ public class EtcMappingResourceResolverTest {
 
     @Mock
     EventAdmin eventAdmin;
-    
+
     @Mock
     ResourceResolverMetrics metrics;
 
@@ -99,8 +97,6 @@ public class EtcMappingResourceResolverTest {
 
     StringInterpolationProvider stringInterpolationProvider = new StringInterpolationProviderImpl();
     MapEntries mapEntries;
-
-    File vanityBloomFilterFile;
 
     CommonResourceResolverFactoryImpl commonFactory;
 
@@ -116,7 +112,6 @@ public class EtcMappingResourceResolverTest {
         MockitoAnnotations.initMocks(this);
 
         List<MapConfigurationProvider.VanityPathConfig> configs = getVanityPathConfigs();
-        vanityBloomFilterFile = new File("target/test-classes/resourcesvanityBloomFilter.txt");
         List<ResourceProviderHandler> handlers = asList(createRPHandler(resourceProvider, "rp1", 0, "/"));
         ResourceProviderTracker resourceProviderTracker = mock(ResourceProviderTracker.class);
         ResourceProviderStorage storage = new ResourceProviderStorage(handlers);
@@ -132,13 +127,12 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("mapRootPrefix", activator, "/etc/map");
         setInaccessibleField("observationPaths", activator, new Path[] {new Path("/")});
         setInaccessibleField("metrics", activator, metrics);
-        
+
         ServiceUserMapper serviceUserMapper = mock(ServiceUserMapper.class);
         setInaccessibleField("serviceUserMapper", activator, serviceUserMapper);
         commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
-        when(serviceUserMapper.getServiceUserID(any(Bundle.class),anyString())).thenReturn("mapping");
+        when(serviceUserMapper.getServiceUserID(nullable(Bundle.class),nullable(String.class))).thenReturn("mapping");
         // Activate method is package private so we use reflection to to call it
         callInaccessibleMethod("activate", null, commonFactory, BundleContext.class, bundleContext);
         final Bundle usingBundle = mock(Bundle.class);

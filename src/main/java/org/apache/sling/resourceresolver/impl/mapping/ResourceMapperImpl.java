@@ -163,8 +163,9 @@ public class ResourceMapperImpl implements ResourceMapper {
         mappings.addAll(0, vanityPaths);
 
         // 7. final effort to make sure we have at least one mapped path
-        if ( mappings.isEmpty() && nonDecoratedResource != null )
-            mappings.add(nonDecoratedResource.getPath());
+        if ( mappings.isEmpty() ) {
+            mappings.add(nonDecoratedResource != null ? nonDecoratedResource.getPath() : "/");
+        }
 
         // 8. apply context path if needed
         mappings.replaceAll(new ApplyContextPath(request));
@@ -363,7 +364,7 @@ public class ResourceMapperImpl implements ResourceMapper {
                 final URI uri = new URI(path, false);
 
                 // 1. mangle the namespaces in the path
-                path = mangleNamespaces(uri.getPath());
+                path = mangleNamespaces(uri.getPath() == null ? "" : uri.getPath());
 
                 // 2. prepend servlet context path if we have a request
                 if (req != null && req.getContextPath() != null && req.getContextPath().length() > 0) {

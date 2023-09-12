@@ -110,6 +110,7 @@ public class FactoryPreconditions {
                             // ignore and continue
                             continue;
                         }
+                        @SuppressWarnings("rawtypes")
                         final ServiceReference ref = info.getServiceReference();
                         final Object servicePid = ref.getProperty(Constants.SERVICE_PID);
                         if ( unavailableServicePid != null && unavailableServicePid.equals(servicePid) ) {

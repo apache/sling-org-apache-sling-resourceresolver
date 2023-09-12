@@ -29,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -42,7 +43,6 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
-import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -53,7 +53,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
 
 /**
  * Validates that the {@link ResourceMapperImpl} correctly queries all sources of mappings
@@ -76,20 +75,22 @@ import org.mockito.Mockito;
 @RunWith(Parameterized.class)
 public class ResourceMapperImplTest {
 
-    @Parameters(name="optimized alias resolution → {0}")
-    public static Object[] data() {
-        return new Object[] { false, true};
+    @Parameters(name = "optimized alias resolution / paged query support -> {0} / {1}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] { { false, false }, { false, true }, { true, false }, { true, true } });
     }
-    
+
     @Rule
     public final OsgiContext ctx = new OsgiContext();
 
     private final boolean optimiseAliasResolution;
+    private final boolean pagedQuerySupport;
     private HttpServletRequest req;
     private ResourceResolver resolver;
 
-    public ResourceMapperImplTest(boolean optimiseAliasResolution) {
+    public ResourceMapperImplTest(boolean optimiseAliasResolution, boolean pagedQuerySupport) {
         this.optimiseAliasResolution = optimiseAliasResolution;
+        this.pagedQuerySupport = pagedQuerySupport;
     }
 
     @Before
@@ -99,7 +100,7 @@ public class ResourceMapperImplTest {
         ctx.registerInjectActivateService(new ResourceAccessSecurityTracker());
         ctx.registerInjectActivateService(new StringInterpolationProviderImpl());
 
-        InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider();
+        InMemoryResourceProvider resourceProvider = new InMemoryResourceProvider(pagedQuerySupport);
         resourceProvider.putResource("/"); // root
         resourceProvider.putResource("/here"); // regular page
         resourceProvider.putResource("/there", PROP_ALIAS, "alias-value"); // with alias
@@ -113,6 +114,14 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
         resourceProvider.putResource("/parent/child-multiple", PROP_ALIAS, "alias-child-1", "alias-child-2"); // child has multiple alias
         resourceProvider.putResource("/vain", "sling:vanityPath", "/vanity-a", "/vanity-b"); // vanity path
+
+        // Tests to complete coverage of vanity path formats; test expectations based on behavior as of Jan 2023, not necessarily common sense 
+        resourceProvider.putResource("/vain-ext", "sling:vanityPath", "/vanity-a/foo.txt", "/vanity.bar/foo"); // vanity path with extensions
+        resourceProvider.putResource("/vain-empty", "sling:vanityPath", ""); // vanity path empty
+        resourceProvider.putResource("/vain-relative", "sling:vanityPath", "foobar"); // vanity path not absolute
+        resourceProvider.putResource("/vain-url", "sling:vanityPath", "https://example.com/", "https://example.com/foo"); 
+        resourceProvider.putResource("/vain-url-invalid", "sling:vanityPath", "://pathOfMalformed"); 
+        resourceProvider.putResource("/vain-url-nopath", "sling:vanityPath", "https://example.com"); 
 
         // build /etc/map structure
         resourceProvider.putResource("/etc");
@@ -325,6 +334,85 @@ public class ResourceMapperImplTest {
             .singleMappingWithRequest("/app/vain")
             .allMappings("/vanity-a", "/vanity-b", "/vain")
             .allMappingsWithRequest("/app/vanity-a", "/app/vanity-b", "/app/vain")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings; test removal of extensions.
+     */
+    @Test
+    public void mapResourceWithVanityPathsWithExt() {
+        ExpectedMappings.existingResource("/vain-ext")
+            .singleMapping("/vain-ext")
+            .singleMappingWithRequest("/app/vain-ext")
+            .allMappings("/vain-ext", "/vanity.bar/foo", "/vanity-a/foo")
+            .allMappingsWithRequest("/app/vain-ext", "/app/vanity.bar/foo", "/app/vanity-a/foo")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings; test empty target
+     */
+    @Test
+    public void mapResourceWithVanityPathsTargetEmpty() {
+        ExpectedMappings.existingResource("/vain-empty")
+            .singleMapping("/vain-empty")
+            .singleMappingWithRequest("/app/vain-empty")
+            .allMappings("/vain-empty")
+            .allMappingsWithRequest("/app/vain-empty")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings; test non-abs target
+     */
+    @Test
+    public void mapResourceWithVanityPathsTargetNonAbs() {
+        ExpectedMappings.existingResource("/vain-relative")
+            .singleMapping("/vain-relative")
+            .singleMappingWithRequest("/app/vain-relative")
+            .allMappings("/vain-relative", "/foobar")
+            .allMappingsWithRequest("/app/vain-relative", "/app/foobar")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings, URL shaped variants (see see SLING-11749)
+     */
+    @Test
+    public void mapResourceWithVanityPathsURLTarget() {
+        ExpectedMappings.existingResource("/vain-url")
+            .singleMapping("/vain-url")
+            .singleMappingWithRequest("/app/vain-url")
+            .allMappings("/vain-url", "/foo", "/")
+            .allMappingsWithRequest("/app/vain-url", "/app/foo", "/app/")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings, URL shaped variants, empty path (see see SLING-11757)
+     */
+    @Test
+    public void mapResourceWithVanityPathsURLTargetNoPath() {
+        ExpectedMappings.existingResource("/vain-url-nopath")
+            .singleMapping("/vain-url-nopath")
+            .singleMappingWithRequest("/app/vain-url-nopath")
+            .allMappings("/vain-url-nopath", "")
+            .allMappingsWithRequest("/app/vain-url-nopath", "")
+            .verify(resolver, req);
+    }
+
+    /**
+     * Validates that vanity paths are returned as mappings, invalid URL shaped variants (see see SLING-11749)
+     * @throws MalformedURLException 
+     */
+    @Test
+    public void mapResourceWithVanityPathsInvalidURLTarget() {
+        ExpectedMappings.existingResource("/vain-url-invalid")
+            .singleMapping("/vain-url-invalid")
+            .singleMappingWithRequest("/app/vain-url-invalid")
+            .allMappings("/vain-url-invalid")
+            .allMappingsWithRequest("/app/vain-url-invalid")
             .verify(resolver, req);
     }
 

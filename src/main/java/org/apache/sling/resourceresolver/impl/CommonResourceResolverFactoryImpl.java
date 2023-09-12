@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
  * implementing the shared/common functionality of all resource
  * resolver factories.
  */
-public class CommonResourceResolverFactoryImpl implements ResourceResolverFactory, MapConfigurationProvider {
+public class CommonResourceResolverFactoryImpl implements MapConfigurationProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommonResourceResolverFactoryImpl.class);
 
@@ -382,7 +382,7 @@ public class CommonResourceResolverFactoryImpl implements ResourceResolverFactor
     }
 
     @Override
-    public BidiMap getVirtualURLMap() {
+    public BidiMap<String, String> getVirtualURLMap() {
         return this.activator.getVirtualURLMap();
     }
 

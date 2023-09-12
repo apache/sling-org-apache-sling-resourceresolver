@@ -34,7 +34,6 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
 
-import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,10 +50,10 @@ import java.util.concurrent.Semaphore;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -78,7 +77,7 @@ public abstract class AbstractMappingMapEntriesTest {
 
     @Mock
     EventAdmin eventAdmin;
-    
+
     Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
     @Mock
@@ -89,7 +88,6 @@ public abstract class AbstractMappingMapEntriesTest {
     StringInterpolationProviderImpl stringInterpolationProvider = new StringInterpolationProviderImpl();
     MapEntries mapEntries;
 
-    File vanityBloomFilterFile;
 
     Resource map;
     Resource http;
@@ -102,10 +100,8 @@ public abstract class AbstractMappingMapEntriesTest {
         MockitoAnnotations.initMocks(this);
 
         List<MapConfigurationProvider.VanityPathConfig> configs = getVanityPathConfigs();
-        vanityBloomFilterFile = new File("target/test-classes/resourcesvanityBloomFilter.txt");
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundleContext.getDataFile("vanityBloomFilter.txt")).thenReturn(vanityBloomFilterFile);
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
@@ -114,7 +110,7 @@ public abstract class AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(
             Collections.<Resource> emptySet().iterator());
 
         map = setupEtcMapResource("/etc", "map");
@@ -135,9 +131,7 @@ public abstract class AbstractMappingMapEntriesTest {
 
     @After
     public void tearDown() throws Exception {
-        vanityBloomFilterFile.delete();
     }
-
 
     // -------------------------- private methods ----------
 
@@ -222,11 +216,11 @@ public abstract class AbstractMappingMapEntriesTest {
      * so that we can add children to them and create the iterators after
      * everything is setup
      */
-    static interface ResourceDecorator {
+    public static interface ResourceDecorator {
         public List<Resource> getChildrenList();
     }
 
-    static class DataFuture {
+    public static class DataFuture {
         public Future<Iterator<?>> future;
 
         public DataFuture(Future<Iterator<?>> future) {
