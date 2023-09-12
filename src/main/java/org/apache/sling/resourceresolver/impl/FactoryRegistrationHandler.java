@@ -25,6 +25,8 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceRegistration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Dictionary;
 import java.util.Hashtable;
@@ -35,14 +37,16 @@ import java.util.concurrent.TimeUnit;
 
 public class FactoryRegistrationHandler implements AutoCloseable {
 
+    private static final Logger LOG = LoggerFactory.getLogger(FactoryRegistrationHandler.class);
+
     private final ResourceResolverFactoryActivator activator;
 
     private final FactoryPreconditions factoryPreconditions;
 
     private final ExecutorService factoryRegistrationWorker;
 
+    @SuppressWarnings("java:S3077") // The field is only ever set to null or to a new FactoryRegistration instance, which is safe.
     private volatile FactoryRegistration factoryRegistration;
-
 
     public FactoryRegistrationHandler(
             ResourceResolverFactoryActivator activator, FactoryPreconditions factoryPreconditions) {
@@ -74,6 +78,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
      */
     void maybeRegisterFactory(final String unavailableName, final String unavailableServicePid) {
         if (!factoryRegistrationWorker.isShutdown()) {
+            LOG.debug("submitting maybeRegisterFactory");
             factoryRegistrationWorker.submit(() -> {
                 final boolean preconditionsOk = factoryPreconditions.checkPreconditions(unavailableName, unavailableServicePid);
                 if ( preconditionsOk && this.factoryRegistration == null ) {
@@ -83,6 +88,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
                         withThreadName("ResourceResolverFactory registration", this::doRegisterFactory);
                     }
                 } else if ( !preconditionsOk && this.factoryRegistration != null ) {
+                    LOG.debug("performing unregisterFactory via maybeRegisterFactory");
                     withThreadName("ResourceResolverFactory deregistration", this::doUnregisterFactory);
                 }
             });
@@ -90,6 +96,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     }
 
     void unregisterFactory() {
+        LOG.debug("submitting unregisterFactory");
         factoryRegistrationWorker.submit(() -> withThreadName("ResourceResolverFactory deregistration",
                 this::doUnregisterFactory));
     }
@@ -98,19 +105,23 @@ public class FactoryRegistrationHandler implements AutoCloseable {
      * Register the factory.
      */
     private void doRegisterFactory() {
+        LOG.debug("performing registerFactory, factoryRegistration == {}", factoryRegistration);
         if (this.factoryRegistration == null) {
             this.factoryRegistration = new FactoryRegistration(activator.getBundleContext(), activator);
         }
+        LOG.debug("finished performing registerFactory, factoryRegistration == {}", factoryRegistration);
     }
 
     /**
      * Unregister the factory (if registered).
      */
     private void doUnregisterFactory() {
+        LOG.debug("performing unregisterFactory, factoryRegistration == {}", factoryRegistration);
         if (this.factoryRegistration != null) {
             this.factoryRegistration.unregister();
             this.factoryRegistration = null;
         }
+        LOG.debug("finished performing unregisterFactory, factoryRegistration == {}", factoryRegistration);
     }
 
     private static void withThreadName(String threadName, Runnable task) {
@@ -140,22 +151,20 @@ public class FactoryRegistrationHandler implements AutoCloseable {
             final Dictionary<String, Object> serviceProps = new Hashtable<>();
             serviceProps.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
             serviceProps.put(Constants.SERVICE_DESCRIPTION, "Apache Sling Resource Resolver Factory");
-            factoryRegistration = context.registerService(ResourceResolverFactory.class,
-                    new ServiceFactory<ResourceResolverFactory>() {
+            factoryRegistration = context.registerService(ResourceResolverFactory.class, new ServiceFactory<>() {
+                @Override
+                public ResourceResolverFactory getService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration) {
+                    if (FactoryRegistrationHandler.this.factoryRegistrationWorker.isShutdown()) {
+                        return null;
+                    }
+                    return new ResourceResolverFactoryImpl(commonFactory, bundle, activator.getServiceUserMapper());
+                }
 
-                        @Override
-                        public ResourceResolverFactory getService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration) {
-                            if (FactoryRegistrationHandler.this.factoryRegistrationWorker.isShutdown()) {
-                                return null;
-                            }
-                            return new ResourceResolverFactoryImpl(commonFactory, bundle, activator.getServiceUserMapper());
-                        }
-
-                        @Override
-                        public void ungetService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration, final ResourceResolverFactory service) {
-                            // nothing to do
-                        }
-                    }, serviceProps);
+                @Override
+                public void ungetService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration, final ResourceResolverFactory service) {
+                    // nothing to do
+                }
+            }, serviceProps);
 
             runtimeRegistration = context.registerService(RuntimeService.class, activator.getRuntimeService(), null);
         }

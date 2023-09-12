@@ -130,6 +130,7 @@ public class ResourceResolverFactoryActivator {
     /** Observation paths */
     private volatile Path[] observationPaths;
 
+    @SuppressWarnings("java:S3077")
     private volatile FactoryRegistrationHandler factoryRegistrationHandler;
 
     /**
