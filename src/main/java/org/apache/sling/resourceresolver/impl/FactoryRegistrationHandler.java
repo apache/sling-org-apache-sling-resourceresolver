@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Dictionary;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -53,7 +52,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
         this.factoryPreconditions = factoryPreconditions;
         this.activator = activator;
         this.factoryRegistrationWorker = Executors.newSingleThreadExecutor(
-                r -> new Thread(r, "ResourceResolverFactory registration/deregistration"));
+                r -> new Thread(r, ResourceResolverFactory.class.getSimpleName() + " registration/deregistration"));
     }
 
     @Override
@@ -84,11 +83,11 @@ public class FactoryRegistrationHandler implements AutoCloseable {
                     // check system bundle state - if stopping, don't register new factory
                     final Bundle systemBundle = activator.getBundleContext().getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
                     if ( systemBundle != null && systemBundle.getState() != Bundle.STOPPING ) {
-                        withThreadName("ResourceResolverFactory registration", this::doRegisterFactory);
+                        runWithThreadName("registration", this::doRegisterFactory);
                     }
                 } else if ( !preconditionsOk && this.factoryRegistration != null ) {
                     LOG.debug("performing unregisterFactory via maybeRegisterFactory");
-                    withThreadName("ResourceResolverFactory deregistration", this::doUnregisterFactory);
+                    runWithThreadName("deregistration", this::doUnregisterFactory);
                 }
             });
         }
@@ -96,7 +95,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
 
     void unregisterFactory() {
         LOG.debug("submitting unregisterFactory");
-        factoryRegistrationWorker.submit(() -> withThreadName("ResourceResolverFactory deregistration",
+        factoryRegistrationWorker.submit(() -> runWithThreadName("deregistration",
                 this::doUnregisterFactory));
     }
 
@@ -123,10 +122,10 @@ public class FactoryRegistrationHandler implements AutoCloseable {
         LOG.debug("finished performing unregisterFactory, factoryRegistration == {}", factoryRegistration);
     }
 
-    private static void withThreadName(String threadName, Runnable task) {
+    private static void runWithThreadName(String threadNameSuffix, Runnable task) {
         final String name = Thread.currentThread().getName();
         try {
-            Thread.currentThread().setName(threadName);
+            Thread.currentThread().setName(ResourceResolverFactory.class.getSimpleName() + " " + threadNameSuffix);
             task.run();
         } finally {
             Thread.currentThread().setName(name);
