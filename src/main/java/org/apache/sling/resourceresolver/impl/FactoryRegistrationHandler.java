@@ -62,11 +62,10 @@ public class FactoryRegistrationHandler implements AutoCloseable {
         factoryRegistrationWorker.shutdown();
         try {
             if (!factoryRegistrationWorker.awaitTermination(5, TimeUnit.SECONDS)) {
-                final List<Runnable> runnables = factoryRegistrationWorker.shutdownNow();
-                if (runnables.size() >= 2) {
-                    final Runnable unregisterTask = runnables.get(runnables.size() - 2);
-                    unregisterTask.run();
-                }
+                factoryRegistrationWorker.shutdownNow();
+                // make sure everything is unregistered, even if
+                // the factoryRegistrationWorker did not complete
+                doUnregisterFactory();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
