@@ -23,14 +23,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -40,6 +43,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -71,11 +76,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.Invocation;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.ServiceRegistration;
 
 import static org.mockito.ArgumentMatchers.nullable;
 
@@ -117,10 +124,6 @@ public class MockedResourceResolverImplTest {
     @Mock
     private QueryLanguageProvider queryProvider;
 
-    private Map<String, Object> services = new HashMap<String, Object>();
-
-    private Map<String, Object> serviceProperties = new HashMap<String, Object>();
-
     private ResourceResolverFactoryImpl resourceResolverFactory;
 
     @Mock
@@ -151,13 +154,20 @@ public class MockedResourceResolverImplTest {
 
     @SuppressWarnings("unchecked")
     @Before
-    public void before() throws LoginException {
+    public void before() throws LoginException, InterruptedException {
         activator = new ResourceResolverFactoryActivator();
 
         // system bundle access
         final Bundle systemBundle = mock(Bundle.class);
         Mockito.when(systemBundle.getState()).thenReturn(Bundle.ACTIVE);
         Mockito.when(bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION)).thenReturn(systemBundle);
+        CountDownLatch factoryRegistrationDone = new CountDownLatch(1);
+        Mockito.when(bundleContext.registerService(same(ResourceResolverFactory.class), any(ServiceFactory.class), any(Dictionary.class)))
+                .thenAnswer(invocation -> {
+                    factoryRegistrationDone.countDown();
+                    return mock(ServiceRegistration.class);
+                });
+
         activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
         activator.resourceProviderTracker = resourceProviderTracker;
         activator.changeListenerWhiteboard = resourceChangeListenerWhiteboard;
@@ -312,31 +322,20 @@ public class MockedResourceResolverImplTest {
         Mockito.when(usingBundle.getBundleContext()).thenReturn(usingBundleContext);
         Mockito.when(usingBundleContext.getBundle()).thenReturn(usingBundle);
 
-        // extract any services that were registered into a map.
-        ArgumentCaptor<Class> classesCaptor = ArgumentCaptor.forClass(Class.class);
-        ArgumentCaptor<ServiceFactory> serviceCaptor = ArgumentCaptor.forClass(ServiceFactory.class);
-        @SuppressWarnings("rawtypes")
-        ArgumentCaptor<Dictionary> propertiesCaptor = ArgumentCaptor.forClass(Dictionary.class);
-        Mockito.verify(bundleContext, Mockito.atLeastOnce()).registerService(
-            (Class<ResourceResolverFactory>)classesCaptor.capture(), (ServiceFactory<ResourceResolverFactory>)serviceCaptor.capture(),
-            propertiesCaptor.capture());
+        factoryRegistrationDone.await(5, TimeUnit.SECONDS);
 
-        int si = 0;
-        List<ServiceFactory> serviceList = serviceCaptor.getAllValues();
-        @SuppressWarnings({ "unused", "rawtypes" })
-        List<Dictionary> servicePropertiesList = propertiesCaptor.getAllValues();
-        for (Class serviceClass : classesCaptor.getAllValues()) {
-            services.put(serviceClass.getName(), serviceList.get(si));
-            serviceProperties.put(serviceClass.getName(), serviceProperties.get(si));
-            si++;
-        }
+        ArgumentCaptor<ServiceFactory<ResourceResolverFactory>> serviceCaptor = argumentCaptorForClass(ServiceFactory.class);
+        Mockito.verify(bundleContext, Mockito.atLeastOnce()).registerService(
+                same(ResourceResolverFactory.class),
+                serviceCaptor.capture(),
+                any(Dictionary.class));
+
         // verify that a ResourceResolverFactoryImpl was created and registered.
-        Assert.assertNotNull("" + services, services.get(ResourceResolverFactory.class.getName()));
-        Object rrf = services.get(ResourceResolverFactory.class.getName());
-        if (rrf instanceof ServiceFactory) {
-            rrf = ((ServiceFactory) rrf).getService(usingBundle, null);
-        }
-        Assert.assertTrue(rrf instanceof ResourceResolverFactoryImpl);
+        ServiceFactory<ResourceResolverFactory> rrfServiceFactory = serviceCaptor.getValue();
+        Assert.assertNotNull("ServiceFactory<ResourceResolverFactory>", rrfServiceFactory);
+        final ResourceResolverFactory rrf = rrfServiceFactory.getService(usingBundle, null);
+        assertNotNull("ResourceResolverFactory", rrf);
+        assertTrue("ResourceResolverFactoryImpl", rrf instanceof ResourceResolverFactoryImpl);
         resourceResolverFactory = (ResourceResolverFactoryImpl) rrf;
 
         // ensure allowed alias locations are *not* ending with a slash (invalid absolut path)
@@ -348,6 +347,11 @@ public class MockedResourceResolverImplTest {
         assertNotEquals("Mappings unavailable",
             MapEntries.EMPTY,
             getInaccessibleField("commonFactory",rrf,CommonResourceResolverFactoryImpl.class).getMapEntries());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> ArgumentCaptor<T> argumentCaptorForClass(Class<?> clazz) {
+        return (ArgumentCaptor<T>) ArgumentCaptor.forClass(clazz);
     }
 
     public static ResourceProviderHandler createRPHandler(ResourceProvider<?> rp, String pid, long ranking,
@@ -470,11 +474,13 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testGetResolver() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        Assert.assertNotNull(resourceResolver);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            Assert.assertNotNull(resourceResolver);
+        }
         Map<String, Object> authenticationInfo = new HashMap<String, Object>();
-        resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo);
-        Assert.assertNotNull(resourceResolver);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo)) {
+            Assert.assertNotNull(resourceResolver);
+        }
     }
 
     /**
@@ -483,14 +489,11 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testResolverMisc() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        try {
-            resourceResolver.getAttribute(null);
-            Assert.fail("Should have thrown a NPE");
-        } catch ( NullPointerException e) {
-            // this is expected.
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            assertThrows("Should have thrown a NPE", NullPointerException.class,
+                    () -> resourceResolver.getAttribute(null));
+            Assert.assertArrayEquals(new String[]{"/apps/","/libs/"}, resourceResolver.getSearchPath());
         }
-        Assert.assertArrayEquals(new String[]{"/apps/","/libs/"}, resourceResolver.getSearchPath());
     }
 
     /**
@@ -499,12 +502,14 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testGetAuthenticatedResolve() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(null);
-        Assert.assertNotNull(resourceResolver);
-        Map<String, Object> authenticationInfo = new HashMap<String, Object>();
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(null)) {
+            Assert.assertNotNull(resourceResolver);
+        }
 
-        resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo);
-        Assert.assertNotNull(resourceResolver);
+        Map<String, Object> authenticationInfo = new HashMap<String, Object>();
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo)) {
+            Assert.assertNotNull(resourceResolver);
+        }
     }
 
     /**
@@ -513,11 +518,12 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testGetResource() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        Assert.assertNotNull(resourceResolver);
-        Resource singleResource = buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        Resource resource = resourceResolver.getResource("/single/test");
-        Assert.assertEquals(singleResource, resource);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            Assert.assertNotNull(resourceResolver);
+            Resource singleResource = buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            Resource resource = resourceResolver.getResource("/single/test");
+            Assert.assertEquals(singleResource, resource);
+        }
     }
 
     /**
@@ -526,11 +532,12 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testGetResourceSLING864() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        Assert.assertNotNull(resourceResolver);
-        Resource singleResource = buildResource("/single/test.with/extra.dots/inthepath", EMPTY_RESOURCE_LIST,resourceResolver, resourceProvider);
-        Resource resource = resourceResolver.getResource("/single/test.with/extra.dots/inthepath");
-        Assert.assertEquals(singleResource, resource);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            Assert.assertNotNull(resourceResolver);
+            Resource singleResource = buildResource("/single/test.with/extra.dots/inthepath", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            Resource resource = resourceResolver.getResource("/single/test.with/extra.dots/inthepath");
+            Assert.assertEquals(singleResource, resource);
+        }
     }
 
 
@@ -540,14 +547,15 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testRelativeResource() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        Assert.assertNotNull(resourceResolver);
-        Resource appResource = buildResource("/apps/store/inventory", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
-        Resource libResource = buildResource("/libs/store/catalog", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
-        Resource testResource = resourceResolver.getResource("store/inventory");
-        Assert.assertEquals(appResource, testResource);
-        testResource = resourceResolver.getResource("store/catalog");
-        Assert.assertEquals(libResource, testResource);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            Assert.assertNotNull(resourceResolver);
+            Resource appResource = buildResource("/apps/store/inventory", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
+            Resource libResource = buildResource("/libs/store/catalog", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
+            Resource testResource = resourceResolver.getResource("store/inventory");
+            Assert.assertEquals(appResource, testResource);
+            testResource = resourceResolver.getResource("store/catalog");
+            Assert.assertEquals(libResource, testResource);
+        }
     }
 
     /**
@@ -558,36 +566,37 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testMapping() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        Mockito.when(request.getScheme()).thenReturn("http");
-        Mockito.when(request.getServerPort()).thenReturn(80);
-        Mockito.when(request.getServerName()).thenReturn("localhost");
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            HttpServletRequest request = mock(HttpServletRequest.class);
+            Mockito.when(request.getScheme()).thenReturn("http");
+            Mockito.when(request.getServerPort()).thenReturn(80);
+            Mockito.when(request.getServerName()).thenReturn("localhost");
 
-        String path = resourceResolver.map(request,"/single/test?q=123123");
-        Assert.assertEquals("/single/test?q=123123", path);
-        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        path = resourceResolver.map(request,"/single/test");
-        Assert.assertEquals("/single/test", path);
+            String path = resourceResolver.map(request, "/single/test?q=123123");
+            Assert.assertEquals("/single/test?q=123123", path);
+            buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            path = resourceResolver.map(request, "/single/test");
+            Assert.assertEquals("/single/test", path);
 
-        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        // test path mapping without a request.
-        path = resourceResolver.map("/single/test");
-        Assert.assertEquals("/single/test", path);
+            buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            // test path mapping without a request.
+            path = resourceResolver.map("/single/test");
+            Assert.assertEquals("/single/test", path);
 
-        buildResource("/content", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        path = resourceResolver.map("/content.html");
-        Assert.assertEquals("/content.html", path);
+            buildResource("/content", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            path = resourceResolver.map("/content.html");
+            Assert.assertEquals("/content.html", path);
 
-        path = resourceResolver.map(request,"some/relative/path/test");
-        Assert.assertEquals("some/relative/path/test", path);
-      
-        buildResource("/", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        buildResource("/single", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
-        path = resourceResolver.map("/single//test.html");
-        Assert.assertEquals("/single/test.html", path);
+            path = resourceResolver.map(request, "some/relative/path/test");
+            Assert.assertEquals("some/relative/path/test", path);
+
+            buildResource("/", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            buildResource("/single", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            path = resourceResolver.map("/single//test.html");
+            Assert.assertEquals("/single/test.html", path);
+        }
     }
 
 
@@ -599,22 +608,23 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testListChildren() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider );
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
 
 
-        Resource resource = resourceResolver.getResource("/single/test/withchildren");
-        Assert.assertNotNull(resource);
+            Resource resource = resourceResolver.getResource("/single/test/withchildren");
+            Assert.assertNotNull(resource);
 
-        // test via the resource list children itself, this really just tests this test case.
-        Iterator<Resource> resourceIterator = resource.listChildren();
-        Assert.assertNotNull(resourceResolver);
-        int i = 0;
-        while(resourceIterator.hasNext()) {
-            Assert.assertEquals("m"+i, resourceIterator.next().getName());
-            i++;
+            // test via the resource list children itself, this really just tests this test case.
+            Iterator<Resource> resourceIterator = resource.listChildren();
+            Assert.assertNotNull(resourceResolver);
+            int i = 0;
+            while (resourceIterator.hasNext()) {
+                Assert.assertEquals("m" + i, resourceIterator.next().getName());
+                i++;
+            }
+            Assert.assertEquals(5, i);
         }
-        Assert.assertEquals(5, i);
     }
 
     /**
@@ -623,22 +633,23 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testResourceResolverListChildren() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
 
 
-        Resource resource = resourceResolver.getResource("/single/test/withchildren");
-        Assert.assertNotNull(resource);
+            Resource resource = resourceResolver.getResource("/single/test/withchildren");
+            Assert.assertNotNull(resource);
 
-        // test via the resource list children itself, this really just tests this test case.
-        Iterator<Resource> resourceIterator = resourceResolver.listChildren(resource);
-        Assert.assertNotNull(resourceResolver);
-        int i = 0;
-        while(resourceIterator.hasNext()) {
-            Assert.assertEquals("m"+i, resourceIterator.next().getName());
-            i++;
+            // test via the resource list children itself, this really just tests this test case.
+            Iterator<Resource> resourceIterator = resourceResolver.listChildren(resource);
+            Assert.assertNotNull(resourceResolver);
+            int i = 0;
+            while (resourceIterator.hasNext()) {
+                Assert.assertEquals("m" + i, resourceIterator.next().getName());
+                i++;
+            }
+            Assert.assertEquals(5, i);
         }
-        Assert.assertEquals(5,i);
     }
 
     /**
@@ -647,22 +658,23 @@ public class MockedResourceResolverImplTest {
      */
     @Test
     public void testResourceResolverGetChildren() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
-        buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
 
 
-        Resource resource = resourceResolver.getResource("/single/test/withchildren");
-        Assert.assertNotNull(resource);
+            Resource resource = resourceResolver.getResource("/single/test/withchildren");
+            Assert.assertNotNull(resource);
 
-        // test via the resource list children itself, this really just tests this test case.
-        Iterable<Resource> resourceIterator = resourceResolver.getChildren(resource);
-        Assert.assertNotNull(resourceResolver);
-        int i = 0;
-        for(Resource r : resourceIterator) {
-            Assert.assertEquals("m"+i, r.getName());
-            i++;
+            // test via the resource list children itself, this really just tests this test case.
+            Iterable<Resource> resourceIterator = resourceResolver.getChildren(resource);
+            Assert.assertNotNull(resourceResolver);
+            int i = 0;
+            for (Resource r : resourceIterator) {
+                Assert.assertEquals("m" + i, r.getName());
+                i++;
+            }
+            Assert.assertEquals(5, i);
         }
-        Assert.assertEquals(5,i);
     }
 
     @SuppressWarnings("unchecked")
@@ -674,41 +686,42 @@ public class MockedResourceResolverImplTest {
         Mockito.when(queryProvider.queryResources(Mockito.nullable(ResolveContext.class), Mockito.nullable(String.class), Mockito.nullable(String.class)))
         .thenReturn(buildValueMapCollection(n, "A_").iterator());
 
-        final ResourceResolver rr = resourceResolverFactory.getResourceResolver(null);
-        buildResource("/search/test/withchildren", buildChildResources("/search/test/withchildren"), rr, resourceProvider);
-        final Iterator<Map<String, Object>> it = rr.queryResources("/search", FAKE_QUERY_LANGUAGE);
-        final Set<String> toFind = new HashSet<String>();
-        for(int i=0; i < n; i++) {
-            toFind.add("A_" + i);
-        }
+        try (ResourceResolver rr = resourceResolverFactory.getResourceResolver(null)) {
+            buildResource("/search/test/withchildren", buildChildResources("/search/test/withchildren"), rr, resourceProvider);
+            final Iterator<Map<String, Object>> it = rr.queryResources("/search", FAKE_QUERY_LANGUAGE);
+            final Set<String> toFind = new HashSet<String>();
+            for (int i = 0; i < n; i++) {
+                toFind.add("A_" + i);
+            }
 
-        assertTrue("Expecting non-empty result (" + n + ")", it.hasNext());
-        while(it.hasNext()) {
-            final Map<String, Object> m = it.next();
-            toFind.remove(m.get(PATH));
+            assertTrue("Expecting non-empty result (" + n + ")", it.hasNext());
+            while (it.hasNext()) {
+                final Map<String, Object> m = it.next();
+                toFind.remove(m.get(PATH));
+            }
+            assertTrue("Expecting no leftovers (" + n + ") in" + toFind, toFind.isEmpty());
         }
-        assertTrue("Expecting no leftovers (" + n + ") in" + toFind, toFind.isEmpty());
     }
 
     @Test public void test_versions() throws LoginException {
-        ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null);
+        try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
+            Resource resource = resourceResolver.resolve("/content/test.html;v=1.0");
+            Map<String, String> parameters = resource.getResourceMetadata().getParameterMap();
+            assertEquals("/content/test.html", resource.getPath());
+            assertEquals("test.html", resource.getName());
+            assertEquals(Collections.singletonMap("v", "1.0"), parameters);
 
-        Resource resource = resourceResolver.resolve("/content/test.html;v=1.0");
-        Map<String, String> parameters = resource.getResourceMetadata().getParameterMap();
-        assertEquals("/content/test.html", resource.getPath());
-        assertEquals("test.html", resource.getName());
-        assertEquals(Collections.singletonMap("v", "1.0"), parameters);
+            resource = resourceResolver.resolve("/content/test;v='1.0'.html");
+            parameters = resource.getResourceMetadata().getParameterMap();
+            assertEquals("/content/test.html", resource.getPath());
+            assertEquals("test.html", resource.getName());
+            assertEquals(Collections.singletonMap("v", "1.0"), parameters);
 
-        resource = resourceResolver.resolve("/content/test;v='1.0'.html");
-        parameters = resource.getResourceMetadata().getParameterMap();
-        assertEquals("/content/test.html", resource.getPath());
-        assertEquals("test.html", resource.getName());
-        assertEquals(Collections.singletonMap("v", "1.0"), parameters);
-
-        buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
-        resource = resourceResolver.getResource("/single/test/withchildren;v='1.0'");
-        assertNotNull(resource);
-        assertEquals("/single/test/withchildren", resource.getPath());
-        assertEquals("withchildren", resource.getName());
+            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
+            resource = resourceResolver.getResource("/single/test/withchildren;v='1.0'");
+            assertNotNull(resource);
+            assertEquals("/single/test/withchildren", resource.getPath());
+            assertEquals("withchildren", resource.getName());
+        }
     }
 }

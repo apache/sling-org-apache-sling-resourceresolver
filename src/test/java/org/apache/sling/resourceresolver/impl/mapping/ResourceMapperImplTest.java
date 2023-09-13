@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -53,6 +54,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.osgi.util.tracker.ServiceTracker;
 
 /**
  * Validates that the {@link ResourceMapperImpl} correctly queries all sources of mappings
@@ -94,7 +96,7 @@ public class ResourceMapperImplTest {
     }
 
     @Before
-    public void prepare() throws LoginException {
+    public void prepare() throws LoginException, InterruptedException {
 
         ctx.registerInjectActivateService(new ServiceUserMapperImpl());
         ctx.registerInjectActivateService(new ResourceAccessSecurityTracker());
@@ -139,7 +141,15 @@ public class ResourceMapperImplTest {
         ctx.registerInjectActivateService(new ResourceResolverFactoryActivator(),
                 "resource.resolver.optimize.alias.resolution", optimiseAliasResolution);
 
-        ResourceResolverFactory factory = ctx.getService(ResourceResolverFactory.class);
+        final ResourceResolverFactory factory;
+        final ServiceTracker<ResourceResolverFactory, ResourceResolverFactory> tracker =
+                new ServiceTracker<>(ctx.bundleContext(), ResourceResolverFactory.class, null);
+        try {
+            tracker.open();
+            factory = tracker.waitForService(TimeUnit.SECONDS.toMillis(5));
+        } finally {
+            tracker.close();
+        }
 
         assertNotNull(factory);
 

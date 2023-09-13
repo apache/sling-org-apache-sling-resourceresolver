@@ -52,7 +52,7 @@ public class AuthenticatedResourceProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(ResourceResolverImpl.class);
 
-    public static final AuthenticatedResourceProvider UNAUTHENTICATED_PROVIDER = new AuthenticatedResourceProvider(null, false, null, null);
+    public static final AuthenticatedResourceProvider UNAUTHENTICATED_PROVIDER = new AuthenticatedResourceProvider();
 
     private final ResourceProviderHandler providerHandler;
 
@@ -77,6 +77,13 @@ public class AuthenticatedResourceProvider {
         this.resolveContext = resolveContext;
         this.tracker = tracker;
         this.useRAS = useRAS;
+    }
+
+    private AuthenticatedResourceProvider() {
+        this.providerHandler = null;
+        this.resolveContext = null;
+        this.tracker = null;
+        this.useRAS = false;
     }
 
     /**

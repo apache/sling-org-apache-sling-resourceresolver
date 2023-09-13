@@ -31,6 +31,7 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -142,6 +143,11 @@ public class EtcMappingResourceResolverTest {
         etc = buildResource("/etc", null, resourceResolver, resourceProvider);
         map = buildResource("/etc/map", etc, resourceResolver, resourceProvider);
         http = buildResource("/etc/map/http", map, resourceResolver, resourceProvider);
+    }
+
+    @After
+    public void cleanup() {
+        resourceResolver.close();
     }
 
     List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {

@@ -23,9 +23,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Dictionary;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,10 +34,10 @@ import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.ResourceDecorator;
-import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
 import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
 import org.apache.sling.resourceresolver.impl.observation.ResourceChangeListenerWhiteboard;
@@ -47,11 +45,7 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.ChangeListener;
 import org.apache.sling.resourceresolver.impl.providers.RuntimeServiceImpl;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceFactory;
-import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -75,16 +69,6 @@ import org.slf4j.LoggerFactory;
 @Designate(ocd = ResourceResolverFactoryConfig.class)
 @Component(name = "org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl")
 public class ResourceResolverFactoryActivator {
-
-    private static final class FactoryRegistration {
-        /** Registration .*/
-        public volatile ServiceRegistration<ResourceResolverFactory> factoryRegistration;
-
-        /** Runtime registration. */
-        public volatile ServiceRegistration<RuntimeService> runtimeRegistration;
-
-        public volatile CommonResourceResolverFactoryImpl commonFactory;
-    }
 
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -140,10 +124,8 @@ public class ResourceResolverFactoryActivator {
     /** Observation paths */
     private volatile Path[] observationPaths;
 
-    private final FactoryPreconditions preconds = new FactoryPreconditions();
-
-    /** Factory registration. */
-    private volatile FactoryRegistration factoryRegistration;
+    @SuppressWarnings("java:S3077")
+    private volatile FactoryRegistrationHandler factoryRegistrationHandler;
 
     private final VanityPathConfigurer vanityPathConfigurer = new VanityPathConfigurer();
     {
@@ -235,7 +217,7 @@ public class ResourceResolverFactoryActivator {
      * Activates this component (called by SCR before)
      */
     @Activate
-    protected void activate(final BundleContext bundleContext, 
+    protected void activate(final BundleContext bundleContext,
         final ResourceResolverFactoryConfig config,
         final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
         this.vanityPathConfigurer.setConfiguration(config, deprecatedVanityConfig);
@@ -315,85 +297,50 @@ public class ResourceResolverFactoryActivator {
             }
         }
 
+        // for testing: if we run unit test, both trackers are set from the outside
+        final boolean hasPreRegisteredResourceProviderTracker = this.resourceProviderTracker != null;
+        if (!hasPreRegisteredResourceProviderTracker) {
+            this.resourceProviderTracker = new ResourceProviderTracker();
+            this.changeListenerWhiteboard = new ResourceChangeListenerWhiteboard();
+            this.changeListenerWhiteboard.activate(this.bundleContext, this.resourceProviderTracker, searchPath);
+        }
+
         // check for required property
         Set<String> requiredResourceProvidersLegacy = getStringSet(config.resource_resolver_required_providers());
         Set<String> requiredResourceProviderNames = getStringSet(config.resource_resolver_required_providernames());
 
-        boolean hasLegacyRequiredProvider = false;
-        if ( requiredResourceProvidersLegacy != null ) {
-            hasLegacyRequiredProvider = requiredResourceProvidersLegacy.remove(ResourceResolverFactoryConfig.LEGACY_REQUIRED_PROVIDER_PID);
-            if ( !requiredResourceProvidersLegacy.isEmpty() ) {
-                logger.error("ResourceResolverFactory is using deprecated required providers configuration (resource.resolver.required.providers" +
-                        "). Please change to use the property resource.resolver.required.providernames for values: " + requiredResourceProvidersLegacy);
-            } else {
-            	requiredResourceProvidersLegacy = null;
-            }
-        }
-        if ( hasLegacyRequiredProvider ) {
-            final boolean hasRequiredProvider;
-        	if ( requiredResourceProviderNames != null ) {
-        		hasRequiredProvider = !requiredResourceProviderNames.add(ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME);
-        	} else {
-        		hasRequiredProvider = false;
-        		requiredResourceProviderNames = Collections.singleton(ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME);
-        	}
-        	if ( hasRequiredProvider ) {
-                logger.warn("ResourceResolverFactory is using deprecated required providers configuration (resource.resolver.required.providers" +
-                        ") with value '" + ResourceResolverFactoryConfig.LEGACY_REQUIRED_PROVIDER_PID + ". Please remove this configuration property. " +
-                        ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME + " is already contained in the property resource.resolver.required.providernames.");
-        	} else {
-                logger.warn("ResourceResolverFactory is using deprecated required providers configuration (resource.resolver.required.providers" +
-                        ") with value '" + ResourceResolverFactoryConfig.LEGACY_REQUIRED_PROVIDER_PID + ". Please remove this configuration property and add " +
-                        ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME + " to the property resource.resolver.required.providernames.");
-        	}
-        }
+        final FactoryPreconditions factoryPreconditions = new FactoryPreconditions(
+                resourceProviderTracker,
+                requiredResourceProviderNames,
+                requiredResourceProvidersLegacy);
+        factoryRegistrationHandler = new FactoryRegistrationHandler(this, factoryPreconditions);
+        factoryRegistrationHandler.maybeRegisterFactory(null, null);
 
-        // for testing: if we run unit test, both trackers are set from the outside
-        if ( this.resourceProviderTracker == null ) {
-            this.resourceProviderTracker = new ResourceProviderTracker();
-            this.changeListenerWhiteboard = new ResourceChangeListenerWhiteboard();
-            this.preconds.activate(this.bundleContext,
-            		requiredResourceProvidersLegacy,
-            		requiredResourceProviderNames,
-            		resourceProviderTracker);
-            this.changeListenerWhiteboard.activate(this.bundleContext,
-                this.resourceProviderTracker, searchPath);
-            this.resourceProviderTracker.activate(this.bundleContext,
-                    this.eventAdmin,
+        if (!hasPreRegisteredResourceProviderTracker) {
+            this.resourceProviderTracker.activate(this.bundleContext, this.eventAdmin,
                     new ChangeListener() {
 
                         @Override
                         public void providerAdded() {
-                            if ( factoryRegistration == null ) {
-                                checkFactoryPreconditions(null, null);
-                            }
-
+                            factoryRegistrationHandler.maybeRegisterFactory(null, null);
                         }
 
                         @Override
                         public void providerRemoved(final String name, final String pid, final boolean stateful, final boolean isUsed) {
-                            if ( factoryRegistration != null ) {
-                                if ( isUsed && (stateful || config.resource_resolver_providerhandling_paranoid()) ) {
-                                    unregisterFactory();
-                                }
-                                checkFactoryPreconditions(name, pid);
+                            if ( isUsed && (stateful || config.resource_resolver_providerhandling_paranoid()) ) {
+                                factoryRegistrationHandler.unregisterFactory();
                             }
+                            factoryRegistrationHandler.maybeRegisterFactory(name, pid);
                         }
                     });
-        } else {
-            this.preconds.activate(this.bundleContext,
-            		requiredResourceProvidersLegacy,
-            		requiredResourceProviderNames,
-            		resourceProviderTracker);
-            this.checkFactoryPreconditions(null, null);
-         }
+        }
     }
 
     /**
      * Modifies this component (called by SCR to update this component)
      */
     @Modified
-    protected void modified(final BundleContext bundleContext, 
+    protected void modified(final BundleContext bundleContext,
         final ResourceResolverFactoryConfig config,
         final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
         this.deactivate();
@@ -405,8 +352,10 @@ public class ResourceResolverFactoryActivator {
      */
     @Deactivate
     protected void deactivate() {
-        this.unregisterFactory();
+        this.factoryRegistrationHandler.close();
+        this.factoryRegistrationHandler = null;
 
+        // factoryRegistrationHandler must be closed before bundleContext is set to null
         this.bundleContext = null;
         this.config = DEFAULT_CONFIG;
         this.vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG, null);
@@ -414,88 +363,7 @@ public class ResourceResolverFactoryActivator {
         this.changeListenerWhiteboard = null;
         this.resourceProviderTracker.deactivate();
         this.resourceProviderTracker = null;
-
-        this.preconds.deactivate();
         this.resourceDecoratorTracker.close();
-
-        // this is just a sanity call to make sure that unregister
-        // in the case that a registration happened again
-        // while deactivation
-        this.unregisterFactory();
-    }
-
-    /**
-     * Unregister the factory (if registered)
-     * This method might be called concurrently from deactivate and the
-     * background thread, therefore we need to synchronize.
-     */
-    private void unregisterFactory() {
-        FactoryRegistration local = null;
-        synchronized ( this ) {
-            if ( this.factoryRegistration != null ) {
-                local = this.factoryRegistration;
-                this.factoryRegistration = null;
-            }
-        }
-        this.unregisterFactory(local);
-    }
-
-    /**
-     * Unregister the provided factory
-     */
-    private void unregisterFactory(final FactoryRegistration local) {
-        if ( local != null ) {
-            if ( local.factoryRegistration != null ) {
-                local.factoryRegistration.unregister();
-            }
-            if ( local.runtimeRegistration != null ) {
-                local.runtimeRegistration.unregister();
-            }
-            if ( local.commonFactory != null ) {
-                local.commonFactory.deactivate();
-            }
-        }
-    }
-
-    /**
-     * Try to register the factory.
-     */
-    private void registerFactory(final BundleContext localContext) {
-        final FactoryRegistration local = new FactoryRegistration();
-
-        if ( localContext != null ) {
-            // activate and register factory
-            final Dictionary<String, Object> serviceProps = new Hashtable<>();
-            serviceProps.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
-            serviceProps.put(Constants.SERVICE_DESCRIPTION, "Apache Sling Resource Resolver Factory");
-
-            local.commonFactory = new CommonResourceResolverFactoryImpl(this);
-            local.commonFactory.activate(localContext);
-            local.factoryRegistration = localContext.registerService(
-                ResourceResolverFactory.class, new ServiceFactory<ResourceResolverFactory>() {
-
-                    @Override
-                    public ResourceResolverFactory getService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration) {
-                        if ( ResourceResolverFactoryActivator.this.bundleContext == null ) {
-                            return null;
-                        }
-                        final ResourceResolverFactoryImpl r = new ResourceResolverFactoryImpl(
-                                local.commonFactory, bundle,
-                            ResourceResolverFactoryActivator.this.getServiceUserMapper());
-                        return r;
-                    }
-
-                    @Override
-                    public void ungetService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration, final ResourceResolverFactory service) {
-                        // nothing to do
-                    }
-                }, serviceProps);
-
-            local.runtimeRegistration = localContext.registerService(RuntimeService.class,
-                    this.getRuntimeService(), null);
-
-            this.factoryRegistration = local;
-        }
     }
 
     /**
@@ -512,35 +380,6 @@ public class ResourceResolverFactoryActivator {
 
     public BundleContext getBundleContext() {
     	return this.bundleContext;
-    }
-
-    /**
-     * Check the preconditions and if it changed, either register factory or unregister
-     */
-    private void checkFactoryPreconditions(final String unavailableName, final String unavailableServicePid) {
-        final BundleContext localContext = this.getBundleContext();
-        if ( localContext != null ) {
-            final boolean result = this.preconds.checkPreconditions(unavailableName, unavailableServicePid);
-            if ( result && this.factoryRegistration == null ) {
-                // check system bundle state - if stopping, don't register new factory
-                final Bundle systemBundle = localContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
-                if ( systemBundle != null && systemBundle.getState() != Bundle.STOPPING ) {
-                    boolean create = true;
-                    synchronized ( this ) {
-                        if ( this.factoryRegistration == null ) {
-                            this.factoryRegistration = new FactoryRegistration();
-                        } else {
-                            create = false;
-                        }
-                    }
-                    if ( create ) {
-                        this.registerFactory(localContext);
-                    }
-                }
-            } else if ( !result && this.factoryRegistration != null ) {
-                this.unregisterFactory();
-            }
-        }
     }
 
     /**
