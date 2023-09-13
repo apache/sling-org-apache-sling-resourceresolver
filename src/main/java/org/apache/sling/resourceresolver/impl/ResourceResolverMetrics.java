@@ -77,11 +77,11 @@ public class ResourceResolverMetrics {
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathBloomFalsePositiveGauge;
     private Supplier<Long> numberOfVanityPathBloomFalsePositiveSupplier = ZERO_SUPPLIER;
 
-    // number of aliases
-    private ServiceRegistration<Gauge<Long>> numberOfAliasesGauge;
-    private Supplier<Long> numberOfAliasesSupplier = ZERO_SUPPLIER;
+    // number of resources with aliased children
+    private ServiceRegistration<Gauge<Long>> numberOfResourcesWithAliasedChildrenGauge;
+    private Supplier<Long> numberOfResourcesWithAliasedChildrenSupplier = ZERO_SUPPLIER;
 
-    // number of aliases
+    // number of resources with aliases on startup
     private ServiceRegistration<Gauge<Long>> numberOfResourcesWithAliasesOnStartupGauge;
     private Supplier<Long> numberOfResourcesWithAliasesOnStartupSupplier = ZERO_SUPPLIER;
 
@@ -95,7 +95,7 @@ public class ResourceResolverMetrics {
         numberOfVanityPathLookupsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathLookups", () -> numberOfVanityPathLookupsSupplier );
         numberOfVanityPathBloomNegativeGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomNegatives", () -> numberOfVanityPathBloomNegativeSupplier );
         numberOfVanityPathBloomFalsePositiveGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomFalsePositives", () -> numberOfVanityPathBloomFalsePositiveSupplier );
-        numberOfAliasesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfAliases", () -> numberOfAliasesSupplier );
+        numberOfResourcesWithAliasedChildrenGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfResourcesWithAliasedChildren", () -> numberOfResourcesWithAliasedChildrenSupplier);
         numberOfResourcesWithAliasesOnStartupGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfResourcesWithAliasesOnStartup", () -> numberOfResourcesWithAliasesOnStartupSupplier );
         unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX  + ".unclosedResourceResolvers");
     }
@@ -108,7 +108,7 @@ public class ResourceResolverMetrics {
         numberOfVanityPathBloomNegativeGauge.unregister();
         numberOfVanityPathBloomFalsePositiveGauge.unregister();
         numberOfResourcesWithAliasesOnStartupGauge.unregister();
-        numberOfAliasesGauge.unregister();
+        numberOfResourcesWithAliasedChildrenGauge.unregister();
     }
 
     /**
@@ -155,8 +155,8 @@ public class ResourceResolverMetrics {
      * Set the number of aliases in the system
      * @param supplier a supplier returning the number of aliases
      */
-    public void setNumberOfAliasesSupplier(Supplier<Long> supplier) {
-        numberOfAliasesSupplier = supplier;
+    public void setNumberOfResourcesWithAliasedChildrenSupplier(Supplier<Long> supplier) {
+        numberOfResourcesWithAliasedChildrenSupplier = supplier;
     }
 
     /**

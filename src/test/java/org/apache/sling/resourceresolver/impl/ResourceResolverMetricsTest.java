@@ -49,11 +49,11 @@ public class ResourceResolverMetricsTest {
     @Test
     public void testGauges() {
         Gauge<Long> vanityPaths =  getGauge(ResourceResolverMetrics.METRICS_PREFIX + ".numberOfVanityPaths");
-        Gauge<Long> aliases = getGauge(ResourceResolverMetrics.METRICS_PREFIX + ".numberOfAliases");
+        Gauge<Long> aliases = getGauge(ResourceResolverMetrics.METRICS_PREFIX + ".numberOfResourcesWithAliasedChildren");
         assertThat(vanityPaths.getValue(),is(0L));
         assertThat(aliases.getValue(),is(0L));
         
-        metrics.setNumberOfAliasesSupplier(() -> 3L);
+        metrics.setNumberOfResourcesWithAliasedChildrenSupplier(() -> 3L);
         metrics.setNumberOfVanityPathsSupplier(() -> 2L);
         assertThat(vanityPaths.getValue(),is(2L));
         assertThat(aliases.getValue(),is(3L));

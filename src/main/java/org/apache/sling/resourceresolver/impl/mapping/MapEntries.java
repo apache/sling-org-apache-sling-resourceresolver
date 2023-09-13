@@ -197,7 +197,7 @@ public class MapEntries implements
             this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
             this.metrics.get().setNumberOfVanityPathBloomNegativeSupplier(vanityPathBloomNegative::get);
             this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
-            this.metrics.get().setNumberOfAliasesSupplier(() -> (long) aliasMap.size());
+            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
         }
     }
