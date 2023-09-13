@@ -206,7 +206,7 @@ public class MockedResourceResolverImplTest {
             }
 
             @Override
-            public String[] resource_resolver_vanitypath_whitelist() {
+            public String[] resource_resolver_vanitypath_allowlist() {
                 return null;
             }
 
@@ -226,7 +226,7 @@ public class MockedResourceResolverImplTest {
             }
 
             @Override
-            public String[] resource_resolver_vanitypath_blacklist() {
+            public String[] resource_resolver_vanitypath_denylist() {
                 return null;
             }
 
@@ -316,7 +316,7 @@ public class MockedResourceResolverImplTest {
             public boolean resource_resolver_vanitypath_cache_in_background() {
                 return false;
             }
-        });
+        }, null);
 
         // configure using Bundle
         Mockito.when(usingBundle.getBundleContext()).thenReturn(usingBundleContext);
