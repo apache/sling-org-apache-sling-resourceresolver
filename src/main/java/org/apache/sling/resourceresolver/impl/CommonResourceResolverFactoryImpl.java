@@ -388,12 +388,12 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     @Override
     public int getDefaultVanityPathRedirectStatus() {
-        return this.activator.getDefaultVanityPathRedirectStatus();
+        return this.activator.getVanityPathConfigurer().getDefaultVanityPathRedirectStatus();
     }
 
     @Override
     public boolean isVanityPathCacheInitInBackground() {
-        return this.activator.isVanityPathCacheInitInBackground();
+        return this.activator.getVanityPathConfigurer().isVanityPathCacheInitInBackground();
     }
 
    /**
@@ -415,22 +415,22 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     @Override
     public boolean isVanityPathEnabled() {
-        return this.activator.isVanityPathEnabled();
+        return this.activator.getVanityPathConfigurer().isVanityPathEnabled();
     }
 
     @Override
     public long getMaxCachedVanityPathEntries() {
-        return this.activator.getMaxCachedVanityPathEntries();
+        return this.activator.getVanityPathConfigurer().getMaxCachedVanityPathEntries();
     }
 
     @Override
     public boolean isMaxCachedVanityPathEntriesStartup() {
-        return this.activator.isMaxCachedVanityPathEntriesStartup();
+        return this.activator.getVanityPathConfigurer().isMaxCachedVanityPathEntriesStartup();
     }
 
     @Override
     public int getVanityBloomFilterMaxBytes() {
-        return this.activator.getVanityBloomFilterMaxBytes();
+        return this.activator.getVanityPathConfigurer().getVanityBloomFilterMaxBytes();
     }
 
     @Override
@@ -440,7 +440,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     @Override
     public boolean hasVanityPathPrecedence() {
-        return this.activator.hasVanityPathPrecedence();
+        return this.activator.getVanityPathConfigurer().hasVanityPathPrecedence();
     }
 
     @Override
@@ -450,24 +450,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     @Override
     public List<VanityPathConfig> getVanityPathConfig() {
-        final String[] includes = this.activator.getVanityPathWhiteList();
-        final String[] excludes = this.activator.getVanityPathBlackList();
-        if ( includes == null && excludes == null ) {
-            return null;
-        }
-        final List<VanityPathConfig> configs = new ArrayList<>();
-        if ( includes != null ) {
-            for(final String val : includes) {
-                configs.add(new VanityPathConfig(val, false));
-            }
-        }
-        if ( excludes != null ) {
-            for(final String val : excludes) {
-                configs.add(new VanityPathConfig(val, true));
-            }
-        }
-        Collections.sort(configs);
-        return configs;
+        return this.activator.getVanityPathConfigurer().getVanityPathConfig();
     }
 
     @Override

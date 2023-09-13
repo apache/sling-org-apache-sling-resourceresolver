@@ -21,8 +21,16 @@ package org.apache.sling.resourceresolver.impl;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
@@ -68,7 +76,6 @@ import org.slf4j.LoggerFactory;
 @Component(name = "org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl")
 public class ResourceResolverFactoryActivator {
 
-
     private static final class FactoryRegistration {
         /** Registration .*/
         public volatile ServiceRegistration<ResourceResolverFactory> factoryRegistration;
@@ -78,7 +85,6 @@ public class ResourceResolverFactoryActivator {
 
         public volatile CommonResourceResolverFactoryImpl commonFactory;
     }
-
 
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -131,12 +137,6 @@ public class ResourceResolverFactoryActivator {
     @SuppressWarnings("java:S3077")
     private volatile Set<String> allowedAliasLocations = Collections.emptySet();
 
-    /** Vanity path whitelist */
-    private volatile String[] vanityPathWhiteList;
-
-    /** Vanity path blacklist */
-    private volatile String[] vanityPathBlackList;
-
     /** Observation paths */
     private volatile Path[] observationPaths;
 
@@ -144,6 +144,11 @@ public class ResourceResolverFactoryActivator {
 
     /** Factory registration. */
     private volatile FactoryRegistration factoryRegistration;
+
+    private final VanityPathConfigurer vanityPathConfigurer = new VanityPathConfigurer();
+    {
+        vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG, null);
+    }
 
     /**
      * Get the resource decorator tracker.
@@ -200,18 +205,6 @@ public class ResourceResolverFactoryActivator {
                || path.startsWith(this.mapRootPrefix);
     }
 
-    public int getDefaultVanityPathRedirectStatus() {
-        return config.resource_resolver_default_vanity_redirect_status();
-    }
-
-    public boolean isVanityPathEnabled() {
-        return this.config.resource_resolver_enable_vanitypath();
-    }
-
-    public boolean isVanityPathCacheInitInBackground() {
-        return this.config.resource_resolver_vanitypath_cache_in_background();
-    }
-
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
@@ -224,30 +217,6 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_log_unclosed();
     }
 
-    public String[] getVanityPathWhiteList() {
-        return this.vanityPathWhiteList;
-    }
-
-    public String[] getVanityPathBlackList() {
-        return this.vanityPathBlackList;
-    }
-
-    public boolean hasVanityPathPrecedence() {
-        return this.config.resource_resolver_vanity_precedence();
-    }
-
-    public long getMaxCachedVanityPathEntries() {
-        return this.config.resource_resolver_vanitypath_maxEntries();
-    }
-
-    public boolean isMaxCachedVanityPathEntriesStartup() {
-        return this.config.resource_resolver_vanitypath_maxEntries_startup();
-    }
-
-    public int getVanityBloomFilterMaxBytes() {
-        return this.config.resource_resolver_vanitypath_bloomfilter_maxBytes();
-    }
-
     public boolean shouldLogResourceResolverClosing() {
         return this.config.resource_resolver_log_closing();
     }
@@ -256,13 +225,20 @@ public class ResourceResolverFactoryActivator {
         return this.observationPaths;
     }
 
+    public VanityPathConfigurer getVanityPathConfigurer() {
+        return this.vanityPathConfigurer;
+    }
+
     // ---------- SCR Integration ---------------------------------------------
 
     /**
      * Activates this component (called by SCR before)
      */
     @Activate
-    protected void activate(final BundleContext bundleContext, final ResourceResolverFactoryConfig config) {
+    protected void activate(final BundleContext bundleContext, 
+        final ResourceResolverFactoryConfig config,
+        final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
+        this.vanityPathConfigurer.setConfiguration(config, deprecatedVanityConfig);
         this.bundleContext = bundleContext;
         this.config = config;
 
@@ -336,43 +312,6 @@ public class ResourceResolverFactoryActivator {
             }
             if ( !prefixSet.isEmpty()) {
                 this.allowedAliasLocations = Collections.unmodifiableSet(prefixSet);
-            }
-        }
-
-        // vanity path white list
-        this.vanityPathWhiteList = null;
-        String[] vanityPathPrefixes = config.resource_resolver_vanitypath_whitelist();
-        if ( vanityPathPrefixes != null ) {
-            final List<String> prefixList = new ArrayList<>();
-            for(final String value : vanityPathPrefixes) {
-                if ( value.trim().length() > 0 ) {
-                    if ( value.trim().endsWith("/") ) {
-                        prefixList.add(value.trim());
-                    } else {
-                        prefixList.add(value.trim() + "/");
-                    }
-                }
-            }
-            if ( prefixList.size() > 0 ) {
-                this.vanityPathWhiteList = prefixList.toArray(new String[prefixList.size()]);
-            }
-        }
-        // vanity path black list
-        this.vanityPathBlackList = null;
-        vanityPathPrefixes = config.resource_resolver_vanitypath_blacklist();
-        if ( vanityPathPrefixes != null ) {
-            final List<String> prefixList = new ArrayList<>();
-            for(final String value : vanityPathPrefixes) {
-                if ( value.trim().length() > 0 ) {
-                    if ( value.trim().endsWith("/") ) {
-                        prefixList.add(value.trim());
-                    } else {
-                        prefixList.add(value.trim() + "/");
-                    }
-                }
-            }
-            if ( prefixList.size() > 0 ) {
-                this.vanityPathBlackList = prefixList.toArray(new String[prefixList.size()]);
             }
         }
 
@@ -454,9 +393,11 @@ public class ResourceResolverFactoryActivator {
      * Modifies this component (called by SCR to update this component)
      */
     @Modified
-    protected void modified(final BundleContext bundleContext, final ResourceResolverFactoryConfig config) {
+    protected void modified(final BundleContext bundleContext, 
+        final ResourceResolverFactoryConfig config,
+        final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
         this.deactivate();
-        this.activate(bundleContext, config);
+        this.activate(bundleContext, config, deprecatedVanityConfig);
     }
 
     /**
@@ -468,6 +409,7 @@ public class ResourceResolverFactoryActivator {
 
         this.bundleContext = null;
         this.config = DEFAULT_CONFIG;
+        this.vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG, null);
         this.changeListenerWhiteboard.deactivate();
         this.changeListenerWhiteboard = null;
         this.resourceProviderTracker.deactivate();

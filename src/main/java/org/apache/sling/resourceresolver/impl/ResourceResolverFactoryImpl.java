@@ -104,7 +104,7 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
     @Override
     public ResourceResolver getAdministrativeResourceResolver(
             Map<String, Object> authenticationInfo) throws LoginException {
-        // usingBundle is required as bundles must now be whitelisted to use this method
+        // usingBundle is required as bundles must now be allow listed to use this method
         if (usingBundle == null) {
             throw new LoginException("usingBundle is null");
         }
