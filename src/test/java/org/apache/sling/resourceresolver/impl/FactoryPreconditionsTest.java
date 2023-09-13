@@ -43,30 +43,13 @@ public class FactoryPreconditionsTest {
         final ResourceProviderStorage storage = Mockito.mock(ResourceProviderStorage.class);
         Mockito.when(tracker.getResourceProviderStorage()).thenReturn(storage);
 
-        FactoryPreconditions conditions = new FactoryPreconditions();
-        conditions.activate(null, null, null, tracker);
+        FactoryPreconditions conditions = new FactoryPreconditions(tracker, null, null);
 
         assertTrue(conditions.checkPreconditions(null, null));
 
-        conditions = new FactoryPreconditions();
-        conditions.activate(null, Collections.<String> emptySet(), Collections.<String> emptySet(), tracker);
+        conditions = new FactoryPreconditions(tracker, Collections.<String> emptySet(), Collections.<String> emptySet());
 
         assertTrue(conditions.checkPreconditions(null, null));
-    }
-
-    @Test public void testDeactivated() {
-        final ResourceProviderTracker tracker = Mockito.mock(ResourceProviderTracker.class);
-        final ResourceProviderStorage storage = Mockito.mock(ResourceProviderStorage.class);
-        Mockito.when(tracker.getResourceProviderStorage()).thenReturn(storage);
-
-        FactoryPreconditions conditions = new FactoryPreconditions();
-        conditions.activate(null, null, null, tracker);
-
-        assertTrue(conditions.checkPreconditions(null, null));
-
-        conditions.deactivate();
-
-        assertFalse(conditions.checkPreconditions(null, null));
     }
 
     private List<ResourceProviderHandler> getResourceProviderHandlers(String[] pids) {
@@ -108,8 +91,7 @@ public class FactoryPreconditionsTest {
         final ResourceProviderStorage storage = Mockito.mock(ResourceProviderStorage.class);
         Mockito.when(tracker.getResourceProviderStorage()).thenReturn(storage);
 
-        FactoryPreconditions conditions = new FactoryPreconditions();
-        conditions.activate(null, new HashSet<>(Arrays.asList("pid1", "pid3")), null, tracker);
+        FactoryPreconditions conditions = new FactoryPreconditions(tracker, null, new HashSet<>(Arrays.asList("pid1", "pid3")));
 
         final List<ResourceProviderHandler> handlers1 = getResourceProviderHandlers(new String[] {"pid2"});
         Mockito.when(storage.getAllHandlers()).thenReturn(handlers1);
@@ -129,8 +111,7 @@ public class FactoryPreconditionsTest {
         final ResourceProviderStorage storage = Mockito.mock(ResourceProviderStorage.class);
         Mockito.when(tracker.getResourceProviderStorage()).thenReturn(storage);
 
-        FactoryPreconditions conditions = new FactoryPreconditions();
-        conditions.activate(null, null,new HashSet<>(Arrays.asList("n1", "n2")), tracker);
+        FactoryPreconditions conditions = new FactoryPreconditions(tracker, new HashSet<>(Arrays.asList("n1", "n2")), null);
 
         final List<ResourceProviderHandler> handlers1 = getResourceProviderHandlersWithNames(new String[] {"n2"});
         Mockito.when(storage.getAllHandlers()).thenReturn(handlers1);
@@ -150,8 +131,7 @@ public class FactoryPreconditionsTest {
         final ResourceProviderStorage storage = Mockito.mock(ResourceProviderStorage.class);
         Mockito.when(tracker.getResourceProviderStorage()).thenReturn(storage);
 
-        FactoryPreconditions conditions = new FactoryPreconditions();
-        conditions.activate(null, new HashSet<>(Arrays.asList("pid1", "pid3")), null, tracker);
+        FactoryPreconditions conditions = new FactoryPreconditions(tracker, null, new HashSet<>(Arrays.asList("pid1", "pid3")));
 
         final List<ResourceProviderHandler> handlers2 = getResourceProviderHandlers(new String[] {"pid1", "pid2", "pid3"});
         Mockito.when(storage.getAllHandlers()).thenReturn(handlers2);

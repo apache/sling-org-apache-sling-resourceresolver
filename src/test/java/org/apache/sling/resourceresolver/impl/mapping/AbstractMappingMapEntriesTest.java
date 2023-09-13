@@ -110,8 +110,8 @@ public abstract class AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
-        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(
-            Collections.<Resource> emptySet().iterator());
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(Collections.emptyIterator());
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(Collections.emptyIterator());
 
         map = setupEtcMapResource("/etc", "map");
         http = setupEtcMapResource("http", map);
@@ -162,7 +162,7 @@ public abstract class AbstractMappingMapEntriesTest {
         String path = (parent == null ? parentPath : parent.getPath()) + "/" + name;
         when(resource.getPath()).thenReturn(path);
         when(resource.getName()).thenReturn(name);
-        ValueMap valueMap = buildValueMap(valueMapPairs);
+        ValueMap valueMap = buildValueMap((Object[]) valueMapPairs);
         when(resource.getValueMap()).thenReturn(valueMap);
         when(resource.adaptTo(ValueMap.class)).thenReturn(valueMap);
         when(resourceResolver.getResource(resource.getPath())).thenReturn(resource);
