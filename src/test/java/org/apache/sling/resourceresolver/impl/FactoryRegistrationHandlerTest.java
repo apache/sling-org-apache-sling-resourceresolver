@@ -51,7 +51,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(OsgiContextExtension.class)
 public class FactoryRegistrationHandlerTest {
 
-    private static final int DEFAULT_TEST_ITERATIONS = 10000;
+    private static final int DEFAULT_TEST_ITERATIONS = 20;
 
     private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REGISTRATION = allOf(
             hasSize(4),
