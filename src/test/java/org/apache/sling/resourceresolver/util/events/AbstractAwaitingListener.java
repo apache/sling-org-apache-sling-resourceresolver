@@ -59,8 +59,6 @@ abstract class AbstractAwaitingListener implements ServiceListener, AutoCloseabl
     protected abstract boolean isMatchingServiceEvent(ServiceEvent serviceEvent);
 
     protected boolean await(long timeout, TimeUnit timeUnit) throws InterruptedException {
-        // sleep a little to give other threads an opportunity to complete service (un)registrations
-        TimeUnit.MILLISECONDS.sleep(1);
         return latch.await(timeout, timeUnit);
     }
 

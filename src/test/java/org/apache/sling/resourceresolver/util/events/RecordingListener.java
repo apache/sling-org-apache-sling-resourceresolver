@@ -83,7 +83,8 @@ public class RecordingListener extends AbstractAwaitingListener {
         if (signalRegistration != null) {
             final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
             while (!serviceEventDTOMatcher.matches(serviceEvents) && System.nanoTime() < deadline) {
-                TimeUnit.MILLISECONDS.sleep(1);
+                // give other threads a chance
+                Thread.yield();
             }
             signalRegistration.unregister();
             if (!await(1, TimeUnit.SECONDS)) {

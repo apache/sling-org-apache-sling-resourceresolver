@@ -51,7 +51,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(OsgiContextExtension.class)
 public class FactoryRegistrationHandlerTest {
 
-    public static final int DEFAULT_TEST_ITERATIONS = 20;
+    private static final int DEFAULT_TEST_ITERATIONS = 10000;
 
     private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REGISTRATION = allOf(
             hasSize(4),
@@ -69,12 +69,12 @@ public class FactoryRegistrationHandlerTest {
             hasItem(registration(ResourceResolverFactory.class))
     );
 
-    public OsgiContext osgi = new OsgiContext();
+    OsgiContext osgi = new OsgiContext();
 
     private ResourceResolverFactoryActivator activator;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         final ResourceProviderTracker resourceProviderTracker = mock(ResourceProviderTracker.class);
         doReturn(mock(ResourceProviderStorage.class)).when(resourceProviderTracker).getResourceProviderStorage();
 
@@ -96,7 +96,7 @@ public class FactoryRegistrationHandlerTest {
     }
 
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
-    public void testFactoryRegistrationDeregistration() throws InterruptedException {
+    void testFactoryRegistrationDeregistration() throws InterruptedException {
         final BundleContext bundleContext = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
         when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
@@ -121,7 +121,7 @@ public class FactoryRegistrationHandlerTest {
     }
 
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
-    public void testConditionChangeLeadingToUnregistration() throws InterruptedException {
+    void testConditionChangeLeadingToUnregistration() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
 
@@ -142,7 +142,7 @@ public class FactoryRegistrationHandlerTest {
 
 
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
-    public void testReconfigurationLeadingToUnregsitration() throws InterruptedException {
+    void testReconfigurationLeadingToUnregsitration() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
         when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
@@ -162,7 +162,7 @@ public class FactoryRegistrationHandlerTest {
         }
     }
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
-    public void testReconfigurationWithNoChanges() throws InterruptedException {
+    void testReconfigurationWithNoChanges() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
         when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
@@ -181,7 +181,7 @@ public class FactoryRegistrationHandlerTest {
     }
 
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
-    public void testReconfigurationLeadingToReregistration() throws InterruptedException {
+    void testReconfigurationLeadingToReregistration() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
 
         try (final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
@@ -202,7 +202,7 @@ public class FactoryRegistrationHandlerTest {
     }
 
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
-    public void testUnregisterOnClose() throws InterruptedException {
+    void testUnregisterOnClose() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
         final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler();
