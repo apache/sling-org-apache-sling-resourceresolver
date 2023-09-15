@@ -49,7 +49,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(OsgiContextExtension.class)
-public class FactoryRegistrationHandlerTest {
+class FactoryRegistrationHandlerTest {
 
     private static final int DEFAULT_TEST_ITERATIONS = 20;
 
