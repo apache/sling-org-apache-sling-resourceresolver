@@ -22,44 +22,64 @@ import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
+import org.apache.sling.resourceresolver.util.events.RecordingListener;
+import org.apache.sling.resourceresolver.util.events.ServiceEventUtil.ServiceEventDTO;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.apache.sling.testing.mock.osgi.junit5.OsgiContextExtension;
+import org.hamcrest.Matcher;
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.defaultanswers.ReturnsSmartNulls;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceEvent;
-import org.osgi.framework.ServiceListener;
-import org.osgi.framework.ServiceReference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-
-import static org.junit.Assert.assertTrue;
+import static org.apache.sling.resourceresolver.util.CustomMatchers.allOf;
+import static org.apache.sling.resourceresolver.util.CustomMatchers.hasItem;
+import static org.apache.sling.resourceresolver.util.events.ServiceEventUtil.registration;
+import static org.apache.sling.resourceresolver.util.events.ServiceEventUtil.unregistration;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(OsgiContextExtension.class)
 public class FactoryRegistrationHandlerTest {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FactoryRegistrationHandlerTest.class);
+    public static final int DEFAULT_TEST_ITERATIONS = 20;
 
-    public static final ReturnsSmartNulls DEFAULT_ANSWER = new ReturnsSmartNulls();
+    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REGISTRATION = allOf(
+            hasSize(4),
+            hasItem(registration(ResourceResolverFactory.class))
+    );
 
-    @Rule
+    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_UNREGISTRATION = allOf(
+            hasSize(4),
+            hasItem(unregistration(ResourceResolverFactory.class))
+    );
+
+    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REREGISTRATION = allOf(
+            hasSize(8),
+            hasItem(unregistration(ResourceResolverFactory.class)),
+            hasItem(registration(ResourceResolverFactory.class))
+    );
+
     public OsgiContext osgi = new OsgiContext();
 
     private ResourceResolverFactoryActivator activator;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         final ResourceProviderTracker resourceProviderTracker = mock(ResourceProviderTracker.class);
         doReturn(mock(ResourceProviderStorage.class)).when(resourceProviderTracker).getResourceProviderStorage();
+
+        final VanityPathConfigurer vanityPathConfigurer = mock(VanityPathConfigurer.class);
+        doReturn(false).when(vanityPathConfigurer).isVanityPathEnabled();
 
         activator = mock(ResourceResolverFactoryActivator.class);
         doReturn(osgi.bundleContext()).when(activator).getBundleContext();
@@ -67,115 +87,139 @@ public class FactoryRegistrationHandlerTest {
         doReturn(mock(ServiceUserMapper.class)).when(activator).getServiceUserMapper();
         doReturn(new TreeBidiMap<>()).when(activator).getVirtualURLMap();
         doReturn(null).when(activator).getEventAdmin();
-
+        doReturn(vanityPathConfigurer).when(activator).getVanityPathConfigurer();
+        doCallRealMethod().when(activator).getRuntimeService();
     }
 
     private static <T> T mock(Class<T> classToMock) {
-        return Mockito.mock(classToMock, DEFAULT_ANSWER);
+        return Mockito.mock(classToMock, new ReturnsSmartNulls());
     }
 
-    @Test
-    public void testFactoryRegistration() throws InterruptedException {
+    @RepeatedTest(DEFAULT_TEST_ITERATIONS)
+    public void testFactoryRegistrationDeregistration() throws InterruptedException {
+        final BundleContext bundleContext = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
         when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
 
-        try (AwaitingListener unregistration =
-                     AwaitingListener.unregistration(osgi.bundleContext(), ResourceResolverFactory.class)) {
-            try (FactoryRegistrationHandler factoryRegistrationHandler =
-                         new FactoryRegistrationHandler(activator, preconditions);
-                 AwaitingListener registration = AwaitingListener.registration(osgi.bundleContext(), ResourceResolverFactory.class)) {
-                factoryRegistrationHandler.maybeRegisterFactory(null, null);
-                assertTrue("Expected ResourceResolverFactory service to be registered",
-                        registration.await(5, TimeUnit.SECONDS));
+        try (FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
+
+            try (RecordingListener listener = RecordingListener.of(bundleContext)) {
+                factoryRegistrationHandler.configure(activator, preconditions);
+                listener.assertRecorded(RRF_REGISTRATION);
             }
-            assertTrue("Expected ResourceResolverFactory service to be unregistered",
-                    unregistration.await(5, TimeUnit.SECONDS));
+
+            try (RecordingListener listener = RecordingListener.of(bundleContext)) {
+                factoryRegistrationHandler.unregisterFactory();
+                listener.assertRecorded(RRF_UNREGISTRATION);
+            }
+
+            try (RecordingListener listener = RecordingListener.of(bundleContext)) {
+                factoryRegistrationHandler.maybeRegisterFactory(null, null);
+                listener.assertRecorded(RRF_REGISTRATION);
+            }
         }
     }
 
-    @Test
-    public void testFactoryDeregistrationWhenConditionsUnsatisfied() throws InterruptedException {
+    @RepeatedTest(DEFAULT_TEST_ITERATIONS)
+    public void testConditionChangeLeadingToUnregistration() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
-        try (FactoryRegistrationHandler factoryRegistrationHandler =
-                     new FactoryRegistrationHandler(activator, preconditions);
-             AwaitingListener registration = AwaitingListener.registration(ctx, ResourceResolverFactory.class);
-             AwaitingListener unregistration = AwaitingListener.unregistration(ctx, ResourceResolverFactory.class)) {
 
-            when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
-            factoryRegistrationHandler.maybeRegisterFactory(null, null);
-            assertTrue("Expected ResourceResolverFactory service to be registered",
-                    registration.await(5, TimeUnit.SECONDS));
+        try (FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
+            try (final RecordingListener listener = RecordingListener.of(ctx)) {
+                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+                factoryRegistrationHandler.configure(activator, preconditions);
+                listener.assertRecorded(RRF_REGISTRATION);
+            }
 
-            when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(false);
-            factoryRegistrationHandler.maybeRegisterFactory(null, null);
-            assertTrue("Expected ResourceResolverFactory service to be unregistered",
-                    unregistration.await(5, TimeUnit.SECONDS));
+            try (final RecordingListener listener = RecordingListener.of(ctx)) {
+                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(false);
+                factoryRegistrationHandler.maybeRegisterFactory(null, null);
+                listener.assertRecorded(RRF_UNREGISTRATION);
+            }
         }
     }
 
-    private static class AwaitingListener implements ServiceListener, AutoCloseable {
 
-        private final BundleContext bundleContext;
+    @RepeatedTest(DEFAULT_TEST_ITERATIONS)
+    public void testReconfigurationLeadingToUnregsitration() throws InterruptedException {
+        final BundleContext ctx = osgi.bundleContext();
+        final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
+        when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
 
-        private final Predicate<ServiceEvent> expectedEventPredicate;
+        try (final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
+            try (RecordingListener listener = RecordingListener.of(ctx)) {
+                factoryRegistrationHandler.configure(activator, preconditions);
+                listener.assertRecorded(RRF_REGISTRATION);
+            }
 
-        private final CountDownLatch latch;
-
-        public AwaitingListener(BundleContext ctx, Predicate<ServiceEvent> expectedEventPredicate) {
-            this(ctx, expectedEventPredicate, 1);
-        }
-
-        public AwaitingListener(BundleContext ctx, Predicate<ServiceEvent> expectedEventPredicate, int count) {
-            this.bundleContext = ctx;
-            this.expectedEventPredicate = expectedEventPredicate;
-            this.latch = new CountDownLatch(count);
-            this.bundleContext.addServiceListener(this);
-        }
-
-        public static AwaitingListener registration(BundleContext bundleContext, Class<?> clazz) {
-            return new AwaitingListener(bundleContext, serviceEvent -> {
-                if (serviceEvent.getType() == ServiceEvent.REGISTERED) {
-                    return isInstance(bundleContext, serviceEvent.getServiceReference(), clazz);
-                }
-                return false;
-            });
-        }
-
-        public static AwaitingListener unregistration(BundleContext bundleContext, Class<?> clazz) {
-            return new AwaitingListener(bundleContext, serviceEvent -> {
-                if (serviceEvent.getType() == ServiceEvent.UNREGISTERING) {
-                    return isInstance(bundleContext, serviceEvent.getServiceReference(), clazz);
-                }
-                return false;
-            });
-        }
-
-        private static boolean isInstance(BundleContext bundleContext, ServiceReference<?> ref, Class<?> clazz) {
-            try {
-                final Object service = bundleContext.getService(ref);
-                final boolean isInstance = clazz.isInstance(service);
-                LOG.info("{} == isInstance({}, {})", isInstance, service.getClass(), clazz);
-                return isInstance;
-            } finally {
-                bundleContext.ungetService(ref);
+            try (RecordingListener listener = RecordingListener.of(ctx)) {
+                final FactoryPreconditions failingPreconditions = mock(FactoryPreconditions.class); // new instance
+                when(failingPreconditions.checkPreconditions(isNull(), isNull())).thenReturn(false);
+                factoryRegistrationHandler.configure(activator, failingPreconditions);
+                listener.assertRecorded(RRF_UNREGISTRATION);
             }
         }
+    }
+    @RepeatedTest(DEFAULT_TEST_ITERATIONS)
+    public void testReconfigurationWithNoChanges() throws InterruptedException {
+        final BundleContext ctx = osgi.bundleContext();
+        final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
+        when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
 
-        @Override
-        public void serviceChanged(ServiceEvent event) {
-            if (expectedEventPredicate.test(event)) {
-                latch.countDown();
+        try (final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
+            try (RecordingListener listener = RecordingListener.of(ctx)) {
+                factoryRegistrationHandler.configure(activator, preconditions);
+                listener.assertRecorded(RRF_REGISTRATION);
+            }
+
+            try (RecordingListener listener = RecordingListener.of(ctx)) {
+                factoryRegistrationHandler.configure(activator, preconditions);
+                listener.assertRecorded(empty());
             }
         }
+    }
 
-        public boolean await(long timeout, TimeUnit timeUnit) throws InterruptedException {
-            return latch.await(timeout, timeUnit);
+    @RepeatedTest(DEFAULT_TEST_ITERATIONS)
+    public void testReconfigurationLeadingToReregistration() throws InterruptedException {
+        final BundleContext ctx = osgi.bundleContext();
+
+        try (final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
+            try (RecordingListener listener = RecordingListener.of(ctx)) {
+                final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
+                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+                factoryRegistrationHandler.configure(activator, preconditions);
+                listener.assertRecorded(RRF_REGISTRATION);
+            }
+
+            try (RecordingListener listener = RecordingListener.of(ctx)) {
+                final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
+                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+                factoryRegistrationHandler.configure(activator, preconditions);
+                listener.assertRecorded(allOf(RRF_REREGISTRATION));
+            }
+        }
+    }
+
+    @RepeatedTest(DEFAULT_TEST_ITERATIONS)
+    public void testUnregisterOnClose() throws InterruptedException {
+        final BundleContext ctx = osgi.bundleContext();
+        final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
+        final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler();
+
+        try (RecordingListener listener = RecordingListener.of(ctx)) {
+            when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+            factoryRegistrationHandler.configure(activator, preconditions);
+            listener.assertRecorded(RRF_REGISTRATION);
         }
 
-        @Override
-        public void close() {
-            bundleContext.removeServiceListener(this);
+        try (RecordingListener listener = RecordingListener.of(ctx)) {
+            when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(false);
+            factoryRegistrationHandler.close();
+            listener.assertRecorded(allOf(RRF_UNREGISTRATION));
+
+            assertThrows(IllegalStateException.class, () -> factoryRegistrationHandler.configure(activator, preconditions),
+                    "Reconfiguration is no longer possible after a FactoryRegistrationHandler is closed.");
         }
     }
 }

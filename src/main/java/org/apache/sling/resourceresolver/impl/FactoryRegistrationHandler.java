@@ -30,45 +30,85 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Dictionary;
 import java.util.Hashtable;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class FactoryRegistrationHandler implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FactoryRegistrationHandler.class);
 
-    private final ResourceResolverFactoryActivator activator;
-
-    private final FactoryPreconditions factoryPreconditions;
-
     private final ExecutorService factoryRegistrationWorker;
 
-    @SuppressWarnings("java:S3077") // The field is only ever set to null or to a new FactoryRegistration instance, which is safe.
-    private volatile FactoryRegistration factoryRegistration;
+    /**
+     * The configurationLock serializes access to the fields {@code activator}
+     * and  {@code factoryPreconditions}. Each access to these fields must be
+     * guarded by this lock.
+     */
+    private final ReentrantLock configurationLock = new ReentrantLock();
 
-    public FactoryRegistrationHandler(
-            ResourceResolverFactoryActivator activator, FactoryPreconditions factoryPreconditions) {
-        this.factoryPreconditions = factoryPreconditions;
-        this.activator = activator;
+    /** Access only when holding configurationLock */
+    private ResourceResolverFactoryActivator activator;
+
+    /** Access only when holding configurationLock */
+    private FactoryPreconditions factoryPreconditions;
+
+    /**
+     * The registrationLock serializes access to the field {@code factoryRegistration}.
+     * Each access to these field must be guarded by this lock.
+     */
+    private final ReentrantLock registrationLock = new ReentrantLock();
+
+    /** Access only when holding registrationLock */
+    private FactoryRegistration factoryRegistration;
+
+    public FactoryRegistrationHandler() {
         this.factoryRegistrationWorker = Executors.newSingleThreadExecutor(
                 r -> new Thread(r, ResourceResolverFactory.class.getSimpleName() + " registration/deregistration"));
     }
 
+    public void configure(ResourceResolverFactoryActivator activator, FactoryPreconditions factoryPreconditions) {
+        checkClosed();
+
+        boolean reRegister;
+        try {
+            configurationLock.lock();
+            reRegister = this.activator != activator || !Objects.equals(this.factoryPreconditions, factoryPreconditions);
+            LOG.debug("activator differs = {}, factoryPreconditions differ = {}", this.activator != activator, !Objects.equals(this.factoryPreconditions, factoryPreconditions));
+            LOG.debug("factoryPreconditions {} vs {}", this.factoryPreconditions, factoryPreconditions);
+            this.factoryPreconditions = factoryPreconditions;
+            this.activator = activator;
+        } finally {
+            configurationLock.unlock();
+        }
+
+        if (reRegister) {
+            if (this.factoryRegistration != null) {
+                unregisterFactory();
+            }
+            maybeRegisterFactory(null, null);
+        }
+    }
+
+    private void checkClosed() {
+        if (factoryRegistrationWorker.isShutdown()) {
+            throw new IllegalStateException("FactoryRegistrationHandler is already closed");
+        }
+    }
+
     @Override
     public void close() {
-        unregisterFactory();
         factoryRegistrationWorker.shutdown();
         try {
-            if (!factoryRegistrationWorker.awaitTermination(5, TimeUnit.SECONDS)) {
+            if (!factoryRegistrationWorker.awaitTermination(1, TimeUnit.MINUTES)) {
                 factoryRegistrationWorker.shutdownNow();
-                // make sure everything is unregistered, even if
-                // the factoryRegistrationWorker did not complete
-                doUnregisterFactory();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        runWithThreadName("deregistration on close", this::doUnregisterFactory);
     }
 
     /**
@@ -77,15 +117,24 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     void maybeRegisterFactory(final String unavailableName, final String unavailableServicePid) {
         if (!factoryRegistrationWorker.isShutdown()) {
             LOG.debug("submitting maybeRegisterFactory");
-            factoryRegistrationWorker.submit(() -> {
-                final boolean preconditionsOk = factoryPreconditions.checkPreconditions(unavailableName, unavailableServicePid);
-                if ( preconditionsOk && this.factoryRegistration == null ) {
+            final boolean preconditionsOk;
+            final ResourceResolverFactoryActivator localActivator;
+            try {
+                configurationLock.lock();
+                preconditionsOk = factoryPreconditions.checkPreconditions(unavailableName, unavailableServicePid);
+                localActivator = this.activator;
+            } finally {
+                configurationLock.unlock();
+            }
+
+            factoryRegistrationWorker.execute(() -> {
+                if (preconditionsOk && this.factoryRegistration == null) {
+                    final Bundle systemBundle = localActivator.getBundleContext().getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
                     // check system bundle state - if stopping, don't register new factory
-                    final Bundle systemBundle = activator.getBundleContext().getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
-                    if ( systemBundle != null && systemBundle.getState() != Bundle.STOPPING ) {
-                        runWithThreadName("registration", this::doRegisterFactory);
+                    if (systemBundle != null && systemBundle.getState() != Bundle.STOPPING) {
+                        runWithThreadName("registration", () -> this.doRegisterFactory(localActivator));
                     }
-                } else if ( !preconditionsOk && this.factoryRegistration != null ) {
+                } else if (!preconditionsOk && this.factoryRegistration != null) {
                     LOG.debug("performing unregisterFactory via maybeRegisterFactory");
                     runWithThreadName("deregistration", this::doUnregisterFactory);
                 }
@@ -94,35 +143,48 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     }
 
     void unregisterFactory() {
-        LOG.debug("submitting unregisterFactory");
-        factoryRegistrationWorker.submit(() -> runWithThreadName("deregistration",
-                this::doUnregisterFactory));
+        if (!factoryRegistrationWorker.isShutdown()) {
+            LOG.debug("submitting unregisterFactory");
+            factoryRegistrationWorker.execute(
+                    () -> runWithThreadName("deregistration", this::doUnregisterFactory));
+        }
     }
 
     /**
      * Register the factory.
      */
-    private void doRegisterFactory() {
-        LOG.debug("performing registerFactory, factoryRegistration == {}", factoryRegistration);
-        if (this.factoryRegistration == null) {
-            this.factoryRegistration = new FactoryRegistration(activator.getBundleContext(), activator);
+    private void doRegisterFactory(ResourceResolverFactoryActivator activator) {
+        try {
+            registrationLock.lock();
+            LOG.debug("performing registerFactory, factoryRegistration == {}", factoryRegistration);
+            if (this.factoryRegistration == null) {
+                this.factoryRegistration = new FactoryRegistration(activator.getBundleContext(), activator);
+            }
+            LOG.debug("finished performing registerFactory, factoryRegistration == {}", factoryRegistration);
+        } finally {
+            registrationLock.unlock();
         }
-        LOG.debug("finished performing registerFactory, factoryRegistration == {}", factoryRegistration);
     }
 
     /**
      * Unregister the factory (if registered).
      */
     private void doUnregisterFactory() {
-        LOG.debug("performing unregisterFactory, factoryRegistration == {}", factoryRegistration);
-        if (this.factoryRegistration != null) {
-            this.factoryRegistration.unregister();
-            this.factoryRegistration = null;
+        try {
+            registrationLock.lock();
+            LOG.debug("performing unregisterFactory, factoryRegistration == {}", factoryRegistration);
+            if (this.factoryRegistration != null) {
+                this.factoryRegistration.unregister();
+                LOG.debug("setting factoryRegistration = null");
+                this.factoryRegistration = null;
+            }
+            LOG.debug("finished performing unregisterFactory, factoryRegistration == {}", factoryRegistration);
+        } finally {
+            registrationLock.unlock();
         }
-        LOG.debug("finished performing unregisterFactory, factoryRegistration == {}", factoryRegistration);
     }
 
-    private static void runWithThreadName(String threadNameSuffix, Runnable task) {
+    private void runWithThreadName(String threadNameSuffix, Runnable task) {
         final String name = Thread.currentThread().getName();
         try {
             Thread.currentThread().setName(ResourceResolverFactory.class.getSimpleName() + " " + threadNameSuffix);
@@ -168,9 +230,16 @@ public class FactoryRegistrationHandler implements AutoCloseable {
         }
 
         void unregister() {
+            LOG.debug("Unregister runtimeRegistration");
             runtimeRegistration.unregister();
+
+            LOG.debug("Unregister factoryRegistration");
             factoryRegistration.unregister();
+
+            LOG.debug("Unregister commonFactory");
             commonFactory.deactivate();
+                        
+            LOG.debug("Unregister completed");
         }
     }
 }
