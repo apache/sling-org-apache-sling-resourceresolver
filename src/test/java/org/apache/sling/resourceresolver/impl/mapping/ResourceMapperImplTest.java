@@ -109,6 +109,8 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/there-multiple", PROP_ALIAS, "alias-value-3", "alias-value-4"); // with multivalued alias
         resourceProvider.putResource("/somewhere", PROP_ALIAS, "alias-value-2"); // with alias and also /etc/map
         resourceProvider.putResource("/there/that"); // parent has alias
+        resourceProvider.putResource("/content1");
+        resourceProvider.putResource("/content1/jcr:content", PROP_ALIAS, "jcr:content-alias"); // jcr:content resource
         resourceProvider.putResource("/content");
         resourceProvider.putResource("/content/virtual");
         resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
@@ -229,6 +231,22 @@ public class ResourceMapperImplTest {
             .singleMappingWithRequest("/app/alias-value")
             .allMappings("/alias-value", "/there")
             .allMappingsWithRequest("/app/alias-value", "/app/there")
+            .verify(resolver, req);
+    }
+    
+    /**
+     * Validates that a jcr:content resource cannot be aliased, but instead its parent resource is
+     *
+     * @throws LoginException
+     */
+    @Test
+    public void mapJcrContentResourceWithAlias() {
+
+        ExpectedMappings.existingResource("/content1/jcr:content")
+            .singleMapping("/jcr:content-alias/jcr:content")
+            .singleMappingWithRequest("/app/jcr:content-alias/jcr:content")
+            .allMappings("/jcr:content-alias/jcr:content", "/content1/jcr:content")
+            .allMappingsWithRequest("/app/content1/jcr:content", "/app/jcr:content-alias/jcr:content")
             .verify(resolver, req);
     }
 
