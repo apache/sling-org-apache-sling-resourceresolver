@@ -28,6 +28,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -44,6 +45,7 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -54,6 +56,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
 import org.osgi.util.tracker.ServiceTracker;
 
 /**
@@ -452,6 +455,33 @@ public class ResourceMapperImplTest {
                 .allMappings("/alias-parent/alias-child", "/alias-parent/child", "/parent/alias-child")
                 .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child")
                 .verify(resolver, req);
+    }
+
+    /**
+     * Validates that in case of the optimized lookup less repository access is done
+     * @throws Exception 
+     */
+    @Test
+    public void mapAliasLookupOptimization() throws Exception {
+        ResourceResolverImpl spyResolver =  Mockito.spy((ResourceResolverImpl) resolver);
+
+        // inject that spy into the mapper, so we can reason about the repo access
+        ResourceMapperImpl mapper = (ResourceMapperImpl) resolver.adaptTo(ResourceMapper.class);
+        Field internalResolver = mapper.getClass().getDeclaredField("resolver");
+        internalResolver.setAccessible(true);
+        internalResolver.set(mapper,spyResolver);
+        
+        mapper.getMapping("/parent/child");
+        mapper.getMapping("/alias-parent/alias-child");
+        mapper.getMapping("/content/virtual/foo"); // there are no aliases here!
+        
+        if (this.optimiseAliasResolution) {
+            Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(3)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        } else {
+            Mockito.verify(spyResolver,Mockito.times(4)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(7)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        }
     }
 
     static class ExpectedMappings {
