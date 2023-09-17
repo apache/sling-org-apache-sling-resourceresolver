@@ -24,7 +24,7 @@ import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_R
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -77,7 +77,7 @@ import org.osgi.util.tracker.ServiceTracker;
 @RunWith(Parameterized.class)
 public class ResourceMapperImplTest {
 
-    @Parameters(name = "optimized alias resolution / paged query support -> {0} / {1}")
+    @Parameters(name = "optimized alias resolution = {0} / paged query support = {1}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] { { false, false }, { false, true }, { true, false }, { true, true } });
     }
