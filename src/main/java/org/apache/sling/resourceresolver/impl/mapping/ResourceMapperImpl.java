@@ -284,7 +284,7 @@ public class ResourceMapperImpl implements ResourceMapper {
     	if ( parentPath == null ) {
     		return Collections.emptyList();
     	}
-    	String name = path.substring(parentPath.length()+1);
+    	String name = ResourceUtil.getName(path);
 
     	final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
 
