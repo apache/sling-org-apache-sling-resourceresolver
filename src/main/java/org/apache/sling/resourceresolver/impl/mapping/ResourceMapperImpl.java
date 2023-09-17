@@ -250,7 +250,7 @@ public class ResourceMapperImpl implements ResourceMapper {
 	            if ("/".equals(path)) {
 	                path = null;
 	            } else if (path != null) {
-	                current = res.getResourceResolver().resolve(path);
+	                current = resolver.resolve(path);
 	            }
 	        }
         }
