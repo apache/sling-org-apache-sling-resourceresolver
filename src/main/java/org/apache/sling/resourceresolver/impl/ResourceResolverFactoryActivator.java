@@ -124,8 +124,7 @@ public class ResourceResolverFactoryActivator {
     /** Observation paths */
     private volatile Path[] observationPaths;
 
-    @SuppressWarnings("java:S3077")
-    private volatile FactoryRegistrationHandler factoryRegistrationHandler;
+    private final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler();
 
     private final VanityPathConfigurer vanityPathConfigurer = new VanityPathConfigurer();
     {
@@ -313,8 +312,7 @@ public class ResourceResolverFactoryActivator {
                 resourceProviderTracker,
                 requiredResourceProviderNames,
                 requiredResourceProvidersLegacy);
-        factoryRegistrationHandler = new FactoryRegistrationHandler(this, factoryPreconditions);
-        factoryRegistrationHandler.maybeRegisterFactory(null, null);
+        factoryRegistrationHandler.configure(this, factoryPreconditions);
 
         if (!hasPreRegisteredResourceProviderTracker) {
             this.resourceProviderTracker.activate(this.bundleContext, this.eventAdmin,
@@ -343,7 +341,7 @@ public class ResourceResolverFactoryActivator {
     protected void modified(final BundleContext bundleContext,
         final ResourceResolverFactoryConfig config,
         final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
-        this.deactivate();
+        this.deactivateInternal();
         this.activate(bundleContext, config, deprecatedVanityConfig);
     }
 
@@ -352,11 +350,13 @@ public class ResourceResolverFactoryActivator {
      */
     @Deactivate
     protected void deactivate() {
-        this.factoryRegistrationHandler.close();
-        this.factoryRegistrationHandler = null;
-
         // factoryRegistrationHandler must be closed before bundleContext is set to null
+        this.factoryRegistrationHandler.close();
         this.bundleContext = null;
+        deactivateInternal();
+    }
+
+    private void deactivateInternal() {
         this.config = DEFAULT_CONFIG;
         this.vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG, null);
         this.changeListenerWhiteboard.deactivate();
