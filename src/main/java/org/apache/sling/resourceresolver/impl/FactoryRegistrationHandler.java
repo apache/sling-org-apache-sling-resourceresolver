@@ -60,8 +60,9 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     private final AtomicReference<FactoryRegistration> factoryRegistration = new AtomicReference<>(null);
 
     public FactoryRegistrationHandler() {
+        final String originalThreadName = Thread.currentThread().getName();
         this.factoryRegistrationWorker = Executors.newSingleThreadExecutor(
-                r -> new Thread(r, ResourceResolverFactory.class.getSimpleName() + " registration/deregistration"));
+                r -> new Thread(r, ResourceResolverFactory.class.getSimpleName() + " registration/deregistration (" + originalThreadName + ")"));
     }
 
     public void configure(ResourceResolverFactoryActivator activator, FactoryPreconditions factoryPreconditions) {
