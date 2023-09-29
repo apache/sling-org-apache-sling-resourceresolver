@@ -472,17 +472,35 @@ public class ResourceMapperImplTest {
         internalResolver.setAccessible(true);
         internalResolver.set(mapper,spyResolver);
         
-        mapper.getMapping("/parent/child");
-        mapper.getMapping("/alias-parent/alias-child");
-        mapper.getMapping("/content/virtual/foo"); // there are no aliases here!
-        
+        mapper.getMapping("/parent/child"); // alias on both parent and child
         if (this.optimiseAliasResolution) {
             Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
-            Mockito.verify(spyResolver,Mockito.times(3)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+            Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
         } else {
-            Mockito.verify(spyResolver,Mockito.times(4)).resolve(Mockito.any(String.class));
-            Mockito.verify(spyResolver,Mockito.times(7)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+            Mockito.verify(spyResolver,Mockito.times(1)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(2)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
         }
+        Mockito.clearInvocations(spyResolver);
+        
+        mapper.getMapping("/content/virtual/foo"); // there are no aliases here!
+        if (this.optimiseAliasResolution) {
+            Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        } else {
+            Mockito.verify(spyResolver,Mockito.times(2)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(3)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        }
+        Mockito.clearInvocations(spyResolver);
+        
+        mapper.getMapping("/alias-parent/alias-child"); // the path consists of 2 aliases
+        if (this.optimiseAliasResolution) {
+            Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        } else {
+            Mockito.verify(spyResolver,Mockito.times(1)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(2)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        }
+        
     }
 
     static class ExpectedMappings {
