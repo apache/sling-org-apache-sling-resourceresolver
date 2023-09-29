@@ -149,8 +149,8 @@ public @interface ResourceResolverFactoryConfig {
 
     @AttributeDefinition(name = "Optimize alias resolution",
         description ="This flag controls whether to optimize" +
-                     " the alias resolution by creating an internal cache of aliases. This might have an impact on the startup time"+
-                     " and on the alias update time if the number of aliases is huge (over 10000).")
+                     " the alias resolution by creating an internal cache of aliases. NOTE: this setting will be removed " +
+                     " with the optimzed resolution being the default.")
     boolean resource_resolver_optimize_alias_resolution() default true;
 
     @AttributeDefinition(name = "Allowed Optimized Alias Locations",

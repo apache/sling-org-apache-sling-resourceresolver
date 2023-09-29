@@ -295,6 +295,10 @@ public class ResourceResolverFactoryActivator {
                 this.allowedAliasLocations = Collections.unmodifiableSet(prefixSet);
             }
         }
+        if (!config.resource_resolver_optimize_alias_resolution()) {
+            logger.warn("The non-optimized alias resolution is used, which has been found to have problems (see SLING-12025). " +
+                    "Please migrate to the optimized alias resolution, as the non-optimized version will be removed");
+        }
 
         // for testing: if we run unit test, both trackers are set from the outside
         final boolean hasPreRegisteredResourceProviderTracker = this.resourceProviderTracker != null;
