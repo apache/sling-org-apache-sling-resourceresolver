@@ -150,7 +150,7 @@ public @interface ResourceResolverFactoryConfig {
     @AttributeDefinition(name = "Optimize alias resolution",
         description ="This flag controls whether to optimize" +
                      " the alias resolution by creating an internal cache of aliases. NOTE: this setting will be removed " +
-                     " with the optimzed resolution being the default.")
+                     " with the optimized resolution being the default (see SLING-12025).")
     boolean resource_resolver_optimize_alias_resolution() default true;
 
     @AttributeDefinition(name = "Allowed Optimized Alias Locations",
