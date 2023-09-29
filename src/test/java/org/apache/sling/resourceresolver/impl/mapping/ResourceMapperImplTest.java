@@ -258,11 +258,11 @@ public class ResourceMapperImplTest {
                 .verify(resolver, req);
         } else {
             ExpectedMappings.existingResource("/content1/jcr:content")
-            .singleMapping("/content1/jcr:content")
-            .singleMappingWithRequest("/app/content1/jcr:content")
-            .allMappings("/content1/jcr:content")
-            .allMappingsWithRequest("/app/content1/jcr:content")
-            .verify(resolver, req);
+                .singleMapping("/content1/jcr:content")
+                .singleMappingWithRequest("/app/content1/jcr:content")
+                .allMappings("/content1/jcr:content")
+                .allMappingsWithRequest("/app/content1/jcr:content")
+                .verify(resolver, req);
         }
     }
 
