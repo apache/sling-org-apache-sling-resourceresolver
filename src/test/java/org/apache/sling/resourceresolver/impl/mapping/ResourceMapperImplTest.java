@@ -109,6 +109,8 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/there-multiple", PROP_ALIAS, "alias-value-3", "alias-value-4"); // with multivalued alias
         resourceProvider.putResource("/somewhere", PROP_ALIAS, "alias-value-2"); // with alias and also /etc/map
         resourceProvider.putResource("/there/that"); // parent has alias
+        resourceProvider.putResource("/content1");
+        resourceProvider.putResource("/content1/jcr:content", PROP_ALIAS, "jcr:content-alias"); // jcr:content resource
         resourceProvider.putResource("/content");
         resourceProvider.putResource("/content/virtual");
         resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
@@ -230,6 +232,38 @@ public class ResourceMapperImplTest {
             .allMappings("/alias-value", "/there")
             .allMappingsWithRequest("/app/alias-value", "/app/there")
             .verify(resolver, req);
+    }
+    
+    /**
+     * Validates that a jcr:content resource cannot be aliased, but instead its parent resource is
+     * 
+     * NOTE: There is a bug in this behavior:
+     * * if optimiseAliasResolution is true, the behavior is working as expected
+     * * if optimiseAliasResolution is false the aliasing is not working
+     * 
+     * This bug exists for quite some time (and therefore should be considered a feature by now), so 
+     * this test expects different outcome in this case. Also see SLING-12025
+     *
+     * @throws LoginException
+     */
+    @Test
+    public void mapJcrContentResourceWithAlias() {
+
+        if (this.optimiseAliasResolution) {
+            ExpectedMappings.existingResource("/content1/jcr:content")
+                .singleMapping("/jcr:content-alias/jcr:content")
+                .singleMappingWithRequest("/app/jcr:content-alias/jcr:content")
+                .allMappings("/jcr:content-alias/jcr:content", "/content1/jcr:content")
+                .allMappingsWithRequest("/app/content1/jcr:content", "/app/jcr:content-alias/jcr:content")
+                .verify(resolver, req);
+        } else {
+            ExpectedMappings.existingResource("/content1/jcr:content")
+                .singleMapping("/content1/jcr:content")
+                .singleMappingWithRequest("/app/content1/jcr:content")
+                .allMappings("/content1/jcr:content")
+                .allMappingsWithRequest("/app/content1/jcr:content")
+                .verify(resolver, req);
+        }
     }
 
     /**
