@@ -30,8 +30,10 @@ import org.apache.sling.testing.mock.osgi.junit5.OsgiContextBuilder;
 import org.apache.sling.testing.mock.osgi.junit5.OsgiContextExtension;
 import org.hamcrest.Matcher;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.defaultanswers.ReturnsSmartNulls;
@@ -80,9 +82,12 @@ class FactoryRegistrationHandlerTest {
             .build();
 
     private ResourceResolverFactoryActivator activator;
+    private String originalThreadName;
 
     @BeforeEach
-    void setUp() {
+    void setUp(TestInfo testInfo) {
+        originalThreadName = Thread.currentThread().getName();
+        Thread.currentThread().setName(originalThreadName + "(" + testInfo.getDisplayName() + ")");
         final ResourceProviderTracker resourceProviderTracker = mock(ResourceProviderTracker.class);
         doReturn(mock(ResourceProviderStorage.class)).when(resourceProviderTracker).getResourceProviderStorage();
 
@@ -97,6 +102,11 @@ class FactoryRegistrationHandlerTest {
         doReturn(null).when(activator).getEventAdmin();
         doReturn(vanityPathConfigurer).when(activator).getVanityPathConfigurer();
         doCallRealMethod().when(activator).getRuntimeService();
+    }
+
+    @AfterEach
+    void tearDown() {
+        Thread.currentThread().setName(originalThreadName);
     }
 
     private static <T> T mock(Class<T> classToMock) {
