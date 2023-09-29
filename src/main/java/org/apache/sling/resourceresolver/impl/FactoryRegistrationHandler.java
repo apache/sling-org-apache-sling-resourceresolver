@@ -199,6 +199,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
                 @Override
                 public ResourceResolverFactory getService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration) {
                     if (FactoryRegistrationHandler.this.factoryRegistrationWorker.isShutdown()) {
+                        LOG.warn("FactoryRegistrationHandler is already closed, returning null for ResourceResolverFactory");
                         return null;
                     }
                     return new ResourceResolverFactoryImpl(commonFactory, bundle, activator.getServiceUserMapper());

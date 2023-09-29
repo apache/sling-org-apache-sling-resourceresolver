@@ -23,6 +23,8 @@ import org.hamcrest.Matcher;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceEvent;
 import org.osgi.framework.ServiceRegistration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Hashtable;
@@ -35,6 +37,8 @@ import java.util.function.Predicate;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class RecordingListener extends AbstractAwaitingListener {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RecordingListener.class);
 
     private final Collection<ServiceEventDTO> serviceEvents = new ConcurrentLinkedQueue<ServiceEventDTO>();
 
@@ -71,6 +75,8 @@ public class RecordingListener extends AbstractAwaitingListener {
     public void serviceChanged(ServiceEvent serviceEvent) {
         super.serviceChanged(serviceEvent);
         if (!isInternalEvent(serviceEvent) && recordingFilter.test(serviceEvent)) {
+            final ServiceEventDTO eventDTO = ServiceEventDTO.create(serviceEvent);
+            LOG.info("Recorded event({}, {}) | {}", eventDTO.getEventType(), eventDTO.getClasses(), this);
             serviceEvents.add(ServiceEventDTO.create(serviceEvent));
         }
     }
