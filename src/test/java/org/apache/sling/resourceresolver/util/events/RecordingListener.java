@@ -100,6 +100,6 @@ public class RecordingListener extends AbstractAwaitingListener {
             stopListening();
         }
 
-        assertThat("Expected ServiceEvents " + this, serviceEvents, serviceEventDTOMatcher);
+        assertThat("Expected ServiceEvents " + this + "(" + Thread.currentThread().getName() + ")", serviceEvents, serviceEventDTOMatcher);
     }
 }
