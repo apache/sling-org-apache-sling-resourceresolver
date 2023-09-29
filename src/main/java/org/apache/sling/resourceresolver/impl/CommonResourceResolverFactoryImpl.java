@@ -307,6 +307,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
     protected void activate(final BundleContext bundleContext) {
         final Logger logger = LoggerFactory.getLogger(getClass());
         try {
+            logger.info("registerService(Servlet)");
             plugin = new ResourceResolverWebConsolePlugin(bundleContext, this, this.activator.getRuntimeService());
         } catch (final Throwable ignore) {
             // an exception here probably means the web console plugin is not

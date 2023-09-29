@@ -171,7 +171,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     private void runWithThreadName(String threadNameSuffix, Runnable task) {
         final String name = Thread.currentThread().getName();
         try {
-            Thread.currentThread().setName(ResourceResolverFactory.class.getSimpleName() + " " + threadNameSuffix);
+            Thread.currentThread().setName(ResourceResolverFactory.class.getSimpleName() + " " + threadNameSuffix + " (" + name + ")");
             task.run();
         } finally {
             Thread.currentThread().setName(name);
@@ -195,6 +195,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
             final Dictionary<String, Object> serviceProps = new Hashtable<>();
             serviceProps.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
             serviceProps.put(Constants.SERVICE_DESCRIPTION, "Apache Sling Resource Resolver Factory");
+            LOG.info("registerService(ResourceResolverFactory)");
             factoryRegistration = context.registerService(ResourceResolverFactory.class, new ServiceFactory<>() {
                 @Override
                 public ResourceResolverFactory getService(final Bundle bundle, final ServiceRegistration<ResourceResolverFactory> registration) {
@@ -211,6 +212,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
                 }
             }, serviceProps);
 
+            LOG.info("registerService(RuntimeService)");
             runtimeRegistration = context.registerService(RuntimeService.class, activator.getRuntimeService(), null);
         }
 

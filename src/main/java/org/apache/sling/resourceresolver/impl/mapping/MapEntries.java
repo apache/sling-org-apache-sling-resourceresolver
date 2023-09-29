@@ -214,6 +214,7 @@ public class MapEntries implements
         log.info("Registering for {}", Arrays.toString(factory.getObservationPaths()));
 
         this.resourceChangeQueue = Collections.synchronizedList(new LinkedList<>());
+        log.info("registerService(ResourceChangeListener)");
         return bundleContext.registerService(ResourceChangeListener.class, this, props);
     }
 

@@ -100,6 +100,6 @@ public class RecordingListener extends AbstractAwaitingListener {
             stopListening();
         }
 
-        assertThat("Expected ServiceEvents", serviceEvents, serviceEventDTOMatcher);
+        assertThat("Expected ServiceEvents " + this, serviceEvents, serviceEventDTOMatcher);
     }
 }
