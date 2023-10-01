@@ -114,6 +114,11 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/somewhere", PROP_ALIAS, "alias-value-2"); // with alias and also /etc/map
         resourceProvider.putResource("/there/that"); // parent has alias
         resourceProvider.putResource("/content");
+        resourceProvider.putResource("/content/very");
+        resourceProvider.putResource("/content/very/deep");
+        resourceProvider.putResource("/content/very/deep/path");
+        resourceProvider.putResource("/content/very/deep/path/with");
+        resourceProvider.putResource("/content/very/deep/path/with/resources");
         resourceProvider.putResource("/content/virtual");
         resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
         resourceProvider.putResource("/parent", PROP_ALIAS, "alias-parent"); // parent has alias
@@ -473,35 +478,28 @@ public class ResourceMapperImplTest {
         internalResolver.set(mapper,spyResolver);
         
         mapper.getMapping("/parent/child"); // alias on both parent and child
-        if (this.optimiseAliasResolution) {
-            Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
-            Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
-        } else {
-            Mockito.verify(spyResolver,Mockito.times(1)).resolve(Mockito.any(String.class));
-            Mockito.verify(spyResolver,Mockito.times(2)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
-        }
-        Mockito.clearInvocations(spyResolver);
-        
-        mapper.getMapping("/content/virtual/foo"); // there are no aliases here!
-        if (this.optimiseAliasResolution) {
-            Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
-            Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
-        } else {
-            Mockito.verify(spyResolver,Mockito.times(2)).resolve(Mockito.any(String.class));
-            Mockito.verify(spyResolver,Mockito.times(3)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
-        }
-        Mockito.clearInvocations(spyResolver);
+        assertResourceResolverAccess(spyResolver, 2);
         
         mapper.getMapping("/alias-parent/alias-child"); // the path consists of 2 aliases
+        assertResourceResolverAccess (spyResolver, 2);
+        
+        mapper.getMapping("/content/very/deep/path/with/resources"); // deep path
+        assertResourceResolverAccess (spyResolver, 6);
+        
+    }
+    
+    private void assertResourceResolverAccess(ResourceResolverImpl spyResolver, int pathSegments) {
         if (this.optimiseAliasResolution) {
             Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
             Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
         } else {
-            Mockito.verify(spyResolver,Mockito.times(1)).resolve(Mockito.any(String.class));
-            Mockito.verify(spyResolver,Mockito.times(2)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+            Mockito.verify(spyResolver,Mockito.times(pathSegments-1)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(pathSegments)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
         }
-        
+        Mockito.clearInvocations(spyResolver);
     }
+    
+    
 
     static class ExpectedMappings {
 
