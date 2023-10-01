@@ -46,6 +46,7 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker.
 import org.apache.sling.resourceresolver.impl.providers.RuntimeServiceImpl;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -390,15 +391,15 @@ public class ResourceResolverFactoryActivator {
      * Bind a resource decorator.
      */
     @Reference(service = ResourceDecorator.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    protected void bindResourceDecorator(final ResourceDecorator decorator, final Map<String, Object> props) {
-        this.resourceDecoratorTracker.bindResourceDecorator(decorator, props);
+    protected void bindResourceDecorator(final ResourceDecorator decorator, final ServiceReference<ResourceDecorator> ref) {
+        this.resourceDecoratorTracker.bindResourceDecorator(decorator, ref);
     }
 
     /**
      * Unbind a resource decorator.
      */
-    protected void unbindResourceDecorator(final ResourceDecorator decorator, final Map<String, Object> props) {
-        this.resourceDecoratorTracker.unbindResourceDecorator(decorator, props);
+    protected void unbindResourceDecorator(final ResourceDecorator decorator) {
+        this.resourceDecoratorTracker.unbindResourceDecorator(decorator);
     }
 
     /**

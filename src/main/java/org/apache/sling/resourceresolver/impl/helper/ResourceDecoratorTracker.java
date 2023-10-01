@@ -22,12 +22,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceDecorator;
-import org.apache.sling.commons.osgi.Order;
-import org.apache.sling.commons.osgi.ServiceUtil;
+import org.osgi.framework.ServiceReference;
 
 /**
  * Helper class to track the resource decorators and keep them sorted by their
@@ -79,13 +77,12 @@ public class ResourceDecoratorTracker {
     /**
      * Bind a resource decorator.
      * @param decorator The decorator
-     * @param props The service properties
+     * @param ref The service reference
      */
     public void bindResourceDecorator(final ResourceDecorator decorator,
-            final Map<String, Object> props) {
+            final ServiceReference<ResourceDecorator> ref) {
         synchronized (this.resourceDecorators) {
-            this.resourceDecorators.add(new ResourceDecoratorEntry(decorator,
-                    ServiceUtil.getComparableForServiceRanking(props, Order.ASCENDING)));
+            this.resourceDecorators.add(new ResourceDecoratorEntry(decorator, ref));
             Collections.sort(this.resourceDecorators);
             updateResourceDecoratorsArray();
         }
@@ -94,13 +91,10 @@ public class ResourceDecoratorTracker {
     /**
      * Unbind a resouce decorator.
      * @param decorator The decorator
-     * @param props The service properties
      */
-    public void unbindResourceDecorator(final ResourceDecorator decorator,
-            final Map<String, Object> props) {
+    public void unbindResourceDecorator(final ResourceDecorator decorator) {
         synchronized (this.resourceDecorators) {
-            final Iterator<ResourceDecoratorEntry> i = this.resourceDecorators
-                    .iterator();
+            final Iterator<ResourceDecoratorEntry> i = this.resourceDecorators.iterator();
             while (i.hasNext()) {
                 final ResourceDecoratorEntry current = i.next();
                 if (current.decorator == decorator) {
@@ -143,8 +137,7 @@ public class ResourceDecoratorTracker {
 
         final ResourceDecorator decorator;
 
-        public ResourceDecoratorEntry(final ResourceDecorator d,
-                final Comparable<Object> comparable) {
+        public ResourceDecoratorEntry(final ResourceDecorator d, final Comparable<Object> comparable) {
             this.comparable = comparable;
             this.decorator = d;
         }

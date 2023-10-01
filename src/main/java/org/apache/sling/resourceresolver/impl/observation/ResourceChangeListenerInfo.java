@@ -20,7 +20,6 @@ package org.apache.sling.resourceresolver.impl.observation;
 
 import static org.apache.sling.api.resource.observation.ResourceChangeListener.CHANGES;
 import static org.apache.sling.api.resource.observation.ResourceChangeListener.PATHS;
-import static org.apache.sling.commons.osgi.PropertiesUtil.toStringArray;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -36,8 +35,8 @@ import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.resource.path.PathSet;
-import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.osgi.framework.ServiceReference;
+import org.osgi.util.converter.Converters;
 
 /**
  * Information about a resource change listener.
@@ -65,31 +64,29 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
     public ResourceChangeListenerInfo(final ServiceReference<ResourceChangeListener> ref, final List<String> searchPaths) {
         boolean configValid = true;
         final Set<String> pathsSet = new HashSet<>();
-        final String paths[] = toStringArray(ref.getProperty(PATHS), null);
-        if ( paths != null ) {
-            for(final String p : paths) {
-                boolean isGlobPattern = false;
-                String normalisedPath = ResourceUtil.normalize(p);
-                if (p.startsWith(Path.GLOB_PREFIX)) {
-                    isGlobPattern = true;
-                    normalisedPath =  ResourceUtil.normalize(p.substring(Path.GLOB_PREFIX.length()));
-                }
-                if (!".".equals(p) && normalisedPath.isEmpty()) {
-                    configValid = false;
-                } else if ( normalisedPath.startsWith("/") && !isGlobPattern ) {
-                    pathsSet.add(normalisedPath);
-                } else if (normalisedPath.startsWith("/") && isGlobPattern) {
-                    pathsSet.add(Path.GLOB_PREFIX + normalisedPath);
-                } else {
-                    for(final String sp : searchPaths) {
-                        if ( p.equals(".") ) {
-                            pathsSet.add(sp);
+        final String paths[] = Converters.standardConverter().convert(ref.getProperty(PATHS)).to(String[].class);
+        for(final String p : paths) {
+            boolean isGlobPattern = false;
+            String normalisedPath = ResourceUtil.normalize(p);
+            if (p.startsWith(Path.GLOB_PREFIX)) {
+                isGlobPattern = true;
+                normalisedPath =  ResourceUtil.normalize(p.substring(Path.GLOB_PREFIX.length()));
+            }
+            if (!".".equals(p) && normalisedPath.isEmpty()) {
+                configValid = false;
+            } else if ( normalisedPath.startsWith("/") && !isGlobPattern ) {
+                pathsSet.add(normalisedPath);
+            } else if (normalisedPath.startsWith("/") && isGlobPattern) {
+                pathsSet.add(Path.GLOB_PREFIX + normalisedPath);
+            } else {
+                for(final String sp : searchPaths) {
+                    if ( p.equals(".") ) {
+                        pathsSet.add(sp);
+                    } else {
+                        if (isGlobPattern) {
+                            pathsSet.add(Path.GLOB_PREFIX + ResourceUtil.normalize(sp + normalisedPath));
                         } else {
-                            if (isGlobPattern) {
-                                pathsSet.add(Path.GLOB_PREFIX + ResourceUtil.normalize(sp + normalisedPath));
-                            } else {
-                                pathsSet.add(ResourceUtil.normalize(sp + normalisedPath));
-                            }
+                            pathsSet.add(ResourceUtil.normalize(sp + normalisedPath));
                         }
                     }
                 }
@@ -119,7 +116,7 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
             final Set<ChangeType> rts = new HashSet<>();
             final Set<ChangeType> pts = new HashSet<>();
             try {
-                for (final String changeName : toStringArray(ref.getProperty(CHANGES))) {
+                for (final String changeName : Converters.standardConverter().convert(ref.getProperty(CHANGES)).to(String[].class)) {
                     final ChangeType ct = ChangeType.valueOf(changeName);
                     if (ct.ordinal() < ChangeType.PROVIDER_ADDED.ordinal()) {
                         rts.add(ct);
@@ -153,7 +150,7 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
 
         if ( ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT) != null ) {
             this.propertyNamesHint = new HashSet<>();
-            for(final String val : PropertiesUtil.toStringArray(ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT)) ) {
+            for(final String val : Converters.standardConverter().convert(ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT)).to(String[].class) ) {
                 this.propertyNamesHint.add(val);
             }
         } else {

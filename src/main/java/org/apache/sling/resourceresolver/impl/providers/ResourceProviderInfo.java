@@ -19,9 +19,10 @@
 package org.apache.sling.resourceresolver.impl.providers;
 
 import org.apache.sling.api.resource.runtime.dto.AuthType;
-import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.osgi.framework.ServiceReference;
+import org.osgi.util.converter.Converter;
+import org.osgi.util.converter.Converters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,11 +61,12 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
 
     @SuppressWarnings("rawtypes")
     public ResourceProviderInfo(final ServiceReference<ResourceProvider> ref) {
+        final Converter c = Converters.standardConverter();
         this.ref = ref;
-        this.path = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_ROOT), "");
-        this.name = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_NAME), null);
-        this.useResourceAccessSecurity = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_USE_RESOURCE_ACCESS_SECURITY), false);
-        final String authType = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_AUTHENTICATE), AuthType.no.name());
+        this.path = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ROOT)).defaultValue("").to(String.class);
+        this.name = c.convert(ref.getProperty(ResourceProvider.PROPERTY_NAME)).to(String.class);
+        this.useResourceAccessSecurity = c.convert(ref.getProperty(ResourceProvider.PROPERTY_USE_RESOURCE_ACCESS_SECURITY)).to(boolean.class);
+        final String authType = c.convert(ref.getProperty(ResourceProvider.PROPERTY_AUTHENTICATE)).defaultValue(AuthType.no.name()).to(String.class);
         AuthType aType = null;
         try {
             aType = AuthType.valueOf(authType);
@@ -72,11 +74,11 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
             logger.error("Illegal auth type {} for resource provider {}", authType, name);
         }
         this.authType = aType;
-        this.modifiable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_MODIFIABLE), false);
-        this.adaptable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE), false);
-        this.refreshable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE), false);
-        this.attributable = PropertiesUtil.toBoolean(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE), false);
-        final String modeValue = PropertiesUtil.toString(ref.getProperty(ResourceProvider.PROPERTY_MODE), ResourceProvider.MODE_OVERLAY).toUpperCase();
+        this.modifiable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODIFIABLE)).to(boolean.class);
+        this.adaptable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE)).to(boolean.class);
+        this.refreshable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE)).to(boolean.class);
+        this.attributable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE)).to(boolean.class);
+        final String modeValue = c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODE)).defaultValue(ResourceProvider.MODE_OVERLAY.toUpperCase()).to(String.class);
         Mode mode = null;
         try {
             mode = Mode.valueOf(modeValue);
