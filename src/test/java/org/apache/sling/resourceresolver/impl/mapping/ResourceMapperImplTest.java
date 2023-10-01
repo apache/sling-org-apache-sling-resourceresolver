@@ -478,17 +478,23 @@ public class ResourceMapperImplTest {
         internalResolver.set(mapper,spyResolver);
         
         mapper.getMapping("/parent/child"); // alias on both parent and child
-        assertResourceResolverAccess(spyResolver, 2);
+        assertResourceResolverAccess(spyResolver, "/parent/child");
         
         mapper.getMapping("/alias-parent/alias-child"); // the path consists of 2 aliases
-        assertResourceResolverAccess (spyResolver, 2);
+        assertResourceResolverAccess (spyResolver, "/alias-parent/alias-child");
         
         mapper.getMapping("/content/very/deep/path/with/resources"); // deep path
-        assertResourceResolverAccess (spyResolver, 6);
-        
+        assertResourceResolverAccess (spyResolver, "/content/very/deep/path/with/resources");
     }
     
-    private void assertResourceResolverAccess(ResourceResolverImpl spyResolver, int pathSegments) {
+    
+    /**
+     * validate the number of repository accesses by the previous operation
+     * @param spyResolver the resourceresolver
+     * @param path the mapped path without trailing slash
+     */
+    private void assertResourceResolverAccess(ResourceResolverImpl spyResolver, String  path) { 
+        int pathSegments = (int) path.chars().filter(c -> c == '/').count();
         if (this.optimiseAliasResolution) {
             Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
             Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
