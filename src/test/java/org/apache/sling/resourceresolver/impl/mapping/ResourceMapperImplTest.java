@@ -24,10 +24,11 @@ import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_R
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -44,6 +45,7 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.ResourceAccessSecurityTracker;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -54,6 +56,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
+
 import org.osgi.util.tracker.ServiceTracker;
 
 /**
@@ -77,7 +81,7 @@ import org.osgi.util.tracker.ServiceTracker;
 @RunWith(Parameterized.class)
 public class ResourceMapperImplTest {
 
-    @Parameters(name = "optimized alias resolution / paged query support -> {0} / {1}")
+    @Parameters(name = "optimized alias resolution = {0} / paged query support = {1}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] { { false, false }, { false, true }, { true, false }, { true, true } });
     }
@@ -112,6 +116,11 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/content1");
         resourceProvider.putResource("/content1/jcr:content", PROP_ALIAS, "jcr:content-alias"); // jcr:content resource
         resourceProvider.putResource("/content");
+        resourceProvider.putResource("/content/very");
+        resourceProvider.putResource("/content/very/deep");
+        resourceProvider.putResource("/content/very/deep/path");
+        resourceProvider.putResource("/content/very/deep/path/with");
+        resourceProvider.putResource("/content/very/deep/path/with/resources");
         resourceProvider.putResource("/content/virtual");
         resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
         resourceProvider.putResource("/parent", PROP_ALIAS, "alias-parent"); // parent has alias
@@ -487,6 +496,47 @@ public class ResourceMapperImplTest {
                 .allMappingsWithRequest("/app/alias-parent/alias-child", "/app/alias-parent/child", "/app/parent/alias-child")
                 .verify(resolver, req);
     }
+
+    /**
+     * Validates that in case of the optimized lookup less repository access is done
+     * @throws Exception 
+     */
+    @Test
+    public void mapAliasLookupOptimization() throws Exception {
+        ResourceResolverImpl spyResolver =  Mockito.spy((ResourceResolverImpl) resolver);
+
+        // inject that spy into the mapper, so we can reason about the repo access
+        ResourceMapperImpl mapper = (ResourceMapperImpl) resolver.adaptTo(ResourceMapper.class);
+        Field internalResolver = mapper.getClass().getDeclaredField("resolver");
+        internalResolver.setAccessible(true);
+        internalResolver.set(mapper,spyResolver);
+        
+        assertResourceResolverAccess(spyResolver, mapper, "/parent/child"); // alias on both parent and child
+        assertResourceResolverAccess(spyResolver, mapper, "/alias-parent/alias-child"); // the path consists of 2 aliases 
+        assertResourceResolverAccess(spyResolver, mapper, "/content/very/deep/path/with/resources"); // deep path
+    }
+    
+    
+    /**
+     * validate the number of repository accesses by the previous operation
+     * @param spyResolver the resourceresolver
+     * @param mapper the ResourceMapper to use
+     * @param path the mapped path without trailing slash
+     */
+    private void assertResourceResolverAccess(ResourceResolverImpl spyResolver, ResourceMapperImpl mapper, String  path) { 
+        int pathSegments = (int) path.chars().filter(c -> c == '/').count();
+        mapper.getMapping(path);
+        if (this.optimiseAliasResolution) {
+            Mockito.verify(spyResolver,Mockito.times(0)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(1)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        } else {
+            Mockito.verify(spyResolver,Mockito.times(pathSegments-1)).resolve(Mockito.any(String.class));
+            Mockito.verify(spyResolver,Mockito.times(pathSegments)).resolveInternal(Mockito.any(String.class),Mockito.anyMap());
+        }
+        Mockito.clearInvocations(spyResolver);
+    }
+    
+    
 
     static class ExpectedMappings {
 

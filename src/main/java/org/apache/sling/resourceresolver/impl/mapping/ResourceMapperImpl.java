@@ -203,23 +203,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         // make sure to append resolutionPathInfo, if present
         pathBuilder.setResolutionPathInfo(resolutionPathInfo);
         
-        Resource current = res;
-        String path = res.getPath();
-        while (path != null) {
-            List<String> aliases = Collections.emptyList();
-            // read alias only if we can read the resources and it's not a jcr:content leaf
-            if (current != null && !path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
-                aliases = readAliases(path, current);
-            }
-            // build the path from the name segments or aliases
-            pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
-            path = ResourceUtil.getParent(path);
-            if ("/".equals(path)) {
-                path = null;
-            } else if (path != null) {
-                current = res.getResourceResolver().resolve(path);
-            }
-        }
+        resolveAliases(res, pathBuilder);
         
         // and then we have the mapped path to work on
         List<String> mappedPaths = pathBuilder.generatePaths();
@@ -232,34 +216,86 @@ public class ResourceMapperImpl implements ResourceMapper {
         
         return mappedPaths;
     }
-    
-    private List<String> readAliases(String path, Resource current) {
+
+	private void resolveAliases(Resource res, PathGenerator pathBuilder) {
+		Resource current = res;
+        String path = res.getPath();
         if (this.mapEntries.isOptimizeAliasResolutionEnabled()) {
-            logger.debug("map: Optimize Alias Resolution is Enabled");
-            String parentPath = ResourceUtil.getParent(path);
-            
-            if ( parentPath == null )
-                return Collections.emptyList();
-            
-            final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
-            
-            if ( aliases == null || !aliases.containsValue(current.getName()) ) 
-                return Collections.emptyList();
-            
-            return aliases.entrySet().stream()
-                .filter( e -> current.getName().contentEquals(e.getValue()) )
-                .map( Entry::getKey )
-                .collect(Collectors.toList());
-            
-        } else {
-            logger.debug("map: Optimize Alias Resolution is Disabled");
-            String[] aliases = ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS, String[].class);
-            if ( aliases == null || aliases.length == 0 )
-                return Collections.emptyList();
-            if ( aliases.length == 1 )
-                return Collections.singletonList(aliases[0]);
-            return Arrays.asList(aliases);
-        }        
+        	// this code path avoids any creation of Sling Resource objects
+        	while (path != null) {
+	            List<String> aliases = Collections.emptyList();
+	            // read alias only if we can read the resources and it's not a jcr:content leaf
+	            if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
+	                aliases = readAliasesOptimized(path);
+	            }
+	            // build the path from the name segments or aliases
+	            pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
+	            path = ResourceUtil.getParent(path);
+	            if ("/".equals(path)) {
+	                path = null;
+	            } 
+	        }
+        }
+        else {
+        	// while here there Resources are resolved
+	        while (path != null) {
+	            List<String> aliases = Collections.emptyList();
+	            // read alias only if we can read the resources and it's not a jcr:content leaf
+	            if (current != null && !path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
+	                aliases = readAliases(path, current);
+	            }
+	            // build the path from the name segments or aliases
+	            pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
+	            path = ResourceUtil.getParent(path);
+	            if ("/".equals(path)) {
+	                path = null;
+	            } else if (path != null) {
+	                current = resolver.resolve(path);
+	            }
+	        }
+        }
+	}
+    
+	/**
+	 * Resolve the aliases for the given resource by directly reading the sling:alias property
+	 * @param path the path of the resource
+	 * @param current the resource
+	 * @return
+	 */
+    private List<String> readAliases(String path, Resource current) {
+    	logger.debug("map: Optimize Alias Resolution is Disabled");
+    	String[] aliases = ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS, String[].class);
+    	if ( aliases == null || aliases.length == 0 )
+    		return Collections.emptyList();
+    	if ( aliases.length == 1 )
+    		return Collections.singletonList(aliases[0]);
+    	return Arrays.asList(aliases);      
+    }
+    
+    /**
+     * Resolve teh aliases for the given resource by a lookup in the mapEntries structure, avoiding
+     * any repository access
+     * @param path
+     * @return
+     */
+    private List<String> readAliasesOptimized(String path) {
+    	logger.debug("map: Optimize Alias Resolution is Enabled");
+    	String parentPath = ResourceUtil.getParent(path);
+    	if ( parentPath == null ) {
+    		return Collections.emptyList();
+    	}
+    	String name = ResourceUtil.getName(path);
+
+    	final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
+
+    	if ( aliases == null || !aliases.containsValue(name) ) 
+    		return Collections.emptyList();
+
+    	return aliases.entrySet().stream()
+    			.filter( e -> name.contentEquals(e.getValue()) )
+    			.map( Entry::getKey )
+    			.collect(Collectors.toList());
+
     }
 
     private void populateMappingsFromMapEntries(List<String> mappings, List<String> mappedPathList,
