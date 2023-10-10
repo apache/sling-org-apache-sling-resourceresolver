@@ -18,6 +18,7 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.runtime.RuntimeService;
 import org.osgi.framework.Bundle;
@@ -62,7 +63,11 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     public FactoryRegistrationHandler() {
         final String originalThreadName = Thread.currentThread().getName();
         this.factoryRegistrationWorker = Executors.newSingleThreadExecutor(
-                r -> new Thread(r, ResourceResolverFactory.class.getSimpleName() + " registration/deregistration (" + originalThreadName + ")"));
+                r -> {
+                    final Thread thread = new Thread(r, originalThreadName + "|" + ResourceResolverFactory.class.getSimpleName() + " registration/deregistration");
+                    thread.setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught exception in thread '{}'", t.getName(), e));
+                    return thread;
+                });
     }
 
     public void configure(ResourceResolverFactoryActivator activator, FactoryPreconditions factoryPreconditions) {
@@ -172,7 +177,8 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     private void runWithThreadName(String threadNameSuffix, Runnable task) {
         final String name = Thread.currentThread().getName();
         try {
-            Thread.currentThread().setName(ResourceResolverFactory.class.getSimpleName() + " " + threadNameSuffix + " (" + name + ")");
+            final String infix = "|" + ResourceResolverFactory.class.getSimpleName();
+            Thread.currentThread().setName(StringUtils.substringBefore(name, infix) + infix + " " + threadNameSuffix);
             task.run();
         } finally {
             Thread.currentThread().setName(name);

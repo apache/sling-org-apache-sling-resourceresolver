@@ -26,7 +26,6 @@ import org.apache.sling.resourceresolver.util.events.RecordingListener;
 import org.apache.sling.resourceresolver.util.events.ServiceEventUtil.ServiceEventDTO;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.testing.mock.osgi.junit5.OsgiContext;
-import org.apache.sling.testing.mock.osgi.junit5.OsgiContextBuilder;
 import org.apache.sling.testing.mock.osgi.junit5.OsgiContextExtension;
 import org.hamcrest.Matcher;
 import org.jetbrains.annotations.NotNull;
@@ -40,6 +39,8 @@ import org.mockito.internal.stubbing.defaultanswers.ReturnsSmartNulls;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Method;
 
 import static org.apache.sling.resourceresolver.util.CustomMatchers.allOf;
 import static org.apache.sling.resourceresolver.util.CustomMatchers.hasItem;
@@ -55,8 +56,6 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(OsgiContextExtension.class)
 class FactoryRegistrationHandlerTest {
-
-    private static final Logger LOG = LoggerFactory.getLogger(FactoryRegistrationHandlerTest.class);
 
     private static final int DEFAULT_TEST_ITERATIONS = 20;
 
@@ -76,10 +75,7 @@ class FactoryRegistrationHandlerTest {
             hasItem(registration(ResourceResolverFactory.class))
     );
 
-    OsgiContext osgi = new OsgiContextBuilder()
-            .afterSetUp(context -> LOG.info("--- INITIALIZING OSGiContext {}", context))
-            .beforeTearDown(context -> LOG.info("--- TEARING DOWN OSGiContext {}", context))
-            .build();
+    OsgiContext osgi = new OsgiContext();
 
     private ResourceResolverFactoryActivator activator;
     private String originalThreadName;
@@ -87,7 +83,9 @@ class FactoryRegistrationHandlerTest {
     @BeforeEach
     void setUp(TestInfo testInfo) {
         originalThreadName = Thread.currentThread().getName();
-        Thread.currentThread().setName(originalThreadName + "(" + testInfo.getDisplayName() + ")");
+        final String testName = testInfo.getTestMethod().map(Method::getName).map("#"::concat).orElse("")
+                + "(" + testInfo.getDisplayName() + ")";
+        Thread.currentThread().setName(testName);
         final ResourceProviderTracker resourceProviderTracker = mock(ResourceProviderTracker.class);
         doReturn(mock(ResourceProviderStorage.class)).when(resourceProviderTracker).getResourceProviderStorage();
 
