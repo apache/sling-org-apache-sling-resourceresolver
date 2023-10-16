@@ -64,7 +64,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
         final String originalThreadName = Thread.currentThread().getName();
         this.factoryRegistrationWorker = Executors.newSingleThreadExecutor(
                 r -> {
-                    final Thread thread = new Thread(r, originalThreadName + "|" + ResourceResolverFactory.class.getSimpleName() + " registration/deregistration");
+                    final Thread thread = new Thread(r, originalThreadName + "|async|" + ResourceResolverFactory.class.getSimpleName() + " registration/deregistration");
                     thread.setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught exception in thread '{}'", t.getName(), e));
                     return thread;
                 });
@@ -99,6 +99,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
 
     @Override
     public void close() {
+        LOG.info("Closing FactoryRegistrationHandler", new Exception("closing stacktrace"));
         factoryRegistrationWorker.shutdown();
         try {
             if (!factoryRegistrationWorker.awaitTermination(1, TimeUnit.MINUTES)) {
