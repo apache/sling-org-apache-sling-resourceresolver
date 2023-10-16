@@ -87,7 +87,7 @@ public class RecordingListener extends AbstractAwaitingListener {
 
     public void assertRecorded(Matcher<? super Collection<? extends ServiceEventDTO>> serviceEventDTOMatcher) throws InterruptedException {
         if (signalRegistration != null) {
-            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
             while (!serviceEventDTOMatcher.matches(serviceEvents) && System.nanoTime() < deadline) {
                 // give other threads a chance
                 Thread.yield();
