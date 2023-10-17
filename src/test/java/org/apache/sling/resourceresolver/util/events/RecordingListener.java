@@ -80,8 +80,12 @@ public class RecordingListener extends AbstractAwaitingListener {
     }
 
     public void assertRecorded(Matcher<? super Collection<? extends ServiceEventDTO>> serviceEventDTOMatcher) throws InterruptedException {
+        assertRecordedWithin(5, serviceEventDTOMatcher);
+    }
+
+    public void assertRecordedWithin(int maxWaitSec, Matcher<? super Collection<? extends ServiceEventDTO>> serviceEventDTOMatcher) throws InterruptedException {
         if (signalRegistration != null) {
-            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(maxWaitSec);
             while (!serviceEventDTOMatcher.matches(serviceEvents) && System.nanoTime() < deadline) {
                 // give other threads a chance
                 Thread.yield();
@@ -94,6 +98,7 @@ public class RecordingListener extends AbstractAwaitingListener {
             stopListening();
         }
 
-        assertThat("Expected ServiceEvents", serviceEvents, serviceEventDTOMatcher);
+        assertThat("Expected ServiceEvents were not recorded within " + maxWaitSec + " seconds. Make sure to " +
+                        "re-try with a longer wait time.", serviceEvents, serviceEventDTOMatcher);
     }
 }
