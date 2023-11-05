@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>org.apache.sling.resourceresolver</artifactId>
-    <version>1.11.2</version>
+    <version>1.11.3-SNAPSHOT</version>
 
     <name>Apache Sling Resource Resolver</name>
     <description>
@@ -40,13 +40,13 @@
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-resourceresolver.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-resourceresolver.git</developerConnection>
         <url>https://github.com/apache/sling-org-apache-sling-resourceresolver.git</url>
-        <tag>org.apache.sling.resourceresolver-1.11.2</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
         <site.jira.version.id>12314286</site.jira.version.id>
         <site.javadoc.exclude>**.internal.**</site.javadoc.exclude>
-        <project.build.outputTimestamp>1699182809</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1699182879</project.build.outputTimestamp>
     </properties>
 
     <build>
