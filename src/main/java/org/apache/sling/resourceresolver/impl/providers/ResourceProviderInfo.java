@@ -78,7 +78,8 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
         this.adaptable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE)).to(boolean.class);
         this.refreshable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE)).to(boolean.class);
         this.attributable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE)).to(boolean.class);
-        final String modeValue = c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODE)).defaultValue(ResourceProvider.MODE_OVERLAY.toUpperCase()).to(String.class);
+        final String modeValue = c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODE))
+            .defaultValue(ResourceProvider.MODE_OVERLAY).to(String.class).toUpperCase();
         Mode mode = null;
         try {
             mode = Mode.valueOf(modeValue);
