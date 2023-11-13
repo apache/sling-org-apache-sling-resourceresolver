@@ -71,7 +71,7 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
         try {
             aType = AuthType.valueOf(authType);
         } catch ( final IllegalArgumentException iae) {
-            logger.error("Illegal auth type {} for resource provider {}", authType, name);
+            logger.error("Illegal auth type {} for resource provider {} ({})", authType, name, ref);
         }
         this.authType = aType;
         this.modifiable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODIFIABLE)).to(boolean.class);
@@ -84,9 +84,12 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
         try {
             mode = Mode.valueOf(modeValue);
         } catch ( final IllegalArgumentException iae) {
-            logger.error("Illegal mode {} for resource provider {}", modeValue, name);
+            logger.error("Illegal mode {} for resource provider {} ({})", modeValue, name, ref);
         }
         this.mode = mode;
+        if ( !path.startsWith("/") ) {
+            logger.error("Path {} does not start with / for resource provider {} ({})", path, name, ref);
+        }
     }
 
     public boolean isValid() {
