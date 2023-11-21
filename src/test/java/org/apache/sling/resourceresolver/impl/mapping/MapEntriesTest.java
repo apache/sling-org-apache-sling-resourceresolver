@@ -161,8 +161,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
-        mapEntries = Mockito.spy(new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics));
-        final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
+        mapEntries = /*Mockito.spy(*/new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);//);
+        final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
 
         this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
@@ -201,10 +201,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries.doInit();
 
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
-        assertTrue(aliasMap.containsKey("alias"));
-        assertEquals("child", aliasMap.get("alias"));
+        assertTrue(aliasMap.containsKey("child"));
+        assertEquals(Collections.singletonList("alias"), aliasMap.get("child"));
     }
 
     @Test
@@ -238,10 +238,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries.doInit();
 
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
-        assertTrue(aliasMap.containsKey("alias"));
-        assertEquals("child", aliasMap.get("alias"));
+        assertTrue(aliasMap.containsKey("child"));
+        assertEquals(Collections.singletonList("alias"), aliasMap.get("child"));
     }
 
     @Test
@@ -936,8 +936,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
 
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMap);
+        Map<String, List<String>> aliasMap = mapEntries.getAliasMap("/parent");
+        assertNotNull(aliasMap);
     }
 
     //SLING-3727
@@ -961,8 +961,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
 
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMap);
+        Map<String, List<String>> aliasMap = mapEntries.getAliasMap("/parent");
+        assertEquals(Collections.emptyMap(), aliasMap);
     }
 
     //SLING-3727
@@ -986,8 +986,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         removeAlias.invoke(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
 
-        Map<String, String> aliasMap = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMap);
+        Map<String, List<String>> aliasMap = mapEntries.getAliasMap("/parent");
+        assertEquals(Collections.emptyMap(), aliasMap);
     }
 
     @Test
@@ -1009,10 +1009,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(Collections.singletonList("alias"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1028,8 +1028,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(Collections.singletonList("alias"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1045,9 +1045,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(2, aliasMapEntry.size());
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
+        assertEquals(1, aliasMapEntry.size()); // only 2 aliases for 1 child resource
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("alias","aliasJcrContent"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
     }
@@ -1071,10 +1071,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent", new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("parent", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("parent"));
+        assertEquals(Collections.singletonList("alias"), aliasMapEntry.get("parent"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1090,8 +1090,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("parent", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("parent"));
+        assertEquals(Collections.singletonList("alias"), aliasMapEntry.get("parent"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1107,9 +1107,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/");
         assertNotNull(aliasMapEntry);
-        assertEquals(2, aliasMapEntry.size());
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertEquals("parent", aliasMapEntry.get("aliasJcrContent"));
+        assertEquals(1, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("parent"));
+        assertEquals(List.of("alias","aliasJcrContent"), aliasMapEntry.get("parent"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1125,8 +1125,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("parent", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("parent"));
+        assertEquals(List.of("alias", "aliasJcrContent"), aliasMapEntry.get("parent"));
         assertEquals(1, aliasMap.size());
 
     }
@@ -1150,11 +1150,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         updateResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertFalse(aliasMapEntry.containsKey("aliasUpdated"));
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1164,9 +1163,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertFalse(aliasMapEntry.containsKey("alias"));
-        assertTrue(aliasMapEntry.containsKey("aliasUpdated"));
-        assertEquals("child", aliasMapEntry.get("aliasUpdated"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasUpdated"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1183,10 +1181,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(2, aliasMapEntry.size());
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertFalse(aliasMapEntry.containsKey("aliasJcrContentUpdated"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
+        assertEquals(1, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasUpdated","aliasJcrContent"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1195,10 +1192,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(2, aliasMapEntry.size());
-        assertFalse(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContentUpdated"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContentUpdated"));
+        assertEquals(1, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasUpdated", "aliasJcrContentUpdated"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1207,10 +1203,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(2, aliasMapEntry.size());
-        assertFalse(aliasMapEntry.containsKey("alias"));
-        assertTrue(aliasMapEntry.containsKey("aliasUpdated"));
-        assertEquals("child", aliasMapEntry.get("aliasUpdated"));
+        assertEquals(1, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasUpdated","aliasJcrContentUpdated"), aliasMapEntry.get("child"));
 
         //add another node with different alias and check that the update doesn't break anything (see also SLING-3728)
         final Resource secondResult = mock(Resource.class);
@@ -1225,17 +1220,16 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(3, aliasMapEntry.size());
+        assertEquals(2, aliasMapEntry.size());
 
         when(jcrContentResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContentUpdated"));
         updateResource.invoke(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(3, aliasMapEntry.size());
-        assertFalse(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContentUpdated"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContentUpdated"));
+        assertEquals(2, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasUpdated","aliasJcrContentUpdated"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1247,9 +1241,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
         assertEquals(2, aliasMapEntry.size());
-        assertFalse(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContentUpdated"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContentUpdated"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasJcrContentUpdated"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1278,10 +1271,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1289,7 +1282,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.invoke(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         assertEquals(0, aliasMap.size());
 
@@ -1299,8 +1292,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1308,7 +1301,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.invoke(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         assertEquals(0, aliasMap.size());
     }
@@ -1344,10 +1337,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasJcrContent"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1356,7 +1349,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.invoke(mapEntries, "/parent", "/parent/child/jcr:content", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         assertEquals(0, aliasMap.size());
 
@@ -1367,8 +1360,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasJcrContent"), aliasMapEntry.get("child"));
 
         assertEquals(1, aliasMap.size());
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(null);
@@ -1376,11 +1369,12 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.invoke(mapEntries, "/parent", "/parent/child/jcr:content", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         assertEquals(0, aliasMap.size());
     }
 
+    
     @Test
     public void test_doRemoveAlias3() throws Exception {
         final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
@@ -1415,11 +1409,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         // test with two nodes
         assertEquals(1, aliasMap.size());
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(2, aliasMapEntry.size());
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertEquals(1, aliasMapEntry.size());
+        assertEquals(List.of("alias", "aliasJcrContent"), aliasMapEntry.get("child"));
 
         // remove child jcr:content node
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(null);
@@ -1431,7 +1424,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
         assertEquals(1, aliasMapEntry.size());
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertEquals(List.of("alias"), aliasMapEntry.get("child"));
 
         // re-add the node and test /parent/child
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(jcrContentResult);
@@ -1441,9 +1434,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         // STOP
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertEquals(2, aliasMapEntry.size());
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
-        assertEquals("child", aliasMapEntry.get("alias"));
+        assertEquals(1, aliasMapEntry.size());
+        assertEquals(List.of("alias", "aliasJcrContent"), aliasMapEntry.get("child"));
 
         when(resourceResolver.getResource("/parent/child")).thenReturn(null);
         removeAlias.invoke(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
@@ -1454,16 +1446,16 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
         assertEquals(1, aliasMapEntry.size());
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
+        assertEquals(List.of("aliasJcrContent"), aliasMapEntry.get("child"));
 
         // re-add the node and test node removal
         addResource.invoke(mapEntries, "/parent/child", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
-        assertEquals(2, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("aliasJcrContent", "alias"), aliasMapEntry.get("child"));
+        assertEquals(1, aliasMapEntry.size());
 
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(null);
         when(childRsrc.getChild("jcr:content")).thenReturn(null);
@@ -1482,16 +1474,16 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertEquals("child", aliasMapEntry.get("aliasJcrContent"));
-        assertEquals(2, aliasMapEntry.size());
+        assertTrue(aliasMapEntry.containsKey("child"));
+        assertEquals(List.of("alias","aliasJcrContent"), aliasMapEntry.get("child"));
+        assertEquals(1, aliasMapEntry.size());
 
         when(resourceResolver.getResource("/parent/child")).thenReturn( null);
         removeAlias.invoke(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
 
         assertEquals(0, aliasMap.size());
         aliasMapEntry = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
     }
 
     @Test
@@ -1516,10 +1508,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent", new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("parent", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("parent"));
+        assertEquals(List.of("alias"), aliasMapEntry.get("parent"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1527,7 +1519,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.invoke(mapEntries, "/", "/parent", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         assertEquals(0, aliasMap.size());
 
@@ -1537,8 +1529,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("alias"));
-        assertEquals("parent", aliasMapEntry.get("alias"));
+        assertTrue(aliasMapEntry.containsKey("parent"));
+        assertEquals(List.of("alias"), aliasMapEntry.get("parent"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1546,7 +1538,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.invoke(mapEntries, "/", "/parent", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         assertEquals(0, aliasMap.size());
     }
@@ -1582,10 +1574,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, "/parent/jcr:content", new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("aliasJcrContent"));
-        assertEquals("parent", aliasMapEntry.get("aliasJcrContent"));
+        assertTrue(aliasMapEntry.containsKey("parent"));
+        assertEquals(List.of("aliasJcrContent"), aliasMapEntry.get("parent"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1594,7 +1586,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeAlias.invoke(mapEntries, "/", "/parent/jcr:content", new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         assertEquals(0, aliasMap.size());
     }
@@ -1659,11 +1651,11 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, grandChildJcrContent.getPath(), new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent/container/childContainer");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/parent/container/childContainer");
         assertNotNull(aliasMapEntry);
         assertEquals(1, aliasMapEntry.size());
-        assertTrue(aliasMapEntry.containsKey("gc"));
-        assertEquals("grandChild", aliasMapEntry.get("gc"));
+        assertTrue(aliasMapEntry.containsKey("grandChild"));
+        assertEquals(List.of("gc"), aliasMapEntry.get("grandChild"));
 
 
         // delete the jcr:content present in a parent path
@@ -1674,8 +1666,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         aliasMapEntry = mapEntries.getAliasMap("/parent/container/childContainer");
         assertNotNull(aliasMapEntry);
         assertEquals(1, aliasMapEntry.size());
-        assertTrue(aliasMapEntry.containsKey("gc"));
-        assertEquals("grandChild", aliasMapEntry.get("gc"));
+        assertTrue(aliasMapEntry.containsKey("grandChild"));
+        assertEquals(List.of("gc"), aliasMapEntry.get("grandChild"));
 
     }
 
@@ -1717,10 +1709,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource.invoke(mapEntries, child1JcrContent.getPath(), new AtomicBoolean());
 
-        Map<String, String> aliasMapEntry = mapEntries.getAliasMap("/parent");
+        Map<String, List<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("test1"));
-        assertEquals("child1", aliasMapEntry.get("test1"));
+        assertTrue(aliasMapEntry.containsKey("child1"));
+        assertEquals(List.of("test1"), aliasMapEntry.get("child1"));
 
         assertEquals(1, aliasMap.size());
 
@@ -1745,10 +1737,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("test1"));
-        assertTrue(aliasMapEntry.containsKey("test2"));
-        assertEquals("child1", aliasMapEntry.get("test1"));
-        assertEquals("child2", aliasMapEntry.get("test2"));
+        assertTrue(aliasMapEntry.containsKey("child1"));
+        assertTrue(aliasMapEntry.containsKey("child2"));
+        assertEquals(List.of("test1"), aliasMapEntry.get("child1"));
+        assertEquals(List.of("test2"), aliasMapEntry.get("child2"));
 
 
         assertEquals(1, aliasMap.size());
@@ -1765,10 +1757,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("test1"));
-        assertTrue(aliasMapEntry.containsKey("test2"));
-        assertEquals("child1", aliasMapEntry.get("test1"));
-        assertEquals("child2", aliasMapEntry.get("test2"));
+        assertTrue(aliasMapEntry.containsKey("child1"));
+        assertTrue(aliasMapEntry.containsKey("child2"));
+        assertEquals(List.of("test1"), aliasMapEntry.get("child1"));
+        assertEquals(List.of("test2"), aliasMapEntry.get("child2"));
 
 
         assertEquals(1, aliasMap.size());
@@ -1780,8 +1772,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("test1"));
-        assertEquals("child1", aliasMapEntry.get("test1"));
+        assertTrue(aliasMapEntry.containsKey("child1"));
+        assertEquals(List.of("test1"), aliasMapEntry.get("child1"));
 
 
         assertEquals(1, aliasMap.size());
@@ -1792,7 +1784,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         removeResource.invoke(mapEntries, child1JcrContent.getPath(), new AtomicBoolean());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
 
         when(child1.getChild("jcr:content")).thenReturn(child1JcrContent);
         addResource.invoke(mapEntries, child1JcrContent.getPath(), new AtomicBoolean());
@@ -1801,10 +1793,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
-        assertTrue(aliasMapEntry.containsKey("test1"));
-        assertTrue(aliasMapEntry.containsKey("test2"));
-        assertEquals("child1", aliasMapEntry.get("test1"));
-        assertEquals("child2", aliasMapEntry.get("test2"));
+        assertTrue(aliasMapEntry.containsKey("child1"));
+        assertTrue(aliasMapEntry.containsKey("child2"));
+        assertEquals(List.of("test1"), aliasMapEntry.get("child1"));
+        assertEquals(List.of("test2"), aliasMapEntry.get("child2"));
 
 
         assertEquals(1, aliasMap.size());
@@ -1814,7 +1806,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
-        assertNull(aliasMapEntry);
+        assertEquals(Collections.emptyMap(), aliasMapEntry);
     }
 
     @Test

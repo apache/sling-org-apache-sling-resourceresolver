@@ -18,6 +18,39 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Stream;
+
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
@@ -34,6 +67,7 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
+import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
@@ -41,38 +75,6 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Stream;
 
 public class MapEntries implements
     MapEntriesHandler,
@@ -140,7 +142,10 @@ public class MapEntries implements
 
     private Map <String,List <String>> vanityTargets;
 
-    private Map<String, Map<String, String>> aliasMap;
+    /**
+     * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
+     */
+    private ConcurrentMap<String, ConcurrentMap<String, List<String>>> aliasMapsMap;
 
     private final AtomicLong aliasResourcesOnStartup;
 
@@ -159,7 +164,6 @@ public class MapEntries implements
     private final StringInterpolationProvider stringInterpolationProvider;
 
     private final boolean useOptimizeAliasResolution;
-
     public MapEntries(final MapConfigurationProvider factory, 
             final BundleContext bundleContext, 
             final EventAdmin eventAdmin, 
@@ -174,7 +178,7 @@ public class MapEntries implements
         this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, Collections.emptyList());
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
-        this.aliasMap = Collections.<String, Map<String, String>>emptyMap();
+        this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.aliasResourcesOnStartup = new AtomicLong(0);
@@ -197,7 +201,7 @@ public class MapEntries implements
             this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
             this.metrics.get().setNumberOfVanityPathBloomNegativeSupplier(vanityPathBloomNegative::get);
             this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
-            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMap.size());
+            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
         }
     }
@@ -237,8 +241,8 @@ public class MapEntries implements
             //optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final Map<String, Map<String, String>> loadedMap = this.loadAliases(resolver);
-                    this.aliasMap = loadedMap;
+                    final ConcurrentMap<String, ConcurrentMap<String, List<String>>> loadedMap = this.loadAliases(resolver);
+                    this.aliasMapsMap = loadedMap;
     
                 } catch (final Exception e) {
 
@@ -430,7 +434,7 @@ public class MapEntries implements
         }
         if (this.useOptimizeAliasResolution) {
             final String pathPrefix = path + "/";
-            for (final String contentPath : this.aliasMap.keySet()) {
+            for (final String contentPath : this.aliasMapsMap.keySet()) {
                 if (path.startsWith(contentPath + "/") || path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
                     changed |= removeAlias(contentPath, path, resolverRefreshed);
@@ -451,7 +455,7 @@ public class MapEntries implements
         // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
         // otherwise we can discard the event
         boolean handle = true;
-        String resourcePath = null;
+        final String resourcePath;
         if ( path != null  && path.length() > contentPath.length()) {
             final String subPath = path.substring(contentPath.length() + 1);
             final int firstSlash = subPath.indexOf('/');
@@ -467,6 +471,7 @@ public class MapEntries implements
                 resourcePath = ResourceUtil.getParent(path);
             } else {
                 handle = false;
+                resourcePath = null;
             }
         }
         else {
@@ -478,20 +483,13 @@ public class MapEntries implements
 
         this.initializing.lock();
         try {
-            final Map<String, String> aliasMapEntry = aliasMap.get(contentPath);
+            final Map<String, List<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
                 this.refreshResolverIfNecessary(resolverRefreshed);
 
-                for (Iterator<Map.Entry<String, String>> iterator = aliasMapEntry.entrySet().iterator(); iterator.hasNext(); ) {
-                    final Map.Entry<String, String> entry = iterator.next();
-                    String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
-                    if ((prefix + entry.getValue()).startsWith(resourcePath)){
-                        iterator.remove();
-                    }
-                }
-
-                if (aliasMapEntry.isEmpty()) {
-                    this.aliasMap.remove(contentPath);
+                String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
+                if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
+                    this.aliasMapsMap.remove(contentPath);
                 }
 
                 Resource containingResource = this.resolver != null ? this.resolver.getResource(resourcePath) : null;
@@ -575,7 +573,7 @@ public class MapEntries implements
     }
 
     private boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, this.aliasMap);
+        return loadAlias(resource, this.aliasMapsMap);
     }
 
     /**
@@ -595,18 +593,12 @@ public class MapEntries implements
             final String containingResourceName = containingResource.getName();
             final String parentPath = ResourceUtil.getParent(containingResource.getPath());
 
-            final Map<String, String> aliasMapEntry = parentPath == null ? null : aliasMap.get(parentPath);
+            final Map<String, List<String>> aliasMapEntry = parentPath == null ? null : aliasMapsMap.get(parentPath);
             if (aliasMapEntry != null) {
-                for (Iterator<Map.Entry<String, String>> iterator = aliasMapEntry.entrySet().iterator(); iterator.hasNext(); ) {
-                    final Map.Entry<String, String> entry = iterator.next();
-                    if (containingResourceName.equals(entry.getValue())){
-                        iterator.remove();
-                    }
+                aliasMapEntry.remove(containingResourceName);
+                if (aliasMapEntry.isEmpty()) {
+                    this.aliasMapsMap.remove(parentPath);
                 }
-            }
-
-            if (aliasMapEntry != null && aliasMapEntry.isEmpty()) {
-                this.aliasMap.remove(parentPath);
             }
 
             boolean changed = aliasMapEntry != null;
@@ -710,8 +702,9 @@ public class MapEntries implements
     }
     
     @Override
-    public Map<String, String> getAliasMap(final String parentPath) {
-        return aliasMap.get(parentPath);
+    public @NotNull ConcurrentMap<String, List<String>> getAliasMap(final String parentPath) {
+        ConcurrentMap<String, List<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
+        return aliasMapForParent != null ? aliasMapForParent : new ConcurrentHashMap<>();
     }
 
     @Override
@@ -1156,8 +1149,8 @@ public class MapEntries implements
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
-    private Map<String, Map<String, String>> loadAliases(final ResourceResolver resolver) {
-        final Map<String, Map<String, String>> map = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, ConcurrentMap<String, List<String>>> loadAliases(final ResourceResolver resolver) {
+        final ConcurrentMap<String, ConcurrentMap<String, List<String>>> map = new ConcurrentHashMap<>();
         final String queryString = generateAliasQuery();
 
         log.debug("start alias query: {}", queryString);
@@ -1211,7 +1204,7 @@ public class MapEntries implements
     /**
      * Load alias given a resource
      */
-    private boolean loadAlias(final Resource resource, Map<String, Map<String, String>> map) {
+    private boolean loadAlias(final Resource resource, ConcurrentMap<String, ConcurrentMap<String, List<String>>> map) {
 
         // resource containing the alias
         final Resource containingResource;
@@ -1243,24 +1236,20 @@ public class MapEntries implements
 
             if (aliasArray != null) {
                 log.debug("Found alias, total size {}", aliasArray.length);
+                // the order matters here, the first alias in the array must come first
                 for (final String alias : aliasArray) {
                     if (isAliasValid(alias)) {
                         log.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.", alias, parentPath);
                     } else {
-                        Map<String, String> parentMap = map.get(parentPath);
-
-                        if (parentMap == null) {
-                            parentMap = new LinkedHashMap<>();
-                            map.put(parentPath, parentMap);
-                        }
-
-                        String current = parentMap.get(alias);
-                        if (current != null) {
+                        ConcurrentMap<String, List<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
+                        Optional<String> currentResourceName = parentMap.entrySet().stream().filter(entry -> entry.getValue().contains(alias)).findFirst().map(Map.Entry::getKey);
+                        if (currentResourceName.isPresent()) {
                             log.warn(
                                     "Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.",
-                                    alias, parentPath, current, resourceName);
+                                    alias, parentPath, currentResourceName.get(), resourceName);
                         } else {
-                            parentMap.put(alias, resourceName);
+                            List<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
+                            existingAliases.add(alias);
                             hasAlias = true;
                         }
                     }

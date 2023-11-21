@@ -120,7 +120,7 @@ public abstract class AbstractMappingMapEntriesTest {
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {});
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
-        final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMap");
+        final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
         this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
     }

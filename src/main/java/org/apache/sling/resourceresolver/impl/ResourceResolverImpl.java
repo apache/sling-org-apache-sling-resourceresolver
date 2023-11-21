@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
@@ -839,20 +840,18 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if (factory.getMapEntries().isOptimizeAliasResolutionEnabled()){
             logger.debug("getChildInternal: Optimize Alias Resolution is Enabled");
             //optimization made in SLING-2521
-            final Map<String, String> aliases = factory.getMapEntries().getAliasMap(parent.getPath());
-            if (aliases != null) {
-                final String aliasName = aliases.get(childName);
-                if (aliasName != null ) {
-                    final String aliasPath;
-                    if ( aliasName.startsWith("/") ) {
-                        aliasPath = aliasName;
-                    } else {
-                        aliasPath = parent.getPath() + '/' + aliasName;
-                    }
-                    final Resource aliasedChild = getAbsoluteResourceInternal(parent, ResourceUtil.normalize(aliasPath), EMPTY_PARAMETERS, true );
-                    logger.debug("getChildInternal: Found Resource {} with alias {} to use", aliasedChild, childName);
-                    return aliasedChild;
+            final Optional<String> aliasedResourceName = factory.getMapEntries().getAliasMap(parent.getPath()).entrySet()
+                    .stream().filter(e -> e.getValue().contains(childName)).findFirst().map(Map.Entry::getKey);
+            if (aliasedResourceName.isPresent()) {
+                final String aliasPath;
+                if ( aliasedResourceName.get().startsWith("/") ) {
+                    aliasPath = aliasedResourceName.get();
+                } else {
+                    aliasPath = parent.getPath() + '/' + aliasedResourceName.get();
                 }
+                final Resource aliasedChild = getAbsoluteResourceInternal(parent, ResourceUtil.normalize(aliasPath), EMPTY_PARAMETERS, true );
+                logger.debug("getChildInternal: Found Resource {} with alias {} to use", aliasedChild, childName);
+                return aliasedChild;
             }
         } else {
             if ( this.factory.isOptimizeAliasResolutionEnabled() ) {

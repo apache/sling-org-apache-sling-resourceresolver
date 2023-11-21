@@ -27,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
@@ -287,16 +288,7 @@ public class ResourceMapperImpl implements ResourceMapper {
     	}
     	String name = ResourceUtil.getName(path);
 
-    	final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
-
-    	if ( aliases == null || !aliases.containsValue(name) ) 
-    		return Collections.emptyList();
-
-    	return new LinkedHashMap<>(aliases).entrySet().stream()
-    			.filter( e -> name.contentEquals(e.getValue()) )
-    			.map( Entry::getKey )
-    			.collect(Collectors.toList());
-
+    	return mapEntries.getAliasMap(parentPath).getOrDefault(name, Collections.emptyList());
     }
 
     private void populateMappingsFromMapEntries(List<String> mappings, List<String> mappedPathList,
