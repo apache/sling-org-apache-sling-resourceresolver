@@ -59,8 +59,8 @@ public interface MapEntriesHandler {
         }
 
         @Override
-        public ConcurrentMap<String, List<String>> getAliasMap(String parentPath) {
-            return new ConcurrentHashMap<>();
+        public Map<String, Collection<String>> getAliasMap(String parentPath) {
+            return Collections.emptyMap();
         }
 
         @Override
@@ -98,7 +98,7 @@ public interface MapEntriesHandler {
      * @param parentPath the parent path
      * @return a map of all child alias entries, possibly empty
      */
-    @NotNull ConcurrentMap<String, List<String>> getAliasMap(@NotNull String parentPath);
+    @NotNull Map<String, Collection<String>> getAliasMap(@NotNull String parentPath);
 
     /**
      * Creates an iterator over the possibly applicable mapping entries for resolving a resource

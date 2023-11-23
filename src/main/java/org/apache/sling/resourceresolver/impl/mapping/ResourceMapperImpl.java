@@ -225,7 +225,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         if (this.mapEntries.isOptimizeAliasResolutionEnabled()) {
         	// this code path avoids any creation of Sling Resource objects
         	while (path != null) {
-	            List<String> aliases = Collections.emptyList();
+	            Collection<String> aliases = Collections.emptyList();
 	            // read alias only if we can read the resources and it's not a jcr:content leaf
 	            if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
 	                aliases = readAliasesOptimized(path);
@@ -280,7 +280,7 @@ public class ResourceMapperImpl implements ResourceMapper {
      * @param path
      * @return
      */
-    private List<String> readAliasesOptimized(String path) {
+    private Collection<String> readAliasesOptimized(String path) {
     	logger.debug("map: Optimize Alias Resolution is Enabled");
     	String parentPath = ResourceUtil.getParent(path);
     	if ( parentPath == null ) {

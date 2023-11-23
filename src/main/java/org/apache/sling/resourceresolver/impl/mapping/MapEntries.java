@@ -68,7 +68,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -145,7 +144,7 @@ public class MapEntries implements
     /**
      * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
      */
-    private ConcurrentMap<String, ConcurrentMap<String, List<String>>> aliasMapsMap;
+    private Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
     private final AtomicLong aliasResourcesOnStartup;
 
@@ -241,7 +240,7 @@ public class MapEntries implements
             //optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final ConcurrentMap<String, ConcurrentMap<String, List<String>>> loadedMap = this.loadAliases(resolver);
+                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver);
                     this.aliasMapsMap = loadedMap;
     
                 } catch (final Exception e) {
@@ -483,7 +482,7 @@ public class MapEntries implements
 
         this.initializing.lock();
         try {
-            final Map<String, List<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
+            final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
                 this.refreshResolverIfNecessary(resolverRefreshed);
 
@@ -593,7 +592,7 @@ public class MapEntries implements
             final String containingResourceName = containingResource.getName();
             final String parentPath = ResourceUtil.getParent(containingResource.getPath());
 
-            final Map<String, List<String>> aliasMapEntry = parentPath == null ? null : aliasMapsMap.get(parentPath);
+            final Map<String, Collection<String>> aliasMapEntry = parentPath == null ? null : aliasMapsMap.get(parentPath);
             if (aliasMapEntry != null) {
                 aliasMapEntry.remove(containingResourceName);
                 if (aliasMapEntry.isEmpty()) {
@@ -702,9 +701,9 @@ public class MapEntries implements
     }
     
     @Override
-    public @NotNull ConcurrentMap<String, List<String>> getAliasMap(final String parentPath) {
-        ConcurrentMap<String, List<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
-        return aliasMapForParent != null ? aliasMapForParent : new ConcurrentHashMap<>();
+    public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
+        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
+        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
     }
 
     @Override
@@ -1149,8 +1148,8 @@ public class MapEntries implements
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
-    private ConcurrentMap<String, ConcurrentMap<String, List<String>>> loadAliases(final ResourceResolver resolver) {
-        final ConcurrentMap<String, ConcurrentMap<String, List<String>>> map = new ConcurrentHashMap<>();
+    private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver) {
+        final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
         final String queryString = generateAliasQuery();
 
         log.debug("start alias query: {}", queryString);
@@ -1204,7 +1203,7 @@ public class MapEntries implements
     /**
      * Load alias given a resource
      */
-    private boolean loadAlias(final Resource resource, ConcurrentMap<String, ConcurrentMap<String, List<String>>> map) {
+    private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map) {
 
         // resource containing the alias
         final Resource containingResource;
@@ -1241,14 +1240,14 @@ public class MapEntries implements
                     if (isAliasValid(alias)) {
                         log.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.", alias, parentPath);
                     } else {
-                        ConcurrentMap<String, List<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
+                        Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
                         Optional<String> currentResourceName = parentMap.entrySet().stream().filter(entry -> entry.getValue().contains(alias)).findFirst().map(Map.Entry::getKey);
                         if (currentResourceName.isPresent()) {
                             log.warn(
                                     "Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.",
                                     alias, parentPath, currentResourceName.get(), resourceName);
                         } else {
-                            List<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
+                            Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
                             existingAliases.add(alias);
                             hasAlias = true;
                         }

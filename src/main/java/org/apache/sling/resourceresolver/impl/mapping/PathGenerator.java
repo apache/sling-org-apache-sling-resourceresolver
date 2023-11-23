@@ -19,6 +19,7 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -74,7 +75,7 @@ public class PathGenerator {
      * @param alias the list of aliases
      * @param name the name
      */
-    public void insertSegment(@NotNull List<String> alias, @NotNull String name) {
+    public void insertSegment(@NotNull Collection<String> alias, @NotNull String name) {
         
         List<String> filtered = Stream.concat(alias.stream(), Stream.of(name) )
             .filter( e -> e != null && ! e.isEmpty() )
