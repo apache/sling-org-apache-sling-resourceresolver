@@ -24,10 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -223,7 +220,7 @@ public class ResourceMapperImpl implements ResourceMapper {
         if (this.mapEntries.isOptimizeAliasResolutionEnabled()) {
         	// this code path avoids any creation of Sling Resource objects
         	while (path != null) {
-	            List<String> aliases = Collections.emptyList();
+	            Collection<String> aliases = Collections.emptyList();
 	            // read alias only if we can read the resources and it's not a jcr:content leaf
 	            if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
 	                aliases = readAliasesOptimized(path);
@@ -278,7 +275,7 @@ public class ResourceMapperImpl implements ResourceMapper {
      * @param path
      * @return
      */
-    private List<String> readAliasesOptimized(String path) {
+    private Collection<String> readAliasesOptimized(String path) {
     	logger.debug("map: Optimize Alias Resolution is Enabled");
     	String parentPath = ResourceUtil.getParent(path);
     	if ( parentPath == null ) {
@@ -286,16 +283,7 @@ public class ResourceMapperImpl implements ResourceMapper {
     	}
     	String name = ResourceUtil.getName(path);
 
-    	final Map<String, String> aliases = mapEntries.getAliasMap(parentPath);
-
-    	if ( aliases == null || !aliases.containsValue(name) ) 
-    		return Collections.emptyList();
-
-    	return aliases.entrySet().stream()
-    			.filter( e -> name.contentEquals(e.getValue()) )
-    			.map( Entry::getKey )
-    			.collect(Collectors.toList());
-
+    	return mapEntries.getAliasMap(parentPath).getOrDefault(name, Collections.emptyList());
     }
 
     private void populateMappingsFromMapEntries(List<String> mappings, List<String> mappedPathList,

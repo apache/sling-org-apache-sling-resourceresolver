@@ -57,7 +57,7 @@ public interface MapEntriesHandler {
         }
 
         @Override
-        public Map<String, String> getAliasMap(String parentPath) {
+        public Map<String, Collection<String>> getAliasMap(String parentPath) {
             return Collections.emptyMap();
         }
 
@@ -89,14 +89,14 @@ public interface MapEntriesHandler {
     void logDisableAliasOptimization();
 
     /**
-     * Returns all alias entries that for children of the specified <code>parentPath</code>
+     * Returns all alias entries for children of the specified <code>parentPath</code>
      *
-     * <p>The returned map has resource names as keys and aliases as values.</p>
+     * <p>The returned map has resource names as keys and the assigned aliases as values.</p>
      *
      * @param parentPath the parent path
      * @return a map of all child alias entries, possibly empty
      */
-    @NotNull Map<String, String> getAliasMap(@NotNull String parentPath);
+    @NotNull Map<String, Collection<String>> getAliasMap(@NotNull String parentPath);
 
     /**
      * Creates an iterator over the possibly applicable mapping entries for resolving a resource
