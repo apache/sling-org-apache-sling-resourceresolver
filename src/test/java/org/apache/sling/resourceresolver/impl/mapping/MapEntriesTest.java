@@ -161,7 +161,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
-        mapEntries = /*Mockito.spy(*/new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);//);
+        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
 
