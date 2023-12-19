@@ -1288,50 +1288,58 @@ public class MapEntries implements
         return it;
     }
 
+    /**
+     * Utility class for running paged queries.
+     */
     private class PagedQueryIterator implements Iterator<Resource> {
 
         private ResourceResolver resolver;
+        private String name;
+        private String propertyName;
         private String query;
-        private String lastPath = "";
+        private String lastValue = "";
         private Iterator<Resource> it;
         private int count = 0;
         private int page = 0;
-        private int pageSize = Integer.getInteger("sling.vanityPath.pageSize", 2000);
+        private int pageSize;
         private Resource next = null;
 
-        public PagedQueryIterator(ResourceResolver resolver, String query) {
+        public PagedQueryIterator(String name, String propertyName, ResourceResolver resolver, String query, int pageSize) {
+            this.name = name;
+            this.propertyName = propertyName;
             this.resolver = resolver;
             this.query = query;
+            this.pageSize = pageSize;
             nextPage();
         }
 
         private void nextPage() {
             count = 0;
-            String tquery = String.format(query, queryLiteral(lastPath));
-            log.debug("start vanity path query (page {}): {}", page, tquery);
+            String tquery = String.format(query, queryLiteral(lastValue));
+            log.debug("start {} query (page {}): {}", name, page, tquery);
             long queryStart = System.nanoTime();
             this.it = resolver.findResources(tquery, "JCR-SQL2");
             long queryElapsed = System.nanoTime() - queryStart;
-            log.debug("end vanity path query (page {}); elapsed {}ms", page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+            log.debug("end {} query (page {}); elapsed {}ms", name, page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
             page += 1;
         }
 
         private Resource getNext() throws NoSuchElementException {
             Resource resource = it.next();
             count += 1;
-            final String[] paths = resource.getValueMap().get(PROP_VANITY_PATH, new String[0]);
-            if (paths.length > 0) {
-                String p = paths[0];
-                if (p.compareTo(lastPath) < 0) {
+            final String[] values = resource.getValueMap().get(propertyName, new String[0]);
+            if (values.length > 0) {
+                String value = values[0];
+                if (value.compareTo(lastValue) < 0) {
                     String message = String.format(
-                            "unexpected query result in page %d, vanity path of '%s' despite querying for > '%s'", (page - 1), p,
-                            lastPath);
+                            "unexpected query result in page %d, {} of '%s' despite querying for > '%s'", (page - 1), propertyName, value,
+                            lastValue);
                     log.error(message);
                     throw new RuntimeException(message);
                 }
                 // start next page?
-                if (count > pageSize && !p.equals(lastPath)) {
-                    lastPath = p;
+                if (count > pageSize && !value.equals(lastValue)) {
+                    lastValue = value;
                     nextPage();
                 }
             }
@@ -1374,7 +1382,8 @@ public class MapEntries implements
         Iterator<Resource> it;
         try {
             final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) > '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator(resolver, queryStringWithSort);
+            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort,
+                    Integer.getInteger("sling.vanityPath.pageSize", 2000));
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
             supportsSort = false;
