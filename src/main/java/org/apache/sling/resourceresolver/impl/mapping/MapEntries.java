@@ -1332,9 +1332,8 @@ public class MapEntries implements
             if (values.length > 0) {
                 String value = values[0];
                 if (value.compareTo(lastValue) < 0) {
-                    String message = String.format(
-                            "unexpected query result in page %d, {} of '%s' despite querying for > '%s'", (page - 1), propertyName, value,
-                            lastValue);
+                    String message = String.format("unexpected query result in page %d, %s of '%s' despite querying for > '%s'",
+                            (page - 1), propertyName, value, lastValue);
                     log.error(message);
                     throw new RuntimeException(message);
                 }
