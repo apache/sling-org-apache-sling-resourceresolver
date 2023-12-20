@@ -1306,7 +1306,7 @@ public class MapEntries implements
         private String[] defaultValue = new String[0];
 
         /**
-         * @param subject name of the query
+         * @param subject name of the query, will be used only for logging
          * @param propertyName name of multivalued string property to query on
          * @param resolver resource resolver
          * @param query query string in SQL2 syntax
