@@ -1294,7 +1294,7 @@ public class MapEntries implements
     private class PagedQueryIterator implements Iterator<Resource> {
 
         private ResourceResolver resolver;
-        private String name;
+        private String subject;
         private String propertyName;
         private String query;
         private String lastValue = "";
@@ -1305,8 +1305,15 @@ public class MapEntries implements
         private Resource next = null;
         private String[] defaultValue = new String[0];
 
-        public PagedQueryIterator(String name, String propertyName, ResourceResolver resolver, String query, int pageSize) {
-            this.name = name;
+        /**
+         * @param subject name of the query
+         * @param propertyName name of multivalued string property to query on
+         * @param resolver resource resolver
+         * @param query query string in SQL2 syntax
+         * @param pageSize page size (start a new query after page size is exceeded)
+         */
+        public PagedQueryIterator(String subject, String propertyName, ResourceResolver resolver, String query, int pageSize) {
+            this.subject = subject;
             this.propertyName = propertyName;
             this.resolver = resolver;
             this.query = query;
@@ -1317,11 +1324,11 @@ public class MapEntries implements
         private void nextPage() {
             count = 0;
             String tquery = String.format(query, queryLiteral(lastValue));
-            log.debug("start {} query (page {}): {}", name, page, tquery);
+            log.debug("start {} query (page {}): {}", subject, page, tquery);
             long queryStart = System.nanoTime();
             this.it = resolver.findResources(tquery, "JCR-SQL2");
             long queryElapsed = System.nanoTime() - queryStart;
-            log.debug("end {} query (page {}); elapsed {}ms", name, page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+            log.debug("end {} query (page {}); elapsed {}ms", subject, page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
             page += 1;
         }
 
@@ -1339,7 +1346,7 @@ public class MapEntries implements
                 }
                 // start next page?
                 if (count > pageSize && !value.equals(lastValue)) {
-                    log.debug("read {} query (page {}); {} entries", name, page, count);
+                    log.debug("read {} query (page {}); {} entries", subject, page, count);
                     lastValue = value;
                     nextPage();
                 }
