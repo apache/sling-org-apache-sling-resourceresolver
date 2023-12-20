@@ -1303,6 +1303,7 @@ public class MapEntries implements
         private int page = 0;
         private int pageSize;
         private Resource next = null;
+        private String[] defaultValue = new String[0];
 
         public PagedQueryIterator(String name, String propertyName, ResourceResolver resolver, String query, int pageSize) {
             this.name = name;
@@ -1327,7 +1328,7 @@ public class MapEntries implements
         private Resource getNext() throws NoSuchElementException {
             Resource resource = it.next();
             count += 1;
-            final String[] values = resource.getValueMap().get(propertyName, new String[0]);
+            final String[] values = resource.getValueMap().get(propertyName, defaultValue);
             if (values.length > 0) {
                 String value = values[0];
                 if (value.compareTo(lastValue) < 0) {
@@ -1339,6 +1340,7 @@ public class MapEntries implements
                 }
                 // start next page?
                 if (count > pageSize && !value.equals(lastValue)) {
+                    log.debug("read {} query (page {}); {} entries", name, page, count);
                     lastValue = value;
                     nextPage();
                 }
