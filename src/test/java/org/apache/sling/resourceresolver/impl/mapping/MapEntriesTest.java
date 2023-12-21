@@ -187,7 +187,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(result.getName()).thenReturn("child");
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -224,7 +224,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(secondResult.getName()).thenReturn("child2");
         when(secondResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
@@ -2279,7 +2279,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
                 String query = StringUtils.trim((String)invocation.getArguments()[0]);
-                assertEquals("SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,'/jcr:system')) AND sling:alias IS NOT NULL", query);
+                assertEquals("SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL", query);
                 return Collections.<Resource> emptySet().iterator();
             }
         });

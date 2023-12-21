@@ -105,7 +105,7 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
 
                 // we don't explicitly filter paths under jcr:system, but we don't expect to have such resources either
                 // and this stub provider is not the proper location to test JCR queries
-                if  ( "sql".equals(language) && "SELECT sling:alias FROM nt:base AS page WHERE (NOT ISDESCENDANTNODE(page,'/jcr:system')) AND sling:alias IS NOT NULL".equals(query) ) {
+                if  ( "JCR-SQL2".equals(language) && "SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL".equals(query) ) {
                     return resourcesWithProperty(ctx, "sling:alias")
                         .iterator();
                 }

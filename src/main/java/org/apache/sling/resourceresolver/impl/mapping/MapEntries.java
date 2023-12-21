@@ -112,8 +112,6 @@ public class MapEntries implements
 
     private static final String JCR_SYSTEM_PREFIX = JCR_SYSTEM_PATH + '/';
 
-    static final String ALIAS_BASE_QUERY_DEFAULT = "SELECT sling:alias FROM nt:base AS page";
-
     static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /** default log */
@@ -1154,7 +1152,7 @@ public class MapEntries implements
 
         log.debug("start alias query: {}", queryString);
         long queryStart = System.nanoTime();
-        final Iterator<Resource> i = resolver.findResources(queryString, "sql");
+        final Iterator<Resource> i = resolver.findResources(queryString, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
         log.debug("end alias query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
 
@@ -1178,25 +1176,24 @@ public class MapEntries implements
     private String generateAliasQuery() {
         final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
-        StringBuilder baseQuery = new StringBuilder(ALIAS_BASE_QUERY_DEFAULT);
-        baseQuery.append(" ").append("WHERE");
+        StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
 
         if (allowedLocations.isEmpty()) {
             String jcrSystemPath = StringUtils.removeEnd(JCR_SYSTEM_PREFIX, "/");
-            baseQuery.append(" (").append("NOT ISDESCENDANTNODE(page,'").append(queryLiteral(jcrSystemPath)).append("'))");
+            baseQuery.append(" NOT isdescendantnode('").append(queryLiteral(jcrSystemPath)).append("')");
         } else {
             Iterator<String> pathIterator = allowedLocations.iterator();
-            baseQuery.append("(");
+            baseQuery.append(" (");
             String sep = "";
             while (pathIterator.hasNext()) {
                 String prefix = pathIterator.next();
-                baseQuery.append(sep).append("ISDESCENDANTNODE(page,'").append(queryLiteral(prefix)).append("')");
+                baseQuery.append(sep).append("isdescendantnode('").append(queryLiteral(prefix)).append("')");
                 sep = " OR ";
             }
             baseQuery.append(")");
         }
 
-        baseQuery.append(" AND sling:alias IS NOT NULL");
+        baseQuery.append(" AND [sling:alias] IS NOT NULL");
         return baseQuery.toString();
     }
 
