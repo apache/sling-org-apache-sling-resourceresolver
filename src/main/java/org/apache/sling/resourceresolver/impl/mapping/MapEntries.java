@@ -1148,19 +1148,26 @@ public class MapEntries implements
      */
     private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver) {
         final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
-        final String queryString = generateAliasQuery();
+        final String baseQueryString = generateAliasQuery();
 
-        log.debug("start alias query: {}", queryString);
-        long queryStart = System.nanoTime();
-        final Iterator<Resource> i = resolver.findResources(queryString, "JCR-SQL2");
-        long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end alias query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        Iterator<Resource> it;
+        try {
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:alias]) > '%s' ORDER BY FIRST([sling:alias])";
+            it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort,
+                    Integer.getInteger("sling.alias.pageSize", 2000));
+        } catch (QuerySyntaxException ex) {
+            log.debug("sort with first() not supported, falling back to base query", ex);
+            it = queryUnpaged("alias", baseQueryString);
+        } catch (UnsupportedOperationException ex) {
+            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+            it = queryUnpaged("alias", baseQueryString);
+        }
 
         long count = 0;
         long processStart = System.nanoTime();
-        while (i.hasNext()) {
+        while (it.hasNext()) {
             count += 1;
-            loadAlias(i.next(), map);
+            loadAlias(it.next(), map);
         }
         long processElapsed = System.nanoTime() - processStart;
         log.debug("processed {} resources with sling:alias properties in {}ms", count, TimeUnit.NANOSECONDS.toMillis(processElapsed));
@@ -1276,12 +1283,12 @@ public class MapEntries implements
         return invalid;
     }
 
-    private Iterator<Resource> queryAllVanityPaths(String query) {
-        log.debug("start vanityPath query: {}", query);
+    private Iterator<Resource> queryUnpaged(String subject, String query) {
+        log.debug("start {} query: {}", subject, query);
         long queryStart = System.nanoTime();
         final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end vanityPath query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        log.debug("end {} query; elapsed {}ms", subject, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
         return it;
     }
 
@@ -1392,11 +1399,11 @@ public class MapEntries implements
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
             supportsSort = false;
-            it = queryAllVanityPaths(baseQueryString);
+            it = queryUnpaged("vanity path", baseQueryString);
         } catch (UnsupportedOperationException ex) {
             log.debug("query failed as unsupported, retrying without paging/sorting", ex);
             supportsSort = false;
-            it = queryAllVanityPaths(baseQueryString);
+            it = queryUnpaged("vanity path", baseQueryString);
         }
 
         long count = 0;
