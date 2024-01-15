@@ -354,7 +354,7 @@ public class MapEntries implements
                 long initElapsed = System.nanoTime() - initStart;
                 long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
                 log.info(
-                        "vanity path initialization - end, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
+                        "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
                         vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
             } catch (LoginException ex) {
                 log.error("Vanity path init failed", ex);
@@ -1174,8 +1174,8 @@ public class MapEntries implements
         }
         long processElapsed = System.nanoTime() - processStart;
         long resourcePerSecond = (count * TimeUnit.SECONDS.toNanos(1) / (processElapsed == 0 ? 1 : processElapsed));
-        log.info("alias initialization - end, processed {} resources with sling:alias properties in {}ms (~{} resource/s)", count,
-                TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond);
+        log.info("alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s)",
+                count, TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond);
 
         this.aliasResourcesOnStartup.set(count);
 
