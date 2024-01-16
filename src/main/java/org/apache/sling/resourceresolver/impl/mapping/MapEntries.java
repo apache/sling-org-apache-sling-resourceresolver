@@ -352,7 +352,10 @@ public class MapEntries implements
                 drainQueue(resourceChangeQueue);
 
                 long initElapsed = System.nanoTime() - initStart;
-                log.info("vanity path initialization - end, elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(initElapsed));
+                long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
+                log.info(
+                        "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
+                        vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
             } catch (LoginException ex) {
                 log.error("Vanity path init failed", ex);
             } finally {
@@ -1162,6 +1165,7 @@ public class MapEntries implements
             it = queryUnpaged("alias", baseQueryString);
         }
 
+        log.debug("alias initialization - start");
         long count = 0;
         long processStart = System.nanoTime();
         while (it.hasNext()) {
@@ -1169,7 +1173,9 @@ public class MapEntries implements
             loadAlias(it.next(), map);
         }
         long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} resources with sling:alias properties in {}ms", count, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        long resourcePerSecond = (count * TimeUnit.SECONDS.toNanos(1) / (processElapsed == 0 ? 1 : processElapsed));
+        log.info("alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s)",
+                count, TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond);
 
         this.aliasResourcesOnStartup.set(count);
 
