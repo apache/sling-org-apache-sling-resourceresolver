@@ -222,6 +222,7 @@ public class MapEntries implements
      * Actual initializer. Guards itself against concurrent use by using a
      * ReentrantLock. Does nothing if the resource resolver has already been
      * null-ed.
+     * @return true if the optimizedAliasResolution is enabled, false otherwise
      */
     protected boolean doInit() {
 
@@ -270,7 +271,7 @@ public class MapEntries implements
      * using a ReentrantLock. Does nothing if the resource resolver has already
      * been null-ed.
      *
-     * @throws IOException
+     * @throws IOException in case of problems
      */
     protected void initializeVanityPaths() throws IOException {
         this.initializing.lock();

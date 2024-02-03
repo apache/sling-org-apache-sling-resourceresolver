@@ -80,6 +80,7 @@ public interface MapEntriesHandler {
     /**
      * Whether alias resolution optimization is enabled.
      * If it is enabled {@link #getAliasMap(String)} can be used.
+     * @return true if the optimizedAliasResolution should be used, false otherwise
      */
     boolean isOptimizeAliasResolutionEnabled();
 
@@ -106,6 +107,7 @@ public interface MapEntriesHandler {
      *
      * <p>The iterator will iterate over the mapping entries in the order of the pattern length.</p>
      *
+     * @param requestPath  the requestPath
      * @return the map entry iterator
      */
     @NotNull Iterator<MapEntry> getResolveMapsIterator(@NotNull String requestPath);

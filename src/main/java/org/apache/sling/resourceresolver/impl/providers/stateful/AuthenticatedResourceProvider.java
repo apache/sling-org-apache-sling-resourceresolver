@@ -64,10 +64,10 @@ public class AuthenticatedResourceProvider {
 
     /**
      * Constructor
-     * @param providerHandler
-     * @param useRAS
-     * @param resolveContext
-     * @param tracker
+     * @param providerHandler the providerHandler
+     * @param useRAS useRAS
+     * @param resolveContext resolveContext
+     * @param tracker tracker
      */
     public AuthenticatedResourceProvider(@NotNull final ResourceProviderHandler providerHandler,
             final boolean useRAS,
@@ -133,6 +133,10 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#getResource(ResolveContext, String, ResourceContext, Resource)
+     * @param path the path
+     * @param parent parent
+     * @param parameters parameters
+     * @return the resource
      */
     public Resource getResource(final String path, final Resource parent, final Map<String, String> parameters) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -156,6 +160,8 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#listChildren(ResolveContext, Resource)
+     * @param parent parent
+     * @return the iterator
      */
     public Iterator<Resource> listChildren(final Resource parent) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -167,6 +173,7 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#getAttributeNames(ResolveContext)
+     * @param attributeNames attributeNames
      */
     public void getAttributeNames(final Set<String> attributeNames) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -180,6 +187,8 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#getAttribute(ResolveContext, String)
+     * @param name name
+     * @return the attribute
      */
     public Object getAttribute(final String name) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -191,6 +200,11 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#create(ResolveContext, String, Map)
+     * @param resolver the resolver
+     * @param path path
+     * @param properties properties
+     * @return the resource
+     * @throws PersistenceException in case of problems
      */
     public Resource create(final ResourceResolver resolver,
             final String path,
@@ -205,6 +219,11 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#orderBefore(ResolveContext, Resource, String, String)
+     * @param parent parent
+     * @param name name
+     * @param followingSiblingName followingSiblingName
+     * @return true if the order was changed, false if the order was correct already before
+     * @throws PersistenceException in case of problems
      */
     public boolean orderBefore(final @NotNull Resource parent, final @NotNull String name, final @Nullable String followingSiblingName) 
         throws PersistenceException {
@@ -218,6 +237,8 @@ public class AuthenticatedResourceProvider {
     
     /**
      * @see ResourceProvider#delete(ResolveContext, Resource)
+     * @param resource resource
+     * @throws PersistenceException in case of problems
      */
     public void delete(final Resource resource) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -240,6 +261,7 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#commit(ResolveContext)
+     * @throws PersistenceException in case of problems
      */
     public void commit() throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -250,6 +272,7 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#hasChanges(ResolveContext)
+     * @return true if there are transient changes
      */
     public boolean hasChanges() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -261,6 +284,7 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#getQueryLanguageProvider()
+     * @return the QueryLanguageProvider
      */
     private QueryLanguageProvider<Object> getQueryLanguageProvider() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -272,6 +296,7 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see QueryLanguageProvider#getSupportedLanguages(ResolveContext)
+     * @return array with the support query languages
      */
     public String[] getSupportedLanguages() {
         final QueryLanguageProvider<Object> jcrQueryProvider = getQueryLanguageProvider();
@@ -283,6 +308,9 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see QueryLanguageProvider#findResources(ResolveContext, String, String)
+     * @param query the query
+     * @param language the language of the query
+     * @return an iterator covering the found resources
      */
     public Iterator<Resource> findResources(final String query, final String language) {
         final QueryLanguageProvider<Object> jcrQueryProvider = getQueryLanguageProvider();
@@ -294,6 +322,9 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see QueryLanguageProvider#queryResources(ResolveContext, String, String)
+     * @param query the query
+     * @param language the language of the query
+     * @return a map with the result
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public Iterator<Map<String, Object>> queryResources(final String query, final String language) {
@@ -306,6 +337,9 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#adaptTo(ResolveContext, Class)
+     * @param type the type to convert to
+     * @param <AdapterType> the adapter target
+     * @return the adapter target or {code}null{code} if the adaption failed
      */
     public <AdapterType> AdapterType adaptTo(final Class<AdapterType> type) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -317,6 +351,10 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#copy(ResolveContext, String, String)
+     * @param srcAbsPath the absolute source path
+     * @param destAbsPath the absolute target path
+     * @return true if the copy succeeded, false otherwise
+     * @throws PersistenceException in case of problems
      */
     public boolean copy(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
@@ -328,6 +366,10 @@ public class AuthenticatedResourceProvider {
 
     /**
      * @see ResourceProvider#move(ResolveContext, String, String)
+     * @param srcAbsPath the absolute source path
+     * @param destAbsPath the absolute target path
+     * @return true if the move succeeded, false otherwise
+     * @throws PersistenceException in case of problems
      */
     public boolean move(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();

@@ -50,6 +50,8 @@ public class StarResource extends SyntheticResource {
     /**
      * True if a StarResource should be used for the given request, if a real
      * Resource was not found
+     * @param path the path 
+     * @return true if the StarResource should be used, false otherwise
      */
     public static boolean appliesTo(String path) {
         return path.contains(SLASH_STAR) || path.endsWith(SLASH_STAR);
@@ -58,6 +60,8 @@ public class StarResource extends SyntheticResource {
     /**
      * Returns true if the path of the resource ends with the
      * {@link #SLASH_STAR} and therefore should be considered a star resource.
+     * @param res the resource
+     * @return true if the StarResource should be used, false otherwise
      */
     public static boolean isStarResource(Resource res) {
         return res.getPath().endsWith(SLASH_STAR);
@@ -73,6 +77,7 @@ public class StarResource extends SyntheticResource {
      * Calls {@link org.apache.sling.api.resource.ResourceUtil#getResourceSuperType(ResourceResolver, String)}
      * method to dynamically resolve the resource super type of this star
      * resource.
+     * @return the resource supertype
      */
     @Override
     public String getResourceSuperType() {
@@ -93,7 +98,10 @@ public class StarResource extends SyntheticResource {
         return super.adaptTo(type);
     }
 
-    /** Get our ResourceMetadata for given path */
+    /** Get our ResourceMetadata for given path 
+     * @path the path
+     * @return the resource metadata for the given path
+     * */
     static ResourceMetadata getResourceMetadata(String path) {
         ResourceMetadata result = new ResourceMetadata();
 

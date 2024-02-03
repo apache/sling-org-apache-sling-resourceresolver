@@ -52,6 +52,8 @@ public class StringInterpolationProviderImpl
 
     /**
      * Activates this component (called by SCR before)
+     * @param bundleContext the bundleContext
+     * @param config the configuration
      */
     @Activate
     protected void activate(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
@@ -77,6 +79,8 @@ public class StringInterpolationProviderImpl
 
     /**
      * Modifies this component (called by SCR to update this component)
+     * @param bundleContext the bundleContext
+     * @param config the configuration
      */
     @Modified
     protected void modified(final BundleContext bundleContext, final StringInterpolationProviderConfiguration config) {
@@ -85,6 +89,7 @@ public class StringInterpolationProviderImpl
 
     /**
      * Deactivates this component (called by SCR to take out of service)
+     * @param bundleContext the bundleContext
      */
     @Deactivate
     protected void deactivate(final BundleContext bundleContext) {

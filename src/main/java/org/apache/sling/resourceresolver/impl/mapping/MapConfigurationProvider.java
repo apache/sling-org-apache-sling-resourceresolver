@@ -79,13 +79,14 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
     /**
      * A list of allow and deny list prefixes all ending with a slash.
      * If <code>null</code> is returned, all paths are allowed.
+     * @return the list of prefixes or {code}null{code}
      */
     List<VanityPathConfig> getVanityPathConfig();
 
     /**
      * A set of allow prefixes all ending with a slash.
      * If empty set is returned, all paths are allowed.
-     * @return
+     * @return the set of prefixes
      */
     Set<String> getAllowedAliasLocations();
 }
