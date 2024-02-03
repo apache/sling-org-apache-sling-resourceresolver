@@ -32,6 +32,11 @@ import org.junit.Test;
 
 public class MapEntryTest {
 
+    @Test public void test_regular_path() {
+        // regular paths should return null like the Javadoc says
+        assertNull(MapEntry.toURI("/the/path"));
+    }
+
     @Test public void test_to_url_http_80() {
         assertEqualUri("http://sling.apache.org", "http/sling.apache.org.80");
         assertEqualUri("http://sling.apache.org/", "http/sling.apache.org.80/");
