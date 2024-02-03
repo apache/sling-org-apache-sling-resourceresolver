@@ -123,6 +123,8 @@ public class MapEntry implements Comparable<MapEntry> {
      * URI of the form http://host:77/the/path where any potential default port
      * (80 for http and 443 for https) is actually removed. If the path is just
      * a regular path such as /the/path, this method returns <code>null</code>.
+     * @param uriPath the uripath
+     * @return the cleaned URI string
      */
     public static String toURI(final String uriPath) {
         for (int i = 0; i < PATH_TO_URL_MATCH.length; i++) {
