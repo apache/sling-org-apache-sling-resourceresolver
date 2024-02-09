@@ -304,8 +304,12 @@ public class MapEntries implements
 
         @Override
         public void run() {
-            temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
-            execute();
+            try {
+                temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
+                execute();
+            } catch (Throwable t) {
+                log.error("vanity path initializer thread terminated with a throwable", t);
+            }
         }
 
         private void drainQueue(List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
