@@ -303,11 +303,10 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      * @param handler The provider handler
      */
     private boolean activate(final ResourceProviderHandler handler) {
-        synchronized (this.handlers) {
-            updateProviderContext(handler);
-        }
+        updateProviderContext(handler);
         if ( !handler.activate() ) {
             logger.warn("Activating resource provider {} failed", handler.getInfo());
+            handler.getProviderContext().update(null, null);
             this.invalidProviders.put(handler.getInfo(), FailureReason.service_not_gettable);
 
             return false;
