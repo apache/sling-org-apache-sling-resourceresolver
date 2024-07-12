@@ -70,7 +70,7 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
 
         void providerAdded();
 
-        void providerRemoved(String name, String pid, boolean stateful, boolean used);
+        void providerRemoved(boolean stateful, boolean used);
     }
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -110,11 +110,7 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
             public void removedService(final ServiceReference<ResourceProvider> reference, final ServiceReference<ResourceProvider> ref) {
                 final ResourceProviderInfo info = infos.remove(ref);
                 if ( info != null ) {
-                    Object pid = ref.getProperty(Constants.SERVICE_PID);
-                    if ( pid != null && !(pid instanceof String) ) {
-                        pid = null;
-                    }
-                    unregister(info, (String)pid);
+                    unregister(info);
                 }
             }
 
@@ -170,68 +166,53 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      */
     private void register(final ResourceProviderInfo info) {
         if ( info.isValid() ) {
-           logger.debug("Registering new resource provider {}", info);
-           final List<ProviderEvent> events = new ArrayList<>();
-           boolean providerAdded = false;
-           ResourceProviderHandler deactivateHandler = null;
+            logger.debug("Registering new resource provider {}", info);
 
-           ResourceProviderHandler activate = null;
-           synchronized ( this.handlers ) {
-               final List<ResourceProviderHandler> matchingHandlers = this.handlers.computeIfAbsent(info.getPath(), key -> new ArrayList<>());
-               final ResourceProviderHandler handler = new ResourceProviderHandler(bundleContext, info);
-               matchingHandlers.add(handler);
-               Collections.sort(matchingHandlers);
-               if ( matchingHandlers.get(0) == handler ) {
-                   activate = handler;
-               }
-           }
-           if ( activate != null ) {
-               if ( this.activate(activate) ) {
-                   providerAdded = true;
-                   events.add(new ProviderEvent(true, info));
-                   synchronized ( this.handlers ) {
-                       storage = null;
-                       final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
-                       if ( matchingHandlers != null && matchingHandlers.size() > 1  ) {
-                           deactivateHandler = matchingHandlers.get(1);
-                       }
-                   }
-               } else {
-                   synchronized ( this.handlers ) {
-                       final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
-                       if ( matchingHandlers != null && !matchingHandlers.isEmpty() && matchingHandlers.remove(activate) ) {
-                           storage = null;
-                           if ( matchingHandlers.isEmpty() ) {
-                               this.handlers.remove(info.getPath());
-                           }
-                       }
-                   }
-               }
-           }
+            final List<ProviderEvent> events = new ArrayList<>();
+            boolean providerAdded = false;
+            ResourceProviderHandler deactivateHandler = null;
 
-           final ChangeListener cl = this.listener;
-           if ( providerAdded && cl != null ) {
-               cl.providerAdded();
-           }
-           // we have to check for deactivated handlers
-           if ( deactivateHandler != null ) {
-               final ResourceProviderInfo handlerInfo = deactivateHandler.getInfo();
-               if ( cl != null ) {
-                   Object pid = handlerInfo.getServiceReference().getProperty(Constants.SERVICE_PID);
-                   if ( pid != null && !(pid instanceof String) ) {
-                       pid = null;
-                   }
-                   cl.providerRemoved(handlerInfo.getName(), (String)pid,
-                               handlerInfo.getAuthType() != AuthType.no,
-                                       deactivateHandler.isUsed());
-               }
-               this.deactivate(deactivateHandler);
-               synchronized ( this.handlers ) {
-                   storage = null;
-               }
-               events.add(new ProviderEvent(false, handlerInfo));
-           }
-           this.postEvents(events);
+            final ResourceProviderHandler handler = new ResourceProviderHandler(bundleContext, info);
+
+            // update list of active handlers
+            synchronized ( this.handlers ) {
+                final List<ResourceProviderHandler> matchingHandlers = this.handlers.computeIfAbsent(info.getPath(), key -> new ArrayList<>());
+                matchingHandlers.add(handler);
+                Collections.sort(matchingHandlers);
+
+                if ( matchingHandlers.get(0) == handler ) {
+                    if ( this.activate(handler) ) {
+                        providerAdded = true;
+                        events.add(new ProviderEvent(true, info));
+                        synchronized ( this.handlers ) {
+                            storage = null;
+                            if (  matchingHandlers.size() > 1  ) {
+                                deactivateHandler = matchingHandlers.get(1);
+                                this.deactivate(deactivateHandler);
+                                events.add(new ProviderEvent(false, deactivateHandler.getInfo()));
+                            }
+                        }
+                    } else {
+                        matchingHandlers.remove(handler);
+                        if ( matchingHandlers.isEmpty() ) {
+                            this.handlers.remove(info.getPath());
+                        }
+                    }
+                }
+            }
+
+            // update change listener (only once)
+            final ChangeListener cl = this.listener;
+            if ( cl != null ) {
+                if ( deactivateHandler != null ) {
+                    cl.providerRemoved(deactivateHandler.getInfo().getAuthType() != AuthType.no, deactivateHandler.isUsed());
+                } else if ( providerAdded ) {
+                    cl.providerAdded();
+                }
+            }
+
+            // send events
+            this.postEvents(events);
         } else {
             logger.warn("Ignoring invalid resource provider {}", info);
             this.invalidProviders.put(info, FailureReason.invalid);
@@ -242,14 +223,12 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      * Unregister a resource provider.
      * @param info The resource provider info.
      */
-    private void unregister(final ResourceProviderInfo info, final String pid) {
-        final boolean isInvalid;
-        synchronized ( this.invalidProviders ) {
-            isInvalid = this.invalidProviders.remove(info) != null;
-        }
+    private void unregister(final ResourceProviderInfo info) {
+        final boolean isInvalid = this.invalidProviders.remove(info) != null;
 
         if ( !isInvalid ) {
             logger.debug("Unregistering resource provider {}", info);
+            final List<ProviderEvent> events = new ArrayList<>();
 
             // remove provider from handlers and if the provider is active (first handler)
             // keep the reference for deactivation
@@ -265,82 +244,55 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
                             it.remove();
                             if ( first ) {
                                 deactivateHandler = h;
+                                storage = null;
                             } else {
                                 h.dispose();
                             }
                             if (matchingHandlers.isEmpty()) {
                                 this.handlers.remove(info.getPath());
                             }
-                            storage = null;
 
                             break;
                         }
                         first = false;
                     }
                 }
-            }
+                if ( deactivateHandler != null ) {
+                    this.deactivate(deactivateHandler);
+                    deactivateHandler.dispose();
+                    events.add(new ProviderEvent(false, info));
 
-            if ( deactivateHandler != null ) {
-                final List<ProviderEvent> events = new ArrayList<>();
-                final ChangeListener cl = this.listener;
-                if ( cl != null ) {
-                    cl.providerRemoved(info.getName(), pid,
-                            info.getAuthType() != AuthType.no,
-                                    deactivateHandler.isUsed());
-                }
-                this.deactivate(deactivateHandler);
-                deactivateHandler.dispose();
-
-                // check if we can activate another handler
-                ResourceProviderHandler addingProvider = null;
-                synchronized ( this.handlers ) {
-                    final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
-                    if ( matchingHandlers != null ) {
-                        if ( matchingHandlers.isEmpty() ) {
-                            this.handlers.remove(info.getPath());
-                        } else {
-                            addingProvider = matchingHandlers.get(0);
-                        }
-                    }
-                }
-                boolean providerAdded = false;
-                while ( addingProvider != null ) {
-                    if (this.activate(addingProvider)) {
-                        events.add(new ProviderEvent(true, addingProvider.getInfo()));
-                        providerAdded = true;
-                        addingProvider = null;
-                        synchronized ( this.handlers ) {
-                            this.storage = null;
-                        }
-                    } else {
-                        synchronized ( this.handlers ) {
-                            final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
-                            if ( matchingHandlers != null && !matchingHandlers.isEmpty() ) {
-                                if ( matchingHandlers.get(0) == addingProvider ) {
-                                    this.storage = null;
-                                    matchingHandlers.remove(0);
-                                    addingProvider.dispose();
-                                    if ( matchingHandlers.isEmpty() ) {
-                                        this.handlers.remove(info.getPath());
-                                        addingProvider = null;
-                                    } else {
-                                        addingProvider = matchingHandlers.get(0);
-                                    }
+                    // check if we can activate another handler
+                    if ( !matchingHandlers.isEmpty() ) {
+                        ResourceProviderHandler addingProvider = matchingHandlers.get(0);
+                        while ( addingProvider != null ) {
+                            if (this.activate(addingProvider)) {
+                                events.add(new ProviderEvent(true, addingProvider.getInfo()));
+                                addingProvider = null;
+                            } else {
+                                matchingHandlers.remove(0);
+                                addingProvider.dispose();
+                                if ( matchingHandlers.isEmpty() ) {
+                                    this.handlers.remove(info.getPath());
+                                    addingProvider = null;
+                                } else {
+                                    addingProvider = matchingHandlers.get(0);
                                 }
                             }
                         }
-                    }
+                    }    
                 }
-
-                if ( providerAdded && cl != null ) {
-                    if ( cl != null ) {
-                        cl.providerAdded();
-                    }
-                }
-                events.add(new ProviderEvent(false,info));
-                this.postEvents(events);
-
             }
+
+            // update change listener (only once)
+            final ChangeListener cl = this.listener;
+            if ( cl != null ) {
+                cl.providerRemoved(info.getAuthType() != AuthType.no, deactivateHandler.isUsed());
+            }
+
+            // send events
+            this.postEvents(events);
+
         } else {
             logger.debug("Unregistering invalid resource provider {}", info);
         }
@@ -426,13 +378,11 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
                 }
             }
         }
-        synchronized ( this.invalidProviders ) {
-            for(final Map.Entry<ResourceProviderInfo, FailureReason> entry : this.invalidProviders.entrySet()) {
-                final ResourceProviderFailureDTO d = new ResourceProviderFailureDTO();
-                fill(d, entry.getKey());
-                d.reason = entry.getValue();
-                failures.add(d);
-            }
+        for(final Map.Entry<ResourceProviderInfo, FailureReason> entry : this.invalidProviders.entrySet()) {
+            final ResourceProviderFailureDTO d = new ResourceProviderFailureDTO();
+            fill(d, entry.getKey());
+            d.reason = entry.getValue();
+            failures.add(d);
         }
         dto.providers = dtos.toArray(new ResourceProviderDTO[dtos.size()]);
         dto.failedProviders = failures.toArray(new ResourceProviderFailureDTO[failures.size()]);

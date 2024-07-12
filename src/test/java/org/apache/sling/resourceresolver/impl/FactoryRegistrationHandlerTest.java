@@ -43,7 +43,6 @@ import static org.apache.sling.resourceresolver.util.events.ServiceEventUtil.unr
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
@@ -99,7 +98,7 @@ class FactoryRegistrationHandlerTest {
     void testFactoryRegistrationDeregistration() throws InterruptedException {
         final BundleContext bundleContext = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
-        when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+        when(preconditions.checkPreconditions()).thenReturn(true);
 
         try (FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
 
@@ -114,7 +113,7 @@ class FactoryRegistrationHandlerTest {
             }
 
             try (RecordingListener listener = RecordingListener.of(bundleContext)) {
-                factoryRegistrationHandler.maybeRegisterFactory(null, null);
+                factoryRegistrationHandler.maybeRegisterFactory();
                 listener.assertRecorded(RRF_REGISTRATION);
             }
         }
@@ -127,14 +126,14 @@ class FactoryRegistrationHandlerTest {
 
         try (FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
             try (final RecordingListener listener = RecordingListener.of(ctx)) {
-                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+                when(preconditions.checkPreconditions()).thenReturn(true);
                 factoryRegistrationHandler.configure(activator, preconditions);
                 listener.assertRecorded(RRF_REGISTRATION);
             }
 
             try (final RecordingListener listener = RecordingListener.of(ctx)) {
-                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(false);
-                factoryRegistrationHandler.maybeRegisterFactory(null, null);
+                when(preconditions.checkPreconditions()).thenReturn(false);
+                factoryRegistrationHandler.maybeRegisterFactory();
                 listener.assertRecorded(RRF_UNREGISTRATION);
             }
         }
@@ -145,7 +144,7 @@ class FactoryRegistrationHandlerTest {
     void testReconfigurationLeadingToUnregsitration() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
-        when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+        when(preconditions.checkPreconditions()).thenReturn(true);
 
         try (final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
             try (RecordingListener listener = RecordingListener.of(ctx)) {
@@ -155,7 +154,7 @@ class FactoryRegistrationHandlerTest {
 
             try (RecordingListener listener = RecordingListener.of(ctx)) {
                 final FactoryPreconditions failingPreconditions = mock(FactoryPreconditions.class); // new instance
-                when(failingPreconditions.checkPreconditions(isNull(), isNull())).thenReturn(false);
+                when(failingPreconditions.checkPreconditions()).thenReturn(false);
                 factoryRegistrationHandler.configure(activator, failingPreconditions);
                 listener.assertRecorded(RRF_UNREGISTRATION);
             }
@@ -165,7 +164,7 @@ class FactoryRegistrationHandlerTest {
     void testReconfigurationWithNoChanges() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
         final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
-        when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+        when(preconditions.checkPreconditions()).thenReturn(true);
 
         try (final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
             try (RecordingListener listener = RecordingListener.of(ctx)) {
@@ -187,14 +186,14 @@ class FactoryRegistrationHandlerTest {
         try (final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler()) {
             try (RecordingListener listener = RecordingListener.of(ctx)) {
                 final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
-                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+                when(preconditions.checkPreconditions()).thenReturn(true);
                 factoryRegistrationHandler.configure(activator, preconditions);
                 listener.assertRecorded(RRF_REGISTRATION);
             }
 
             try (RecordingListener listener = RecordingListener.of(ctx)) {
                 final FactoryPreconditions preconditions = mock(FactoryPreconditions.class);
-                when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+                when(preconditions.checkPreconditions()).thenReturn(true);
                 factoryRegistrationHandler.configure(activator, preconditions);
                 listener.assertRecorded(allOf(RRF_REREGISTRATION));
             }
@@ -208,13 +207,13 @@ class FactoryRegistrationHandlerTest {
         final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler();
 
         try (RecordingListener listener = RecordingListener.of(ctx)) {
-            when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(true);
+            when(preconditions.checkPreconditions()).thenReturn(true);
             factoryRegistrationHandler.configure(activator, preconditions);
             listener.assertRecorded(RRF_REGISTRATION);
         }
 
         try (RecordingListener listener = RecordingListener.of(ctx)) {
-            when(preconditions.checkPreconditions(isNull(), isNull())).thenReturn(false);
+            when(preconditions.checkPreconditions()).thenReturn(false);
             factoryRegistrationHandler.close();
             listener.assertRecorded(allOf(RRF_UNREGISTRATION));
 
