@@ -184,13 +184,11 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
                     if ( this.activate(handler) ) {
                         providerAdded = true;
                         events.add(new ProviderEvent(true, info));
-                        synchronized ( this.handlers ) {
-                            storage = null;
-                            if (  matchingHandlers.size() > 1  ) {
-                                deactivateHandler = matchingHandlers.get(1);
-                                this.deactivate(deactivateHandler);
-                                events.add(new ProviderEvent(false, deactivateHandler.getInfo()));
-                            }
+                        storage = null;
+                        if (  matchingHandlers.size() > 1  ) {
+                            deactivateHandler = matchingHandlers.get(1);
+                            this.deactivate(deactivateHandler);
+                            events.add(new ProviderEvent(false, deactivateHandler.getInfo()));
                         }
                     } else {
                         matchingHandlers.remove(handler);
