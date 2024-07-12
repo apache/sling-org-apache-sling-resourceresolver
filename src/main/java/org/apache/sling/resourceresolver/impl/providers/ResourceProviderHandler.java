@@ -86,9 +86,10 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
         if ( this.provider != null ) {
             this.provider.stop();
             this.provider = null;
-            this.context.update(null, null);
             this.bundleContext.ungetService(this.info.getServiceReference());
         }
+        this.context.update(null, null);
+        this.isUsed = false;
     }
 
     /**
