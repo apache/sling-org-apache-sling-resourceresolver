@@ -41,8 +41,8 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
 
     /**
      * Create a new handler
-     * @param bc   Bundle context to get the service.
      * @param info Resource provider info.
+     * @param provider The resource provider
      */
     public ResourceProviderHandler(final ResourceProviderInfo info, final ResourceProvider<Object> provider) {
         this.info = info;

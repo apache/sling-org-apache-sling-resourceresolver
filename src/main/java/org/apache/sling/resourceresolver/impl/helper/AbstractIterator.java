@@ -21,10 +21,14 @@ package org.apache.sling.resourceresolver.impl.helper;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+/**
+ * Abstract base class for an iterator
+ */
 public abstract class AbstractIterator<T> implements Iterator<T> {
 
     private T nextElement;
 
+    /** Abstract method to be overriden by subclasses */
     protected abstract T seek();
 
     @Override
@@ -49,5 +53,4 @@ public abstract class AbstractIterator<T> implements Iterator<T> {
     public void remove() {
         throw new UnsupportedOperationException();
     }
-
 }
