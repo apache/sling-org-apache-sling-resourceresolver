@@ -75,13 +75,10 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @SuppressWarnings("rawtypes")
-    private final Map<ServiceReference<ResourceProvider>, ResourceProviderInfo> infos = new ConcurrentHashMap<>();
-
     private volatile BundleContext bundleContext;
 
     @SuppressWarnings("rawtypes")
-    private volatile ServiceTracker<ResourceProvider, ServiceReference<ResourceProvider>> tracker;
+    private volatile ServiceTracker<ResourceProvider, ResourceProviderInfo> tracker;
 
     private final Map<String, List<ResourceProviderHandler>> handlers = new HashMap<>();
 
@@ -104,28 +101,22 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
         this.listener = listener;
         this.tracker = new ServiceTracker<>(bundleContext,
                 ResourceProvider.class,
-                new ServiceTrackerCustomizer<ResourceProvider, ServiceReference<ResourceProvider>>() {
+                new ServiceTrackerCustomizer<>() {
 
             @Override
-            public void removedService(final ServiceReference<ResourceProvider> reference, final ServiceReference<ResourceProvider> ref) {
-                final ResourceProviderInfo info = infos.remove(ref);
-                if ( info != null ) {
-                    unregister(info);
-                }
+            public void removedService(final ServiceReference<ResourceProvider> reference, final ResourceProviderInfo info) {
+                unregister(reference, info);
             }
 
             @Override
-            public void modifiedService(final ServiceReference<ResourceProvider> reference, final ServiceReference<ResourceProvider> service) {
-                removedService(reference, service);
+            public void modifiedService(final ServiceReference<ResourceProvider> reference, final ResourceProviderInfo info) {
+                removedService(reference, info);
                 addingService(reference);
             }
 
             @Override
-            public ServiceReference<ResourceProvider> addingService(final ServiceReference<ResourceProvider> reference) {
-                final ResourceProviderInfo info = new ResourceProviderInfo(reference);
-                infos.put(reference, info);
-                register(info);
-                return reference;
+            public ResourceProviderInfo addingService(final ServiceReference<ResourceProvider> reference) {
+                return register(reference);
             }
         });
         this.tracker.open();
@@ -139,7 +130,6 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
             this.tracker.close();
             this.tracker = null;
         }
-        this.infos.clear();
         this.handlers.clear();
         this.invalidProviders.clear();
     }
@@ -161,156 +151,160 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
     }
 
     /**
-     * Try to register a new resource provider.
-     * @param info The resource provider info.
+     * Register a new resource provider
+     * @param ref The service reference
      */
-    private void register(final ResourceProviderInfo info) {
-        if ( info.isValid() ) {
-            logger.debug("Registering new resource provider {}", info);
+    @SuppressWarnings("unchecked")
+    private ResourceProviderInfo register(@SuppressWarnings("rawtypes") final ServiceReference<ResourceProvider> ref) {
+        // create a info
+        final ResourceProviderInfo info = new ResourceProviderInfo(ref);
 
-            final List<ProviderEvent> events = new ArrayList<>();
-            boolean providerAdded = false;
-            ResourceProviderHandler deactivateHandler = null;
-
-            final ResourceProviderHandler handler = new ResourceProviderHandler(bundleContext, info);
-
-            // update list of active handlers
-            synchronized ( this.handlers ) {
-                final List<ResourceProviderHandler> matchingHandlers = this.handlers.computeIfAbsent(info.getPath(), key -> new ArrayList<>());
-                matchingHandlers.add(handler);
-                Collections.sort(matchingHandlers);
-
-                if ( matchingHandlers.get(0) == handler ) {
-                    if ( this.activate(handler) ) {
-                        providerAdded = true;
-                        events.add(new ProviderEvent(true, info));
-                        storage = null;
-                        if (  matchingHandlers.size() > 1  ) {
-                            deactivateHandler = matchingHandlers.get(1);
-                            this.deactivate(deactivateHandler);
-                            events.add(new ProviderEvent(false, deactivateHandler.getInfo()));
-                        }
-                    } else {
-                        matchingHandlers.remove(handler);
-                        if ( matchingHandlers.isEmpty() ) {
-                            this.handlers.remove(info.getPath());
-                        }
-                    }
-                }
-            }
-
-            // update change listener (only once)
-            final ChangeListener cl = this.listener;
-            if ( cl != null ) {
-                if ( deactivateHandler != null ) {
-                    cl.providerRemoved(deactivateHandler.getInfo().getAuthType() != AuthType.no, deactivateHandler.isUsed());
-                } else if ( providerAdded ) {
-                    cl.providerAdded();
-                }
-            }
-
-            // send events
-            this.postEvents(events);
-        } else {
+        // check validity
+        if ( !info.isValid() ) {
             logger.warn("Ignoring invalid resource provider {}", info);
             this.invalidProviders.put(info, FailureReason.invalid);
+        } else {
+            // get the service
+            ResourceProvider<Object> provider = null;
+            try {
+                provider = (ResourceProvider<Object>) this.bundleContext.getService(ref);
+            } catch (final IllegalStateException ise) {
+                // ignore
+            }
+            if ( provider == null ) {
+                logger.warn("Ignoring resource provider as the service is not gettable {}", info);
+                this.invalidProviders.put(info, FailureReason.service_not_gettable);
+            } else {
+                logger.debug("Registering new resource provider {}", info);
+                this.add(new ResourceProviderHandler(info, provider));
+            }
+        }
+        return info;
+    }
+
+    /**
+     * Unregister a resource provider
+     * @param ref The service reference
+     * @param info The resource provider info
+     */
+    private void unregister(@SuppressWarnings("rawtypes") final ServiceReference<ResourceProvider> ref, final ResourceProviderInfo info) {
+        final boolean isInvalid = this.invalidProviders.remove(info) != null;
+        if ( !isInvalid ) {
+            logger.debug("Unregistering resource provider {}", info);
+            this.remove(info);
+            try {
+                this.bundleContext.ungetService(ref);
+            } catch ( final IllegalStateException ise) {
+                // ignore
+            }
         }
     }
 
     /**
-     * Unregister a resource provider.
+     * Add a new resource provider.
+     * @param handler The resource provider handler
+     */
+    private void add(final ResourceProviderHandler handler) {
+        final List<ProviderEvent> events = new ArrayList<>();
+        boolean providerAdded = false;
+        ResourceProviderHandler deactivateHandler = null;
+
+        // update list of active handlers
+        synchronized ( this.handlers ) {
+            final List<ResourceProviderHandler> matchingHandlers = this.handlers.computeIfAbsent(handler.getInfo().getPath(), key -> new ArrayList<>());
+            matchingHandlers.add(handler);
+            Collections.sort(matchingHandlers);
+
+            if ( matchingHandlers.get(0) == handler ) {
+                this.storage = null;
+                providerAdded = true;
+                events.add(new ProviderEvent(true, handler.getInfo()));
+                this.activate(handler);
+                if (  matchingHandlers.size() > 1  ) {
+                    deactivateHandler = matchingHandlers.get(1);
+                    this.deactivate(deactivateHandler);
+                    events.add(new ProviderEvent(false, deactivateHandler.getInfo()));
+                }
+            }
+        }
+
+        // update change listener (only once)
+        final ChangeListener cl = this.listener;
+        if ( cl != null ) {
+            if ( deactivateHandler != null ) {
+                cl.providerRemoved(deactivateHandler.getInfo().getAuthType() != AuthType.no, deactivateHandler.isUsed());
+            } else if ( providerAdded ) {
+                cl.providerAdded();
+            }
+        }
+
+        // send events
+        this.postEvents(events);
+    }
+
+    /**
+     * Remove a resource provider.
      * @param info The resource provider info.
      */
-    private void unregister(final ResourceProviderInfo info) {
-        final boolean isInvalid = this.invalidProviders.remove(info) != null;
+    private void remove(final ResourceProviderInfo info) {
+        final List<ProviderEvent> events = new ArrayList<>();
 
-        if ( !isInvalid ) {
-            logger.debug("Unregistering resource provider {}", info);
-            final List<ProviderEvent> events = new ArrayList<>();
-
-            // remove provider from handlers and if the provider is active (first handler)
-            // keep the reference for deactivation
-            ResourceProviderHandler deactivateHandler = null;
-            synchronized (this.handlers) {
-                final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
-                if ( matchingHandlers != null ) {
-                    final Iterator<ResourceProviderHandler> it = matchingHandlers.iterator();
-                    boolean first = true;
-                    while (it.hasNext()) {
-                        final ResourceProviderHandler h = it.next();
-                        if (h.getInfo() == info) {
-                            it.remove();
-                            if ( first ) {
-                                deactivateHandler = h;
-                                storage = null;
-                            } else {
-                                h.dispose();
-                            }
-                            if (matchingHandlers.isEmpty()) {
-                                this.handlers.remove(info.getPath());
-                            }
-
-                            break;
+        // remove provider from handlers and if the provider is active (first handler)
+        // keep the reference for deactivation
+        ResourceProviderHandler deactivateHandler = null;
+        synchronized (this.handlers) {
+            final List<ResourceProviderHandler> matchingHandlers = this.handlers.get(info.getPath());
+            if ( matchingHandlers != null ) {
+                final Iterator<ResourceProviderHandler> it = matchingHandlers.iterator();
+                boolean first = true;
+                while (it.hasNext()) {
+                    final ResourceProviderHandler h = it.next();
+                    if (h.getInfo() == info) {
+                        it.remove();
+                        if ( first ) {
+                            this.storage = null;
+                            deactivateHandler = h;
                         }
-                        first = false;
+                        if (matchingHandlers.isEmpty()) {
+                            this.handlers.remove(info.getPath());
+                        }
+
+                        break;
                     }
-                }
-                if ( deactivateHandler != null ) {
-                    this.deactivate(deactivateHandler);
-                    deactivateHandler.dispose();
-                    events.add(new ProviderEvent(false, info));
-
-                    // check if we can activate another handler
-                    if ( !matchingHandlers.isEmpty() ) {
-                        ResourceProviderHandler addingProvider = matchingHandlers.get(0);
-                        while ( addingProvider != null ) {
-                            if (this.activate(addingProvider)) {
-                                events.add(new ProviderEvent(true, addingProvider.getInfo()));
-                                addingProvider = null;
-                            } else {
-                                matchingHandlers.remove(0);
-                                addingProvider.dispose();
-                                if ( matchingHandlers.isEmpty() ) {
-                                    this.handlers.remove(info.getPath());
-                                    addingProvider = null;
-                                } else {
-                                    addingProvider = matchingHandlers.get(0);
-                                }
-                            }
-                        }
-                    }    
+                    first = false;
                 }
             }
+            if ( deactivateHandler != null ) {
+                this.deactivate(deactivateHandler);
+                events.add(new ProviderEvent(false, info));
 
-            // update change listener (only once)
-            final ChangeListener cl = this.listener;
-            if ( cl != null ) {
-                cl.providerRemoved(info.getAuthType() != AuthType.no, deactivateHandler.isUsed());
+                // check if we can activate another handler
+                if ( !matchingHandlers.isEmpty() ) {
+                    final ResourceProviderHandler addingProvider = matchingHandlers.get(0);
+                    this.activate(addingProvider);
+                    events.add(new ProviderEvent(true, addingProvider.getInfo()));
+                }    
             }
-
-            // send events
-            this.postEvents(events);
-
-        } else {
-            logger.debug("Unregistering invalid resource provider {}", info);
         }
+
+        // update change listener (only once)
+        final ChangeListener cl = this.listener;
+        if ( cl != null ) {
+            cl.providerRemoved(info.getAuthType() != AuthType.no, deactivateHandler.isUsed());
+        }
+
+        // send events
+        this.postEvents(events);
     }
 
     /**
      * Activate a resource provider
      * @param handler The provider handler
      */
-    private boolean activate(final ResourceProviderHandler handler) {
+    private void activate(final ResourceProviderHandler handler) {
         updateProviderContext(handler);
-        if ( !handler.activate() ) {
-            logger.warn("Activating resource provider {} failed", handler.getInfo());
-            handler.getProviderContext().update(null, null);
-            this.invalidProviders.put(handler.getInfo(), FailureReason.service_not_gettable);
-
-            return false;
-        }
+        handler.activate();
         logger.debug("Activated resource provider {}", handler.getInfo());
-        return true;
     }
 
     /**

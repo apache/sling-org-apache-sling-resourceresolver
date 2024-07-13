@@ -21,24 +21,20 @@ package org.apache.sling.resourceresolver.impl.providers;
 import org.apache.sling.resourceresolver.impl.providers.tree.Pathable;
 import org.apache.sling.spi.resource.provider.ProviderContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
-import org.osgi.framework.BundleContext;
 
 /**
  * Holder for a resource provider service.
  */
 public class ResourceProviderHandler implements Comparable<ResourceProviderHandler>, Pathable {
 
-    /** The bundle context to get the provider. */
-    private volatile BundleContext bundleContext;
-
     /** The provider context. */
-    private volatile ProviderContextImpl context = new ProviderContextImpl();
+    private final ProviderContextImpl context = new ProviderContextImpl();
 
     /** The resource provider info. */
-    private volatile ResourceProviderInfo info;
+    private final ResourceProviderInfo info;
 
-    /** The resource provider. Only available if the provider is active. */
-    private volatile ResourceProvider<Object> provider;
+    /** The resource provider. */
+    private final ResourceProvider<Object> provider;
 
     /** Flag to indicate whether the service has been used. */
     private volatile boolean isUsed = false;
@@ -48,9 +44,9 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
      * @param bc   Bundle context to get the service.
      * @param info Resource provider info.
      */
-    public ResourceProviderHandler(final BundleContext bc, final ResourceProviderInfo info) {
+    public ResourceProviderHandler(final ResourceProviderInfo info, final ResourceProvider<Object> provider) {
         this.info = info;
-        this.bundleContext = bc;
+        this.provider = provider;
     }
 
     /**
@@ -62,20 +58,11 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
     }
 
     /**
-     * Activate this handler.
-     * Get the resource provider service from the service registry.
-     * @return {@code true} if the provider could be activated, {@code false} otherwise.
+     * Start the resource provder
      */
-    @SuppressWarnings("unchecked")
-    public boolean activate() {
-        if ( this.provider == null ) {
-            this.provider = (ResourceProvider<Object>) this.bundleContext.getService(this.info.getServiceReference());
-            if ( this.provider != null ) {
-                this.provider.start(context);
-            }
-            this.isUsed = false;
-        }
-        return this.provider != null;
+    public void activate() {
+        this.provider.start(context);
+        this.isUsed = false;
     }
 
     /**
@@ -83,22 +70,8 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
      * Unget the provider service.
      */
     public void deactivate() {
-        if ( this.provider != null ) {
-            this.provider.stop();
-            this.provider = null;
-            this.bundleContext.ungetService(this.info.getServiceReference());
-        }
+        this.provider.stop();
         this.context.update(null, null);
-        this.isUsed = false;
-    }
-
-    /**
-     * Clear all references.
-     */
-    public void dispose() {
-        this.info = null;
-        this.bundleContext = null;
-        this.context = null;
         this.isUsed = false;
     }
 
@@ -156,9 +129,7 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
      * Update the provider
      */
     public void update() {
-        if ( this.provider != null ) {
-            this.provider.update(ProviderContext.EXCLUDED_PATHS_CHANGED + ProviderContext.OBSERVATION_LISTENER_CHANGED);
-        }
+        this.provider.update(ProviderContext.EXCLUDED_PATHS_CHANGED + ProviderContext.OBSERVATION_LISTENER_CHANGED);
     }
 
     /**
