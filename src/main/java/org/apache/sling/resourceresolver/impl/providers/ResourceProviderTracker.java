@@ -78,11 +78,14 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
     private volatile BundleContext bundleContext;
 
     @SuppressWarnings("rawtypes")
-    private volatile ServiceTracker<ResourceProvider, ResourceProviderInfo> tracker;
+    private volatile ServiceTracker<ResourceProvider, ServiceReference<ResourceProvider>> tracker;
 
     private final Map<String, List<ResourceProviderHandler>> handlers = new HashMap<>();
 
     private final Map<ResourceProviderInfo, FailureReason> invalidProviders = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
+    private final Map<ServiceReference<ResourceProvider>, ResourceProviderInfo> providerInfos = new ConcurrentHashMap<>();
 
     private volatile EventAdmin eventAdmin;
 
@@ -104,19 +107,20 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
                 new ServiceTrackerCustomizer<>() {
 
             @Override
-            public void removedService(final ServiceReference<ResourceProvider> reference, final ResourceProviderInfo info) {
-                unregister(reference, info);
+            public void removedService(final ServiceReference<ResourceProvider> reference, final ServiceReference<ResourceProvider> tracked) {
+                unregister(reference);
             }
 
             @Override
-            public void modifiedService(final ServiceReference<ResourceProvider> reference, final ResourceProviderInfo info) {
-                removedService(reference, info);
+            public void modifiedService(final ServiceReference<ResourceProvider> reference, final ServiceReference<ResourceProvider> tracked) {
+                removedService(reference, tracked);
                 addingService(reference);
             }
 
             @Override
-            public ResourceProviderInfo addingService(final ServiceReference<ResourceProvider> reference) {
-                return register(reference);
+            public ServiceReference<ResourceProvider> addingService(final ServiceReference<ResourceProvider> reference) {
+                register(reference);
+                return reference;
             }
         });
         this.tracker.open();
@@ -155,9 +159,10 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      * @param ref The service reference
      */
     @SuppressWarnings("unchecked")
-    private ResourceProviderInfo register(@SuppressWarnings("rawtypes") final ServiceReference<ResourceProvider> ref) {
+    private void register(@SuppressWarnings("rawtypes") final ServiceReference<ResourceProvider> ref) {
         // create a info
         final ResourceProviderInfo info = new ResourceProviderInfo(ref);
+        this.providerInfos.put(ref, info);
 
         // check validity
         if ( !info.isValid() ) {
@@ -179,7 +184,6 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
                 this.add(new ResourceProviderHandler(info, provider));
             }
         }
-        return info;
     }
 
     /**
@@ -187,7 +191,11 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
      * @param ref The service reference
      * @param info The resource provider info
      */
-    private void unregister(@SuppressWarnings("rawtypes") final ServiceReference<ResourceProvider> ref, final ResourceProviderInfo info) {
+    private void unregister(@SuppressWarnings("rawtypes") final ServiceReference<ResourceProvider> ref) {
+        final ResourceProviderInfo info = this.providerInfos.remove(ref);
+        if (info == null) {
+            return; // this should never happen
+        }
         final boolean isInvalid = this.invalidProviders.remove(info) != null;
         if ( !isInvalid ) {
             logger.debug("Unregistering resource provider {}", info);
