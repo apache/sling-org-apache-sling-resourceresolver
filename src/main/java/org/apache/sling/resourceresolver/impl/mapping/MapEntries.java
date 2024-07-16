@@ -1224,10 +1224,15 @@ public class MapEntries implements
             containingResource = resource;
         }
 
+        if (containingResource == null) {
+            log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
+            return false;
+        }
+ 
         final Resource parent = containingResource.getParent();
 
         if (parent == null) {
-            log.debug("parent is null for alias on {}.", resource.getName());
+            log.warn("parent is null for alias on {}, skipping.", resource.getPath());
             return false;
         }
         else {
