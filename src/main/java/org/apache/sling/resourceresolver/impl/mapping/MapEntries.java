@@ -1231,7 +1231,7 @@ public class MapEntries implements
         final Resource parent = containingResource.getParent();
 
         if (parent == null) {
-            log.warn("parent is null for alias on {}, skipping.", resource.getPath());
+            log.warn("containing ancestor is null for alias on {}, skipping.", resource.getPath());
             return false;
         }
         else {
