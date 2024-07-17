@@ -1156,7 +1156,7 @@ public class MapEntries implements
 
         Iterator<Resource> it;
         try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:alias]) > '%s' ORDER BY FIRST([sling:alias])";
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:alias]) %s '%s' ORDER BY FIRST([sling:alias])";
             it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
@@ -1317,7 +1317,7 @@ public class MapEntries implements
 
         /**
          * @param subject name of the query, will be used only for logging
-         * @param propertyName name of multivalued string property to query on
+         * @param propertyName name of multivalued string property to query on (used for diagnostics)
          * @param resolver resource resolver
          * @param query query string in SQL2 syntax
          * @param pageSize page size (start a new query after page size is exceeded)
@@ -1333,7 +1333,10 @@ public class MapEntries implements
 
         private void nextPage() {
             count = 0;
-            String tquery = String.format(query, queryLiteral(lastValue));
+            // first query is ">=" to include empty property values, subsequent
+            // queries then use ">"
+            String op = lastValue.isEmpty() ? ">=" : ">";
+            String tquery = String.format(query, op, queryLiteral(lastValue));
             log.debug("start {} query (page {}): {}", subject, page, tquery);
             long queryStart = System.nanoTime();
             this.it = resolver.findResources(tquery, "JCR-SQL2");
@@ -1399,7 +1402,7 @@ public class MapEntries implements
         boolean supportsSort = true;
         Iterator<Resource> it;
         try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) > '%s' ORDER BY FIRST([sling:vanityPath])";
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) %s '%s' ORDER BY FIRST([sling:vanityPath])";
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
