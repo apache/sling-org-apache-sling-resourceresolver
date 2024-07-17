@@ -1220,15 +1220,14 @@ public class MapEntries implements
 
         if (JCR_CONTENT.equals(resource.getName())) {
             containingResource = resource.getParent();
+            if (containingResource == null) {
+                log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
+                return false;
+            }
         } else {
             containingResource = resource;
         }
 
-        if (containingResource == null) {
-            log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
-            return false;
-        }
- 
         final Resource parent = containingResource.getParent();
 
         if (parent == null) {
