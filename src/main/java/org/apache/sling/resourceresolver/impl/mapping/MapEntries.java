@@ -1306,7 +1306,7 @@ public class MapEntries implements
     /**
      * Utility class for running paged queries.
      */
-    private class PagedQueryIterator implements Iterator<Resource> {
+    protected class PagedQueryIterator implements Iterator<Resource> {
 
         private ResourceResolver resolver;
         private String subject;
