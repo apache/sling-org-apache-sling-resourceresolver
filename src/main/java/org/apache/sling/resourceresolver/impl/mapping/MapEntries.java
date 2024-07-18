@@ -354,6 +354,7 @@ public class MapEntries implements
 
                 long initElapsed = System.nanoTime() - initStart;
                 long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
+
                 log.info(
                         "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
                         vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
@@ -1361,8 +1362,8 @@ public class MapEntries implements
 
         private Resource getNext() throws NoSuchElementException {
             Resource resource = it.next();
-            final String[] values = resource.getValueMap().get(propertyName, defaultValue);
             count += 1;
+            final String[] values = resource.getValueMap().get(propertyName, defaultValue);
 
             if (values.length > 0) {
                 String value = values[0];
