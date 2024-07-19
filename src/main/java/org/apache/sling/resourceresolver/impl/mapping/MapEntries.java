@@ -1180,6 +1180,11 @@ public class MapEntries implements
         String diagnostics = "";
         if (it instanceof PagedQueryIterator) {
             PagedQueryIterator pit = (PagedQueryIterator)it;
+
+            if (pit.getWarning() != null) {
+                log.warn(pit.getWarning());
+            }
+
             diagnostics = pit.getStatistics();
         }
 
@@ -1432,13 +1437,17 @@ public class MapEntries implements
         }
 
         public String getStatistics() {
-            String result = String.format(" (max. page size: %d, number of pages: %d)", largestPage, page);
-            if (largestKeyCount > pageSize * 10) {
-                result += String.format(" - WARNING: largest number of aliases with the same 'first' selector exceeds expectations (value '%s' appears %d times)",
-                        largestKeyValue, largestKeyCount);
-            }
+            return String.format(" (max. page size: %d, number of pages: %d)", largestPage, page);
+        }
 
-            return result;
+        public String getWarning() {
+            if (largestKeyCount > pageSize * 10) {
+                return String.format(
+                        "Largest number of aliases with the same 'first' selector exceeds expectations (value '%s' appears %d times)",
+                        largestKeyValue, largestKeyCount);
+            } else {
+                return null;
+            }
         }
     }
 
