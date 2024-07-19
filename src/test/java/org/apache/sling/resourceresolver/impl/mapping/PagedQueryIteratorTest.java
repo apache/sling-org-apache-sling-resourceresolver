@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -85,6 +86,21 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("simple"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
         Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
+        for (String key : expected) {
+            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
+        }
+        assertFalse(it.hasNext());
+    }
+
+    @Ignore("SLING-12384: detection of incorrect sort order fails")
+    @Test(expected = RuntimeException.class)
+    public void testSimpleWrongOrder() {
+        String[] expected = new String[] { "a", "b", "d", "c" };
+        Collection<Resource> expectedResources = toResourceList(expected);
+        when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
+        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
+                2000);
+        Arrays.sort(expected);
         for (String key : expected) {
             assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
         }
