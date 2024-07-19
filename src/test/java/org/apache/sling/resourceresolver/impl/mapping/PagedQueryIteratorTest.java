@@ -52,6 +52,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     private static String PROPNAME = "prop";
 
     @SuppressWarnings("unchecked")
+    @Override
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.openMocks(this).close();
