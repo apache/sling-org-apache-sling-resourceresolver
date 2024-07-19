@@ -20,20 +20,19 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
@@ -41,6 +40,7 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
@@ -86,7 +86,23 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(eq("simple"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
         Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
         for (String key : expected) {
-            assertEquals(key, it.next().getValueMap().get(PROPNAME, new String[0])[0]);
+            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
+        }
+        assertFalse(it.hasNext());
+    }
+
+    @Ignore("SLING-12384: resources with empty keys lost")
+    @Test
+    public void testPagedWithEmpty() {
+        String[] expected = new String[] { "", "a", "b", "c", "d" };
+        Collection<Resource> expectedResources = toResourceList(expected);
+        Collection<Resource> expectedFilteredResources = filter("", expectedResources);
+        when(resourceResolver.findResources(eq("testPagedWithEmpty ''"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResources.iterator());
+        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
+                2000);
+        for (String key : expected) {
+            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
         }
         assertFalse(it.hasNext());
     }
@@ -101,5 +117,16 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
             result.add(r);
         }
         return result;
+    }
+
+    private static Collection<Resource> filter(String key, Collection<Resource> input) {
+        // this emulates the ">" condition used by PagedQueryIterator prior to
+        // resolution of SLING-12384
+        Predicate<Resource> filter = r -> getFirstValueOf(r, PROPNAME).compareTo(key) > 0;
+        return input.stream().filter(filter).collect(Collectors.toList());
+    }
+
+    private static String getFirstValueOf(Resource r, String propname) {
+        return r.getValueMap().get(propname, new String[0])[0];
     }
 }
