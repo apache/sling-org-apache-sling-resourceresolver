@@ -107,6 +107,36 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         assertFalse(it.hasNext());
     }
 
+    @Ignore("SLING-12384: broken paging")
+    @Test
+    public void testPagedResourcesOnPageBoundaryLost() {
+        String[] expected = new String[] { "a", "a", "a", "a", "a", "a", "b", "c", "d" };
+        Collection<Resource> expectedResources = toResourceList(expected);
+        Collection<Resource> expectedFilteredResources = filter("", expectedResources);
+        Collection<Resource> expectedFilteredResourcesA = filter("a", expectedResources);
+        Collection<Resource> expectedFilteredResourcesB = filter("b", expectedResources);
+        Collection<Resource> expectedFilteredResourcesC = filter("c", expectedResources);
+        Collection<Resource> expectedFilteredResourcesD = filter("d", expectedResources);
+        when(resourceResolver.findResources(eq("testPagedResourcesOnPageBoundaryLost ''"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResources.iterator());
+        when(resourceResolver.findResources(eq("testPagedResourcesOnPageBoundaryLost 'a'"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResourcesA.iterator());
+        when(resourceResolver.findResources(eq("testPagedResourcesOnPageBoundaryLost 'b'"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResourcesB.iterator());
+        when(resourceResolver.findResources(eq("testPagedResourcesOnPageBoundaryLost 'c'"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResourcesC.iterator());
+        when(resourceResolver.findResources(eq("testPagedResourcesOnPageBoundaryLost 'd'"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResourcesD.iterator());
+        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver,
+                "testPagedResourcesOnPageBoundaryLost '%s'", 5);
+        int pos = 0;
+        for (String key : expected) {
+            assertEquals("expects " + key + " at position " + pos, key, getFirstValueOf(it.next(), PROPNAME));
+            pos += 1;
+        }
+        assertFalse(it.hasNext());
+    }
+
     private static Collection<Resource> toResourceList(String... keys) {
         Collection<Resource> result = new ArrayList<>();
         for (String key : keys) {
