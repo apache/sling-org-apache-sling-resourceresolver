@@ -39,6 +39,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries.PagedQueryIterator;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
@@ -110,12 +111,36 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         when(resourceResolver.findResources(eq("testPagedWithEmpty ''"), eq("JCR-SQL2")))
                 .thenReturn(expectedFilteredResources.iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
+        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
                 2000);
         for (String key : expected) {
             assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
         }
         assertFalse(it.hasNext());
+        assertEquals("", it.getWarning());
+    }
+
+    @Test
+    public void testPagedLargePage() {
+        String[] expected = new String[] { "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+                "a", "a", "a", "a", "a", "a", "a", };
+        Collection<Resource> expectedResources = toResourceList(expected);
+        Collection<Resource> expectedFilteredResources = filter("", expectedResources);
+        when(resourceResolver.findResources(eq("testPagedLargePage ''"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResources.iterator());
+        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
+                5);
+        for (String key : expected) {
+            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
+        }
+        assertFalse(it.hasNext());
+        assertEquals("Largest number of aliases with the same 'first' selector exceeds expectations (value 'a' appears 140 times)",
+                it.getWarning());
     }
 
     @Test

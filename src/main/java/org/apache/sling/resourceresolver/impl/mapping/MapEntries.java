@@ -1181,7 +1181,7 @@ public class MapEntries implements
         if (it instanceof PagedQueryIterator) {
             PagedQueryIterator pit = (PagedQueryIterator)it;
 
-            if (pit.getWarning() != null) {
+            if (!pit.getWarning().isEmpty()) {
                 log.warn(pit.getWarning());
             }
 
@@ -1415,6 +1415,10 @@ public class MapEntries implements
                 try {
                     next = getNext();
                 } catch (NoSuchElementException ex) {
+                    if (currentKeyCount > largestKeyCount) {
+                        largestKeyCount = currentKeyCount + 1;
+                        largestKeyValue = lastValue;
+                    }
                     doPageStats();
                     // there are no more
                     next = null;
@@ -1436,17 +1440,18 @@ public class MapEntries implements
                     count, lastKey, largestPage);
         }
 
-        public String getStatistics() {
+        public @NotNull String getStatistics() {
             return String.format(" (max. page size: %d, number of pages: %d)", largestPage, page);
         }
 
-        public String getWarning() {
-            if (largestKeyCount > pageSize * 10) {
+        public @NotNull String getWarning() {
+            int warnAt = pageSize * 10;
+            if (largestKeyCount > warnAt) {
                 return String.format(
                         "Largest number of aliases with the same 'first' selector exceeds expectations (value '%s' appears %d times)",
-                        largestKeyValue, largestKeyCount);
+                        largestKeyValue, largestKeyCount, warnAt);
             } else {
-                return null;
+                return "";
             }
         }
     }
