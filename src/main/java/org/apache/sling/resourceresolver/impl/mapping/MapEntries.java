@@ -1373,6 +1373,12 @@ public class MapEntries implements
                     log.error(message);
                     throw new RuntimeException(message);
                 }
+                if (lastValue != null && value.compareTo(lastValue) < 0) {
+                    String message = String.format("unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
+                            (page - 1), propertyName, value, lastValue);
+                    log.error(message);
+                    throw new RuntimeException(message);
+                }
 
                 // keep information about large key counts
                 if (value.equals(lastValue)) {

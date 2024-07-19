@@ -26,7 +26,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -41,7 +40,6 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
@@ -92,7 +90,6 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         assertFalse(it.hasNext());
     }
 
-    @Ignore("SLING-12384: detection of incorrect sort order fails")
     @Test(expected = RuntimeException.class)
     public void testSimpleWrongOrder() {
         String[] expected = new String[] { "a", "b", "d", "c" };
@@ -100,14 +97,11 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
         Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
                 2000);
-        Arrays.sort(expected);
-        for (String key : expected) {
-            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
+        while (it.hasNext()) {
+            it.next();
         }
-        assertFalse(it.hasNext());
     }
 
-    @Ignore("SLING-12384: resources with empty keys lost")
     @Test
     public void testPagedWithEmpty() {
         String[] expected = new String[] { "", "a", "b", "c", "d" };
@@ -123,7 +117,6 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         assertFalse(it.hasNext());
     }
 
-    @Ignore("SLING-12384: broken paging")
     @Test
     public void testPagedResourcesOnPageBoundaryLost() {
         String[] expected = new String[] { "a", "a", "a", "a", "a", "a", "b", "c", "d" };
@@ -166,9 +159,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     }
 
     private static Collection<Resource> filter(String key, Collection<Resource> input) {
-        // this emulates the ">" condition used by PagedQueryIterator prior to
-        // resolution of SLING-12384
-        Predicate<Resource> filter = r -> getFirstValueOf(r, PROPNAME).compareTo(key) > 0;
+        Predicate<Resource> filter = r -> getFirstValueOf(r, PROPNAME).compareTo(key) >= 0;
         return input.stream().filter(filter).collect(Collectors.toList());
     }
 
