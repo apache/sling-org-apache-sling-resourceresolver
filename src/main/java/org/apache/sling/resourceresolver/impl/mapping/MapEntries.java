@@ -1394,7 +1394,7 @@ public class MapEntries implements
                 // start next page?
                 if (count > pageSize && !value.equals(lastValue)) {
                     largestPage = Math.max(largestPage, count - 1);
-                    log.debug("read {} query (page {}); {} entries, last key was: {}, largest page so far: {}", subject, page,
+                    log.debug("read {} query (page {}); {} entries, last key was: {}, largest page so far: {}", subject, page - 1,
                             count, value, largestPage);
                     lastKey = value;
                     nextPage();
