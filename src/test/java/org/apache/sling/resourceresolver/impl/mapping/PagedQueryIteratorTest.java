@@ -18,12 +18,13 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 
@@ -38,6 +39,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     private MapEntries mapEntries;
 
+    @SuppressWarnings("unchecked")
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.openMocks(this).close();
@@ -47,7 +49,6 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] { new Path("/") });
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
-        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(Collections.<Resource> emptySet().iterator());
 
         Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
@@ -55,7 +56,9 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void testInstantiation() {
-        mapEntries.new PagedQueryIterator("alias", "sling:alias", resourceResolver, "foo", 2000);
+    public void testEmpptyQUery() {
+        when(resourceResolver.findResources(eq("empty"), eq("JCR-SQL2"))).thenReturn(Collections.<Resource> emptySet().iterator());
+        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", "sling:alias", resourceResolver, "empty", 2000);
+        assertFalse(it.hasNext());
     }
 }
