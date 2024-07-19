@@ -85,11 +85,12 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         String[] expected = new String[] { "a", "b", "c" };
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("simple"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
+        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
         for (String key : expected) {
             assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
         }
         assertFalse(it.hasNext());
+        assertEquals("", it.getWarning());
     }
 
     @Test(expected = RuntimeException.class)
@@ -113,10 +114,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedFilteredResources.iterator());
         PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
                 2000);
-        for (String key : expected) {
-            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
-        }
-        assertFalse(it.hasNext());
+        checkResult(it, expected);
         assertEquals("", it.getWarning());
     }
 
@@ -135,10 +133,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedFilteredResources.iterator());
         PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
                 5);
-        for (String key : expected) {
-            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
-        }
-        assertFalse(it.hasNext());
+        checkResult(it, expected);
         assertEquals("Largest number of aliases with the same 'first' selector exceeds expectations (value 'a' appears 140 times)",
                 it.getWarning());
     }
@@ -164,12 +159,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedFilteredResourcesD.iterator());
         Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver,
                 "testPagedResourcesOnPageBoundaryLost '%s'", 5);
-        int pos = 0;
-        for (String key : expected) {
-            assertEquals("expects " + key + " at position " + pos, key, getFirstValueOf(it.next(), PROPNAME));
-            pos += 1;
-        }
-        assertFalse(it.hasNext());
+        checkResult(it, expected);
     }
 
     private static Collection<Resource> toResourceList(String... keys) {
@@ -191,5 +181,14 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     private static String getFirstValueOf(Resource r, String propname) {
         return r.getValueMap().get(propname, new String[0])[0];
+    }
+
+    private static void checkResult(Iterator<Resource> it, String...expected ) {
+        int pos = 0;
+        for (String key : expected) {
+            assertEquals("expects " + key + " at position " + pos, key, getFirstValueOf(it.next(), PROPNAME));
+            pos += 1;
+        }
+        assertFalse(it.hasNext());
     }
 }
