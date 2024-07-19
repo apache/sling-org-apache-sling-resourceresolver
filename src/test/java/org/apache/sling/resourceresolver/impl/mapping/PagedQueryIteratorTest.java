@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
@@ -38,6 +39,8 @@ import org.mockito.MockitoAnnotations;
 public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     private MapEntries mapEntries;
+
+    private static String PROPNAME = "prop";
 
     @SuppressWarnings("unchecked")
     @Before
@@ -56,9 +59,15 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void testEmpptyQUery() {
+    public void testEmptyQuery() {
         when(resourceResolver.findResources(eq("empty"), eq("JCR-SQL2"))).thenReturn(Collections.<Resource> emptySet().iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", "sling:alias", resourceResolver, "empty", 2000);
+        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "empty", 2000);
         assertFalse(it.hasNext());
+    }
+
+    @Test(expected = QuerySyntaxException.class)
+    public void testMalformedQuery() {
+        when(resourceResolver.findResources(eq("malformed"), eq("JCR-SQL2"))).thenThrow(new QuerySyntaxException("x", "y", "z"));
+        mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "malformed", 2000);
     }
 }
