@@ -41,7 +41,6 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries.PagedQueryIterator;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
@@ -137,8 +136,6 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         checkResult(it, expected);
         assertEquals("Largest number of aliases with the same 'first' selector exceeds expectations (value 'a' appears 140 times)",
                 it.getWarning());
-
-        checkResult(it, expected);
     }
 
     @Test
