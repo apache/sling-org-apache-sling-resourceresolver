@@ -528,16 +528,18 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
         public void close(Optional<ResourceResolverMetrics> metrics) {
             try {
-                if (factory.unregisterControl(this.control) && factory.logUnclosedResolvers) {
-                    if (factory.isLive()) {
-                        LOG.warn("Closed unclosed ResourceResolver. The creation stacktrace is available on info log level.");
-                        if (metrics.isPresent()) {
-                            metrics.get().reportUnclosedResourceResolver();
-                        }
-                    } else {
-                        LOG.warn("Forced close of ResourceResolver because the ResourceResolverFactory is shutting down.");
+                if (factory.unregisterControl(this.control)) {
+                    if (metrics.isPresent()) {
+                        metrics.get().reportUnclosedResourceResolver();
                     }
-                    LOG.info("Unclosed ResourceResolver was created here: ", openingException);
+                    if (factory.logUnclosedResolvers) {
+                        if (factory.isLive()) {
+                            LOG.warn("Closed unclosed ResourceResolver. The creation stacktrace is available on info log level.");
+                        } else {
+                            LOG.warn("Forced close of ResourceResolver because the ResourceResolverFactory is shutting down.");
+                        }
+                        LOG.info("Unclosed ResourceResolver was created here: ", openingException);
+                    }
                 }
             } catch (Throwable t) {
                 LOG.warn("Exception while closing ResolverReference", t);
