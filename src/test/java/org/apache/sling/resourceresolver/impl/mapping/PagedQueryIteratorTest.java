@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -120,13 +121,9 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void testPagedLargePage() {
-        String[] expected = new String[] { "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
-                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
-                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
-                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
-                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
-                "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
-                "a", "a", "a", "a", "a", "a", "a", };
+        final int cnt = 140;
+        String[] expected = new String[cnt];
+        Arrays.fill(expected,"a");
         Collection<Resource> expectedResources = toResourceList(expected);
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         when(resourceResolver.findResources(eq("testPagedLargePage ''"), eq("JCR-SQL2")))
@@ -134,8 +131,8 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
                 5);
         checkResult(it, expected);
-        assertEquals("Largest number of aliases with the same 'first' selector exceeds expectations (value 'a' appears 140 times)",
-                it.getWarning());
+        assertEquals("Largest number of aliases with the same 'first' selector exceeds expectations (value 'a' appears " + cnt
+                + " times)", it.getWarning());
     }
 
     @Test
