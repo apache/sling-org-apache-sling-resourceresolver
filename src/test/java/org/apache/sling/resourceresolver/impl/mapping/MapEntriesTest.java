@@ -2279,7 +2279,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
                 String query = StringUtils.trim((String)invocation.getArguments()[0]);
-                assertEquals("SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL AND FIRST([sling:alias]) > '' ORDER BY FIRST([sling:alias])", query);
+                assertEquals("SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL AND FIRST([sling:alias]) >= '' ORDER BY FIRST([sling:alias])", query);
                 return Collections.<Resource> emptySet().iterator();
             }
         });
@@ -2299,7 +2299,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // utilities for testing vanity path queries
 
-    private static String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) > '";
+    private static String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) >= '";
     private static String VPQEND = "' ORDER BY FIRST([sling:vanityPath])";
 
     private boolean matchesPagedQuery(String query) {

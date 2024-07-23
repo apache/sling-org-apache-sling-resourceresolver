@@ -40,8 +40,8 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
+import org.apache.sling.resourceresolver.impl.mapping.MapEntries.PagedQueryIterator;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
@@ -86,14 +86,14 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         String[] expected = new String[] { "a", "b", "c" };
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("simple"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
+        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
         for (String key : expected) {
             assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
         }
         assertFalse(it.hasNext());
+        assertEquals("", it.getWarning());
     }
 
-    @Ignore("SLING-12384: detection of incorrect sort order fails")
     @Test(expected = RuntimeException.class)
     public void testSimpleWrongOrder() {
         String[] expected = new String[] { "a", "b", "d", "c" };
@@ -106,7 +106,6 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         }
     }
 
-    @Ignore("SLING-12384: resources with empty keys lost")
     @Test
     public void testPagedWithEmpty() {
         String[] expected = new String[] { "", "a", "b", "c", "d" };
@@ -114,15 +113,29 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         when(resourceResolver.findResources(eq("testPagedWithEmpty ''"), eq("JCR-SQL2")))
                 .thenReturn(expectedFilteredResources.iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
+        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
                 2000);
-        for (String key : expected) {
-            assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
-        }
-        assertFalse(it.hasNext());
+        checkResult(it, expected);
+        assertEquals("", it.getWarning());
     }
 
-    @Ignore("SLING-12384: broken paging")
+    @Test
+    public void testPagedLargePage() {
+        final int cnt = 140;
+        final int pageSize = 5;
+        String[] expected = new String[cnt];
+        Arrays.fill(expected,"a");
+        Collection<Resource> expectedResources = toResourceList(expected);
+        Collection<Resource> expectedFilteredResources = filter("", expectedResources);
+        when(resourceResolver.findResources(eq("testPagedLargePage ''"), eq("JCR-SQL2")))
+                .thenReturn(expectedFilteredResources.iterator());
+        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
+                pageSize);
+        checkResult(it, expected);
+        assertEquals("Largest number of aliases with the same 'first' selector exceeds expectation of " + pageSize * 10
+                + " (value 'a' appears " + cnt + " times)", it.getWarning());
+    }
+
     @Test
     public void testPagedResourcesOnPageBoundaryLost() {
         String[] expected = new String[] { "a", "a", "a", "a", "a", "a", "b", "c", "d" };
@@ -144,12 +157,8 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedFilteredResourcesD.iterator());
         Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver,
                 "testPagedResourcesOnPageBoundaryLost '%s'", 5);
-        int pos = 0;
-        for (String key : expected) {
-            assertEquals("expects " + key + " at position " + pos, key, getFirstValueOf(it.next(), PROPNAME));
-            pos += 1;
-        }
-        assertFalse(it.hasNext());
+
+        checkResult(it, expected);
     }
 
     private static Collection<Resource> toResourceList(String... keys) {
@@ -165,13 +174,20 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     }
 
     private static Collection<Resource> filter(String key, Collection<Resource> input) {
-        // this emulates the ">" condition used by PagedQueryIterator prior to
-        // resolution of SLING-12384
-        Predicate<Resource> filter = r -> getFirstValueOf(r, PROPNAME).compareTo(key) > 0;
+        Predicate<Resource> filter = r -> getFirstValueOf(r, PROPNAME).compareTo(key) >= 0;
         return input.stream().filter(filter).collect(Collectors.toList());
     }
 
     private static String getFirstValueOf(Resource r, String propname) {
         return r.getValueMap().get(propname, new String[0])[0];
+    }
+
+    private static void checkResult(Iterator<Resource> it, String...expected ) {
+        int pos = 0;
+        for (String key : expected) {
+            assertEquals("expects " + key + " at position " + pos, key, getFirstValueOf(it.next(), PROPNAME));
+            pos += 1;
+        }
+        assertFalse(it.hasNext());
     }
 }

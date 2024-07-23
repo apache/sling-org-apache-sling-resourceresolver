@@ -358,6 +358,7 @@ public class MapEntries implements
 
                 long initElapsed = System.nanoTime() - initStart;
                 long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
+
                 log.info(
                         "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
                         vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
@@ -1160,7 +1161,7 @@ public class MapEntries implements
 
         Iterator<Resource> it;
         try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:alias]) > '%s' ORDER BY FIRST([sling:alias])";
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
             it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
@@ -1179,8 +1180,20 @@ public class MapEntries implements
         }
         long processElapsed = System.nanoTime() - processStart;
         long resourcePerSecond = (count * TimeUnit.SECONDS.toNanos(1) / (processElapsed == 0 ? 1 : processElapsed));
-        log.info("alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s)",
-                count, TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond);
+
+        String diagnostics = "";
+        if (it instanceof PagedQueryIterator) {
+            PagedQueryIterator pit = (PagedQueryIterator)it;
+
+            if (!pit.getWarning().isEmpty()) {
+                log.warn(pit.getWarning());
+            }
+
+            diagnostics = pit.getStatistics();
+        }
+
+        log.info("alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
+                count, TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond, diagnostics);
 
         this.aliasResourcesOnStartup.set(count);
 
@@ -1316,17 +1329,22 @@ public class MapEntries implements
         private String subject;
         private String propertyName;
         private String query;
-        private String lastValue = "";
+        private String lastKey = "";
+        private String lastValue = null;
         private Iterator<Resource> it;
         private int count = 0;
         private int page = 0;
         private int pageSize;
         private Resource next = null;
         private String[] defaultValue = new String[0];
+        private int largestPage = 0;
+        private String largestKeyValue = "";
+        private int largestKeyCount = 0;
+        private int currentKeyCount = 0;
 
         /**
          * @param subject name of the query, will be used only for logging
-         * @param propertyName name of multivalued string property to query on
+         * @param propertyName name of multivalued string property to query on (used for diagnostics)
          * @param resolver resource resolver
          * @param query query string in SQL2 syntax
          * @param pageSize page size (start a new query after page size is exceeded)
@@ -1342,7 +1360,7 @@ public class MapEntries implements
 
         private void nextPage() {
             count = 0;
-            String tquery = String.format(query, queryLiteral(lastValue));
+            String tquery = String.format(query, queryLiteral(lastKey));
             log.debug("start {} query (page {}): {}", subject, page, tquery);
             long queryStart = System.nanoTime();
             this.it = resolver.findResources(tquery, "JCR-SQL2");
@@ -1355,20 +1373,41 @@ public class MapEntries implements
             Resource resource = it.next();
             count += 1;
             final String[] values = resource.getValueMap().get(propertyName, defaultValue);
+
             if (values.length > 0) {
                 String value = values[0];
-                if (value.compareTo(lastValue) < 0) {
+                if (value.compareTo(lastKey) < 0) {
                     String message = String.format("unexpected query result in page %d, %s of '%s' despite querying for > '%s'",
+                            (page - 1), propertyName, value, lastKey);
+                    log.error(message);
+                    throw new RuntimeException(message);
+                }
+                if (lastValue != null && value.compareTo(lastValue) < 0) {
+                    String message = String.format("unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
                             (page - 1), propertyName, value, lastValue);
                     log.error(message);
                     throw new RuntimeException(message);
                 }
+
+                // keep information about large key counts
+                if (value.equals(lastValue)) {
+                    currentKeyCount += 1;
+                } else {
+                    if (currentKeyCount > largestKeyCount) {
+                        largestKeyCount = currentKeyCount + 1;
+                        largestKeyValue = lastValue;
+                    }
+                    currentKeyCount = 0;
+                }
+
                 // start next page?
                 if (count > pageSize && !value.equals(lastValue)) {
-                    log.debug("read {} query (page {}); {} entries", subject, page, count);
-                    lastValue = value;
+                    updatePageStats();
+                    lastKey = value;
                     nextPage();
+                    return getNext();
                 }
+                lastValue = value;
             }
 
             return resource;
@@ -1380,6 +1419,11 @@ public class MapEntries implements
                 try {
                     next = getNext();
                 } catch (NoSuchElementException ex) {
+                    if (currentKeyCount > largestKeyCount) {
+                        largestKeyCount = currentKeyCount + 1;
+                        largestKeyValue = lastValue;
+                    }
+                    updatePageStats();
                     // there are no more
                     next = null;
                 }
@@ -1392,6 +1436,27 @@ public class MapEntries implements
             Resource result = next != null ? next : getNext();
             next = null;
             return result;
+        }
+
+        private void updatePageStats() {
+            largestPage = Math.max(largestPage, count - 1);
+            log.debug("read {} query (page {}); {} entries, last key was: {}, largest page so far: {}", subject, page - 1,
+                    count, lastKey, largestPage);
+        }
+
+        public @NotNull String getStatistics() {
+            return String.format(" (max. page size: %d, number of pages: %d)", largestPage, page);
+        }
+
+        public @NotNull String getWarning() {
+            int warnAt = pageSize * 10;
+            if (largestKeyCount > warnAt) {
+                return String.format(
+                        "Largest number of aliases with the same 'first' selector exceeds expectation of %d (value '%s' appears %d times)",
+                        warnAt, largestKeyValue, largestKeyCount);
+            } else {
+                return "";
+            }
         }
     }
 
@@ -1408,7 +1473,7 @@ public class MapEntries implements
         boolean supportsSort = true;
         Iterator<Resource> it;
         try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) > '%s' ORDER BY FIRST([sling:vanityPath])";
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
