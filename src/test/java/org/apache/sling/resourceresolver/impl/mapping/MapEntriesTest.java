@@ -2299,7 +2299,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // utilities for testing vanity path queries
 
-    private static String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) > '";
+    private static String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) >= '";
     private static String VPQEND = "' ORDER BY FIRST([sling:vanityPath])";
 
     private boolean matchesPagedQuery(String query) {
