@@ -122,6 +122,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     @Test
     public void testPagedLargePage() {
         final int cnt = 140;
+        final int pageSize = 5;
         String[] expected = new String[cnt];
         Arrays.fill(expected,"a");
         Collection<Resource> expectedResources = toResourceList(expected);
@@ -129,10 +130,10 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(eq("testPagedLargePage ''"), eq("JCR-SQL2")))
                 .thenReturn(expectedFilteredResources.iterator());
         PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
-                5);
+                pageSize);
         checkResult(it, expected);
-        assertEquals("Largest number of aliases with the same 'first' selector exceeds expectations (value 'a' appears " + cnt
-                + " times)", it.getWarning());
+        assertEquals("Largest number of aliases with the same 'first' selector exceeds expectation of " + pageSize * 10
+                + " (value 'a' appears " + cnt + " times)", it.getWarning());
     }
 
     @Test

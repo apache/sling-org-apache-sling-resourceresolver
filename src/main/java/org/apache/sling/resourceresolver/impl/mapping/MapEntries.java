@@ -1452,8 +1452,8 @@ public class MapEntries implements
             int warnAt = pageSize * 10;
             if (largestKeyCount > warnAt) {
                 return String.format(
-                        "Largest number of aliases with the same 'first' selector exceeds expectations (value '%s' appears %d times)",
-                        largestKeyValue, largestKeyCount, warnAt);
+                        "Largest number of aliases with the same 'first' selector exceeds expectation of %d (value '%s' appears %d times)",
+                        warnAt, largestKeyValue, largestKeyCount);
             } else {
                 return "";
             }
