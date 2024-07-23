@@ -443,6 +443,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public String map(final HttpServletRequest request, final String resourcePath) {
+        checkClosed();
         return adaptTo(ResourceMapper.class).getMapping(resourcePath, request);
     }
 
@@ -550,6 +551,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public Iterable<Resource> getChildren(final Resource parent) {
+        checkClosed();
+
         return new Iterable<Resource>() {
 
             @Override
@@ -965,6 +968,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public void delete(final Resource resource)
             throws PersistenceException {
+        checkClosed();
+
         // check if the resource is non existing - throws NPE if resource is null as stated in the API
         if ( ResourceUtil.isNonExistingResource(resource) ) {
             // nothing to do
@@ -980,6 +985,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public Resource create(final Resource parent, final String name, final Map<String, Object> properties)
             throws PersistenceException {
+        checkClosed();
         // if parent or name is null, we get an NPE as stated in the API
         if ( name == null ) {
             throw new NullPointerException("name");
@@ -1011,6 +1017,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public boolean orderBefore(@NotNull Resource parent, @NotNull String name, @Nullable String followingSiblingName)
             throws UnsupportedOperationException, PersistenceException, IllegalArgumentException {
+        checkClosed();
         return this.control.orderBefore(this.context, parent, name, followingSiblingName);
     }
 
@@ -1019,6 +1026,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public void revert() {
+        checkClosed();
         this.control.revert(this.context);
     }
 
@@ -1027,6 +1035,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public void commit() throws PersistenceException {
+        checkClosed();
         this.control.commit(this.context);
         resourceTypeLookupCache.clear();
     }
@@ -1036,6 +1045,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public boolean hasChanges() {
+        checkClosed();
         return this.control.hasChanges(this.context);
     }
 
@@ -1044,6 +1054,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
 	@Override
     public boolean hasChildren(Resource resource) {
+        checkClosed();
 		return listChildren(resource).hasNext();
 	}
 
@@ -1052,6 +1063,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public String getParentResourceType(final Resource resource) {
+        checkClosed();
         String resourceSuperType = null;
         if ( resource != null ) {
             resourceSuperType = resource.getResourceSuperType();
@@ -1067,6 +1079,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public String getParentResourceType(final String resourceType) {
+        checkClosed();
         return this.control.getParentResourceType(this.factory, this, resourceType);
     }
 
@@ -1075,6 +1088,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public boolean isResourceType(final Resource resource, final String resourceType) {
+        checkClosed();
 
         if ( resource != null && resourceType != null ) {
              ResourceTypeInformation key = new ResourceTypeInformation(resource.getResourceType(),resource.getResourceSuperType(), resourceType);
@@ -1123,12 +1137,14 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     @Override
     public void refresh() {
+        checkClosed();
         this.control.refresh(this.context);
         resourceTypeLookupCache.clear();
     }
 
     @Override
     public Resource getParent(final Resource child) {
+        checkClosed();
         Resource rsrc = null;
         final String parentPath = ResourceUtil.getParent(child.getPath());
         if ( parentPath != null ) {
@@ -1148,6 +1164,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     @Override
     public Resource copy(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
+        checkClosed();
         Resource rsrc = this.control.copy(this.context, srcAbsPath, destAbsPath);
         if (rsrc != null ) {
             rsrc.getResourceMetadata().setResolutionPath(rsrc.getPath());
@@ -1158,6 +1175,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     @Override
     public Resource move(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
+        checkClosed();
         Resource rsrc = this.control.move(this.context, srcAbsPath, destAbsPath);
         if (rsrc != null ) {
             rsrc.getResourceMetadata().setResolutionPath(rsrc.getPath());
@@ -1166,14 +1184,13 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         return rsrc;
     }
     
+    @Override
     public Map<String,Object> getPropertyMap() {
         if (propertyMap == null) {
             propertyMap = new HashMap<>();
         }
         return propertyMap;
     }
-
-
 
     // Simple pojo acting as key for the resourceTypeLookupCache 
     public class ResourceTypeInformation {
@@ -1208,6 +1225,4 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             return Objects.equals(s1, other.s1) && Objects.equals(s2, other.s2) && Objects.equals(s3, other.s3);
         }
     }
-
-
 }
