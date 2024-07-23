@@ -156,6 +156,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedFilteredResourcesD.iterator());
         Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver,
                 "testPagedResourcesOnPageBoundaryLost '%s'", 5);
+
         checkResult(it, expected);
     }
 
