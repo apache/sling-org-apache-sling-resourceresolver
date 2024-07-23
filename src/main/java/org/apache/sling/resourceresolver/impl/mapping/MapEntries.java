@@ -1402,7 +1402,7 @@ public class MapEntries implements
 
                 // start next page?
                 if (count > pageSize && !value.equals(lastValue)) {
-                    doPageStats();
+                    updatePageStats();
                     lastKey = value;
                     nextPage();
                     return getNext();
@@ -1423,7 +1423,7 @@ public class MapEntries implements
                         largestKeyCount = currentKeyCount + 1;
                         largestKeyValue = lastValue;
                     }
-                    doPageStats();
+                    updatePageStats();
                     // there are no more
                     next = null;
                 }
@@ -1438,7 +1438,7 @@ public class MapEntries implements
             return result;
         }
 
-        private void doPageStats() {
+        private void updatePageStats() {
             largestPage = Math.max(largestPage, count - 1);
             log.debug("read {} query (page {}); {} entries, last key was: {}, largest page so far: {}", subject, page - 1,
                     count, lastKey, largestPage);
