@@ -1269,7 +1269,7 @@ public class MapEntries implements
                 log.debug("Found alias, total size {}", aliasArray.length);
                 // the order matters here, the first alias in the array must come first
                 for (final String alias : aliasArray) {
-                    if (isAliasValid(alias)) {
+                    if (isAliasInvalid(alias)) {
                         log.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.", alias, parentPath);
                     } else {
                         Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
@@ -1297,7 +1297,7 @@ public class MapEntries implements
     /**
      * Check alias syntax
      */
-    private static boolean isAliasValid(String alias) {
+    private static boolean isAliasInvalid(String alias) {
         boolean invalid = alias.equals("..") || alias.equals(".");
         if (!invalid) {
             for (final char c : alias.toCharArray()) {
