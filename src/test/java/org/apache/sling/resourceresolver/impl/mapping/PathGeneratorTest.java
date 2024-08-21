@@ -103,6 +103,20 @@ public class PathGeneratorTest {
         assertThat(paths, Matchers.hasItems("/alias1/bar", "/alias2/bar", "/foo/bar"));
     }
 
+    // test for SLING-12399
+    @Test
+    public void subPathWithMultipleIncludingEmptyAliases() {
+        
+        PathGenerator builder = new PathGenerator();
+        builder.insertSegment(emptyList(), "bar");
+        builder.insertSegment(asList("", "alias1"), "foo");
+        
+        List<String> paths = builder.generatePaths();
+        
+        assertThat(paths, Matchers.hasSize(2));
+        assertThat(paths, Matchers.hasItems("/alias1/bar", "/foo/bar"));
+    }
+
     @Test
     public void subPathWithComplexAliasesSetup() {
         
