@@ -1270,7 +1270,7 @@ public class MapEntries implements
                 // the order matters here, the first alias in the array must come first
                 for (final String alias : aliasArray) {
                     if (isAliasInvalid(alias)) {
-                        log.warn("Encountered invalid alias {} under parent path {}. Refusing to use it.", alias, parentPath);
+                        log.warn("Encountered invalid alias '{}' under parent path '{}'. Refusing to use it.", alias, parentPath);
                     } else {
                         Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
                         Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
@@ -1279,7 +1279,7 @@ public class MapEntries implements
                                 .findFirst().map(Map.Entry::getKey);
                         if (siblingResourceNameWithDuplicateAlias.isPresent()) {
                             log.warn(
-                                    "Encountered duplicate alias {} under parent path {}. Refusing to replace current target {} with {}.",
+                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target {} with {}.",
                                     alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName);
                         } else {
                             Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
@@ -1298,7 +1298,7 @@ public class MapEntries implements
      * Check alias syntax
      */
     private static boolean isAliasInvalid(String alias) {
-        boolean invalid = alias.equals("..") || alias.equals(".");
+        boolean invalid = alias.equals("..") || alias.equals(".") || alias.isEmpty();
         if (!invalid) {
             for (final char c : alias.toCharArray()) {
                 // invalid if / or # or a ?
