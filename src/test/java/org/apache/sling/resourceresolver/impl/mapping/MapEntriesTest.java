@@ -178,6 +178,49 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_simple_alias_support() {
+        // SLING-12399 - empty alias is returned back (might be a bug)
+        for (String validAlias : List.of("alias", "")) {
+            prepareMapEntriesForAlias(validAlias);
+            mapEntries.doInit();
+            Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
+            assertNotNull(aliasMap);
+            assertTrue(aliasMap.containsKey("child"));
+            assertEquals(List.of(validAlias), aliasMap.get("child"));
+        }
+    }
+
+    @Test
+    public void test_simple_multi_alias_support() {
+        prepareMapEntriesForAlias("foo", "bar");
+        mapEntries.doInit();
+        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
+        assertNotNull(aliasMap);
+        assertTrue(aliasMap.containsKey("child"));
+        assertEquals(List.of("foo", "bar"), aliasMap.get("child"));
+    }
+
+    @Test
+    public void test_simple_multi_alias_support_with_blank_and_invalid() {
+        // SLING-12399 - invalid aliases filtered out (but empty string not considered invalid)
+        prepareMapEntriesForAlias("", "foo", ".", "bar", "x/y", "qux", " ");
+        mapEntries.doInit();
+        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
+        assertNotNull(aliasMap);
+        assertTrue(aliasMap.containsKey("child"));
+        assertEquals(List.of("", "foo", "bar", "qux", " "), aliasMap.get("child"));
+    }
+
+    @Test
+    public void test_alias_support_invalid() {
+        for (String invalidAlias : List.of(".", "..", "foo/bar")) {
+            prepareMapEntriesForAlias(invalidAlias);
+            mapEntries.doInit();
+            Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
+            assertEquals(Collections.emptyMap(), aliasMap);
+        }
+    }
+
+    private void prepareMapEntriesForAlias(String... alias) {
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
 
@@ -185,7 +228,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(result.getParent()).thenReturn(parent);
         when(result.getPath()).thenReturn("/parent/child");
         when(result.getName()).thenReturn("child");
-        when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+        when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, alias));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
@@ -198,13 +241,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 }
             }
         });
-
-        mapEntries.doInit();
-
-        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
-        assertNotNull(aliasMap);
-        assertTrue(aliasMap.containsKey("child"));
-        assertEquals(Collections.singletonList("alias"), aliasMap.get("child"));
     }
 
     @Test
