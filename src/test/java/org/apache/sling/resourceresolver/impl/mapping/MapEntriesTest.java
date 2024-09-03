@@ -178,15 +178,12 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_simple_alias_support() {
-        // SLING-12399 - empty alias is returned back (might be a bug)
-        for (String validAlias : List.of("alias", "")) {
-            prepareMapEntriesForAlias(validAlias);
-            mapEntries.doInit();
-            Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
-            assertNotNull(aliasMap);
-            assertTrue(aliasMap.containsKey("child"));
-            assertEquals(List.of(validAlias), aliasMap.get("child"));
-        }
+        prepareMapEntriesForAlias("alias");
+        mapEntries.doInit();
+        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
+        assertNotNull(aliasMap);
+        assertTrue(aliasMap.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMap.get("child"));
     }
 
     @Test
@@ -201,18 +198,18 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_simple_multi_alias_support_with_blank_and_invalid() {
-        // SLING-12399 - invalid aliases filtered out (but empty string not considered invalid)
+        // invalid aliases filtered out
         prepareMapEntriesForAlias("", "foo", ".", "bar", "x/y", "qux", " ");
         mapEntries.doInit();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
         assertTrue(aliasMap.containsKey("child"));
-        assertEquals(List.of("", "foo", "bar", "qux", " "), aliasMap.get("child"));
+        assertEquals(List.of("foo", "bar", "qux", " "), aliasMap.get("child"));
     }
 
     @Test
     public void test_alias_support_invalid() {
-        for (String invalidAlias : List.of(".", "..", "foo/bar")) {
+        for (String invalidAlias : List.of(".", "..", "foo/bar", "# foo", "")) {
             prepareMapEntriesForAlias(invalidAlias);
             mapEntries.doInit();
             Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
