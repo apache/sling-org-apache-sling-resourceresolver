@@ -35,6 +35,7 @@ import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
@@ -82,9 +83,9 @@ public class MapEntries implements
 
     private static final String JCR_CONTENT = "jcr:content";
 
-    private static final String JCR_CONTENT_PREFIX = "jcr:content/";
+    private static final String JCR_CONTENT_PREFIX = JCR_CONTENT + "/";
 
-    private static final String JCR_CONTENT_SUFFIX = "/jcr:content";
+    private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
 
     private static final String PROP_REG_EXP = "sling:match";
 
@@ -588,12 +589,9 @@ public class MapEntries implements
      * @return {@code true} if any change
      */
     private boolean doUpdateAlias(final Resource resource) {
-        final Resource containingResource;
-        if (JCR_CONTENT.equals(resource.getName())) {
-            containingResource = resource.getParent();
-        } else {
-            containingResource = resource;
-        }
+
+        // resource containing the alias
+        final Resource containingResource = getResourceToBeAliased(resource);
 
         if ( containingResource != null ) {
             final String containingResourceName = containingResource.getName();
@@ -618,7 +616,10 @@ public class MapEntries implements
             }
 
             return changed;
+        } else {
+            log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
         }
+
         return false;
     }
 
@@ -1233,16 +1234,11 @@ public class MapEntries implements
     private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map) {
 
         // resource containing the alias
-        final Resource containingResource;
+        final Resource containingResource = getResourceToBeAliased(resource);
 
-        if (JCR_CONTENT.equals(resource.getName())) {
-            containingResource = resource.getParent();
-            if (containingResource == null) {
-                log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
-                return false;
-            }
-        } else {
-            containingResource = resource;
+        if (containingResource == null) {
+            log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
+            return false;
         }
 
         final Resource parent = containingResource.getParent();
@@ -1291,6 +1287,19 @@ public class MapEntries implements
             }
 
             return hasAlias;
+        }
+    }
+
+    /**
+     * Given a resource, check whether the name is "jcr:content", in which case return the parent resource
+     * @param resource resource to check
+     * @return parent of jcr:content resource (may be null), otherwise the resource itself
+     */
+    @Nullable private Resource getResourceToBeAliased(Resource resource) {
+        if (JCR_CONTENT.equals(resource.getName())) {
+            return resource.getParent();
+        } else {
+            return resource;
         }
     }
 

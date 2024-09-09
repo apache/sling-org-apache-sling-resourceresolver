@@ -121,7 +121,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         prevPageSize = Integer.getInteger("sling.vanityPath.pageSize", 2000);
         System.setProperty("sling.vanityPath.pageSize", Integer.toString(pageSize));
 
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
 
         final List<VanityPathConfig> configs = new ArrayList<>();
         configs.add(new VanityPathConfig("/libs/", false));
@@ -175,10 +175,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.dispose();
     }
 
-
-    @Test
-    public void test_simple_alias_support() {
-        prepareMapEntriesForAlias("alias");
+    private void internal_test_simple_alias_support(boolean onJcrContent) {
+        prepareMapEntriesForAlias(onJcrContent, false, "alias");
         mapEntries.doInit();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -187,8 +185,17 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_simple_multi_alias_support() {
-        prepareMapEntriesForAlias("foo", "bar");
+    public void test_simple_alias_support() {
+        internal_test_simple_alias_support(false);
+    }
+
+    @Test
+    public void test_simple_alias_support_on_jcr_content() {
+        internal_test_simple_alias_support(true);
+    }
+
+    private void internal_test_simple_multi_alias_support(boolean onJcrContent) {
+        prepareMapEntriesForAlias(onJcrContent, false, "foo", "bar");
         mapEntries.doInit();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -197,9 +204,29 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
+    public void test_simple_multi_alias_support() {
+        internal_test_simple_multi_alias_support(false);
+    }
+
+    @Test
+    public void test_simple_multi_alias_support_on_jcr_content() {
+        internal_test_simple_multi_alias_support(true);
+    }
+
+    @Test
+    public void test_simple_multi_alias_support_with_null_parent() {
+        // see SLING-12383
+        prepareMapEntriesForAlias(true, true, "foo", "bar");
+        mapEntries.doInit();
+        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
+        assertNotNull(aliasMap);
+        assertFalse(aliasMap.containsKey("child"));
+    }
+
+    @Test
     public void test_simple_multi_alias_support_with_blank_and_invalid() {
         // invalid aliases filtered out
-        prepareMapEntriesForAlias("", "foo", ".", "bar", "x/y", "qux", " ");
+        prepareMapEntriesForAlias(false, false, "", "foo", ".", "bar", "x/y", "qux", " ");
         mapEntries.doInit();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -210,29 +237,37 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_alias_support_invalid() {
         for (String invalidAlias : List.of(".", "..", "foo/bar", "# foo", "")) {
-            prepareMapEntriesForAlias(invalidAlias);
+            prepareMapEntriesForAlias(false, false, invalidAlias);
             mapEntries.doInit();
             Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
             assertEquals(Collections.emptyMap(), aliasMap);
         }
     }
 
-    private void prepareMapEntriesForAlias(String... alias) {
+    private void prepareMapEntriesForAlias(boolean onJcrContent, boolean withNullParent, String... alias) {
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
 
         final Resource result = mock(Resource.class);
-        when(result.getParent()).thenReturn(parent);
+        final Resource content = mock(Resource.class);
+        final Resource aliasResource = onJcrContent ? content : result;
+
+        when(result.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
         when(result.getPath()).thenReturn("/parent/child");
         when(result.getName()).thenReturn("child");
-        when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, alias));
+
+        when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : result);
+        when(content.getPath()).thenReturn("/parent/child/jcr:content");
+        when(content.getName()).thenReturn("jcr:content");
+
+        when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, alias));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
 
             @Override
             public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
                 if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-                    return Collections.singleton(result).iterator();
+                    return Collections.singleton(aliasResource).iterator();
                 } else {
                     return Collections.<Resource> emptySet().iterator();
                 }
