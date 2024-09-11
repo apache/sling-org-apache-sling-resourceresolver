@@ -146,6 +146,8 @@ public class MapEntries implements
     private Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
     private final AtomicLong aliasResourcesOnStartup;
+    private final AtomicLong detectedConflictingAliases;
+    private final AtomicLong detectedInvalidAliases;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
@@ -180,6 +182,8 @@ public class MapEntries implements
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.aliasResourcesOnStartup = new AtomicLong(0);
+        this.detectedConflictingAliases = new AtomicLong(0);
+        this.detectedInvalidAliases = new AtomicLong(0);
 
         this.useOptimizeAliasResolution = doInit();
 
@@ -190,6 +194,7 @@ public class MapEntries implements
         this.vanityPathLookups = new AtomicLong(0);
         this.vanityPathBloomNegative = new AtomicLong(0);
         this.vanityPathBloomFalsePositive = new AtomicLong(0);
+
         initializeVanityPaths();
 
         this.metrics = metrics;
@@ -201,6 +206,9 @@ public class MapEntries implements
             this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
+            this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(detectedConflictingAliases::get);
+            this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(detectedInvalidAliases::get);
+            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(detectedInvalidAliases::get);
         }
     }
 
@@ -1266,7 +1274,8 @@ public class MapEntries implements
                 // the order matters here, the first alias in the array must come first
                 for (final String alias : aliasArray) {
                     if (isAliasInvalid(alias)) {
-                        log.warn("Encountered invalid alias '{}' under parent path '{}'. Refusing to use it.", alias, parentPath);
+                        long invalids = detectedInvalidAliases.incrementAndGet();
+                        log.warn("Encountered invalid alias '{}' under parent path '{}' (total {}). Refusing to use it.", alias, parentPath, invalids);
                     } else {
                         Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
                         Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
