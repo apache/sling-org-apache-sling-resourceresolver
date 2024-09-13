@@ -1275,7 +1275,7 @@ public class MapEntries implements
                 for (final String alias : aliasArray) {
                     if (isAliasInvalid(alias)) {
                         long invalids = detectedInvalidAliases.incrementAndGet();
-                        log.warn("Encountered invalid alias '{}' under parent path '{}' (total {}). Refusing to use it.", alias, parentPath, invalids);
+                        log.warn("Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.", alias, parentPath, invalids);
                     } else {
                         Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
                         Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
@@ -1283,9 +1283,10 @@ public class MapEntries implements
                                 .filter(entry -> entry.getValue().contains(alias))
                                 .findFirst().map(Map.Entry::getKey);
                         if (siblingResourceNameWithDuplicateAlias.isPresent()) {
+                            long conflicting = detectedConflictingAliases.incrementAndGet();
                             log.warn(
-                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target {} with {}.",
-                                    alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName);
+                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target {} with {}  (total so far: {}).",
+                                    alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
                         } else {
                             Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
                             existingAliases.add(alias);

@@ -101,6 +101,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private Map<String, Map<String, String>> aliasMap;
     private AtomicLong detectedInvalidAliases;
+    private AtomicLong detectedConflictingAliases;
 
     private int testSize = 5;
 
@@ -172,7 +173,11 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         final Field detectedInvalidAliasesField = MapEntries.class.getDeclaredField("detectedInvalidAliases");
         detectedInvalidAliasesField.setAccessible(true);
         this.detectedInvalidAliases = (AtomicLong) detectedInvalidAliasesField.get(mapEntries);
-    }
+
+        final Field detectedConflictingAliasesField = MapEntries.class.getDeclaredField("detectedConflictingAliases");
+        detectedConflictingAliasesField.setAccessible(true);
+        this.detectedConflictingAliases = (AtomicLong) detectedConflictingAliasesField.get(mapEntries);
+}
 
     @Override
     @After
@@ -319,6 +324,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertNotNull(aliasMap);
         assertTrue(aliasMap.containsKey("child"));
         assertEquals(Collections.singletonList("alias"), aliasMap.get("child"));
+        assertEquals(1, detectedConflictingAliases.get());
     }
 
     @Test
