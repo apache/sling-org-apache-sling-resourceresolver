@@ -1284,8 +1284,8 @@ public class MapEntries implements
                                 .findFirst().map(Map.Entry::getKey);
                         if (siblingResourceNameWithDuplicateAlias.isPresent()) {
                             long conflicting = detectedConflictingAliases.incrementAndGet();
-                            log.warn(
-                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target {} with {}  (total so far: {}).",
+                            log.error(
+                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total so far: {}).",
                                     alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
                         } else {
                             Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
