@@ -64,11 +64,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -146,6 +148,13 @@ public class MapEntries implements
     private Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
     private final AtomicLong aliasResourcesOnStartup;
+    private final AtomicLong detectedConflictingAliases;
+    private final AtomicLong detectedInvalidAliases;
+
+    // keep track of some defunct aliases for diagnostics (thus size-limited)
+    private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
+    private Queue<String> conflictingAliases;
+    private Queue<String> invalidAliases;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
@@ -179,7 +188,12 @@ public class MapEntries implements
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
+        this.conflictingAliases = new ConcurrentLinkedQueue<>();
+        this.invalidAliases = new ConcurrentLinkedQueue<>();
+
         this.aliasResourcesOnStartup = new AtomicLong(0);
+        this.detectedConflictingAliases = new AtomicLong(0);
+        this.detectedInvalidAliases = new AtomicLong(0);
 
         this.useOptimizeAliasResolution = doInit();
 
@@ -190,6 +204,7 @@ public class MapEntries implements
         this.vanityPathLookups = new AtomicLong(0);
         this.vanityPathBloomNegative = new AtomicLong(0);
         this.vanityPathBloomFalsePositive = new AtomicLong(0);
+
         initializeVanityPaths();
 
         this.metrics = metrics;
@@ -201,6 +216,9 @@ public class MapEntries implements
             this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
+            this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(detectedConflictingAliases::get);
+            this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(detectedInvalidAliases::get);
+            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(detectedInvalidAliases::get);
         }
     }
 
@@ -242,7 +260,16 @@ public class MapEntries implements
                 try {
                     final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver);
                     this.aliasMapsMap = loadedMap;
-    
+
+                    // warn if there are more than a few defunct aliases
+                    if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                        log.warn("There are {} conflicting aliases; excerpt: {}", conflictingAliases.size(), conflictingAliases);
+                    }
+                    if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                        log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
+                    }
+                    conflictingAliases.clear();
+                    invalidAliases.clear();
                 } catch (final Exception e) {
 
                     logDisableAliasOptimization(e);
@@ -1266,7 +1293,12 @@ public class MapEntries implements
                 // the order matters here, the first alias in the array must come first
                 for (final String alias : aliasArray) {
                     if (isAliasInvalid(alias)) {
-                        log.warn("Encountered invalid alias '{}' under parent path '{}'. Refusing to use it.", alias, parentPath);
+                        long invalids = detectedInvalidAliases.incrementAndGet();
+                        log.warn("Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.",
+                                alias, parentPath, invalids);
+                        if (invalids < MAX_REPORT_DEFUNCT_ALIASES) {
+                            invalidAliases.add((String.format("'%s'/'%s'", parentPath, alias)));
+                        }
                     } else {
                         Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
                         Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
@@ -1274,9 +1306,14 @@ public class MapEntries implements
                                 .filter(entry -> entry.getValue().contains(alias))
                                 .findFirst().map(Map.Entry::getKey);
                         if (siblingResourceNameWithDuplicateAlias.isPresent()) {
+                            long conflicting = detectedConflictingAliases.incrementAndGet();
                             log.warn(
-                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target {} with {}.",
-                                    alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName);
+                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total so far: {}).",
+                                    alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
+                            if (conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
+                                conflictingAliases.add((String.format("'%s': '%s'/'%s' vs '%s'/'%s'", parentPath, resourceName,
+                                        alias, siblingResourceNameWithDuplicateAlias.get(), alias)));
+                            }
                         } else {
                             Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
                             existingAliases.add(alias);
