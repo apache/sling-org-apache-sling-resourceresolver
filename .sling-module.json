@@ -1,0 +1,5 @@
+{
+  "jenkins": {
+    "additionalMavenParams": "-Dstarter-its.starter.version=13-SNAPSHOT"
+  }
+}
