@@ -266,7 +266,7 @@ public class MapEntries implements
                         log.warn("There are more than {} conflicting aliases; excerpt: {}", conflictingAliases.size(), conflictingAliases);
                     }
                     if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
-                        log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
+                        log.warn("There are more than {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
                     }
                     conflictingAliases.clear();
                     invalidAliases.clear();
