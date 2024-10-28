@@ -268,6 +268,7 @@ public class MapEntries implements
                     if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
                         log.warn("There are more than {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
                     }
+                    // these are not needed anymore after logging
                     conflictingAliases.clear();
                     invalidAliases.clear();
                 } catch (final Exception e) {
