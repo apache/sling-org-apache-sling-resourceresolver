@@ -47,17 +47,40 @@ public class ResourceResolverMetricsTest {
     }
 
     @Test
-    public void testGauges() {
+    public void testGaugesAliases() {
+        // get gauges
+        Gauge<Long> numberOfResourcesWithAliasedChildren = getGauge("numberOfResourcesWithAliasedChildren");
+        Gauge<Long> numberOfResourcesWithAliasesOnStartup = getGauge("numberOfResourcesWithAliasesOnStartup");
+        Gauge<Long> numberOfDetectedInvalidAliasesGauge = getGauge("numberOfDetectedInvalidAliases");
+        Gauge<Long> numberOfDetectedConflictingAliases = getGauge("numberOfDetectedConflictingAliases");
+
+        // check initial Values
+        assertThat(numberOfResourcesWithAliasedChildren.getValue(), is(0L));
+        assertThat(numberOfResourcesWithAliasesOnStartup.getValue(), is(0L));
+        assertThat(numberOfDetectedInvalidAliasesGauge.getValue(), is(0L));
+        assertThat(numberOfDetectedConflictingAliases.getValue(), is(0L));
+
+        // set values
+        metrics.setNumberOfResourcesWithAliasedChildrenSupplier(() -> 8L);
+        metrics.setNumberOfResourcesWithAliasesOnStartupSupplier(() -> 9L);
+        metrics.setNumberOfDetectedInvalidAliasesSupplier(() -> 10L);
+        metrics.setNumberOfDetectedConflictingAliasesSupplier(() -> 11L);
+
+        // check values
+        assertThat(numberOfResourcesWithAliasedChildren.getValue(), is(8L));
+        assertThat(numberOfResourcesWithAliasesOnStartup.getValue(), is(9L));
+        assertThat(numberOfDetectedInvalidAliasesGauge.getValue(), is(10L));
+        assertThat(numberOfDetectedConflictingAliases.getValue(), is(11L));
+    }
+
+    @Test
+    public void testGaugesVanityPaths() {
         // get gauges
         Gauge<Long> numberOfVanityPaths = getGauge("numberOfVanityPaths");
         Gauge<Long> numberOfResourcesWithVanityPathsOnStartup = getGauge("numberOfResourcesWithVanityPathsOnStartup");
         Gauge<Long> numberOfVanityPathLookups = getGauge("numberOfVanityPathLookups");
         Gauge<Long> numberOfVanityPathBloomNegative = getGauge("numberOfVanityPathBloomNegative");
         Gauge<Long> numberOfVanityPathBloomFalsePositive = getGauge("numberOfVanityPathBloomFalsePositive");
-        Gauge<Long> numberOfResourcesWithAliasedChildren = getGauge("numberOfResourcesWithAliasedChildren");
-        Gauge<Long> numberOfResourcesWithAliasesOnStartup = getGauge("numberOfResourcesWithAliasesOnStartup");
-        Gauge<Long> numberOfDetectedInvalidAliasesGauge = getGauge("numberOfDetectedInvalidAliases");
-        Gauge<Long> numberOfDetectedConflictingAliases = getGauge("numberOfDetectedConflictingAliases");
 
         // check initial Values
         assertThat(numberOfVanityPaths.getValue(), is(0L));
@@ -65,10 +88,6 @@ public class ResourceResolverMetricsTest {
         assertThat(numberOfVanityPathLookups.getValue(), is(0L));
         assertThat(numberOfVanityPathBloomNegative.getValue(), is(0L));
         assertThat(numberOfVanityPathBloomFalsePositive.getValue(), is(0L));
-        assertThat(numberOfResourcesWithAliasedChildren.getValue(), is(0L));
-        assertThat(numberOfResourcesWithAliasesOnStartup.getValue(), is(0L));
-        assertThat(numberOfDetectedInvalidAliasesGauge.getValue(), is(0L));
-        assertThat(numberOfDetectedConflictingAliases.getValue(), is(0L));
 
         // set values
         metrics.setNumberOfVanityPathsSupplier(() -> 3L);
@@ -76,10 +95,6 @@ public class ResourceResolverMetricsTest {
         metrics.setNumberOfVanityPathLookupsSupplier(() -> 5L);
         metrics.setNumberOfVanityPathBloomNegativeSupplier(() -> 6L);
         metrics.setNumberOfVanityPathBloomFalsePositiveSupplier(() -> 7L);
-        metrics.setNumberOfResourcesWithAliasedChildrenSupplier(() -> 8L);
-        metrics.setNumberOfResourcesWithAliasesOnStartupSupplier(() -> 9L);
-        metrics.setNumberOfDetectedInvalidAliasesSupplier(() -> 10L);
-        metrics.setNumberOfDetectedConflictingAliasesSupplier(() -> 11L);
 
         // check values
         assertThat(numberOfVanityPaths.getValue(), is(3L));
@@ -87,10 +102,6 @@ public class ResourceResolverMetricsTest {
         assertThat(numberOfVanityPathLookups.getValue(), is(5L));
         assertThat(numberOfVanityPathBloomNegative.getValue(), is(6L));
         assertThat(numberOfVanityPathBloomFalsePositive.getValue(), is(7L));
-        assertThat(numberOfResourcesWithAliasedChildren.getValue(), is(8L));
-        assertThat(numberOfResourcesWithAliasesOnStartup.getValue(), is(9L));
-        assertThat(numberOfDetectedInvalidAliasesGauge.getValue(), is(10L));
-        assertThat(numberOfDetectedConflictingAliases.getValue(), is(11L));
     }
 
     private Gauge<Long> getGauge(String name) {
