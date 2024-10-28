@@ -64,13 +64,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -153,8 +151,6 @@ public class MapEntries implements
 
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
-    private Queue<String> conflictingAliases;
-    private Queue<String> invalidAliases;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
@@ -187,9 +183,6 @@ public class MapEntries implements
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
-
-        this.conflictingAliases = new ConcurrentLinkedQueue<>();
-        this.invalidAliases = new ConcurrentLinkedQueue<>();
 
         this.aliasResourcesOnStartup = new AtomicLong(0);
         this.detectedConflictingAliases = new AtomicLong(0);
@@ -253,12 +246,15 @@ public class MapEntries implements
                 return this.factory.isOptimizeAliasResolutionEnabled();
             }
 
+            List<String> conflictingAliases = new ArrayList<>();
+            List<String> invalidAliases = new ArrayList<>();
+
             boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
 
             //optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver);
+                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver, conflictingAliases, invalidAliases);
                     this.aliasMapsMap = loadedMap;
 
                     // warn if there are more than a few defunct aliases
@@ -272,9 +268,6 @@ public class MapEntries implements
                     } else if (!invalidAliases.isEmpty()) {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
-                    // these are not needed anymore after logging
-                    conflictingAliases.clear();
-                    invalidAliases.clear();
                 } catch (final Exception e) {
 
                     logDisableAliasOptimization(e);
@@ -611,8 +604,12 @@ public class MapEntries implements
         return false;
     }
 
+    private boolean doAddAlias(final Resource resource, List<String> conflictingAliases, List<String> invalidAliases) {
+        return loadAlias(resource, this.aliasMapsMap, conflictingAliases, invalidAliases);
+    }
+
     private boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, this.aliasMapsMap);
+        return loadAlias(resource, this.aliasMapsMap, null, null);
     }
 
     /**
@@ -1188,7 +1185,9 @@ public class MapEntries implements
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
-    private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver) {
+    private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver,
+            List<String> conflictingAliases, List<String> invalidAliases) {
+
         final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
         final String baseQueryString = generateAliasQuery();
 
@@ -1209,7 +1208,7 @@ public class MapEntries implements
         long processStart = System.nanoTime();
         while (it.hasNext()) {
             count += 1;
-            loadAlias(it.next(), map);
+            loadAlias(it.next(), map, conflictingAliases, invalidAliases);
         }
         long processElapsed = System.nanoTime() - processStart;
         long resourcePerSecond = (count * TimeUnit.SECONDS.toNanos(1) / (processElapsed == 0 ? 1 : processElapsed));
@@ -1263,7 +1262,8 @@ public class MapEntries implements
     /**
      * Load alias given a resource
      */
-    private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map) {
+    private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map,
+            List<String> conflictingAliases, List<String> invalidAliases) {
 
         // resource containing the alias
         final Resource containingResource = getResourceToBeAliased(resource);
@@ -1301,7 +1301,7 @@ public class MapEntries implements
                         long invalids = detectedInvalidAliases.incrementAndGet();
                         log.warn("Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.",
                                 alias, parentPath, invalids);
-                        if (invalids < MAX_REPORT_DEFUNCT_ALIASES) {
+                        if (invalidAliases != null && invalids < MAX_REPORT_DEFUNCT_ALIASES) {
                             invalidAliases.add((String.format("'%s'/'%s'", parentPath, alias)));
                         }
                     } else {
@@ -1315,7 +1315,7 @@ public class MapEntries implements
                             log.warn(
                                     "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total duplicated aliases so far: {}).",
                                     alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
-                            if (conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
+                            if (conflictingAliases != null && conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
                                 conflictingAliases.add((String.format("'%s': '%s'/'%s' vs '%s'/'%s'", parentPath, resourceName,
                                         alias, siblingResourceNameWithDuplicateAlias.get(), alias)));
                             }
