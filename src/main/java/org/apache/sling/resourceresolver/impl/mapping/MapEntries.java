@@ -161,8 +161,8 @@ public class MapEntries implements
     private final AtomicLong vanityCounter;
     private final AtomicLong vanityResourcesOnStartup;
     private final AtomicLong vanityPathLookups;
-    private final AtomicLong vanityPathBloomNegative;
-    private final AtomicLong vanityPathBloomFalsePositive;
+    private final AtomicLong vanityPathBloomNegatives;
+    private final AtomicLong vanityPathBloomFalsePositives;
 
     private byte[] vanityBloomFilter;
 
@@ -202,8 +202,8 @@ public class MapEntries implements
         this.vanityCounter = new AtomicLong(0);
         this.vanityResourcesOnStartup = new AtomicLong(0);
         this.vanityPathLookups = new AtomicLong(0);
-        this.vanityPathBloomNegative = new AtomicLong(0);
-        this.vanityPathBloomFalsePositive = new AtomicLong(0);
+        this.vanityPathBloomNegatives = new AtomicLong(0);
+        this.vanityPathBloomFalsePositives = new AtomicLong(0);
 
         initializeVanityPaths();
 
@@ -212,8 +212,8 @@ public class MapEntries implements
             this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
             this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityResourcesOnStartup::get);
             this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
-            this.metrics.get().setNumberOfVanityPathBloomNegativeSupplier(vanityPathBloomNegative::get);
-            this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
+            this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
+            this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vanityPathBloomFalsePositives::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
             this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(detectedConflictingAliases::get);
@@ -764,8 +764,8 @@ public class MapEntries implements
             if (current >= Long.MAX_VALUE - 100000) {
                 // reset counters when we get close the limit
                 this.vanityPathLookups.set(1);
-                this.vanityPathBloomNegative.set(0);
-                this.vanityPathBloomFalsePositive.set(0);
+                this.vanityPathBloomNegatives.set(0);
+                this.vanityPathBloomFalsePositives.set(0);
                 log.info("Vanity Path metrics reset to 0");
             }
 
@@ -775,7 +775,7 @@ public class MapEntries implements
 
             if (!probablyPresent) {
                 // filtered by Bloom filter
-                this.vanityPathBloomNegative.incrementAndGet();
+                this.vanityPathBloomNegatives.incrementAndGet();
             }
         }
 
@@ -804,7 +804,7 @@ public class MapEntries implements
             }
             if (mapEntries == null && probablyPresent) {
                 // Bloom filter had a false positive
-                this.vanityPathBloomFalsePositive.incrementAndGet();
+                this.vanityPathBloomFalsePositives.incrementAndGet();
             }
         }
 

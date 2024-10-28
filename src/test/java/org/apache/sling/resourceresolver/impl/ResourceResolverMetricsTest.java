@@ -79,29 +79,29 @@ public class ResourceResolverMetricsTest {
         Gauge<Long> numberOfVanityPaths = getGauge("numberOfVanityPaths");
         Gauge<Long> numberOfResourcesWithVanityPathsOnStartup = getGauge("numberOfResourcesWithVanityPathsOnStartup");
         Gauge<Long> numberOfVanityPathLookups = getGauge("numberOfVanityPathLookups");
-        Gauge<Long> numberOfVanityPathBloomNegative = getGauge("numberOfVanityPathBloomNegative");
-        Gauge<Long> numberOfVanityPathBloomFalsePositive = getGauge("numberOfVanityPathBloomFalsePositive");
+        Gauge<Long> numberOfVanityPathBloomNegatives = getGauge("numberOfVanityPathBloomNegatives");
+        Gauge<Long> numberOfVanityPathBloomFalsePositives = getGauge("numberOfVanityPathBloomFalsePositives");
 
         // check initial Values
         assertThat(numberOfVanityPaths.getValue(), is(0L));
         assertThat(numberOfResourcesWithVanityPathsOnStartup.getValue(), is(0L));
         assertThat(numberOfVanityPathLookups.getValue(), is(0L));
-        assertThat(numberOfVanityPathBloomNegative.getValue(), is(0L));
-        assertThat(numberOfVanityPathBloomFalsePositive.getValue(), is(0L));
+        assertThat(numberOfVanityPathBloomNegatives.getValue(), is(0L));
+        assertThat(numberOfVanityPathBloomFalsePositives.getValue(), is(0L));
 
         // set values
         metrics.setNumberOfVanityPathsSupplier(() -> 3L);
         metrics.setNumberOfResourcesWithVanityPathsOnStartupSupplier(() -> 4L);
         metrics.setNumberOfVanityPathLookupsSupplier(() -> 5L);
-        metrics.setNumberOfVanityPathBloomNegativeSupplier(() -> 6L);
-        metrics.setNumberOfVanityPathBloomFalsePositiveSupplier(() -> 7L);
+        metrics.setNumberOfVanityPathBloomNegativesSupplier(() -> 6L);
+        metrics.setNumberOfVanityPathBloomFalsePositivesSupplier(() -> 7L);
 
         // check values
         assertThat(numberOfVanityPaths.getValue(), is(3L));
         assertThat(numberOfResourcesWithVanityPathsOnStartup.getValue(), is(4L));
         assertThat(numberOfVanityPathLookups.getValue(), is(5L));
-        assertThat(numberOfVanityPathBloomNegative.getValue(), is(6L));
-        assertThat(numberOfVanityPathBloomFalsePositive.getValue(), is(7L));
+        assertThat(numberOfVanityPathBloomNegatives.getValue(), is(6L));
+        assertThat(numberOfVanityPathBloomFalsePositives.getValue(), is(7L));
     }
 
     private Gauge<Long> getGauge(String name) {
