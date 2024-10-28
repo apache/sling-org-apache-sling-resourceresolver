@@ -1308,7 +1308,7 @@ public class MapEntries implements
                         if (siblingResourceNameWithDuplicateAlias.isPresent()) {
                             long conflicting = detectedConflictingAliases.incrementAndGet();
                             log.warn(
-                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total so far: {}).",
+                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total duplicated aliases so far: {}).",
                                     alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
                             if (conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
                                 conflictingAliases.add((String.format("'%s': '%s'/'%s' vs '%s'/'%s'", parentPath, resourceName,
