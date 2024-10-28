@@ -263,10 +263,14 @@ public class MapEntries implements
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
-                        log.warn("There are more than {} conflicting aliases; excerpt: {}", conflictingAliases.size(), conflictingAliases);
+                        log.warn("There are {} {} conflicting aliases; excerpt: {}",  conflictingAliases.size(), conflictingAliases);
+                    } else if (!conflictingAliases.isEmpty()) {
+                        log.warn("There are {} conflicting aliases: {}",  conflictingAliases.size(), conflictingAliases);
                     }
                     if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
                         log.warn("There are more than {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
+                    } else if (!invalidAliases.isEmpty()) {
+                        log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
                     // these are not needed anymore after logging
                     conflictingAliases.clear();
