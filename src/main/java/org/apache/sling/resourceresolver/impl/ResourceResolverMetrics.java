@@ -40,8 +40,8 @@ import org.osgi.service.component.annotations.Reference;
  *  org.apache.sling.resourceresolver.numberOfDetectedInvalidAliases -- the total number of detected invalid aliases
  *
  *  org.apache.sling.resourceresolver.numberOfResourcesWithVanityPathsOnStartup -- the total number of resources with sling:vanityPath properties found on startup
- *  org.apache.sling.resourceresolver.numberOfVanityPathBloomFalsePositive -- the total number of vanity path lookup that passed the bloom filter but were false positives
- *  org.apache.sling.resourceresolver.numberOfVanityPathBloomNegative -- the total number of vanity path lookups filtered by the bloom filter
+ *  org.apache.sling.resourceresolver.numberOfVanityPathBloomFalsePositives -- the total number of vanity path lookup that passed the bloom filter but were false positives
+ *  org.apache.sling.resourceresolver.numberOfVanityPathBloomNegatives -- the total number of vanity path lookups filtered by the bloom filter
  *  org.apache.sling.resourceresolver.numberOfVanityPathLookups -- the total number of vanity path lookups
  *  org.apache.sling.resourceresolver.numberOfVanityPaths -- the total number of vanity paths in the cache
  *
