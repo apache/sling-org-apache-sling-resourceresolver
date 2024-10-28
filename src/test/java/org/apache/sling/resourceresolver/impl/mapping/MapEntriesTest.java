@@ -177,7 +177,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         final Field detectedConflictingAliasesField = MapEntries.class.getDeclaredField("detectedConflictingAliases");
         detectedConflictingAliasesField.setAccessible(true);
         this.detectedConflictingAliases = (AtomicLong) detectedConflictingAliasesField.get(mapEntries);
-}
+    }
 
     @Override
     @After
