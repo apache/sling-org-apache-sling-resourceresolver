@@ -1275,13 +1275,16 @@ public class MapEntries implements
                         resource.getPath());
                 return false;
             } else {
-                return loadAliasArray(resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class), map,
+                return loadAliasFromArray(resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class), map,
                         conflictingAliases, invalidAliases, containingResource.getName(), parent.getPath());
             }
         }
     }
 
-    private boolean loadAliasArray(final String[] aliasArray, Map<String, Map<String, Collection<String>>> map,
+    /**
+     * Load alias given a an alias array, return success flag.
+     */
+    private boolean loadAliasFromArray(final String[] aliasArray, Map<String, Map<String, Collection<String>>> map,
             List<String> conflictingAliases, List<String> invalidAliases, final String resourceName, final String parentPath) {
 
         boolean hasAlias = false;
