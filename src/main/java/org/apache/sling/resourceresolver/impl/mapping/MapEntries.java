@@ -604,10 +604,6 @@ public class MapEntries implements
         return false;
     }
 
-    private boolean doAddAlias(final Resource resource, List<String> conflictingAliases, List<String> invalidAliases) {
-        return loadAlias(resource, this.aliasMapsMap, conflictingAliases, invalidAliases);
-    }
-
     private boolean doAddAlias(final Resource resource) {
         return loadAlias(resource, this.aliasMapsMap, null, null);
     }
