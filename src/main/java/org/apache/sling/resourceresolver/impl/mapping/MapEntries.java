@@ -146,14 +146,19 @@ public class MapEntries implements
     private Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
     private final AtomicLong aliasResourcesOnStartup;
+    private final AtomicLong detectedConflictingAliases;
+    private final AtomicLong detectedInvalidAliases;
+
+    // keep track of some defunct aliases for diagnostics (thus size-limited)
+    private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
     private final ReentrantLock initializing = new ReentrantLock();
 
     private final AtomicLong vanityCounter;
     private final AtomicLong vanityResourcesOnStartup;
     private final AtomicLong vanityPathLookups;
-    private final AtomicLong vanityPathBloomNegative;
-    private final AtomicLong vanityPathBloomFalsePositive;
+    private final AtomicLong vanityPathBloomNegatives;
+    private final AtomicLong vanityPathBloomFalsePositives;
 
     private byte[] vanityBloomFilter;
 
@@ -180,6 +185,8 @@ public class MapEntries implements
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.aliasResourcesOnStartup = new AtomicLong(0);
+        this.detectedConflictingAliases = new AtomicLong(0);
+        this.detectedInvalidAliases = new AtomicLong(0);
 
         this.useOptimizeAliasResolution = doInit();
 
@@ -188,8 +195,9 @@ public class MapEntries implements
         this.vanityCounter = new AtomicLong(0);
         this.vanityResourcesOnStartup = new AtomicLong(0);
         this.vanityPathLookups = new AtomicLong(0);
-        this.vanityPathBloomNegative = new AtomicLong(0);
-        this.vanityPathBloomFalsePositive = new AtomicLong(0);
+        this.vanityPathBloomNegatives = new AtomicLong(0);
+        this.vanityPathBloomFalsePositives = new AtomicLong(0);
+
         initializeVanityPaths();
 
         this.metrics = metrics;
@@ -197,10 +205,13 @@ public class MapEntries implements
             this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
             this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityResourcesOnStartup::get);
             this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
-            this.metrics.get().setNumberOfVanityPathBloomNegativeSupplier(vanityPathBloomNegative::get);
-            this.metrics.get().setNumberOfVanityPathBloomFalsePositiveSupplier(vanityPathBloomFalsePositive::get);
+            this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
+            this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vanityPathBloomFalsePositives::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
+            this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(detectedConflictingAliases::get);
+            this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(detectedInvalidAliases::get);
+            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(detectedInvalidAliases::get);
         }
     }
 
@@ -235,14 +246,28 @@ public class MapEntries implements
                 return this.factory.isOptimizeAliasResolutionEnabled();
             }
 
+            List<String> conflictingAliases = new ArrayList<>();
+            List<String> invalidAliases = new ArrayList<>();
+
             boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
 
             //optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver);
+                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver, conflictingAliases, invalidAliases);
                     this.aliasMapsMap = loadedMap;
-    
+
+                    // warn if there are more than a few defunct aliases
+                    if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                        log.warn("There are {} conflicting aliases; excerpt: {}",  conflictingAliases.size(), conflictingAliases);
+                    } else if (!conflictingAliases.isEmpty()) {
+                        log.warn("There are {} conflicting aliases: {}",  conflictingAliases.size(), conflictingAliases);
+                    }
+                    if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                        log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
+                    } else if (!invalidAliases.isEmpty()) {
+                        log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
+                    }
                 } catch (final Exception e) {
 
                     logDisableAliasOptimization(e);
@@ -580,7 +605,7 @@ public class MapEntries implements
     }
 
     private boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, this.aliasMapsMap);
+        return loadAlias(resource, this.aliasMapsMap, null, null);
     }
 
     /**
@@ -737,8 +762,8 @@ public class MapEntries implements
             if (current >= Long.MAX_VALUE - 100000) {
                 // reset counters when we get close the limit
                 this.vanityPathLookups.set(1);
-                this.vanityPathBloomNegative.set(0);
-                this.vanityPathBloomFalsePositive.set(0);
+                this.vanityPathBloomNegatives.set(0);
+                this.vanityPathBloomFalsePositives.set(0);
                 log.info("Vanity Path metrics reset to 0");
             }
 
@@ -748,7 +773,7 @@ public class MapEntries implements
 
             if (!probablyPresent) {
                 // filtered by Bloom filter
-                this.vanityPathBloomNegative.incrementAndGet();
+                this.vanityPathBloomNegatives.incrementAndGet();
             }
         }
 
@@ -777,7 +802,7 @@ public class MapEntries implements
             }
             if (mapEntries == null && probablyPresent) {
                 // Bloom filter had a false positive
-                this.vanityPathBloomFalsePositive.incrementAndGet();
+                this.vanityPathBloomFalsePositives.incrementAndGet();
             }
         }
 
@@ -1156,7 +1181,9 @@ public class MapEntries implements
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
-    private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver) {
+    private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver,
+            List<String> conflictingAliases, List<String> invalidAliases) {
+
         final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
         final String baseQueryString = generateAliasQuery();
 
@@ -1177,7 +1204,7 @@ public class MapEntries implements
         long processStart = System.nanoTime();
         while (it.hasNext()) {
             count += 1;
-            loadAlias(it.next(), map);
+            loadAlias(it.next(), map, conflictingAliases, invalidAliases);
         }
         long processElapsed = System.nanoTime() - processStart;
         long resourcePerSecond = (count * TimeUnit.SECONDS.toNanos(1) / (processElapsed == 0 ? 1 : processElapsed));
@@ -1231,7 +1258,8 @@ public class MapEntries implements
     /**
      * Load alias given a resource
      */
-    private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map) {
+    private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map,
+            List<String> conflictingAliases, List<String> invalidAliases) {
 
         // resource containing the alias
         final Resource containingResource = getResourceToBeAliased(resource);
@@ -1239,55 +1267,68 @@ public class MapEntries implements
         if (containingResource == null) {
             log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
             return false;
-        }
+        } else {
+            final Resource parent = containingResource.getParent();
 
-        final Resource parent = containingResource.getParent();
-
-        if (parent == null) {
-            log.warn("{} is null for alias on {}, skipping.", containingResource == resource ? "parent" : "grandparent",
-                    resource.getPath());
-            return false;
-        }
-        else {
-            // resource the alias is for
-            String resourceName = containingResource.getName();
-
-            // parent path of that resource
-            String parentPath = parent.getPath();
-
-            boolean hasAlias = false;
-
-            // require properties
-            final ValueMap props = resource.getValueMap();
-            final String[] aliasArray = props.get(ResourceResolverImpl.PROP_ALIAS, String[].class);
-
-            if (aliasArray != null) {
-                log.debug("Found alias, total size {}", aliasArray.length);
-                // the order matters here, the first alias in the array must come first
-                for (final String alias : aliasArray) {
-                    if (isAliasInvalid(alias)) {
-                        log.warn("Encountered invalid alias '{}' under parent path '{}'. Refusing to use it.", alias, parentPath);
-                    } else {
-                        Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
-                        Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
-                                .filter(entry -> !entry.getKey().equals(resourceName)) // ignore entry for the current resource
-                                .filter(entry -> entry.getValue().contains(alias))
-                                .findFirst().map(Map.Entry::getKey);
-                        if (siblingResourceNameWithDuplicateAlias.isPresent()) {
-                            log.warn(
-                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target {} with {}.",
-                                    alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName);
-                        } else {
-                            Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
-                            existingAliases.add(alias);
-                            hasAlias = true;
-                        }
-                    }
+            if (parent == null) {
+                log.warn("{} is null for alias on {}, skipping.", containingResource == resource ? "parent" : "grandparent",
+                        resource.getPath());
+                return false;
+            } else {
+                final String[] aliasArray = resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class);
+                if (aliasArray == null) {
+                    return false;
+                } else {
+                    return loadAliasFromArray(aliasArray, map, conflictingAliases, invalidAliases, containingResource.getName(),
+                            parent.getPath());
                 }
             }
-
-            return hasAlias;
         }
+    }
+
+    /**
+     * Load alias given a an alias array, return success flag.
+     */
+    private boolean loadAliasFromArray(final String[] aliasArray, Map<String, Map<String, Collection<String>>> map,
+            List<String> conflictingAliases, List<String> invalidAliases, final String resourceName, final String parentPath) {
+
+        boolean hasAlias = false;
+
+        log.debug("Found alias, total size {}", aliasArray.length);
+
+        // the order matters here, the first alias in the array must come first
+        for (final String alias : aliasArray) {
+            if (isAliasInvalid(alias)) {
+                long invalids = detectedInvalidAliases.incrementAndGet();
+                log.warn("Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.",
+                        alias, parentPath, invalids);
+                if (invalidAliases != null && invalids < MAX_REPORT_DEFUNCT_ALIASES) {
+                    invalidAliases.add((String.format("'%s'/'%s'", parentPath, alias)));
+                }
+            } else {
+                Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
+                Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
+                        .filter(entry -> !entry.getKey().equals(resourceName)) // ignore entry for the current resource
+                        .filter(entry -> entry.getValue().contains(alias))
+                        .findFirst().map(Map.Entry::getKey);
+                if (siblingResourceNameWithDuplicateAlias.isPresent()) {
+                    long conflicting = detectedConflictingAliases.incrementAndGet();
+                    log.warn(
+                            "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total duplicated aliases so far: {}).",
+                            alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
+                    if (conflictingAliases != null && conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
+                        conflictingAliases.add((String.format("'%s': '%s'/'%s' vs '%s'/'%s'", parentPath, resourceName,
+                                alias, siblingResourceNameWithDuplicateAlias.get(), alias)));
+                    }
+                } else {
+                    Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
+                    existingAliases.add(alias);
+                    hasAlias = true;
+                }
+            }
+        }
+
+        return hasAlias;
     }
 
     /**
