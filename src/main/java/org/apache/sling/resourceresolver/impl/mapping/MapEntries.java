@@ -1267,65 +1267,62 @@ public class MapEntries implements
         if (containingResource == null) {
             log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
             return false;
+        } else {
+            final Resource parent = containingResource.getParent();
+
+            if (parent == null) {
+                log.warn("{} is null for alias on {}, skipping.", containingResource == resource ? "parent" : "grandparent",
+                        resource.getPath());
+                return false;
+            } else {
+                return loadAliasArray(resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class), map,
+                        conflictingAliases, invalidAliases, containingResource.getName(), parent.getPath());
+            }
         }
+    }
 
-        final Resource parent = containingResource.getParent();
+    private boolean loadAliasArray(final String[] aliasArray, Map<String, Map<String, Collection<String>>> map,
+            List<String> conflictingAliases, List<String> invalidAliases, final String resourceName, final String parentPath) {
 
-        if (parent == null) {
-            log.warn("{} is null for alias on {}, skipping.", containingResource == resource ? "parent" : "grandparent",
-                    resource.getPath());
-            return false;
-        }
-        else {
-            // resource the alias is for
-            String resourceName = containingResource.getName();
+        boolean hasAlias = false;
 
-            // parent path of that resource
-            String parentPath = parent.getPath();
+        if (aliasArray != null) {
+            log.debug("Found alias, total size {}", aliasArray.length);
 
-            boolean hasAlias = false;
-
-            // require properties
-            final ValueMap props = resource.getValueMap();
-            final String[] aliasArray = props.get(ResourceResolverImpl.PROP_ALIAS, String[].class);
-
-            if (aliasArray != null) {
-                log.debug("Found alias, total size {}", aliasArray.length);
-                // the order matters here, the first alias in the array must come first
-                for (final String alias : aliasArray) {
-                    if (isAliasInvalid(alias)) {
-                        long invalids = detectedInvalidAliases.incrementAndGet();
-                        log.warn("Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.",
-                                alias, parentPath, invalids);
-                        if (invalidAliases != null && invalids < MAX_REPORT_DEFUNCT_ALIASES) {
-                            invalidAliases.add((String.format("'%s'/'%s'", parentPath, alias)));
+            // the order matters here, the first alias in the array must come first
+            for (final String alias : aliasArray) {
+                if (isAliasInvalid(alias)) {
+                    long invalids = detectedInvalidAliases.incrementAndGet();
+                    log.warn("Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.",
+                            alias, parentPath, invalids);
+                    if (invalidAliases != null && invalids < MAX_REPORT_DEFUNCT_ALIASES) {
+                        invalidAliases.add((String.format("'%s'/'%s'", parentPath, alias)));
+                    }
+                } else {
+                    Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
+                    Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(resourceName)) // ignore entry for the current resource
+                            .filter(entry -> entry.getValue().contains(alias))
+                            .findFirst().map(Map.Entry::getKey);
+                    if (siblingResourceNameWithDuplicateAlias.isPresent()) {
+                        long conflicting = detectedConflictingAliases.incrementAndGet();
+                        log.warn(
+                                "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total duplicated aliases so far: {}).",
+                                alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
+                        if (conflictingAliases != null && conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
+                            conflictingAliases.add((String.format("'%s': '%s'/'%s' vs '%s'/'%s'", parentPath, resourceName,
+                                    alias, siblingResourceNameWithDuplicateAlias.get(), alias)));
                         }
                     } else {
-                        Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
-                        Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
-                                .filter(entry -> !entry.getKey().equals(resourceName)) // ignore entry for the current resource
-                                .filter(entry -> entry.getValue().contains(alias))
-                                .findFirst().map(Map.Entry::getKey);
-                        if (siblingResourceNameWithDuplicateAlias.isPresent()) {
-                            long conflicting = detectedConflictingAliases.incrementAndGet();
-                            log.warn(
-                                    "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total duplicated aliases so far: {}).",
-                                    alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
-                            if (conflictingAliases != null && conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
-                                conflictingAliases.add((String.format("'%s': '%s'/'%s' vs '%s'/'%s'", parentPath, resourceName,
-                                        alias, siblingResourceNameWithDuplicateAlias.get(), alias)));
-                            }
-                        } else {
-                            Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
-                            existingAliases.add(alias);
-                            hasAlias = true;
-                        }
+                        Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
+                        existingAliases.add(alias);
+                        hasAlias = true;
                     }
                 }
             }
-
-            return hasAlias;
         }
+
+        return hasAlias;
     }
 
     /**
