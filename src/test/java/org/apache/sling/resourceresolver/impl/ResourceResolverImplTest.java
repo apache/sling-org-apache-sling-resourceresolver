@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.jcr.Session;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.sling.api.SlingException;
 import org.apache.sling.api.resource.LoginException;
@@ -202,7 +202,7 @@ public class ResourceResolverImplTest {
             // expected
         }
         try {
-            rr.map(null, "/somepath");
+            rr.map((HttpServletRequest)null, "/somepath");
             fail();
         } catch (final IllegalStateException ise) {
             // expected
@@ -214,7 +214,7 @@ public class ResourceResolverImplTest {
             // expected
         }
         try {
-            rr.resolve((HttpServletRequest)null);
+            rr.resolve((javax.servlet.http.HttpServletRequest)null);
             fail();
         } catch (final IllegalStateException ise) {
             // expected
@@ -226,7 +226,7 @@ public class ResourceResolverImplTest {
             // expected
         }
         try {
-            rr.resolve(null, "/path");
+            rr.resolve((HttpServletRequest)null, "/path");
             fail();
         } catch (final IllegalStateException ise) {
             // expected
@@ -316,7 +316,7 @@ public class ResourceResolverImplTest {
             // expected
         }
         try {
-            rr.map(null, "/somepath");
+            rr.map((HttpServletRequest)null, "/somepath");
             fail();
         } catch (final IllegalStateException ise) {
             // expected
@@ -328,7 +328,7 @@ public class ResourceResolverImplTest {
             // expected
         }
         try {
-            rr.resolve((HttpServletRequest)null);
+            rr.resolve((javax.servlet.http.HttpServletRequest)null);
             fail();
         } catch (final IllegalStateException ise) {
             // expected
@@ -340,7 +340,7 @@ public class ResourceResolverImplTest {
             // expected
         }
         try {
-            rr.resolve(null, "/path");
+            rr.resolve((HttpServletRequest)null, "/path");
             fail();
         } catch (final IllegalStateException ise) {
             // expected
@@ -376,20 +376,20 @@ public class ResourceResolverImplTest {
                 res01 instanceof NonExistingResource);
 
         try {
-            resResolver.resolve((HttpServletRequest) null);
+            resResolver.resolve((javax.servlet.http.HttpServletRequest) null);
             fail("Expected NullPointerException trying to resolve null request");
         } catch (NullPointerException npe) {
             // expected
         }
 
-        final Resource res0 = resResolver.resolve(null, no_resource_path);
+        final Resource res0 = resResolver.resolve((HttpServletRequest)null, no_resource_path);
         assertNotNull("Expecting resource if resolution fails", res0);
         assertTrue("Resource must be NonExistingResource",
                 res0 instanceof NonExistingResource);
         assertEquals("Path must be the original path", no_resource_path,
                 res0.getPath());
 
-        final HttpServletRequest req1 = mock(HttpServletRequest.class);
+        final javax.servlet.http.HttpServletRequest req1 = mock(javax.servlet.http.HttpServletRequest.class);
         when(req1.getProtocol()).thenReturn("http");
         when(req1.getServerName()).thenReturn("localhost");
         when(req1.getPathInfo()).thenReturn(no_resource_path);
@@ -401,7 +401,7 @@ public class ResourceResolverImplTest {
         assertEquals("Path must be the original path", no_resource_path,
                 res1.getPath());
 
-        final HttpServletRequest req2 = mock(HttpServletRequest.class);
+        final javax.servlet.http.HttpServletRequest req2 = mock(javax.servlet.http.HttpServletRequest.class);
         when(req2.getProtocol()).thenReturn("http");
         when(req2.getServerName()).thenReturn("localhost");
         when(req2.getPathInfo()).thenReturn(null);
@@ -711,12 +711,12 @@ public class ResourceResolverImplTest {
         // this should throw a SlingException when detecting the cyclic hierarchy
         resolver.isResourceType(resource, "/types/unknown");
     }
-    
+
     @Test public void testGetPropertyMap() throws IOException {
         // not having a map must not change the behavior
         PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
         resolver.close();
-        
+
         // use the propertyMap
         resolver = getPathBasedResourceResolver();
         Object value1 = new String("value1");
@@ -736,16 +736,16 @@ public class ResourceResolverImplTest {
         resolver.getPropertyMap().put("key1", value1);
         resolver.getPropertyMap().put("key2", value2);
         resolver.getPropertyMap().put("key3", valueWithException);
-        
+
         resolver.close();
         assertNotNull(resolver.getPropertyMap());
         assertTrue(resolver.getPropertyMap().isEmpty());
         Mockito.verify(value2,Mockito.times(1)).close();
         Mockito.verify(valueWithException,Mockito.times(1)).close();
-        
+
     }
-    
-    
+
+
 
     private PathBasedResourceResolverImpl getPathBasedResourceResolver() {
         return getPathBasedResourceResolver(new String[] {""});
@@ -829,5 +829,5 @@ public class ResourceResolverImplTest {
     }
 
 
-    
+
 }

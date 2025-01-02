@@ -25,11 +25,9 @@ import java.util.Iterator;
 
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.NotNull;
-import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
 import org.apache.commons.collections4.IteratorUtils;
-import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageProvider;
@@ -41,6 +39,8 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /** Test ResourceResolverImpl.mangleNamespaces methods */
 public class ResourceResolverMangleNamespacesTest {
@@ -55,8 +55,8 @@ public class ResourceResolverMangleNamespacesTest {
     public static final String NS_URL = "http://example.com/namespaces/testNS";
 
     @Before
-    public void setup() throws RepositoryException, LoginException {
-        MockitoAnnotations.initMocks(this);
+    public void setup() throws Exception {
+        MockitoAnnotations.openMocks(this).close();
         activeSession = mockedSession;
 
         // Setup a ResourceResolverImpl with namespace mangling and unmangling
@@ -87,7 +87,6 @@ public class ResourceResolverMangleNamespacesTest {
                 return null;
             }
 
-            @SuppressWarnings("unchecked")
             @Override
             public Iterator<Resource> listChildren(ResolveContext<Object> ctx, Resource parent) {
                 return IteratorUtils.emptyIterator();
@@ -117,14 +116,14 @@ public class ResourceResolverMangleNamespacesTest {
 
     @Test
     public void testUnmangleHttp() {
-        final Resource r = rr.resolve(null, "http://example.com/path/_with_mangling");
+        final Resource r = rr.resolve((HttpServletRequest)null, "http://example.com/path/_with_mangling");
         assertEquals("/http://example.com/path/with:mangling", r.getPath());
     }
 
     @Test
     public void testUnmangleNoSession() {
         activeSession = null;
-        final Resource r = rr.resolve(null, "http://example.com/path/_with_mangling");
+        final Resource r = rr.resolve((HttpServletRequest)null, "http://example.com/path/_with_mangling");
         assertEquals("/http://example.com/path/_with_mangling", r.getPath());
     }
 
@@ -135,7 +134,7 @@ public class ResourceResolverMangleNamespacesTest {
 
     @Test
     public void testUnmanglePath() {
-        final Resource r = rr.resolve(null, "/example.com/path/_with_mangling");
+        final Resource r = rr.resolve((HttpServletRequest)null, "/example.com/path/_with_mangling");
         assertEquals("/example.com/path/with:mangling", r.getPath());
     }
 
