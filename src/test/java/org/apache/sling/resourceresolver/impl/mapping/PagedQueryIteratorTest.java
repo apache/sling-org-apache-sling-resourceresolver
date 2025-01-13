@@ -100,7 +100,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test(expected = PagedQueryIterator.QueryImplementationException.class)
     public void testSimpleWrongResultAfterKey() {
-        String[] expected = new String[] { "a", "b", "d", "c" };
+        String[] expected = new String[] { "x", "x", "a", "a" };
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2")).thenReturn(expectedResources.iterator());
         // incorrect return value based on previous key
