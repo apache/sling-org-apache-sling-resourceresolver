@@ -35,8 +35,8 @@ import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.queryLit
  */
 public class PagedQueryIterator implements Iterator<Resource> {
 
-    /** default log */
-    private final Logger log = LoggerFactory.getLogger(PagedQueryIterator.class);
+    /** default log, using MapEntries for backwards compatibility */
+    private final Logger log = LoggerFactory.getLogger(MapEntries.class);
 
     private final String subject;
     private final String propertyName;
