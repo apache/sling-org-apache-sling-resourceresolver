@@ -43,6 +43,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
     private final ResourceResolver resolver;
     private final String query;
     private final int pageSize;
+    private final String[] defaultValue = new String[0];
 
     private String lastKey = "";
     private String lastValue = null;
@@ -50,7 +51,6 @@ public class PagedQueryIterator implements Iterator<Resource> {
     private int count = 0;
     private int page = 0;
     private Resource next = null;
-    private final String[] defaultValue = new String[0];
     private int largestPage = 0;
     private String largestKeyValue = "";
     private int largestKeyCount = 0;

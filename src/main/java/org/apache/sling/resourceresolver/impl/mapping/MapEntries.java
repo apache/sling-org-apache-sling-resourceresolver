@@ -1380,25 +1380,21 @@ public class MapEntries implements
                 + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
                 + " AND [sling:vanityPath] IS NOT NULL";
 
-        boolean supportsSort = true;
         Iterator<Resource> it;
         try {
             final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
-            supportsSort = false;
             it = queryUnpaged("vanity path", baseQueryString);
         } catch (UnsupportedOperationException ex) {
             log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            supportsSort = false;
             it = queryUnpaged("vanity path", baseQueryString);
         }
 
         long count = 0;
         long countInScope = 0;
         long processStart = System.nanoTime();
-        String previousVanityPath = null;
 
         while (it.hasNext()) {
             count += 1;
@@ -1409,12 +1405,6 @@ public class MapEntries implements
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
                 String firstVanityPath = loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
-                if (supportsSort && firstVanityPath != null) {
-                    if (previousVanityPath != null && firstVanityPath.compareTo(previousVanityPath) < 0) {
-                        log.error("Sorting by first(vanityPath) does not appear to work; got " + firstVanityPath + " after " + previousVanityPath);
-                    }
-                    previousVanityPath = firstVanityPath;
-               }
             }
         }
         long processElapsed = System.nanoTime() - processStart;
