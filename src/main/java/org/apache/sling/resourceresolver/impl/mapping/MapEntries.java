@@ -1398,7 +1398,7 @@ public class MapEntries implements
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                String firstVanityPath = loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
