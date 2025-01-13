@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -39,17 +38,13 @@ import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
-import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
-import org.apache.sling.resourceresolver.impl.mapping.MapEntries.PagedQueryIterator;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
 public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
-    private MapEntries mapEntries;
-
-    private static String PROPNAME = "prop";
+    private static final String PROPNAME = "prop";
 
     @SuppressWarnings("unchecked")
     @Override
@@ -62,23 +57,19 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] { new Path("/") });
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
-
-        Optional<ResourceResolverMetrics> metrics = Optional.empty();
-
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
     }
 
     @Test
     public void testEmptyQuery() {
-        when(resourceResolver.findResources(eq("empty"), eq("JCR-SQL2"))).thenReturn(Collections.<Resource> emptySet().iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "empty", 2000);
+        when(resourceResolver.findResources(eq("empty"), eq("JCR-SQL2"))).thenReturn(Collections.emptyIterator());
+        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "empty", 2000);
         assertFalse(it.hasNext());
     }
 
     @Test(expected = QuerySyntaxException.class)
     public void testMalformedQuery() {
         when(resourceResolver.findResources(eq("malformed"), eq("JCR-SQL2"))).thenThrow(new QuerySyntaxException("x", "y", "z"));
-        mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "malformed", 2000);
+        new PagedQueryIterator("alias", PROPNAME, resourceResolver, "malformed", 2000);
     }
 
     @Test
@@ -86,7 +77,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         String[] expected = new String[] { "a", "b", "c" };
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("simple"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
-        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
         for (String key : expected) {
             assertEquals(key, getFirstValueOf(it.next(), PROPNAME));
         }
@@ -99,7 +90,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         String[] expected = new String[] { "a", "b", "d", "c" };
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
+        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
                 2000);
         while (it.hasNext()) {
             it.next();
@@ -113,7 +104,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         when(resourceResolver.findResources(eq("testPagedWithEmpty ''"), eq("JCR-SQL2")))
                 .thenReturn(expectedFilteredResources.iterator());
-        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
                 2000);
         checkResult(it, expected);
         assertEquals("", it.getWarning());
@@ -129,10 +120,10 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         when(resourceResolver.findResources(eq("testPagedLargePage ''"), eq("JCR-SQL2")))
                 .thenReturn(expectedFilteredResources.iterator());
-        PagedQueryIterator it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
                 pageSize);
         checkResult(it, expected);
-        assertEquals("Largest number of aliases with the same 'first' selector exceeds expectation of " + pageSize * 10
+        assertEquals("Largest number of alias entries with the same 'first' selector exceeds expectation of " + pageSize * 10
                 + " (value 'a' appears " + cnt + " times)", it.getWarning());
     }
 
@@ -155,7 +146,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedFilteredResourcesC.iterator());
         when(resourceResolver.findResources(eq("testPagedResourcesOnPageBoundaryLost 'd'"), eq("JCR-SQL2")))
                 .thenReturn(expectedFilteredResourcesD.iterator());
-        Iterator<Resource> it = mapEntries.new PagedQueryIterator("alias", PROPNAME, resourceResolver,
+        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver,
                 "testPagedResourcesOnPageBoundaryLost '%s'", 5);
 
         checkResult(it, expected);
