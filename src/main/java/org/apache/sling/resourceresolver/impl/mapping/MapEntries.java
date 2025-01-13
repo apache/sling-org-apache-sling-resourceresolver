@@ -19,7 +19,6 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import org.apache.commons.collections4.map.LRUMap;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
@@ -959,11 +958,6 @@ public class MapEntries implements
         return this.factory.getMaxCachedVanityPathEntries() == -1;
     }
 
-    // escapes string for use as literal in JCR SQL within single quotes
-    static String queryLiteral(String input) {
-        return input.replace("'", "''");
-    }
-
     /**
      * get the vanity paths  Search for all nodes having a specific vanityPath
      */
@@ -973,9 +967,11 @@ public class MapEntries implements
 
         final String queryString = String.format(
                 "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] "
-                        + "WHERE NOT isdescendantnode('%s') AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
+                        + "WHERE %s AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
                         + "ORDER BY [sling:vanityOrder] DESC",
-                JCR_SYSTEM_PATH, queryLiteral(vanityPath), queryLiteral(vanityPath.substring(1)));
+                QueryBuildHelper.excludeSystemPath(),
+                QueryBuildHelper.escapeString(vanityPath),
+                QueryBuildHelper.escapeString(vanityPath.substring(1)));
 
         try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
             long totalCount = 0;
@@ -1237,15 +1233,14 @@ public class MapEntries implements
         StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
 
         if (allowedLocations.isEmpty()) {
-            String jcrSystemPath = StringUtils.removeEnd(JCR_SYSTEM_PREFIX, "/");
-            baseQuery.append(" NOT isdescendantnode('").append(queryLiteral(jcrSystemPath)).append("')");
+            baseQuery.append(" ").append(QueryBuildHelper.excludeSystemPath());
         } else {
             Iterator<String> pathIterator = allowedLocations.iterator();
             baseQuery.append(" (");
             String sep = "";
             while (pathIterator.hasNext()) {
                 String prefix = pathIterator.next();
-                baseQuery.append(sep).append("isdescendantnode('").append(queryLiteral(prefix)).append("')");
+                baseQuery.append(sep).append("isdescendantnode('").append(QueryBuildHelper.escapeString(prefix)).append("')");
                 sep = " OR ";
             }
             baseQuery.append(")");
@@ -1377,8 +1372,7 @@ public class MapEntries implements
     private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
         final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
-                + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
-                + " AND [sling:vanityPath] IS NOT NULL";
+                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
         Iterator<Resource> it;
         try {

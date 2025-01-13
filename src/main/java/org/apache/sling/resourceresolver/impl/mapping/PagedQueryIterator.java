@@ -28,8 +28,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.sling.resourceresolver.impl.mapping.MapEntries.queryLiteral;
-
 /**
  * Utility class for running paged queries.
  */
@@ -74,7 +72,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
 
     private void nextPage() {
         count = 0;
-        String formattedQuery = String.format(query, queryLiteral(lastKey));
+        String formattedQuery = String.format(query, QueryBuildHelper.escapeString(lastKey));
         log.debug("start {} query (page {}): {}", subject, page, formattedQuery);
         long queryStart = System.nanoTime();
         this.it = resolver.findResources(formattedQuery, "JCR-SQL2");
