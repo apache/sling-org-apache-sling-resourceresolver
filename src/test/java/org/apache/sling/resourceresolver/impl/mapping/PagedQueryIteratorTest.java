@@ -85,7 +85,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         assertEquals("", it.getWarning());
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test(expected = PagedQueryIterator.QueryImplementationException.class)
     public void testSimpleWrongOrder() {
         String[] expected = new String[] { "a", "b", "d", "c" };
         Collection<Resource> expectedResources = toResourceList(expected);

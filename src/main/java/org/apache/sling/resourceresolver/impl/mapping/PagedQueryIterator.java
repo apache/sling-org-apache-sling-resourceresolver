@@ -94,13 +94,13 @@ public class PagedQueryIterator implements Iterator<Resource> {
                 String message = String.format("unexpected query result in page %d, %s of '%s' despite querying for > '%s'",
                         (page - 1), propertyName, value, lastKey);
                 log.error(message);
-                throw new RuntimeException(message);
+                throw new QueryImplementationException(message);
             }
             if (lastValue != null && value.compareTo(lastValue) < 0) {
                 String message = String.format("unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
                         (page - 1), propertyName, value, lastValue);
                 log.error(message);
-                throw new RuntimeException(message);
+                throw new QueryImplementationException(message);
             }
 
             // keep information about large key counts
@@ -170,6 +170,15 @@ public class PagedQueryIterator implements Iterator<Resource> {
                     subject, warnAt, largestKeyValue, largestKeyCount);
         } else {
             return "";
+        }
+    }
+
+    /**
+     * Thrown when the underlying repository misbehaves with respect to sorting on multivalued properties.
+     */
+    public static class QueryImplementationException extends RuntimeException {
+        public QueryImplementationException(String message) {
+            super(message);
         }
     }
 }
