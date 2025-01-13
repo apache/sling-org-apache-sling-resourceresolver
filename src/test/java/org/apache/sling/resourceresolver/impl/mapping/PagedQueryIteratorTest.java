@@ -90,8 +90,22 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         String[] expected = new String[] { "a", "b", "d", "c" };
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
+        // incorrect sort order within a query page
         Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
                 2000);
+        while (it.hasNext()) {
+            it.next();
+        }
+    }
+
+    @Test(expected = PagedQueryIterator.QueryImplementationException.class)
+    public void testSimpleWrongResultAfterKey() {
+        String[] expected = new String[] { "a", "b", "d", "c" };
+        Collection<Resource> expectedResources = toResourceList(expected);
+        when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
+        // incorrect return value based on previous key
+        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
+                1);
         while (it.hasNext()) {
             it.next();
         }

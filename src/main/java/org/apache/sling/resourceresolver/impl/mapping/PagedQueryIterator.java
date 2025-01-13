@@ -89,7 +89,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
         if (values.length > 0) {
             String value = values[0];
             if (value.compareTo(lastKey) < 0) {
-                String message = String.format("unexpected query result in page %d, %s of '%s' despite querying for > '%s'",
+                String message = String.format("unexpected query result in page %d, property name '%s', got '%s', despite querying for > '%s'",
                         (page - 1), propertyName, value, lastKey);
                 log.error(message);
                 throw new QueryImplementationException(message);
