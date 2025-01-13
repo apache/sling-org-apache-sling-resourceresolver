@@ -61,7 +61,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void testEmptyQuery() {
-        when(resourceResolver.findResources(eq("empty"), eq("JCR-SQL2"))).thenReturn(Collections.emptyIterator());
+        when(resourceResolver.findResources("empty", "JCR-SQL2")).thenReturn(Collections.emptyIterator());
         Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "empty", 2000);
         assertFalse(it.hasNext());
     }
