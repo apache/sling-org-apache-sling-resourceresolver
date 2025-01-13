@@ -102,7 +102,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     public void testSimpleWrongResultAfterKey() {
         String[] expected = new String[] { "a", "b", "d", "c" };
         Collection<Resource> expectedResources = toResourceList(expected);
-        when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
+        when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2")).thenReturn(expectedResources.iterator());
         // incorrect return value based on previous key
         Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
                 1);
@@ -116,7 +116,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         String[] expected = new String[] { "", "a", "b", "c", "d" };
         Collection<Resource> expectedResources = toResourceList(expected);
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
-        when(resourceResolver.findResources(eq("testPagedWithEmpty ''"), eq("JCR-SQL2")))
+        when(resourceResolver.findResources("testPagedWithEmpty ''", "JCR-SQL2"))
                 .thenReturn(expectedFilteredResources.iterator());
         PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
                 2000);
@@ -132,7 +132,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Arrays.fill(expected,"a");
         Collection<Resource> expectedResources = toResourceList(expected);
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
-        when(resourceResolver.findResources(eq("testPagedLargePage ''"), eq("JCR-SQL2")))
+        when(resourceResolver.findResources("testPagedLargePage ''", "JCR-SQL2"))
                 .thenReturn(expectedFilteredResources.iterator());
         PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
                 pageSize);
