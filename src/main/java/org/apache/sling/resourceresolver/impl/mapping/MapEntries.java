@@ -98,8 +98,6 @@ public class MapEntries implements
 
     public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
 
-    private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
-
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -137,6 +135,8 @@ public class MapEntries implements
 
     private Collection<MapEntry> mapMaps;
 
+    private final VanityPathHandler vanityPathHandler;
+
     private Map <String,List <String>> vanityTargets;
 
     /**
@@ -158,8 +158,6 @@ public class MapEntries implements
     private final AtomicLong vanityPathLookups;
     private final AtomicLong vanityPathBloomNegatives;
     private final AtomicLong vanityPathBloomFalsePositives;
-
-    private byte[] vanityBloomFilter;
 
     private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
@@ -196,6 +194,8 @@ public class MapEntries implements
         this.vanityPathLookups = new AtomicLong(0);
         this.vanityPathBloomNegatives = new AtomicLong(0);
         this.vanityPathBloomFalsePositives = new AtomicLong(0);
+
+        this.vanityPathHandler = new VanityPathHandler(factory);
 
         initializeVanityPaths();
 
@@ -302,7 +302,6 @@ public class MapEntries implements
         this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
-                this.vanityBloomFilter = createVanityBloomFilter();
                 VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
                 if (this.factory.isVanityPathCacheInitInBackground()) {
                     this.log.debug("bg init starting");
@@ -767,7 +766,7 @@ public class MapEntries implements
             }
 
             // init is done - check the bloom filter
-            probablyPresent = BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath);
+            probablyPresent = this.vanityPathHandler.cacheProbablyContains(vanityPath);
             log.trace("bloom filter lookup for {} -> {}", vanityPath, probablyPresent);
 
             if (!probablyPresent) {
@@ -949,10 +948,6 @@ public class MapEntries implements
     }
 
     // ---------- internal
-
-    private byte[] createVanityBloomFilter() throws IOException {
-        return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
-    }
 
     private boolean isAllVanityPathEntriesCached() {
         return this.factory.getMaxCachedVanityPathEntries() == -1;
@@ -1491,12 +1486,10 @@ public class MapEntries implements
                             vanityCounter.addAndGet(2);
                         }
 
-                        // update bloom filter
-                        BloomFilterUtils.add(vanityBloomFilter, checkPath);
+                        this.vanityPathHandler.cacheWillProbablyContain(checkPath);
                     }
                 } else {
-                    // update bloom filter
-                    BloomFilterUtils.add(vanityBloomFilter, checkPath);
+                    this.vanityPathHandler.cacheWillProbablyContain(checkPath);
                 }
             }
         }
