@@ -45,8 +45,6 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1398,7 +1396,7 @@ public class MapEntries implements
         }
 
         for (final String pVanityPath : pVanityPaths) {
-            final String[] result = this.getVanityPathDefinition(resource.getPath(), pVanityPath);
+            final String[] result = this.vanityPathHandler.getVanityPathDefinition(resource.getPath(), pVanityPath);
             if (result != null) {
                 hasVanityPath = true;
                 final String url = result[0] + result[1];
@@ -1458,58 +1456,6 @@ public class MapEntries implements
             }
         }
         return hasVanityPath ? pVanityPaths[0] : null;
-    }
-
-    /**
-     * Create the vanity path definition. String array containing:
-     * {protocol}/{host}[.port] {absolute path}
-     */
-    private String[] getVanityPathDefinition(final String sourcePath, final String vanityPath) {
-
-        if (vanityPath == null) {
-            log.trace("getVanityPathDefinition: null vanity path on {}", sourcePath);
-            return null;
-        }
-
-        String info = vanityPath.trim();
-
-        if (info.isEmpty()) {
-            log.trace("getVanityPathDefinition: empty vanity path on {}", sourcePath);
-            return null;
-        }
-
-        String prefix = null;
-        String path = null;
-
-        // check for URL-shaped path
-        if (info.indexOf(":/") > -1) {
-            try {
-                final URL u = new URL(info);
-                prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
-                path = u.getPath();
-            } catch (final MalformedURLException e) {
-                log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
-                return null;
-            }
-        } else {
-            prefix = "^" + ANY_SCHEME_HOST;
-
-            if (!info.startsWith("/")) {
-                path = "/" + info;
-            } else {
-                path = info;
-            }
-        }
-
-        // remove extension
-        int lastSlash = path.lastIndexOf('/');
-        int firstDot = path.indexOf('.', lastSlash + 1);
-        if (firstDot != -1) {
-            path = path.substring(0, firstDot);
-            log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
-        }
-
-        return new String[] { prefix, path };
     }
 
     private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {

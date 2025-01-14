@@ -21,6 +21,8 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,8 @@ public class VanityPathHandler {
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
     private final AtomicLong vanityCounter;
+
+    private static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     /**
      * @param factory {@link MapConfigurationProvider}
@@ -92,6 +96,52 @@ public class VanityPathHandler {
             List<String> entries = targetPaths.computeIfAbsent(key, x -> new ArrayList<>());
             entries.add(entry);
         }
+    }
+
+    /**
+     * Create the vanity path definition. String array containing:
+     * {protocol}/{host}[.port] {absolute path}
+     */
+    String[] getVanityPathDefinition(final String sourcePath, final String vanityPath) {
+
+        if (vanityPath == null) {
+            log.trace("getVanityPathDefinition: null vanity path on {}", sourcePath);
+            return null;
+        }
+
+        String info = vanityPath.trim();
+
+        if (info.isEmpty()) {
+            log.trace("getVanityPathDefinition: empty vanity path on {}", sourcePath);
+            return null;
+        }
+
+        String prefix, path;
+
+        // check for URL-shaped path
+        if (info.contains(":/")) {
+            try {
+                final URL u = new URL(info);
+                prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
+                path = u.getPath();
+            } catch (MalformedURLException e) {
+                log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
+                return null;
+            }
+        } else {
+            prefix = "^" + ANY_SCHEME_HOST;
+            path = info.startsWith("/") ? info : "/" + info;
+        }
+
+        // remove extension
+        int lastSlash = path.lastIndexOf('/');
+        int firstDot = path.indexOf('.', lastSlash + 1);
+        if (firstDot != -1) {
+            path = path.substring(0, firstDot);
+            log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
+        }
+
+        return new String[] { prefix, path };
     }
 
     // Bloom Filter
