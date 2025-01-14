@@ -21,6 +21,9 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -84,6 +87,15 @@ public class VanityPathHandler {
         return true;
     }
 
+    void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
+        if (entry != null) {
+            List<String> entries = targetPaths.computeIfAbsent(key, x -> new ArrayList<>());
+            entries.add(entry);
+        }
+    }
+
+    // Bloom Filter
+
     boolean cacheProbablyContains(String path) {
         return BloomFilterUtils.probablyContains(this.bloomFilter, path);
     }
@@ -91,6 +103,8 @@ public class VanityPathHandler {
     void cacheWillProbablyContain(String path) {
         BloomFilterUtils.add(this.bloomFilter, path);
     }
+
+    // Metrics
 
     long getTotalCount() {
         return vanityCounter.get();

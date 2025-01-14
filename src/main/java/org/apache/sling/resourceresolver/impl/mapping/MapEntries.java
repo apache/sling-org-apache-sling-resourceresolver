@@ -1444,10 +1444,10 @@ public class MapEntries implements
                     }
                     if (addedEntry) {
                         // 3. keep the path to return
-                        this.updateTargetPaths(targetPaths, redirect, checkPath);
+                        this.vanityPathHandler.updateTargetPaths(targetPaths, redirect, checkPath);
                         //increment only if the instance variable
                         if (entryMap == resolveMapsMap) {
-                            vanityPathHandler.addToTotalCountAndGet(2);
+                            this.vanityPathHandler.addToTotalCountAndGet(2);
                         }
 
                         this.vanityPathHandler.cacheWillProbablyContain(checkPath);
@@ -1458,18 +1458,6 @@ public class MapEntries implements
             }
         }
         return hasVanityPath ? pVanityPaths[0] : null;
-    }
-
-    private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
-        if (entry == null) {
-           return;
-        }
-        List<String> entries = targetPaths.get(key);
-        if (entries == null) {
-            entries = new ArrayList<>();
-            targetPaths.put(key, entries);
-        }
-        entries.add(entry);
     }
 
     /**
