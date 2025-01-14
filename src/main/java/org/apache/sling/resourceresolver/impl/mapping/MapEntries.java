@@ -1342,7 +1342,7 @@ public class MapEntries implements
                     // this regular expression must match the whole URL !!
                     final String url = "^" + ANY_SCHEME_HOST + extPath + "$";
                     final String redirect = intPath;
-                    MapEntry mapEntry = getMapEntry(url, -1, false, redirect);
+                    MapEntry mapEntry = getMapEntry(url, -1, redirect);
                     if (mapEntry!=null){
                         entries.add(mapEntry);
                     }
@@ -1370,7 +1370,7 @@ public class MapEntries implements
             }
 
             for (final Entry<String, List<String>> entry : map.entrySet()) {
-                MapEntry mapEntry = getMapEntry(ANY_SCHEME_HOST + entry.getKey(), -1, false, entry.getValue().toArray(new String[0]));
+                MapEntry mapEntry = getMapEntry(ANY_SCHEME_HOST + entry.getKey(), -1, entry.getValue().toArray(new String[0]));
                 if (mapEntry!=null){
                     entries.add(mapEntry);
                 }
@@ -1413,13 +1413,13 @@ public class MapEntries implements
     private void addMapEntry(final Map<String, MapEntry> entries, final String path, final String url, final int status) {
         MapEntry entry = entries.get(path);
         if (entry == null) {
-            entry = getMapEntry(path, status, false, url);
+            entry = getMapEntry(path, status, url);
         } else {
             final String[] redir = entry.getRedirect();
             final String[] newRedir = new String[redir.length + 1];
             System.arraycopy(redir, 0, newRedir, 0, redir.length);
             newRedir[redir.length] = url;
-            entry = getMapEntry(entry.getPattern(), entry.getStatus(), false, newRedir);
+            entry = getMapEntry(entry.getPattern(), entry.getStatus(), newRedir);
         }
         if (entry!=null){
             entries.put(path, entry);
@@ -1563,16 +1563,13 @@ public class MapEntries implements
         }
     };
 
-    private MapEntry getMapEntry(String url, final int status, final boolean trailingSlash,
-            final String... redirect){
-
-        MapEntry mapEntry = null;
-        try{
-            mapEntry = new MapEntry(url, status, trailingSlash, 0, redirect);
-        }catch (IllegalArgumentException iae){
-            //ignore this entry
-            log.debug("ignored entry due exception ",iae);
+    private MapEntry getMapEntry(final String url, final int status, final String... redirect) {
+        try {
+            return new MapEntry(url, status, false, 0, redirect);
+        } catch (IllegalArgumentException iae) {
+            // ignore this entry
+            log.debug("ignored entry for {} due to exception", url, iae);
+            return null;
         }
-        return mapEntry;
     }
 }
