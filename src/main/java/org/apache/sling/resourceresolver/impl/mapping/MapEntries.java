@@ -1391,22 +1391,22 @@ public class MapEntries implements
                     if (redirectName.indexOf('.') > -1) {
                         // 1. entry with exact match
                         this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "$", status, false, vanityOrder, redirect));
+                                this.vanityPathHandler.getMapEntry(url + "$", status, vanityOrder, redirect));
 
                         final int idx = redirectName.lastIndexOf('.');
                         final String extension = redirectName.substring(idx + 1);
 
                         // 2. entry with extension
                         addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "\\." + extension, status, false, vanityOrder, redirect));
+                                this.vanityPathHandler.getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
                     } else {
                         // 1. entry with exact match
                         this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "$", status, false, vanityOrder, redirect + ".html"));
+                                this.vanityPathHandler.getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
 
                         // 2. entry with match supporting selectors and extension
                         addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "(\\..*)", status, false, vanityOrder, redirect + "$1"));
+                                this.vanityPathHandler.getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
                     }
                     if (addedEntry) {
                         // 3. keep the path to return
