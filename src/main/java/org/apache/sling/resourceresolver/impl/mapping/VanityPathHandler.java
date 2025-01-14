@@ -48,6 +48,8 @@ public class VanityPathHandler {
     private final AtomicLong counter;
     private final AtomicLong resourcesOnStartup;
     private final AtomicLong lookups;
+    private final AtomicLong bloomNegatives;
+    private final AtomicLong bloomFalsePositives;
 
     private static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -61,6 +63,8 @@ public class VanityPathHandler {
         this.counter = new AtomicLong(0);
         this.resourcesOnStartup = new AtomicLong(0);
         this.lookups = new AtomicLong(0);
+        this.bloomNegatives = new AtomicLong(0);
+        this.bloomFalsePositives = new AtomicLong(0);
     }
 
     /**
@@ -170,5 +174,13 @@ public class VanityPathHandler {
 
     AtomicLong getLookups() {
         return this.lookups;
+    }
+
+    AtomicLong getBloomNegatives() {
+        return this.bloomNegatives;
+    }
+
+    AtomicLong getBloomFalsePositives() {
+        return this.bloomFalsePositives;
     }
 }
