@@ -1809,7 +1809,7 @@ public class MapEntries implements
             return new MapEntry(url, status, false, order, redirect);
         } catch (IllegalArgumentException iae) {
             // ignore this entry
-            log.debug("ignored entry for {] due to exception", iae);
+            log.debug("ignored entry for {} due to exception", url, iae);
             return null;
         }
     }
