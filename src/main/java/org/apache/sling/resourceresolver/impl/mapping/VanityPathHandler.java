@@ -176,7 +176,7 @@ public class VanityPathHandler {
                 int size = entriesCopy.size();
                 if (size >= 100) {
                     log.info(">= 100 MapEntries for {} - check your configuration", key);
-                } else if (size >= 100) {
+                } else if (size >= 10) {
                     log.debug(">= 10 MapEntries for {} - check your configuration", key);
                 }
             }
