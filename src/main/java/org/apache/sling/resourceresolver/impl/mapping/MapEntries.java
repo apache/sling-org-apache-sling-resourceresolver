@@ -1390,19 +1390,23 @@ public class MapEntries implements
                 if (addToCache) {
                     if (redirectName.indexOf('.') > -1) {
                         // 1. entry with exact match
-                        this.vanityPathHandler.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, false, vanityOrder, redirect));
+                        this.vanityPathHandler.addEntry(entryMap, checkPath,
+                                this.vanityPathHandler.getMapEntry(url + "$", status, false, vanityOrder, redirect));
 
                         final int idx = redirectName.lastIndexOf('.');
                         final String extension = redirectName.substring(idx + 1);
 
                         // 2. entry with extension
-                        addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, false, vanityOrder, redirect));
+                        addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath,
+                                this.vanityPathHandler.getMapEntry(url + "\\." + extension, status, false, vanityOrder, redirect));
                     } else {
                         // 1. entry with exact match
-                        this.vanityPathHandler.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, false, vanityOrder, redirect + ".html"));
+                        this.vanityPathHandler.addEntry(entryMap, checkPath,
+                                this.vanityPathHandler.getMapEntry(url + "$", status, false, vanityOrder, redirect + ".html"));
 
                         // 2. entry with match supporting selectors and extension
-                        addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, false, vanityOrder, redirect + "$1"));
+                        addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath,
+                                this.vanityPathHandler.getMapEntry(url + "(\\..*)", status, false, vanityOrder, redirect + "$1"));
                     }
                     if (addedEntry) {
                         // 3. keep the path to return
@@ -1660,19 +1664,6 @@ public class MapEntries implements
         MapEntry mapEntry = null;
         try{
             mapEntry = new MapEntry(url, status, trailingSlash, 0, redirect);
-        }catch (IllegalArgumentException iae){
-            //ignore this entry
-            log.debug("ignored entry due exception ",iae);
-        }
-        return mapEntry;
-    }
-
-    private MapEntry getMapEntry(String url, final int status, final boolean trailingSlash, long order,
-            final String... redirect){
-
-        MapEntry mapEntry = null;
-        try{
-            mapEntry = new MapEntry(url, status, trailingSlash, order, redirect);
         }catch (IllegalArgumentException iae){
             //ignore this entry
             log.debug("ignored entry due exception ",iae);

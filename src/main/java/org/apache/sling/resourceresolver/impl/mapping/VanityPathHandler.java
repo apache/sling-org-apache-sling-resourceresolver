@@ -153,6 +153,16 @@ public class VanityPathHandler {
         return new String[] { prefix, path };
     }
 
+    MapEntry getMapEntry(final String url, final int status, final boolean trailingSlash, long order, final String... redirect){
+        try {
+            return new MapEntry(url, status, trailingSlash, order, redirect);
+        } catch (IllegalArgumentException iae) {
+            //ignore this entry
+            log.debug("ignored entry for {} due to exception", url, iae);
+            return null;
+        }
+    }
+
     /**
      * Add an entry to the resolve map.
      */
