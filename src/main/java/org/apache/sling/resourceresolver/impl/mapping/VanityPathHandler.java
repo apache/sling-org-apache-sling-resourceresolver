@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -150,6 +151,37 @@ public class VanityPathHandler {
         }
 
         return new String[] { prefix, path };
+    }
+
+    /**
+     * Add an entry to the resolve map.
+     */
+    boolean addEntry(final Map<String, List<MapEntry>> entryMap, final String key, final MapEntry entry) {
+
+        if (entry == null) {
+            log.trace("trying to add null entry for {}", key);
+            return false;
+        } else {
+            List<MapEntry> entries = entryMap.get(key);
+            if (entries == null) {
+                entries = new ArrayList<>();
+                entries.add(entry);
+                entryMap.put(key, entries);
+            } else {
+                List<MapEntry> entriesCopy = new ArrayList<>(entries);
+                entriesCopy.add(entry);
+                // and finally sort list
+                Collections.sort(entriesCopy);
+                entryMap.put(key, entriesCopy);
+                int size = entriesCopy.size();
+                if (size >= 100) {
+                    log.info(">= 100 MapEntries for {} - check your configuration", key);
+                } else if (size >= 100) {
+                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
+                }
+            }
+            return true;
+        }
     }
 
     // Bloom Filter
