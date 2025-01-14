@@ -152,7 +152,6 @@ public class MapEntries implements
 
     private final ReentrantLock initializing = new ReentrantLock();
 
-    private final AtomicLong vanityCounter;
     private final AtomicLong vanityResourcesOnStartup;
     private final AtomicLong vanityPathLookups;
     private final AtomicLong vanityPathBloomNegatives;
@@ -188,7 +187,6 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vanityCounter = new AtomicLong(0);
         this.vanityResourcesOnStartup = new AtomicLong(0);
         this.vanityPathLookups = new AtomicLong(0);
         this.vanityPathBloomNegatives = new AtomicLong(0);
@@ -200,7 +198,7 @@ public class MapEntries implements
 
         this.metrics = metrics;
         if (metrics.isPresent()) {
-            this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
+            this.metrics.get().setNumberOfVanityPathsSupplier(vanityPathHandler::getTotalCount);
             this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityResourcesOnStartup::get);
             this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
             this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
@@ -570,7 +568,7 @@ public class MapEntries implements
     private boolean doAddVanity(final Resource resource) {
         log.debug("doAddVanity getting {}", resource.getPath());
 
-        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityPathHandler.getTotalCount() < this.factory.getMaxCachedVanityPathEntries();
         return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache);
     }
 
@@ -593,8 +591,8 @@ public class MapEntries implements
                     this.resolveMapsMap.remove(s);
                 }
             }
-            if (vanityCounter.longValue() > 0) {
-                vanityCounter.addAndGet(-2);
+            if (vanityPathHandler.getTotalCount() > 0) {
+                vanityPathHandler.addToTotalCountAndGet(-2);
             }
             return true;
         }
@@ -985,7 +983,7 @@ public class MapEntries implements
                 }
                 if ( isValid ) {
                     totalValid += 1;
-                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
+                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityPathHandler.getTotalCount() < this.factory.getMaxCachedVanityPathEntries())) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true);
                         entryMap = resolveMapsMap;
                     } else {
@@ -1358,7 +1356,7 @@ public class MapEntries implements
             if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
-                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+                        || vanityPathHandler.getTotalCount() < this.factory.getMaxCachedVanityPathEntries();
                 loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
             }
         }
@@ -1449,7 +1447,7 @@ public class MapEntries implements
                         this.updateTargetPaths(targetPaths, redirect, checkPath);
                         //increment only if the instance variable
                         if (entryMap == resolveMapsMap) {
-                            vanityCounter.addAndGet(2);
+                            vanityPathHandler.addToTotalCountAndGet(2);
                         }
 
                         this.vanityPathHandler.cacheWillProbablyContain(checkPath);

@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Handles loading and caching of vanity paths.
@@ -39,6 +40,8 @@ public class VanityPathHandler {
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
+    private final AtomicLong vanityCounter;
+
     /**
      * @param factory {@link MapConfigurationProvider}
      */
@@ -46,6 +49,7 @@ public class VanityPathHandler {
         this.factory = factory;
         this.bloomFilter = BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES,
                 this.factory.getVanityBloomFilterMaxBytes());
+        this.vanityCounter = new AtomicLong(0);
     }
 
     /**
@@ -86,5 +90,13 @@ public class VanityPathHandler {
 
     void cacheWillProbablyContain(String path) {
         BloomFilterUtils.add(this.bloomFilter, path);
+    }
+
+    long getTotalCount() {
+        return vanityCounter.get();
+    }
+
+    long addToTotalCountAndGet(long delta) {
+        return vanityCounter.addAndGet(delta);
     }
  }
