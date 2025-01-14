@@ -89,11 +89,7 @@ public class MapEntries implements
 
     public static final String PROP_REDIRECT_EXTERNAL_STATUS = "sling:status";
 
-    public static final String PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS = "sling:redirectStatus";
-
     public static final String PROP_VANITY_PATH = "sling:vanityPath";
-
-    public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
 
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
@@ -560,7 +556,7 @@ public class MapEntries implements
         log.debug("doAddVanity getting {}", resource.getPath());
 
         boolean updateTheCache = isAllVanityPathEntriesCached() || vanityPathHandler.getCounter().get() < this.factory.getMaxCachedVanityPathEntries();
-        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
+        return null != this.vanityPathHandler.loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
     }
 
     private boolean doRemoveVanity(final String path) {
@@ -975,11 +971,11 @@ public class MapEntries implements
                 if ( isValid ) {
                     totalValid += 1;
                     if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityPathHandler.getCounter().get() < this.factory.getMaxCachedVanityPathEntries())) {
-                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
+                        this.vanityPathHandler.loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
                         entryMap = resolveMapsMap;
                     } else {
                         final Map <String, List<String>> targetPaths = new HashMap<>();
-                        loadVanityPath(resource, entryMap, targetPaths, true, false);
+                        this.vanityPathHandler.loadVanityPath(resource, entryMap, targetPaths, true, false);
                     }
                 }
             }
@@ -1317,7 +1313,7 @@ public class MapEntries implements
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityPathHandler.getCounter().get() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
+                this.vanityPathHandler.loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
@@ -1333,97 +1329,6 @@ public class MapEntries implements
         this.vanityPathHandler.getResourceCountOnStartup().set(count);
 
         return targetPaths;
-    }
-
-    /**
-     * Load vanity path given a resource
-     * 
-     * @return first vanity path or {@code null}
-     */
-    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap,
-                                  final Map <String, List<String>> targetPaths,
-                                  boolean addToCache, boolean updateCounter) {
-
-        if (!this.vanityPathHandler.isValidVanityPath(resource.getPath())) {
-            return null;
-        }
-
-        final ValueMap props = resource.getValueMap();
-        long vanityOrder = props.get(PROP_VANITY_ORDER, 0L);
-
-        // url is ignoring scheme and host.port and the path is
-        // what is stored in the sling:vanityPath property
-        boolean hasVanityPath = false;
-        final String[] pVanityPaths = props.get(PROP_VANITY_PATH, new String[0]);
-        if (log.isTraceEnabled()) {
-            log.trace("vanity paths on {}: {}", resource.getPath(), Arrays.asList(pVanityPaths));
-        }
-
-        for (final String pVanityPath : pVanityPaths) {
-            final String[] result = this.vanityPathHandler.getVanityPathDefinition(resource.getPath(), pVanityPath);
-            if (result != null) {
-                hasVanityPath = true;
-                final String url = result[0] + result[1];
-                // redirect target is the node providing the
-                // sling:vanityPath
-                // property (or its parent if the node is called
-                // jcr:content)
-                final Resource redirectTarget;
-                if (JCR_CONTENT.equals(resource.getName())) {
-                    redirectTarget = resource.getParent();
-                } else {
-                    redirectTarget = resource;
-                }
-                final String redirect = redirectTarget.getPath();
-                final String redirectName = redirectTarget.getName();
-
-                // whether the target is attained by a external redirect or
-                // by an internal redirect is defined by the sling:redirect
-                // property
-                final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
-                        PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
-                        : -1;
-
-                final String checkPath = result[1];
-
-                boolean addedEntry;
-                if (addToCache) {
-                    if (redirectName.indexOf('.') > -1) {
-                        // 1. entry with exact match
-                        this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "$", status, vanityOrder, redirect));
-
-                        final int idx = redirectName.lastIndexOf('.');
-                        final String extension = redirectName.substring(idx + 1);
-
-                        // 2. entry with extension
-                        addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
-                    } else {
-                        // 1. entry with exact match
-                        this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
-
-                        // 2. entry with match supporting selectors and extension
-                        addedEntry = this.vanityPathHandler.addEntry(entryMap, checkPath,
-                                this.vanityPathHandler.getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
-                    }
-                    if (addedEntry) {
-                        // 3. keep the path to return
-                        this.vanityPathHandler.updateTargetPaths(targetPaths, redirect, checkPath);
-                        //increment only if the instance variable
-                        if (updateCounter) {
-                            this.vanityPathHandler.getCounter().getAndAdd(2);
-                        }
-
-                        this.vanityPathHandler.cacheWillProbablyContain(checkPath);
-                    }
-                } else {
-                    this.vanityPathHandler.cacheWillProbablyContain(checkPath);
-                }
-            }
-        }
-        return hasVanityPath ? pVanityPaths[0] : null;
     }
 
     private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
