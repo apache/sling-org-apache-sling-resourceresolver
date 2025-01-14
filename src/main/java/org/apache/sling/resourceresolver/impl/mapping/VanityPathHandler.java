@@ -45,8 +45,9 @@ public class VanityPathHandler {
 
     private static final String JCR_SYSTEM_PREFIX = "/jcr:system/";
 
-    private final AtomicLong vanityCounter;
-    private final AtomicLong vanityResourcesOnStartup;
+    private final AtomicLong counter;
+    private final AtomicLong resourcesOnStartup;
+    private final AtomicLong lookups;
 
     private static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
@@ -57,8 +58,9 @@ public class VanityPathHandler {
         this.factory = factory;
         this.bloomFilter = BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES,
                 this.factory.getVanityBloomFilterMaxBytes());
-        this.vanityCounter = new AtomicLong(0);
-        this.vanityResourcesOnStartup = new AtomicLong(0);
+        this.counter = new AtomicLong(0);
+        this.resourcesOnStartup = new AtomicLong(0);
+        this.lookups = new AtomicLong(0);
     }
 
     /**
@@ -159,18 +161,30 @@ public class VanityPathHandler {
     // Metrics
 
     long getTotalCount() {
-        return vanityCounter.get();
+        return counter.get();
     }
 
     long addToTotalCountAndGet(long delta) {
-        return vanityCounter.addAndGet(delta);
+        return counter.addAndGet(delta);
     }
 
     Long getResourceCountOnStartup() {
-        return vanityResourcesOnStartup.get();
+        return resourcesOnStartup.get();
     }
 
     void setResourceCountOnStartup(long value) {
-        vanityResourcesOnStartup.set(value);
+        resourcesOnStartup.set(value);
+    }
+
+    long getLookups() {
+        return lookups.get();
+    }
+
+    long incrementAndGetLookups() {
+        return lookups.incrementAndGet();
+    }
+
+    void setLookups(long value) {
+        lookups.set(value);
     }
 }

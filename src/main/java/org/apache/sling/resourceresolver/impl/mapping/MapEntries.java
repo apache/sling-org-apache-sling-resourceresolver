@@ -150,7 +150,6 @@ public class MapEntries implements
 
     private final ReentrantLock initializing = new ReentrantLock();
 
-    private final AtomicLong vanityPathLookups;
     private final AtomicLong vanityPathBloomNegatives;
     private final AtomicLong vanityPathBloomFalsePositives;
 
@@ -184,7 +183,6 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vanityPathLookups = new AtomicLong(0);
         this.vanityPathBloomNegatives = new AtomicLong(0);
         this.vanityPathBloomFalsePositives = new AtomicLong(0);
 
@@ -196,7 +194,7 @@ public class MapEntries implements
         if (metrics.isPresent()) {
             this.metrics.get().setNumberOfVanityPathsSupplier(vanityPathHandler::getTotalCount);
             this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityPathHandler::getResourceCountOnStartup);
-            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
+            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathHandler::getLookups);
             this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
             this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vanityPathBloomFalsePositives::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
@@ -752,10 +750,10 @@ public class MapEntries implements
 
         if (initFinished) {
             // total number of lookups after init (and when cache not complete)
-            long current = this.vanityPathLookups.incrementAndGet();
+            long current = this.vanityPathHandler.incrementAndGetLookups();
             if (current >= Long.MAX_VALUE - 100000) {
                 // reset counters when we get close the limit
-                this.vanityPathLookups.set(1);
+                this.vanityPathHandler.setLookups(1);
                 this.vanityPathBloomNegatives.set(0);
                 this.vanityPathBloomFalsePositives.set(0);
                 log.info("Vanity Path metrics reset to 0");
