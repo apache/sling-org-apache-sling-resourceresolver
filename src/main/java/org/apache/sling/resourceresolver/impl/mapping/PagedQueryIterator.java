@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class PagedQueryIterator implements Iterator<Resource> {
 
-    /** default log, using MapEntries for backwards compatibility */
+    /** default log */
     private final Logger log = LoggerFactory.getLogger(PagedQueryIterator.class);
 
     private final String subject;

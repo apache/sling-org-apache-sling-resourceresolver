@@ -32,7 +32,6 @@ import org.apache.sling.api.resource.observation.ResourceChangeListener;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
-import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.BundleContext;
@@ -417,7 +416,7 @@ public class MapEntries implements
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
-        final boolean isValidVanityPath =  this.isValidVanityPath(path);
+        final boolean isValidVanityPath =  this.vanityPathHandler.isValidVanityPath(path);
         if ( this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
@@ -1002,39 +1001,6 @@ public class MapEntries implements
         return entryMap;
     }
 
-    /**
-     * Check if the path is a valid vanity path
-     * @param path The resource path to check
-     * @return {@code true} if this is valid, {@code false} otherwise
-     */
-    private boolean isValidVanityPath(final String path){
-        if (path == null) {
-            throw new IllegalArgumentException("Unexpected null path");
-        }
-
-        // ignore system tree
-        if (path.startsWith(JCR_SYSTEM_PREFIX)) {
-            log.debug("isValidVanityPath: not valid {}", path);
-            return false;
-        }
-
-        // check allow/deny list
-        if ( this.factory.getVanityPathConfig() != null ) {
-            boolean allowed = false;
-            for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
-                if ( path.startsWith(config.prefix) ) {
-                    allowed = !config.isExclude;
-                    break;
-                }
-            }
-            if ( !allowed ) {
-                log.debug("isValidVanityPath: not valid as not in allow list {}", path);
-                return false;
-            }
-        }
-        return true;
-    }
-
     private String getActualContentPath(final String path){
         final String checkPath;
         if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
@@ -1418,7 +1384,7 @@ public class MapEntries implements
      */
     private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache) {
 
-        if (!isValidVanityPath(resource.getPath())) {
+        if (!this.vanityPathHandler.isValidVanityPath(resource.getPath())) {
             return null;
         }
 

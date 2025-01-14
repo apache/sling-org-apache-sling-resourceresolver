@@ -1893,16 +1893,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_isValidVanityPath() throws Exception {
-        Method method = MapEntries.class.getDeclaredMethod("isValidVanityPath", String.class);
-        method.setAccessible(true);
-
-        assertFalse((Boolean)method.invoke(mapEntries, "/jcr:system/node"));
-
-        assertTrue((Boolean)method.invoke(mapEntries, "/justVanityPath"));
-    }
-
-    @Test
     //SLING-4847
     public void test_doNodeAdded1() throws Exception {
         final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
