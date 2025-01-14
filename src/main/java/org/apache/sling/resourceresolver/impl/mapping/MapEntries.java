@@ -150,7 +150,6 @@ public class MapEntries implements
 
     private final ReentrantLock initializing = new ReentrantLock();
 
-    private final AtomicLong vanityResourcesOnStartup;
     private final AtomicLong vanityPathLookups;
     private final AtomicLong vanityPathBloomNegatives;
     private final AtomicLong vanityPathBloomFalsePositives;
@@ -185,7 +184,6 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vanityResourcesOnStartup = new AtomicLong(0);
         this.vanityPathLookups = new AtomicLong(0);
         this.vanityPathBloomNegatives = new AtomicLong(0);
         this.vanityPathBloomFalsePositives = new AtomicLong(0);
@@ -197,7 +195,7 @@ public class MapEntries implements
         this.metrics = metrics;
         if (metrics.isPresent()) {
             this.metrics.get().setNumberOfVanityPathsSupplier(vanityPathHandler::getTotalCount);
-            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityResourcesOnStartup::get);
+            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityPathHandler::getResourceCountOnStartup);
             this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
             this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
             this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vanityPathBloomFalsePositives::get);
@@ -297,7 +295,7 @@ public class MapEntries implements
         this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
-                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
+                VanityPathInitializer vpi = new VanityPathInitializer(this.factory, this.vanityPathHandler);
                 if (this.factory.isVanityPathCacheInitInBackground()) {
                     this.log.debug("bg init starting");
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
@@ -315,10 +313,13 @@ public class MapEntries implements
 
         private int SIZELIMIT = 10000;
 
-        private MapConfigurationProvider factory;
+        private final MapConfigurationProvider factory;
 
-        public VanityPathInitializer(MapConfigurationProvider factory) {
+        private final VanityPathHandler vanityPathHandler;
+
+        public VanityPathInitializer(MapConfigurationProvider factory, VanityPathHandler vanityPathHandler) {
             this.factory = factory;
+            this.vanityPathHandler = vanityPathHandler;
         }
 
         @Override
@@ -376,11 +377,11 @@ public class MapEntries implements
                 drainQueue(resourceChangeQueue);
 
                 long initElapsed = System.nanoTime() - initStart;
-                long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
+                long resourcesPerSecond = (this.vanityPathHandler.getResourceCountOnStartup() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
 
                 log.info(
                         "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
-                        vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
+                        this.vanityPathHandler.getResourceCountOnStartup(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
             } catch (LoginException ex) {
                 log.error("Vanity path init failed", ex);
             } finally {
@@ -1368,7 +1369,7 @@ public class MapEntries implements
             }
         }
 
-        this.vanityResourcesOnStartup.set(count);
+        this.vanityPathHandler.setResourceCountOnStartup(count);
 
         return targetPaths;
     }
