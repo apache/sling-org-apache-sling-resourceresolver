@@ -19,7 +19,6 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import org.apache.commons.collections4.map.LRUMap;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
@@ -959,11 +958,6 @@ public class MapEntries implements
         return this.factory.getMaxCachedVanityPathEntries() == -1;
     }
 
-    // escapes string for use as literal in JCR SQL within single quotes
-    private static String queryLiteral(String input) {
-        return input.replace("'", "''");
-    }
-
     /**
      * get the vanity paths  Search for all nodes having a specific vanityPath
      */
@@ -973,9 +967,11 @@ public class MapEntries implements
 
         final String queryString = String.format(
                 "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] "
-                        + "WHERE NOT isdescendantnode('%s') AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
+                        + "WHERE %s AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
                         + "ORDER BY [sling:vanityOrder] DESC",
-                JCR_SYSTEM_PATH, queryLiteral(vanityPath), queryLiteral(vanityPath.substring(1)));
+                QueryBuildHelper.excludeSystemPath(),
+                QueryBuildHelper.escapeString(vanityPath),
+                QueryBuildHelper.escapeString(vanityPath.substring(1)));
 
         try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
             long totalCount = 0;
@@ -1237,15 +1233,14 @@ public class MapEntries implements
         StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
 
         if (allowedLocations.isEmpty()) {
-            String jcrSystemPath = StringUtils.removeEnd(JCR_SYSTEM_PREFIX, "/");
-            baseQuery.append(" NOT isdescendantnode('").append(queryLiteral(jcrSystemPath)).append("')");
+            baseQuery.append(" ").append(QueryBuildHelper.excludeSystemPath());
         } else {
             Iterator<String> pathIterator = allowedLocations.iterator();
             baseQuery.append(" (");
             String sep = "";
             while (pathIterator.hasNext()) {
                 String prefix = pathIterator.next();
-                baseQuery.append(sep).append("isdescendantnode('").append(queryLiteral(prefix)).append("')");
+                baseQuery.append(sep).append("isdescendantnode('").append(QueryBuildHelper.escapeString(prefix)).append("')");
                 sep = " OR ";
             }
             baseQuery.append(")");
@@ -1371,174 +1366,29 @@ public class MapEntries implements
     }
 
     /**
-     * Utility class for running paged queries.
-     */
-    protected class PagedQueryIterator implements Iterator<Resource> {
-
-        private ResourceResolver resolver;
-        private String subject;
-        private String propertyName;
-        private String query;
-        private String lastKey = "";
-        private String lastValue = null;
-        private Iterator<Resource> it;
-        private int count = 0;
-        private int page = 0;
-        private int pageSize;
-        private Resource next = null;
-        private String[] defaultValue = new String[0];
-        private int largestPage = 0;
-        private String largestKeyValue = "";
-        private int largestKeyCount = 0;
-        private int currentKeyCount = 0;
-
-        /**
-         * @param subject name of the query, will be used only for logging
-         * @param propertyName name of multivalued string property to query on (used for diagnostics)
-         * @param resolver resource resolver
-         * @param query query string in SQL2 syntax
-         * @param pageSize page size (start a new query after page size is exceeded)
-         */
-        public PagedQueryIterator(String subject, String propertyName, ResourceResolver resolver, String query, int pageSize) {
-            this.subject = subject;
-            this.propertyName = propertyName;
-            this.resolver = resolver;
-            this.query = query;
-            this.pageSize = pageSize;
-            nextPage();
-        }
-
-        private void nextPage() {
-            count = 0;
-            String tquery = String.format(query, queryLiteral(lastKey));
-            log.debug("start {} query (page {}): {}", subject, page, tquery);
-            long queryStart = System.nanoTime();
-            this.it = resolver.findResources(tquery, "JCR-SQL2");
-            long queryElapsed = System.nanoTime() - queryStart;
-            log.debug("end {} query (page {}); elapsed {}ms", subject, page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
-            page += 1;
-        }
-
-        private Resource getNext() throws NoSuchElementException {
-            Resource resource = it.next();
-            count += 1;
-            final String[] values = resource.getValueMap().get(propertyName, defaultValue);
-
-            if (values.length > 0) {
-                String value = values[0];
-                if (value.compareTo(lastKey) < 0) {
-                    String message = String.format("unexpected query result in page %d, %s of '%s' despite querying for > '%s'",
-                            (page - 1), propertyName, value, lastKey);
-                    log.error(message);
-                    throw new RuntimeException(message);
-                }
-                if (lastValue != null && value.compareTo(lastValue) < 0) {
-                    String message = String.format("unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
-                            (page - 1), propertyName, value, lastValue);
-                    log.error(message);
-                    throw new RuntimeException(message);
-                }
-
-                // keep information about large key counts
-                if (value.equals(lastValue)) {
-                    currentKeyCount += 1;
-                } else {
-                    if (currentKeyCount > largestKeyCount) {
-                        largestKeyCount = currentKeyCount + 1;
-                        largestKeyValue = lastValue;
-                    }
-                    currentKeyCount = 0;
-                }
-
-                // start next page?
-                if (count > pageSize && !value.equals(lastValue)) {
-                    updatePageStats();
-                    lastKey = value;
-                    nextPage();
-                    return getNext();
-                }
-                lastValue = value;
-            }
-
-            return resource;
-        }
-
-        @Override
-        public boolean hasNext() {
-            if (next == null) {
-                try {
-                    next = getNext();
-                } catch (NoSuchElementException ex) {
-                    if (currentKeyCount > largestKeyCount) {
-                        largestKeyCount = currentKeyCount + 1;
-                        largestKeyValue = lastValue;
-                    }
-                    updatePageStats();
-                    // there are no more
-                    next = null;
-                }
-            }
-            return next != null;
-        }
-
-        @Override
-        public Resource next() throws NoSuchElementException {
-            Resource result = next != null ? next : getNext();
-            next = null;
-            return result;
-        }
-
-        private void updatePageStats() {
-            largestPage = Math.max(largestPage, count - 1);
-            log.debug("read {} query (page {}); {} entries, last key was: {}, largest page so far: {}", subject, page - 1,
-                    count, lastKey, largestPage);
-        }
-
-        public @NotNull String getStatistics() {
-            return String.format(" (max. page size: %d, number of pages: %d)", largestPage, page);
-        }
-
-        public @NotNull String getWarning() {
-            int warnAt = pageSize * 10;
-            if (largestKeyCount > warnAt) {
-                return String.format(
-                        "Largest number of aliases with the same 'first' selector exceeds expectation of %d (value '%s' appears %d times)",
-                        warnAt, largestKeyValue, largestKeyCount);
-            } else {
-                return "";
-            }
-        }
-    }
-
-    /**
      * Load vanity paths - search for all nodes (except under /jcr:system)
      * having a sling:vanityPath property
      */
     private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
         final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
-                + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
-                + " AND [sling:vanityPath] IS NOT NULL";
+                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
-        boolean supportsSort = true;
         Iterator<Resource> it;
         try {
             final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
-            supportsSort = false;
             it = queryUnpaged("vanity path", baseQueryString);
         } catch (UnsupportedOperationException ex) {
             log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            supportsSort = false;
             it = queryUnpaged("vanity path", baseQueryString);
         }
 
         long count = 0;
         long countInScope = 0;
         long processStart = System.nanoTime();
-        String previousVanityPath = null;
 
         while (it.hasNext()) {
             count += 1;
@@ -1548,13 +1398,7 @@ public class MapEntries implements
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                String firstVanityPath = loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
-                if (supportsSort && firstVanityPath != null) {
-                    if (previousVanityPath != null && firstVanityPath.compareTo(previousVanityPath) < 0) {
-                        log.error("Sorting by first(vanityPath) does not appear to work; got " + firstVanityPath + " after " + previousVanityPath);
-                    }
-                    previousVanityPath = firstVanityPath;
-               }
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
