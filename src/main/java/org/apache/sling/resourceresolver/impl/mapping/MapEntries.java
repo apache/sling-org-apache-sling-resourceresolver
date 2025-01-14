@@ -192,9 +192,9 @@ public class MapEntries implements
 
         this.metrics = metrics;
         if (metrics.isPresent()) {
-            this.metrics.get().setNumberOfVanityPathsSupplier(vanityPathHandler::getTotalCount);
-            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityPathHandler::getResourceCountOnStartup);
-            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathHandler::getLookups);
+            this.metrics.get().setNumberOfVanityPathsSupplier(vanityPathHandler.getCounter()::get);
+            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityPathHandler.getResourceCountOnStartup()::get);
+            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathHandler.getLookups()::get);
             this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
             this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vanityPathBloomFalsePositives::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
@@ -375,7 +375,7 @@ public class MapEntries implements
                 drainQueue(resourceChangeQueue);
 
                 long initElapsed = System.nanoTime() - initStart;
-                long resourcesPerSecond = (this.vanityPathHandler.getResourceCountOnStartup() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
+                long resourcesPerSecond = (this.vanityPathHandler.getResourceCountOnStartup().get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
 
                 log.info(
                         "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
@@ -565,7 +565,7 @@ public class MapEntries implements
     private boolean doAddVanity(final Resource resource) {
         log.debug("doAddVanity getting {}", resource.getPath());
 
-        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityPathHandler.getTotalCount() < this.factory.getMaxCachedVanityPathEntries();
+        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityPathHandler.getCounter().get() < this.factory.getMaxCachedVanityPathEntries();
         return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache);
     }
 
@@ -588,8 +588,8 @@ public class MapEntries implements
                     this.resolveMapsMap.remove(s);
                 }
             }
-            if (vanityPathHandler.getTotalCount() > 0) {
-                vanityPathHandler.addToTotalCountAndGet(-2);
+            if (vanityPathHandler.getCounter().get() > 0) {
+                vanityPathHandler.getCounter().addAndGet(-2);
             }
             return true;
         }
@@ -750,10 +750,10 @@ public class MapEntries implements
 
         if (initFinished) {
             // total number of lookups after init (and when cache not complete)
-            long current = this.vanityPathHandler.incrementAndGetLookups();
+            long current = this.vanityPathHandler.getLookups().incrementAndGet();
             if (current >= Long.MAX_VALUE - 100000) {
                 // reset counters when we get close the limit
-                this.vanityPathHandler.setLookups(1);
+                this.vanityPathHandler.getLookups().set(1);
                 this.vanityPathBloomNegatives.set(0);
                 this.vanityPathBloomFalsePositives.set(0);
                 log.info("Vanity Path metrics reset to 0");
@@ -980,7 +980,7 @@ public class MapEntries implements
                 }
                 if ( isValid ) {
                     totalValid += 1;
-                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityPathHandler.getTotalCount() < this.factory.getMaxCachedVanityPathEntries())) {
+                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityPathHandler.getCounter().get() < this.factory.getMaxCachedVanityPathEntries())) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true);
                         entryMap = resolveMapsMap;
                     } else {
@@ -1353,7 +1353,7 @@ public class MapEntries implements
             if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
-                        || vanityPathHandler.getTotalCount() < this.factory.getMaxCachedVanityPathEntries();
+                        || vanityPathHandler.getCounter().get() < this.factory.getMaxCachedVanityPathEntries();
                 loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
             }
         }
@@ -1367,7 +1367,7 @@ public class MapEntries implements
             }
         }
 
-        this.vanityPathHandler.setResourceCountOnStartup(count);
+        this.vanityPathHandler.getResourceCountOnStartup().set(count);
 
         return targetPaths;
     }
@@ -1444,7 +1444,7 @@ public class MapEntries implements
                         this.vanityPathHandler.updateTargetPaths(targetPaths, redirect, checkPath);
                         //increment only if the instance variable
                         if (entryMap == resolveMapsMap) {
-                            this.vanityPathHandler.addToTotalCountAndGet(2);
+                            this.vanityPathHandler.getCounter().getAndAdd(2);
                         }
 
                         this.vanityPathHandler.cacheWillProbablyContain(checkPath);

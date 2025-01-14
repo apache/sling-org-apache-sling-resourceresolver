@@ -657,7 +657,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
 
         //bad vanity
         Resource badVanityPath = mock(Resource.class, "badVanityPath");
@@ -691,7 +691,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         entries = mapEntries.getResolveMaps();
         assertEquals(4, entries.size());
 
-        assertEquals(4, vph.getTotalCount());
+        assertEquals(4, vph.getCounter().get());
 
         vanityTargets = (Map<String, List<String>>) field.get(mapEntries);
         assertEquals(2, vanityTargets.size());
@@ -729,7 +729,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
 
         //bad vanity
         Resource badVanityPath = mock(Resource.class, "badVanityPath");
@@ -762,7 +762,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         entries = mapEntries.getResolveMaps();
         assertEquals(4, entries.size());
 
-        assertEquals(4, vph.getTotalCount());
+        assertEquals(4, vph.getCounter().get());
 
         vanityTargets = (Map<String, List<String>>) field.get(mapEntries);
         assertEquals(2, vanityTargets.size());
@@ -881,7 +881,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
         assertEquals(2, resolveMapsMap.size());
         assertEquals(1, vanityTargets.size());
         assertNotNull(resolveMapsMap.get("/target/justVanityPath"));
@@ -891,7 +891,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         //remove vanity path
         method1.invoke(mapEntries, "/justVanityPath");
 
-        assertEquals(0, vph.getTotalCount());
+        assertEquals(0, vph.getCounter().get());
 
         assertEquals(1, resolveMapsMap.size());
         assertEquals(0, vanityTargets.size());
@@ -1911,7 +1911,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(0, vph.getTotalCount());
+        assertEquals(0, vph.getCounter().get());
     }
 
     @Test
@@ -1946,7 +1946,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
 
         final Resource justVanityPath2 = mock(Resource.class, "justVanityPath2");
         when(resourceResolver.getResource("/justVanityPath2")).thenReturn(justVanityPath2);
@@ -1968,7 +1968,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         method.invoke(mapEntries, "/target/justVanityPath");
 
-        assertEquals(4, vph.getTotalCount());
+        assertEquals(4, vph.getCounter().get());
     }
 
     @Test
@@ -2004,7 +2004,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(0, vph.getTotalCount());
+        assertEquals(0, vph.getCounter().get());
     }
 
     @Test
@@ -2039,7 +2039,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(0, vph.getTotalCount());
+        assertEquals(0, vph.getCounter().get());
     }
 
     @Test
@@ -2074,7 +2074,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
 
         final Resource justVanityPath2 = mock(Resource.class, "justVanityPath2");
         when(resourceResolver.getResource("/justVanityPath2")).thenReturn(justVanityPath2);
@@ -2096,7 +2096,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         method.invoke(mapEntries, "/target/justVanityPath");
 
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
     }
 
     @Test
@@ -2129,7 +2129,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
     }
 
     @Test
@@ -2161,7 +2161,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
     }
 
     @Test
@@ -2210,14 +2210,14 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityPathHandlerField = MapEntries.class.getDeclaredField("vanityPathHandler");
         vanityPathHandlerField.setAccessible(true);
         VanityPathHandler vph = (VanityPathHandler) vanityPathHandlerField.get(mapEntries);
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
 
         method.invoke(mapEntries, "/target/justVanityPath");
 
         entries = mapEntries.getResolveMaps();
         assertEquals(2, entries.size());
 
-        assertEquals(2, vph.getTotalCount());
+        assertEquals(2, vph.getCounter().get());
     }
 
     @Test

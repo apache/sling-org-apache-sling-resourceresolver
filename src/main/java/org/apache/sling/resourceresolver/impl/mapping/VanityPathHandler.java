@@ -160,31 +160,15 @@ public class VanityPathHandler {
 
     // Metrics
 
-    long getTotalCount() {
-        return counter.get();
+    AtomicLong getCounter() {
+        return this.counter;
     }
 
-    long addToTotalCountAndGet(long delta) {
-        return counter.addAndGet(delta);
+    AtomicLong getResourceCountOnStartup() {
+        return this.resourcesOnStartup;
     }
 
-    Long getResourceCountOnStartup() {
-        return resourcesOnStartup.get();
-    }
-
-    void setResourceCountOnStartup(long value) {
-        resourcesOnStartup.set(value);
-    }
-
-    long getLookups() {
-        return lookups.get();
-    }
-
-    long incrementAndGetLookups() {
-        return lookups.incrementAndGet();
-    }
-
-    void setLookups(long value) {
-        lookups.set(value);
+    AtomicLong getLookups() {
+        return this.lookups;
     }
 }
