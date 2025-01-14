@@ -573,7 +573,7 @@ public class MapEntries implements
         log.debug("doAddVanity getting {}", resource.getPath());
 
         boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache);
+        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
     }
 
     private boolean doRemoveVanity(final String path) {
@@ -992,11 +992,11 @@ public class MapEntries implements
                 if ( isValid ) {
                     totalValid += 1;
                     if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
-                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true);
+                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
                         entryMap = resolveMapsMap;
                     } else {
                         final Map <String, List<String>> targetPaths = new HashMap<>();
-                        loadVanityPath(resource, entryMap, targetPaths, true);
+                        loadVanityPath(resource, entryMap, targetPaths, true, false);
                     }
                 }
             }
@@ -1398,7 +1398,7 @@ public class MapEntries implements
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
@@ -1421,7 +1421,7 @@ public class MapEntries implements
      * 
      * @return first vanity path or {@code null}
      */
-    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache) {
+    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache, boolean updateCounter) {
 
         if (!isValidVanityPath(resource.getPath())) {
             return null;
@@ -1486,8 +1486,8 @@ public class MapEntries implements
                     if (addedEntry) {
                         // 3. keep the path to return
                         this.updateTargetPaths(targetPaths, redirect, checkPath);
-                        //increment only if the instance variable
-                        if (entryMap == resolveMapsMap) {
+
+                        if (updateCounter) {
                             vanityCounter.addAndGet(2);
                         }
 
