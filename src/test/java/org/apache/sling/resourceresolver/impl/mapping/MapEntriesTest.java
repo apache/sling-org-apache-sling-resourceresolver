@@ -276,15 +276,72 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, alias));
 
-        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                return Collections.singleton(aliasResource).iterator();
+            } else {
+                return Collections.<Resource> emptySet().iterator();
+            }
+        });
+    }
 
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-                    return Collections.singleton(aliasResource).iterator();
-                } else {
-                    return Collections.<Resource> emptySet().iterator();
-                }
+    @Test
+    public void test_simple_vanity_path() throws IOException {
+        String vanityPath = "/xyz";
+        String containerName = "foo";
+        String childName = "child";
+        prepareMapEntriesForVanityPath(false, false, containerName, childName, vanityPath);
+        mapEntries.doInit();
+        mapEntries.initializeVanityPaths();
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+        assertNotNull(vanityMap);
+        assertEquals(vanityPath, vanityMap.get("/" + containerName + "/" + childName).get(0));
+    }
+
+    // see SLING-12620
+    @Test(expected = NullPointerException.class)
+    public void test_simple_vanity_path_support_with_null_parent() throws IOException {
+        String vanityPath = "/xyz";
+        String containerName = "foo";
+        String childName = "child";
+        prepareMapEntriesForVanityPath(true, true, containerName, childName, vanityPath);
+        mapEntries.doInit();
+        mapEntries.initializeVanityPaths();
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+        assertNotNull(vanityMap);
+        assertNull(vanityMap.get("/" + containerName + "/" + childName).get(0));
+        assertNull(vanityMap.get("/" + containerName + "/" + childName + "/jcr:content").get(0));
+    }
+
+    private void prepareMapEntriesForVanityPath(boolean onJcrContent, boolean withNullParent, String containerName, String childName, String vanityPath) {
+
+        final Resource parent = mock(Resource.class);
+
+        when(parent.getParent()).thenReturn(null);
+        when(parent.getPath()).thenReturn("/" + containerName);
+        when(parent.getName()).thenReturn(containerName);
+
+        final Resource vanity = mock(Resource.class);
+
+        when(vanity.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
+        when(vanity.getPath()).thenReturn("/" + containerName + "/" + childName);
+        when(vanity.getName()).thenReturn(childName);
+
+        final Resource content = mock(Resource.class);
+
+        when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : vanity);
+        when(content.getPath()).thenReturn("/" + containerName + "/" + childName + "/jcr:content");
+        when(content.getName()).thenReturn("jcr:content");
+
+        final Resource vanityPropHolder = onJcrContent ? content : vanity;
+
+        when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(MapEntries.PROP_VANITY_PATH, vanityPath));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            if (invocation.getArguments()[0].toString().contains(MapEntries.PROP_VANITY_PATH)) {
+                return Collections.singleton(vanityPropHolder).iterator();
+            } else {
+                return Collections.<Resource> emptySet().iterator();
             }
         });
     }
