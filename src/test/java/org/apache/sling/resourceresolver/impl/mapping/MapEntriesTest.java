@@ -290,12 +290,14 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
-        prepareMapEntriesForVanityPath(false, false, containerName, childName, vanityPath);
+        prepareMapEntriesForVanityPath(false, false, containerName,
+                childName, "onemore", vanityPath);
         mapEntries.doInit();
         mapEntries.initializeVanityPaths();
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
         assertNotNull(vanityMap);
         assertEquals(vanityPath, vanityMap.get("/" + containerName + "/" + childName).get(0));
+        assertEquals(2, vanityMap.size());
     }
 
     // see SLING-12620
@@ -304,16 +306,22 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
-        prepareMapEntriesForVanityPath(true, true, containerName, childName, vanityPath);
+        prepareMapEntriesForVanityPath(true, true, containerName,
+                childName, "one-more", vanityPath);
         mapEntries.doInit();
         mapEntries.initializeVanityPaths();
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
         assertNotNull(vanityMap);
         assertNull(vanityMap.get("/" + containerName + "/" + childName).get(0));
         assertNull(vanityMap.get("/" + containerName + "/" + childName + "/jcr:content").get(0));
+        assertEquals(1, vanityMap.size());
     }
 
-    private void prepareMapEntriesForVanityPath(boolean onJcrContent, boolean withNullParent, String containerName, String childName, String vanityPath) {
+    // create a 'custom' node (two flags), followed by a hardwired one (this is used to check that vanity path
+    // processing does not abort after the first error
+    private void prepareMapEntriesForVanityPath(boolean onJcrContent, boolean withNullParent,
+                                                String containerName, String childName,
+                                                String additionalChildName, String vanityPath) {
 
         final Resource parent = mock(Resource.class);
 
@@ -333,15 +341,23 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(content.getPath()).thenReturn("/" + containerName + "/" + childName + "/jcr:content");
         when(content.getName()).thenReturn("jcr:content");
 
+        final Resource oneMore = mock(Resource.class);
+
+        when(oneMore.getParent()).thenReturn(parent);
+        when(oneMore.getPath()).thenReturn("/" + containerName + "/" + additionalChildName);
+        when(oneMore.getName()).thenReturn(additionalChildName);
+
+        when(oneMore.getValueMap()).thenReturn(buildValueMap(MapEntries.PROP_VANITY_PATH, vanityPath + "/onemore"));
+
         final Resource vanityPropHolder = onJcrContent ? content : vanity;
 
         when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(MapEntries.PROP_VANITY_PATH, vanityPath));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
             if (invocation.getArguments()[0].toString().contains(MapEntries.PROP_VANITY_PATH)) {
-                return Collections.singleton(vanityPropHolder).iterator();
+                return List.of(vanityPropHolder, oneMore).iterator();
             } else {
-                return Collections.<Resource> emptySet().iterator();
+                return Collections.emptyIterator();
             }
         });
     }
