@@ -276,15 +276,94 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, alias));
 
-        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer(new Answer<Iterator<Resource>>() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                return List.of(aliasResource).iterator();
+            } else {
+                return Collections.emptyIterator();
+            }
+        });
+    }
 
-            @Override
-            public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-                    return Collections.singleton(aliasResource).iterator();
-                } else {
-                    return Collections.<Resource> emptySet().iterator();
-                }
+    @Test
+    public void test_simple_vanity_path() throws IOException {
+        String vanityPath = "/xyz";
+        String containerName = "foo";
+        String childName = "child";
+        String oneMore = "one-more";
+        prepareMapEntriesForVanityPath(false, false, containerName,
+                childName, oneMore, vanityPath);
+        mapEntries.doInit();
+        mapEntries.initializeVanityPaths();
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+        assertNotNull(vanityMap);
+        assertEquals(vanityPath, vanityMap.get("/" + containerName + "/" + childName).get(0));
+        assertEquals(2, vanityMap.size());
+        assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
+    }
+
+    // see SLING-12620
+    @Test
+    public void test_simple_vanity_path_support_with_null_parent() throws IOException {
+        String vanityPath = "/xyz";
+        String containerName = "foo";
+        String childName = "child";
+        String oneMore = "one-more";
+        prepareMapEntriesForVanityPath(true, true, containerName,
+                childName, oneMore, vanityPath);
+        mapEntries.doInit();
+        mapEntries.initializeVanityPaths();
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+        assertNotNull(vanityMap);
+        // not present
+        assertNull(vanityMap.get("/" + containerName + "/" + childName));
+        assertNull(vanityMap.get("/" + containerName + "/" + childName + "/jcr:content"));
+        // but the other one is present
+        assertEquals(1, vanityMap.size());
+        assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
+    }
+
+    // create a 'custom' node (two flags), followed by a hardwired one (this is used to check that vanity path
+    // processing does not abort after the first error
+    private void prepareMapEntriesForVanityPath(boolean onJcrContent, boolean withNullParent,
+                                                String containerName, String childName,
+                                                String additionalChildName, String vanityPath) {
+
+        final Resource parent = mock(Resource.class);
+
+        when(parent.getParent()).thenReturn(null);
+        when(parent.getPath()).thenReturn("/" + containerName);
+        when(parent.getName()).thenReturn(containerName);
+
+        final Resource vanity = mock(Resource.class);
+
+        when(vanity.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
+        when(vanity.getPath()).thenReturn("/" + containerName + "/" + childName);
+        when(vanity.getName()).thenReturn(childName);
+
+        final Resource content = mock(Resource.class);
+
+        when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : vanity);
+        when(content.getPath()).thenReturn("/" + containerName + "/" + childName + "/jcr:content");
+        when(content.getName()).thenReturn("jcr:content");
+
+        final Resource oneMore = mock(Resource.class);
+
+        when(oneMore.getParent()).thenReturn(parent);
+        when(oneMore.getPath()).thenReturn("/" + containerName + "/" + additionalChildName);
+        when(oneMore.getName()).thenReturn(additionalChildName);
+
+        when(oneMore.getValueMap()).thenReturn(buildValueMap(MapEntries.PROP_VANITY_PATH, vanityPath + "/onemore"));
+
+        final Resource vanityPropHolder = onJcrContent ? content : vanity;
+
+        when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(MapEntries.PROP_VANITY_PATH, vanityPath));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            if (invocation.getArguments()[0].toString().contains(MapEntries.PROP_VANITY_PATH)) {
+                return List.of(vanityPropHolder, oneMore).iterator();
+            } else {
+                return Collections.emptyIterator();
             }
         });
     }
