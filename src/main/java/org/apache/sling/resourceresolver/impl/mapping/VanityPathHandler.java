@@ -103,18 +103,24 @@ public class VanityPathHandler {
         for (final String pVanityPath : pVanityPaths) {
             final String[] result = getVanityPathDefinition(resource.getPath(), pVanityPath);
             if (result != null) {
-                hasVanityPath = true;
-                final String url = result[0] + result[1];
-                // redirect target is the node providing the
-                // sling:vanityPath
-                // property (or its parent if the node is called
-                // jcr:content)
+                // redirect target is the node providing the sling:vanityPath
+                // property (or its parent if the node is called jcr:content)
                 final Resource redirectTarget;
                 if (JCR_CONTENT.equals(resource.getName())) {
                     redirectTarget = resource.getParent();
+                    if (redirectTarget == null) {
+                        // we encountered a broken resource jcr:content resource
+                        // that apparently has no parent; skip this one and
+                        // continue with next
+                        log.warn("containingResource is null for vanity path on {}, skipping.", resource.getPath());
+                        continue;
+                    }
                 } else {
                     redirectTarget = resource;
                 }
+
+                hasVanityPath = true;
+                final String url = result[0] + result[1];
                 final String redirect = redirectTarget.getPath();
                 final String redirectName = redirectTarget.getName();
 
