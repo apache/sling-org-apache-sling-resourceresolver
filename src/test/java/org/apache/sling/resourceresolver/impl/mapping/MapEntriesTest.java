@@ -278,9 +278,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
             if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-                return Collections.singleton(aliasResource).iterator();
+                return List.of(aliasResource).iterator();
             } else {
-                return Collections.<Resource> emptySet().iterator();
+                return Collections.emptyIterator();
             }
         });
     }
