@@ -290,31 +290,37 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
+        String oneMore = "one-more";
         prepareMapEntriesForVanityPath(false, false, containerName,
-                childName, "onemore", vanityPath);
+                childName, oneMore, vanityPath);
         mapEntries.doInit();
         mapEntries.initializeVanityPaths();
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
         assertNotNull(vanityMap);
         assertEquals(vanityPath, vanityMap.get("/" + containerName + "/" + childName).get(0));
         assertEquals(2, vanityMap.size());
+        assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
     }
 
     // see SLING-12620
-    @Test(expected = NullPointerException.class)
+    @Test
     public void test_simple_vanity_path_support_with_null_parent() throws IOException {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
+        String oneMore = "one-more";
         prepareMapEntriesForVanityPath(true, true, containerName,
-                childName, "one-more", vanityPath);
+                childName, oneMore, vanityPath);
         mapEntries.doInit();
         mapEntries.initializeVanityPaths();
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
         assertNotNull(vanityMap);
-        assertNull(vanityMap.get("/" + containerName + "/" + childName).get(0));
-        assertNull(vanityMap.get("/" + containerName + "/" + childName + "/jcr:content").get(0));
+        // not present
+        assertNull(vanityMap.get("/" + containerName + "/" + childName));
+        assertNull(vanityMap.get("/" + containerName + "/" + childName + "/jcr:content"));
+        // but the other one is present
         assertEquals(1, vanityMap.size());
+        assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
     }
 
     // create a 'custom' node (two flags), followed by a hardwired one (this is used to check that vanity path
