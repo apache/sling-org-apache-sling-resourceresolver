@@ -116,14 +116,10 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             this.next = this.nextGlobal;
             this.nextGlobal = null;
         } else if (!this.vanityPathPrecedence){
-            if (this.nextGlobal == null) {
-                this.next = this.nextSpecial;
-                this.nextSpecial = null;
-            } else if (this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length()) {
+            if (this.nextGlobal != null && this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length()) {
                 this.next = this.nextGlobal;
                 this.nextGlobal = null;
-
-            }else {
+            } else {
                 this.next = this.nextSpecial;
                 this.nextSpecial = null;
             }
@@ -132,5 +128,5 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             this.nextSpecial = null;
         }
     }
-}
+};
 
