@@ -40,7 +40,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
 
     private final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
 
-    private boolean vanityPathPrecedence;
+    private final boolean vanityPathPrecedence;
 
     public MapEntryIterator(final String startKey, @NotNull List<MapEntry> globalList,
                             final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
@@ -84,7 +84,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             // given the vanity path in key, walk up the hierarchy until we find
             // map entries for that path (or stop when root is reached)
             while (!this.specialIterator.hasNext() && this.key != null) {
-                this.key = removeSelectorsAndExtensionFromKey(this.key);
+                this.key = removeSelectorsAndExtension(this.key);
                 this.specialIterator = this.getCurrentMapEntryIteratorForVanityPath.apply(this.key);
                 this.key = getParent(key);
             }
@@ -94,15 +94,28 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             }
         }
 
-        boolean useNextGlobal = (this.nextSpecial == null) ||
-                (!this.vanityPathPrecedence && this.nextGlobal != null && this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length());
-
-        if (useNextGlobal) {
+        if (useNextGlobal()) {
             this.next = this.nextGlobal;
             this.nextGlobal = null;
         } else {
             this.next = this.nextSpecial;
             this.nextSpecial = null;
+        }
+    }
+
+    private boolean useNextGlobal() {
+        if (this.nextSpecial == null) {
+            // no next special
+            return true;
+        } else if (this.nextGlobal == null) {
+            // no next global
+            return false;
+        } else if (this.vanityPathPrecedence) {
+            // vanity paths have precedence
+            return false;
+        } else {
+            // decide based on pattern length
+            return this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length();
         }
     }
 
@@ -122,7 +135,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
     }
 
     // remove selectors and extensions
-    private static @NotNull String removeSelectorsAndExtensionFromKey(@NotNull String value) {
+    private static @NotNull String removeSelectorsAndExtension(@NotNull String value) {
         final int lastSlashPos = value.lastIndexOf('/');
         final int lastDotPos = value.indexOf('.', lastSlashPos);
         if (lastDotPos != -1) {
