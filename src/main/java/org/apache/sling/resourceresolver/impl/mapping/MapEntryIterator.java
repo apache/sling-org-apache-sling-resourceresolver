@@ -83,12 +83,8 @@ public class MapEntryIterator implements Iterator<MapEntry> {
                 specialIterator = null;
             }
             while (specialIterator == null && key != null) {
-                // remove selectors and extension
-                final int lastSlashPos = key.lastIndexOf('/');
-                final int lastDotPos = key.indexOf('.', lastSlashPos);
-                if (lastDotPos != -1) {
-                    key = key.substring(0, lastDotPos);
-                }
+
+                key = removeSelectorsAndExtension(key);
 
                 final List<MapEntry> special = this.getCurrentMapEntryForVanityPath.apply(key);
 
@@ -124,6 +120,15 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             this.next = this.nextSpecial;
             this.nextSpecial = null;
         }
+    }
+
+    private String removeSelectorsAndExtension(String key) {
+        final int lastSlashPos = key.lastIndexOf('/');
+        final int lastDotPos = key.indexOf('.', lastSlashPos);
+        if (lastDotPos != -1) {
+            key = key.substring(0, lastDotPos);
+        }
+        return key;
     }
 }
 
