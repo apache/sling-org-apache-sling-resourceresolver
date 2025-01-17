@@ -93,10 +93,10 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             }
         }
 
-        if (this.nextSpecial == null) {
-            this.next = this.nextGlobal;
-            this.nextGlobal = null;
-        } else if (!this.vanityPathPrecedence && this.nextGlobal != null && this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length()) {
+        boolean useNextGlobal = (this.nextSpecial == null) ||
+                (!this.vanityPathPrecedence && this.nextGlobal != null && this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length());
+
+        if (useNextGlobal) {
             this.next = this.nextGlobal;
             this.nextGlobal = null;
         } else {
