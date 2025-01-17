@@ -18,8 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
