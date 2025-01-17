@@ -29,8 +29,6 @@ public class MapEntryIterator implements Iterator<MapEntry> {
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
-    private final Map<String, List<MapEntry>> resolveMapsMap;
-
     private String key;
 
     private MapEntry next;
@@ -48,8 +46,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
                             final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath,
                             final boolean vanityPathPrecedence) {
         this.key = startKey;
-        this.resolveMapsMap = resolveMapsMap;
-        this.globalListIterator = this.resolveMapsMap.get(GLOBAL_LIST_KEY).iterator();
+        this.globalListIterator = resolveMapsMap.get(GLOBAL_LIST_KEY).iterator();
         this.vanityPathPrecedence = vanityPathPrecedence;
         this.getCurrentMapEntryForVanityPath = getCurrentMapEntryForVanityPath;
         this.seek();
