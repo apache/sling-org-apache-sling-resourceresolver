@@ -35,7 +35,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
     private MapEntry nextGlobal;
     private MapEntry nextSpecial;
 
-    private final Iterator<MapEntry> globalListIterator;
+    private final @NotNull Iterator<MapEntry> globalListIterator;
     private @NotNull Iterator<MapEntry> specialIterator = Collections.emptyIterator();
 
     private final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
@@ -86,7 +86,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             while (!this.specialIterator.hasNext() && this.key != null) {
                 this.key = removeSelectorsAndExtensionFromKey(this.key);
                 this.specialIterator = this.getCurrentMapEntryIteratorForVanityPath.apply(this.key);
-                this.key = this.getParent(key);
+                this.key = getParent(key);
             }
 
             if (this.specialIterator.hasNext()) {
