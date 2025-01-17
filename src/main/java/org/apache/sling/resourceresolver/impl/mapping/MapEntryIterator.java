@@ -18,6 +18,9 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -26,19 +29,19 @@ import java.util.function.Function;
 public class MapEntryIterator implements Iterator<MapEntry> {
 
     private String key;
-
     private MapEntry next;
 
-    private final Iterator<MapEntry> globalListIterator;
     private MapEntry nextGlobal;
-
-    private Iterator<MapEntry> specialIterator;
-    private final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath;
     private MapEntry nextSpecial;
+
+    private final Iterator<MapEntry> globalListIterator;
+    private Iterator<MapEntry> specialIterator;
+
+    private final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath;
 
     private boolean vanityPathPrecedence;
 
-    public MapEntryIterator(final String startKey, List<MapEntry> globalList,
+    public MapEntryIterator(final String startKey, @NotNull List<MapEntry> globalList,
                             final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath,
                             final boolean vanityPathPrecedence) {
         this.key = startKey;
@@ -85,7 +88,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
                     specialIterator = special.iterator();
                 }
 
-                key = recurseToParent(key);
+                key = getParent(key);
             }
 
             if (this.specialIterator != null && this.specialIterator.hasNext()) {
@@ -105,21 +108,23 @@ public class MapEntryIterator implements Iterator<MapEntry> {
         }
     }
 
-    private String recurseToParent(String value) {
-        if (value.length() > 1) {
-            final int lastSlash = value.lastIndexOf("/");
+    // return parent path or null when already at root
+    private static @Nullable String getParent(@NotNull String path) {
+        if (path.length() > 1) {
+            final int lastSlash = path.lastIndexOf('/');
             if (lastSlash == 0) {
-                value = null;
+                path = null;
             } else {
-                value = value.substring(0, lastSlash);
+                path = path.substring(0, lastSlash);
             }
         } else {
-            value = null;
+            path = null;
         }
-        return value;
+        return path;
     }
 
-    private String removeSelectorsAndExtensionFromKey(String value) {
+    // remove selectors and extensions
+    private static @NotNull String removeSelectorsAndExtensionFromKey(@NotNull String value) {
         final int lastSlashPos = value.lastIndexOf('/');
         final int lastDotPos = value.indexOf('.', lastSlashPos);
         if (lastDotPos != -1) {
