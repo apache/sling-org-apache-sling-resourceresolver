@@ -78,8 +78,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
     private void seek() {
         if (this.nextGlobal == null && this.globalListIterator.hasNext()) {
             this.nextGlobal = this.globalListIterator.next();
-        }
-        if (this.nextSpecial == null) {
+        } else if (this.nextSpecial == null) {
             if (specialIterator != null && !specialIterator.hasNext()) {
                 specialIterator = null;
             }
@@ -96,6 +95,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
                 if (special != null) {
                     specialIterator = special.iterator();
                 }
+
                 // recurse to the parent
                 if (key.length() > 1) {
                     final int lastSlash = key.lastIndexOf("/");
@@ -108,21 +108,18 @@ public class MapEntryIterator implements Iterator<MapEntry> {
                     key = null;
                 }
             }
+
             if (this.specialIterator != null && this.specialIterator.hasNext()) {
                 this.nextSpecial = this.specialIterator.next();
             }
         }
+
         if (this.nextSpecial == null) {
             this.next = this.nextGlobal;
             this.nextGlobal = null;
-        } else if (!this.vanityPathPrecedence){
-            if (this.nextGlobal != null && this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length()) {
-                this.next = this.nextGlobal;
-                this.nextGlobal = null;
-            } else {
-                this.next = this.nextSpecial;
-                this.nextSpecial = null;
-            }
+        } else if (!this.vanityPathPrecedence && this.nextGlobal != null && this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length()) {
+            this.next = this.nextGlobal;
+            this.nextGlobal = null;
         } else {
             this.next = this.nextSpecial;
             this.nextSpecial = null;
