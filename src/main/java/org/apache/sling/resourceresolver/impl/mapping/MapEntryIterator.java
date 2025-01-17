@@ -21,6 +21,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -35,19 +36,19 @@ public class MapEntryIterator implements Iterator<MapEntry> {
     private MapEntry nextSpecial;
 
     private final Iterator<MapEntry> globalListIterator;
-    private Iterator<MapEntry> specialIterator;
+    private @NotNull Iterator<MapEntry> specialIterator = Collections.emptyIterator();
 
-    private final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath;
+    private final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
 
     private boolean vanityPathPrecedence;
 
     public MapEntryIterator(final String startKey, @NotNull List<MapEntry> globalList,
-                            final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath,
+                            final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
                             final boolean vanityPathPrecedence) {
         this.key = startKey;
         this.globalListIterator = globalList.iterator();
         this.vanityPathPrecedence = vanityPathPrecedence;
-        this.getCurrentMapEntryForVanityPath = getCurrentMapEntryForVanityPath;
+        this.getCurrentMapEntryIteratorForVanityPath = getCurrentMapEntryIteratorForVanityPath;
         this.seek();
     }
 
@@ -75,26 +76,20 @@ public class MapEntryIterator implements Iterator<MapEntry> {
         if (this.nextGlobal == null && this.globalListIterator.hasNext()) {
             this.nextGlobal = this.globalListIterator.next();
         } else if (this.nextSpecial == null) {
-            // null specialIterator when exhausted
-            if (specialIterator != null && !specialIterator.hasNext()) {
-                specialIterator = null;
+            // reset specialIterator when exhausted
+            if (!specialIterator.hasNext()) {
+                specialIterator = Collections.emptyIterator();
             }
 
             // given the vanity path in key, walk up the hierarchy until we find
             // map entries for that path (or stop when root is reached)
-            while (specialIterator == null && key != null) {
-                key = removeSelectorsAndExtensionFromKey(key);
-
-                final List<MapEntry> special = this.getCurrentMapEntryForVanityPath.apply(key);
-
-                if (special != null) {
-                    specialIterator = special.iterator();
-                }
-
-                key = getParent(key);
+            while (!this.specialIterator.hasNext() && this.key != null) {
+                this.key = removeSelectorsAndExtensionFromKey(this.key);
+                this.specialIterator = this.getCurrentMapEntryIteratorForVanityPath.apply(this.key);
+                this.key = this.getParent(key);
             }
 
-            if (this.specialIterator != null && this.specialIterator.hasNext()) {
+            if (this.specialIterator.hasNext()) {
                 this.nextSpecial = this.specialIterator.next();
             }
         }
