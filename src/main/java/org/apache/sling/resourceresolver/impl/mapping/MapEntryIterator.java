@@ -18,6 +18,8 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +86,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             }
             while (specialIterator == null && key != null) {
 
-                key = removeSelectorsAndExtension(key);
+                key = removeSelectorsAndExtensionFromKey(key);
 
                 final List<MapEntry> special = this.getCurrentMapEntryForVanityPath.apply(key);
 
@@ -92,17 +94,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
                     specialIterator = special.iterator();
                 }
 
-                // recurse to the parent
-                if (key.length() > 1) {
-                    final int lastSlash = key.lastIndexOf("/");
-                    if (lastSlash == 0) {
-                        key = null;
-                    } else {
-                        key = key.substring(0, lastSlash);
-                    }
-                } else {
-                    key = null;
-                }
+                key = recurseToParent(key);
             }
 
             if (this.specialIterator != null && this.specialIterator.hasNext()) {
@@ -122,13 +114,27 @@ public class MapEntryIterator implements Iterator<MapEntry> {
         }
     }
 
-    private String removeSelectorsAndExtension(String key) {
-        final int lastSlashPos = key.lastIndexOf('/');
-        final int lastDotPos = key.indexOf('.', lastSlashPos);
-        if (lastDotPos != -1) {
-            key = key.substring(0, lastDotPos);
+    private String recurseToParent(String value) {
+        if (value.length() > 1) {
+            final int lastSlash = value.lastIndexOf("/");
+            if (lastSlash == 0) {
+                value = null;
+            } else {
+                value = value.substring(0, lastSlash);
+            }
+        } else {
+            value = null;
         }
-        return key;
+        return value;
+    }
+
+    private String removeSelectorsAndExtensionFromKey(String value) {
+        final int lastSlashPos = value.lastIndexOf('/');
+        final int lastDotPos = value.indexOf('.', lastSlashPos);
+        if (lastDotPos != -1) {
+            value = value.substring(0, lastDotPos);
+        }
+        return value;
     }
 }
 
