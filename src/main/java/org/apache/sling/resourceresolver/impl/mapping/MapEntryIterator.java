@@ -73,9 +73,16 @@ public class MapEntryIterator implements Iterator<MapEntry> {
     }
 
     private void seek() {
+
+        // compute candidate for next entry from global list
+
         if (this.nextGlobal == null && this.globalListIterator.hasNext()) {
             this.nextGlobal = this.globalListIterator.next();
-        } else if (this.nextSpecial == null) {
+        }
+
+        // compute candidate for next entry from "special" vanity path list
+
+        if (this.nextSpecial == null) {
             // reset specialIterator when exhausted
             if (!specialIterator.hasNext()) {
                 specialIterator = Collections.emptyIterator();
@@ -93,6 +100,8 @@ public class MapEntryIterator implements Iterator<MapEntry> {
                 this.nextSpecial = this.specialIterator.next();
             }
         }
+
+        // choose based on presence, vanity path preferences and pattern lengths
 
         if (useNextGlobal()) {
             this.next = this.nextGlobal;

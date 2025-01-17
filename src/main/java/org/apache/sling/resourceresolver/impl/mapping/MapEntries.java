@@ -1686,7 +1686,6 @@ public class MapEntries implements
                 log.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
             }
         }
-
     }
 
     // return vanity path entry iterator from cache when complete and ready, otherwise from
