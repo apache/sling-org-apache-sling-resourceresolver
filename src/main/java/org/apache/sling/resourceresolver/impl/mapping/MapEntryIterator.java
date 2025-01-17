@@ -75,11 +75,14 @@ public class MapEntryIterator implements Iterator<MapEntry> {
         if (this.nextGlobal == null && this.globalListIterator.hasNext()) {
             this.nextGlobal = this.globalListIterator.next();
         } else if (this.nextSpecial == null) {
+            // null specialIterator when exhausted
             if (specialIterator != null && !specialIterator.hasNext()) {
                 specialIterator = null;
             }
-            while (specialIterator == null && key != null) {
 
+            // given the vanity path in key, walk up the hierarchy until we find
+            // map entries for that path (or stop when root is reached)
+            while (specialIterator == null && key != null) {
                 key = removeSelectorsAndExtensionFromKey(key);
 
                 final List<MapEntry> special = this.getCurrentMapEntryForVanityPath.apply(key);
