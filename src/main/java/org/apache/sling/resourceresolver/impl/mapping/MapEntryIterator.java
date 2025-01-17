@@ -20,7 +20,6 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
 
@@ -42,11 +41,11 @@ public class MapEntryIterator implements Iterator<MapEntry> {
 
     private boolean vanityPathPrecedence;
 
-    public MapEntryIterator(final String startKey, final Map<String, List<MapEntry>> resolveMapsMap,
+    public MapEntryIterator(final String startKey, List<MapEntry> globalList,
                             final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath,
                             final boolean vanityPathPrecedence) {
         this.key = startKey;
-        this.globalListIterator = resolveMapsMap.get(GLOBAL_LIST_KEY).iterator();
+        this.globalListIterator = globalList.iterator();
         this.vanityPathPrecedence = vanityPathPrecedence;
         this.getCurrentMapEntryForVanityPath = getCurrentMapEntryForVanityPath;
         this.seek();

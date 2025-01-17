@@ -719,7 +719,7 @@ public class MapEntries implements
             key = requestPath.substring(secondIndex);
         }
 
-        return new MapEntryIterator(key, resolveMapsMap,
+        return new MapEntryIterator(key, resolveMapsMap.get(GLOBAL_LIST_KEY),
                 this::getCurrentMapEntryForVanityPath, this.factory.hasVanityPathPrecedence());
     }
 
