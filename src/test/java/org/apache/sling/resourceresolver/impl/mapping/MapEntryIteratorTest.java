@@ -35,15 +35,15 @@ public class MapEntryIteratorTest {
     private MapEntry xyz =
             new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
 
-    private MapEntry xyz_abc =
+    private MapEntry xyzAbc =
             new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
 
     private MapEntry global =
             new MapEntry("/foo/global", -1, false, -1, "bla");
 
-    private Map<String, List<MapEntry>> xyz_map = Map.of("/xyz", List.of(xyz));
+    private Map<String, List<MapEntry>> xyzMap = Map.of("/xyz", List.of(xyz));
 
-    private Map<String, List<MapEntry>> xyz_abc_map = Map.of("/xyz", List.of(xyz), "/xyz/def/abc", List.of(xyz_abc));
+    private Map<String, List<MapEntry>> xyzAbcMap = Map.of("/xyz", List.of(xyz), "/xyz/def/abc", List.of(xyzAbc));
 
     private MapEntryIterator vpOnlyIterator =
             new MapEntryIterator("/xyz",
@@ -54,7 +54,7 @@ public class MapEntryIteratorTest {
     private MapEntryIterator vpHierarchyOnlyIterator =
             new MapEntryIterator("/xyz/def/abc",
                     List.of(),
-                    key -> xyz_abc_map.get(key) == null ? Collections.emptyIterator() : xyz_abc_map.get(key).iterator(),
+                    key -> xyzAbcMap.get(key) == null ? Collections.emptyIterator() : xyzAbcMap.get(key).iterator(),
                     true);
 
     private MapEntryIterator noVpIterator =
@@ -65,13 +65,13 @@ public class MapEntryIteratorTest {
 
     private MapEntryIterator bothIteratorVpFirst = new MapEntryIterator("/xyz",
             List.of(global),
-            key ->  xyz_map.get(key) == null ? Collections.emptyIterator() : xyz_map.get(key).iterator(),
+            key ->  xyzMap.get(key) == null ? Collections.emptyIterator() : xyzMap.get(key).iterator(),
             true
             );
 
     private MapEntryIterator bothIteratorVpLast = new MapEntryIterator("/xyz",
             List.of(global),
-            key ->  xyz_map.get(key) == null ? Collections.emptyIterator() : xyz_map.get(key).iterator(),
+            key ->  xyzMap.get(key) == null ? Collections.emptyIterator() : xyzMap.get(key).iterator(),
             false
     );
 
