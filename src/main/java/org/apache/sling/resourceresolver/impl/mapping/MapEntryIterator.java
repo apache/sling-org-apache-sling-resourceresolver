@@ -128,5 +128,5 @@ public class MapEntryIterator implements Iterator<MapEntry> {
             this.nextSpecial = null;
         }
     }
-};
+}
 
