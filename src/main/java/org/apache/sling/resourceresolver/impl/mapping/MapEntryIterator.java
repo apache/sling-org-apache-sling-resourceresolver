@@ -25,9 +25,6 @@ import java.util.function.Function;
 
 public class MapEntryIterator implements Iterator<MapEntry> {
 
-    /** Key for the global list. */
-    private static final String GLOBAL_LIST_KEY = "*";
-
     private String key;
 
     private MapEntry next;
