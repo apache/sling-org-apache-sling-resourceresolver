@@ -1692,14 +1692,12 @@ public class MapEntries implements
 
     // return vanity path entry iterator from cache when complete and ready, otherwise from
     // regular lockup
-    public @NotNull Iterator<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
-        List<MapEntry> l;
+    public @Nullable List<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
         if (this.isAllVanityPathEntriesCached() && this.vanityPathsProcessed.get()) {
-            l = this.resolveMapsMap.get(key);
+            return this.resolveMapsMap.get(key);
         } else {
-            l = this.getMapEntryList(key);
+            return this.getMapEntryList(key);
         }
-        return l == null ? Collections.emptyIterator() : l.iterator();
     }
 
     static final class MapEntryIterator implements Iterator<MapEntry> {
@@ -1715,15 +1713,15 @@ public class MapEntries implements
         private MapEntry nextSpecial;
 
         private boolean vanityPathPrecedence;
-        private final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
+        private final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath;
 
         public MapEntryIterator(final String startKey, @NotNull final List<MapEntry> globalList,
-                                final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
+                                final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath,
                                 final boolean vanityPathPrecedence) {
             this.key = startKey;
             this.globalListIterator = globalList.iterator();
             this.vanityPathPrecedence = vanityPathPrecedence;
-            this.getCurrentMapEntryIteratorForVanityPath = getCurrentMapEntryIteratorForVanityPath;
+            this.getCurrentMapEntryForVanityPath = getCurrentMapEntryForVanityPath;
             this.seek();
         }
 
@@ -1772,7 +1770,10 @@ public class MapEntries implements
                         key = key.substring(0, lastDotPos);
                     }
 
-                    this.specialIterator = this.getCurrentMapEntryIteratorForVanityPath.apply(this.key);
+                    final List<MapEntry> special = this.getCurrentMapEntryForVanityPath.apply(this.key);
+                    if (special != null) {
+                        specialIterator = special.iterator();
+                    }
 
                     // recurse to the parent
                     if (key.length() > 1) {
@@ -1793,7 +1794,7 @@ public class MapEntries implements
             if (this.nextSpecial == null) {
                 this.next = this.nextGlobal;
                 this.nextGlobal = null;
-            } else if (!vanityPathPrecedence) {
+            } else if (!this.vanityPathPrecedence){
                 if (this.nextGlobal == null) {
                     this.next = this.nextSpecial;
                     this.nextSpecial = null;
@@ -1801,7 +1802,7 @@ public class MapEntries implements
                     this.next = this.nextGlobal;
                     this.nextGlobal = null;
 
-                } else {
+                }else {
                     this.next = this.nextSpecial;
                     this.nextSpecial = null;
                 }

@@ -30,7 +30,7 @@ import static org.junit.Assert.assertFalse;
 
 public class MapEntryIteratorTest {
 
-    private MapEntries.MapEntryIterator empty = new MapEntries.MapEntryIterator(null, List.of(), key -> Collections.emptyIterator(), true);
+    private MapEntries.MapEntryIterator empty = new MapEntries.MapEntryIterator(null, List.of(), key -> Collections.emptyList(), true);
 
     private MapEntry xyz =
             new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
@@ -48,30 +48,30 @@ public class MapEntryIteratorTest {
     private MapEntries.MapEntryIterator vpOnlyIterator =
             new MapEntries.MapEntryIterator("/xyz",
                     List.of(),
-                    key -> List.of(xyz).iterator(),
+                    key -> List.of(xyz),
                     true);
 
     private MapEntries.MapEntryIterator vpHierarchyOnlyIterator =
             new MapEntries.MapEntryIterator("/xyz/def/abc",
                     List.of(),
-                    key -> xyzAbcMap.get(key) == null ? Collections.emptyIterator() : xyzAbcMap.get(key).iterator(),
+                    key -> xyzAbcMap.get(key),
                     true);
 
     private MapEntries.MapEntryIterator noVpIterator =
             new MapEntries.MapEntryIterator("/xyz",
                     List.of(xyz),
-                    key -> Collections.emptyIterator(),
+                    key -> Collections.emptyList(),
                     true);
 
     private MapEntries.MapEntryIterator bothIteratorVpFirst = new MapEntries.MapEntryIterator("/xyz",
             List.of(global),
-            key ->  xyzMap.get(key) == null ? Collections.emptyIterator() : xyzMap.get(key).iterator(),
+            key ->  xyzMap.get(key),
             true
             );
 
     private MapEntries.MapEntryIterator bothIteratorVpLast = new MapEntries.MapEntryIterator("/xyz",
             List.of(global),
-            key ->  xyzMap.get(key) == null ? Collections.emptyIterator() : xyzMap.get(key).iterator(),
+            key ->  xyzMap.get(key),
             false
     );
 
