@@ -84,8 +84,8 @@ public class MapEntryIterator implements Iterator<MapEntry> {
 
         if (this.nextSpecial == null) {
             // reset specialIterator when exhausted
-            if (!specialIterator.hasNext()) {
-                specialIterator = Collections.emptyIterator();
+            if (!this.specialIterator.hasNext()) {
+                this.specialIterator = Collections.emptyIterator();
             }
 
             // given the vanity path in key, walk up the hierarchy until we find
