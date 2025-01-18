@@ -27,6 +27,7 @@ import java.util.NoSuchElementException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 
 public class MapEntryIteratorTest {
 
@@ -75,16 +76,18 @@ public class MapEntryIteratorTest {
             false
     );
 
-    @Test(expected = NoSuchElementException.class)
+    @Test
     public void testExhausted() {
         assertFalse(empty.hasNext());
-        empty.next();
+        assertThrows(NoSuchElementException.class,
+                () -> empty.next());
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testRemove() {
         assertFalse(empty.hasNext());
-        empty.remove();
+        assertThrows(UnsupportedOperationException.class,
+                () -> empty.remove());
     }
 
     @Test
