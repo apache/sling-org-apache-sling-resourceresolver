@@ -721,7 +721,7 @@ public class MapEntries implements
             key = requestPath.substring(secondIndex);
         }
 
-        return new MapEntryIterator(key, resolveMapsMap.get(GLOBAL_LIST_KEY).iterator(),
+        return new MapEntryIterator(key, resolveMapsMap.get(GLOBAL_LIST_KEY),
                 this::getCurrentMapEntryForVanityPath, this.factory.hasVanityPathPrecedence());
     }
 
@@ -1702,7 +1702,7 @@ public class MapEntries implements
         return l == null ? Collections.emptyIterator() : l.iterator();
     }
 
-    private final class MapEntryIterator implements Iterator<MapEntry> {
+    static final class MapEntryIterator implements Iterator<MapEntry> {
 
         private String key;
 
@@ -1717,11 +1717,11 @@ public class MapEntries implements
         private boolean vanityPathPrecedence;
         private final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
 
-        public MapEntryIterator(final String startKey, @NotNull final Iterator<MapEntry> globalListIterator,
+        public MapEntryIterator(final String startKey, @NotNull final List<MapEntry> globalList,
                                 final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
                                 final boolean vanityPathPrecedence) {
             this.key = startKey;
-            this.globalListIterator = globalListIterator;
+            this.globalListIterator = globalList.iterator();
             this.vanityPathPrecedence = vanityPathPrecedence;
             this.getCurrentMapEntryIteratorForVanityPath = getCurrentMapEntryIteratorForVanityPath;
             this.seek();
