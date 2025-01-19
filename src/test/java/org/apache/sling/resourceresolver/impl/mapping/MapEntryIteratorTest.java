@@ -40,7 +40,7 @@ public class MapEntryIteratorTest {
             new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
 
     private MapEntry global =
-            new MapEntry("/foo/global", -1, false, -1, "bla");
+            new MapEntry("/foo/global/long", -1, false, -1, "bla");
 
     private Map<String, List<MapEntry>> xyzMap = Map.of("/xyz", List.of(xyz));
 
@@ -64,17 +64,6 @@ public class MapEntryIteratorTest {
                     key -> Collections.emptyList(),
                     true);
 
-    private MapEntries.MapEntryIterator bothIteratorVpFirst = new MapEntries.MapEntryIterator("/xyz",
-            List.of(global),
-            key ->  xyzMap.get(key),
-            true
-            );
-
-    private MapEntries.MapEntryIterator bothIteratorVpLast = new MapEntries.MapEntryIterator("/xyz",
-            List.of(global),
-            key ->  xyzMap.get(key),
-            false
-    );
 
     @Test
     public void testExhausted() {
@@ -126,6 +115,12 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testBothIteratorVpFirst() {
+        MapEntries.MapEntryIterator bothIteratorVpFirst = new MapEntries.MapEntryIterator("/xyz",
+                List.of(global),
+                key -> xyzMap.get(key),
+                true
+        );
+
         MapEntry first = bothIteratorVpFirst.next();
         MapEntry second = bothIteratorVpFirst.next();
         assertFalse(bothIteratorVpFirst.hasNext());
@@ -133,22 +128,29 @@ public class MapEntryIteratorTest {
         assertEquals(2, first.getRedirect().length);
         assertEquals("/foo", first.getRedirect()[0]);
         assertEquals("/bar", first.getRedirect()[1]);
-        assertEquals("^/foo/global", second.getPattern());
+        assertEquals("^/foo/global/long", second.getPattern());
         assertEquals(1, second.getRedirect().length);
         assertEquals("bla", second.getRedirect()[0]);
     }
 
     @Test
-    public void testBothIteratorVpLast() {
-        MapEntry second = bothIteratorVpLast.next();
-        MapEntry first = bothIteratorVpLast.next();
-        assertFalse(bothIteratorVpLast.hasNext());
-        assertEquals("^/xyz", first.getPattern());
-        assertEquals(2, first.getRedirect().length);
-        assertEquals("/foo", first.getRedirect()[0]);
-        assertEquals("/bar", first.getRedirect()[1]);
-        assertEquals("^/foo/global", second.getPattern());
-        assertEquals(1, second.getRedirect().length);
-        assertEquals("bla", second.getRedirect()[0]);
+    public void testBothIteratorVpDefault() {
+        MapEntries.MapEntryIterator bothIteratorVpDefault = new MapEntries.MapEntryIterator("/xyz",
+                List.of(global),
+                key -> xyzMap.get(key),
+                false
+        );
+
+        MapEntry first = bothIteratorVpDefault.next();
+        MapEntry second = bothIteratorVpDefault.next();
+        assertFalse(bothIteratorVpDefault.hasNext());
+
+        assertEquals("^/foo/global/long", first.getPattern());
+        assertEquals(1, first.getRedirect().length);
+        assertEquals("bla", first.getRedirect()[0]);
+        assertEquals("^/xyz", second.getPattern());
+        assertEquals(2, second.getRedirect().length);
+        assertEquals("/foo", second.getRedirect()[0]);
+        assertEquals("/bar", second.getRedirect()[1]);
     }
 }
