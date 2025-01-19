@@ -31,56 +31,40 @@ import static org.junit.Assert.assertThrows;
 
 public class MapEntryIteratorTest {
 
-    private MapEntries.MapEntryIterator empty = new MapEntries.MapEntryIterator(null, List.of(), key -> Collections.emptyList(), true);
+    private final MapEntries.MapEntryIterator empty =
+            new MapEntries.MapEntryIterator(null, List.of(), key -> Collections.emptyList(), true);
 
-    private MapEntry xyz =
+    private final MapEntry xyz =
             new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
 
-    private MapEntry xyzAbc =
-            new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
-
-    private MapEntry global =
+    private final MapEntry global =
             new MapEntry("/foo/global/long", -1, false, -1, "bla");
 
-    private Map<String, List<MapEntry>> xyzMap = Map.of("/xyz", List.of(xyz));
-
-    private Map<String, List<MapEntry>> xyzAbcMap = Map.of("/xyz", List.of(xyz), "/xyz/def/abc", List.of(xyzAbc));
-
-    private MapEntries.MapEntryIterator vpOnlyIterator =
-            new MapEntries.MapEntryIterator("/xyz",
-                    List.of(),
-                    key -> List.of(xyz),
-                    true);
-
-    private MapEntries.MapEntryIterator vpHierarchyOnlyIterator =
-            new MapEntries.MapEntryIterator("/xyz/def/abc",
-                    List.of(),
-                    key -> xyzAbcMap.get(key),
-                    true);
-
-    private MapEntries.MapEntryIterator noVpIterator =
-            new MapEntries.MapEntryIterator("/xyz",
-                    List.of(xyz),
-                    key -> Collections.emptyList(),
-                    true);
-
+    private final Map<String, List<MapEntry>> xyzMap =
+            Map.of("/xyz", List.of(xyz));
 
     @Test
     public void testExhausted() {
         assertFalse(empty.hasNext());
         assertThrows(NoSuchElementException.class,
-                () -> empty.next());
+                empty::next);
     }
 
     @Test
     public void testRemove() {
         assertFalse(empty.hasNext());
         assertThrows(UnsupportedOperationException.class,
-                () -> empty.remove());
+                empty::remove);
     }
 
     @Test
     public void testOnlyOneEntry() {
+        MapEntries.MapEntryIterator noVpIterator =
+                new MapEntries.MapEntryIterator("/xyz",
+                        List.of(xyz),
+                        key -> Collections.emptyList(),
+                        true);
+
         MapEntry first = noVpIterator.next();
         assertFalse(noVpIterator.hasNext());
         assertEquals("^/xyz", first.getPattern());
@@ -91,6 +75,12 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testOnlyOneVanityPath() {
+        MapEntries.MapEntryIterator vpOnlyIterator =
+                new MapEntries.MapEntryIterator("/xyz",
+                        List.of(),
+                        key -> List.of(xyz),
+                        true);
+
         MapEntry first = vpOnlyIterator.next();
         assertFalse(vpOnlyIterator.hasNext());
         assertEquals("^/xyz", first.getPattern());
@@ -101,6 +91,18 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testHierarchyVanityPath() {
+        MapEntry xyzAbc =
+                new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
+
+        Map<String, List<MapEntry>> xyzAbcMap =
+                Map.of("/xyz", List.of(xyz), "/xyz/def/abc", List.of(xyzAbc));
+
+        MapEntries.MapEntryIterator vpHierarchyOnlyIterator =
+                new MapEntries.MapEntryIterator("/xyz/def/abc",
+                        List.of(),
+                        xyzAbcMap::get,
+                        true);
+
         MapEntry first = vpHierarchyOnlyIterator.next();
         MapEntry second = vpHierarchyOnlyIterator.next();
         assertFalse(vpHierarchyOnlyIterator.hasNext());
@@ -117,7 +119,7 @@ public class MapEntryIteratorTest {
     public void testBothIteratorVpFirst() {
         MapEntries.MapEntryIterator bothIteratorVpFirst = new MapEntries.MapEntryIterator("/xyz",
                 List.of(global),
-                key -> xyzMap.get(key),
+                xyzMap::get,
                 true
         );
 
@@ -137,7 +139,7 @@ public class MapEntryIteratorTest {
     public void testBothIteratorVpDefault() {
         MapEntries.MapEntryIterator bothIteratorVpDefault = new MapEntries.MapEntryIterator("/xyz",
                 List.of(global),
-                key -> xyzMap.get(key),
+                xyzMap::get,
                 false
         );
 
