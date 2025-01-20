@@ -38,12 +38,12 @@ public class MapEntryIterator implements Iterator<MapEntry> {
     private final @NotNull Iterator<MapEntry> globalListIterator;
     private @NotNull Iterator<MapEntry> specialIterator = Collections.emptyIterator();
 
-    private final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
+    private final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
 
     private final boolean vanityPathPrecedence;
 
-    public MapEntryIterator(final String startKey, @NotNull List<MapEntry> globalList,
-                            final Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
+    public MapEntryIterator(final @NotNull String startKey, @NotNull List<MapEntry> globalList,
+                            final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
                             final boolean vanityPathPrecedence) {
         this.key = startKey;
         this.globalListIterator = globalList.iterator();
@@ -153,4 +153,3 @@ public class MapEntryIterator implements Iterator<MapEntry> {
         return value;
     }
 }
-
