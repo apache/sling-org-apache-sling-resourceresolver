@@ -53,7 +53,7 @@ public class MapEntryIterator implements Iterator<MapEntry> {
      * @param getCurrentMapEntryIteratorForVanityPath a function that gets the current vanity path entry for a given key (the callback should take care about which phase the vanity path initialization is in)
      * @param vanityPathPrecedence when {@code true}, vanity paths (if present) will always come first, otherwise it depends on the length of the map entry's match pattern (see {@link MapEntry#getPattern()})
      */
-    public MapEntryIterator(final @NotNull String startKey, @NotNull List<MapEntry> globalList,
+    public MapEntryIterator(final @Nullable String startKey, @NotNull List<MapEntry> globalList,
                             final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
                             final boolean vanityPathPrecedence) {
         this.key = startKey;
