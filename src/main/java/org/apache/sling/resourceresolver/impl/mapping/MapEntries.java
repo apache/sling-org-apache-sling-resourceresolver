@@ -1692,7 +1692,7 @@ public class MapEntries implements
 
     // return vanity path entry iterator from cache when complete and ready, otherwise from
     // regular lockup
-    public @Nullable List<MapEntry> getCurrentMapEntryForVanityPath(@NotNull final String key) {
+    public @Nullable List<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
         if (this.isAllVanityPathEntriesCached() && this.vanityPathsProcessed.get()) {
             return this.resolveMapsMap.get(key);
         } else {
