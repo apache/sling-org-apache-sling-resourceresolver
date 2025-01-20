@@ -27,6 +27,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
 
+/**
+ * An {@link Iterator} that combines existing {@link MapEntry}s (usually from the "global" list)
+ * with entries from the vanity path map.
+ */
 public class MapEntryIterator implements Iterator<MapEntry> {
 
     private String key;
@@ -42,6 +46,13 @@ public class MapEntryIterator implements Iterator<MapEntry> {
 
     private final boolean vanityPathPrecedence;
 
+    /**
+     * Creates the combined iterator
+     * @param startKey The path from which to start when finding vanity paths (which includes entries from ancestors aswell)
+     * @param globalList The "global" list of map entries
+     * @param getCurrentMapEntryIteratorForVanityPath a function that gets the current vanity path entry for a given key (the callback should take care about which phase the vanity path initialization is in)
+     * @param vanityPathPrecedence when {@code true}, vanity paths (if present) will always come first, otherwise it depends on the length of the map entry's match pattern (see {@link MapEntry#getPattern()})
+     */
     public MapEntryIterator(final @NotNull String startKey, @NotNull List<MapEntry> globalList,
                             final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
                             final boolean vanityPathPrecedence) {
