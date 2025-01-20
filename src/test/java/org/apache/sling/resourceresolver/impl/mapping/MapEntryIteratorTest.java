@@ -18,77 +18,56 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 
 public class MapEntryIteratorTest {
 
-    private MapEntryIterator empty = new MapEntryIterator(null, List.of(), key -> Collections.emptyIterator(), true);
+    private final MapEntryIterator empty =
+            new MapEntryIterator(null, List.of(), key -> Collections.emptyIterator(), true);
 
-    private MapEntry xyz =
+    private final MapEntry xyz =
             new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
 
-    private MapEntry xyzAbc =
-            new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
+    private final MapEntry global =
+            new MapEntry("/foo/global/long", -1, false, -1, "bla");
 
-    private MapEntry global =
-            new MapEntry("/foo/global", -1, false, -1, "bla");
+    private final Map<String, Iterator<MapEntry>> xyzMap =
+            Map.of("/xyz", List.of(xyz).iterator());
 
-    private Map<String, List<MapEntry>> xyzMap = Map.of("/xyz", List.of(xyz));
-
-    private Map<String, List<MapEntry>> xyzAbcMap = Map.of("/xyz", List.of(xyz), "/xyz/def/abc", List.of(xyzAbc));
-
-    private MapEntryIterator vpOnlyIterator =
-            new MapEntryIterator("/xyz",
-                    List.of(),
-                    key -> List.of(xyz).iterator(),
-                    true);
-
-    private MapEntryIterator vpHierarchyOnlyIterator =
-            new MapEntryIterator("/xyz/def/abc",
-                    List.of(),
-                    key -> xyzAbcMap.get(key) == null ? Collections.emptyIterator() : xyzAbcMap.get(key).iterator(),
-                    true);
-
-    private MapEntryIterator noVpIterator =
-            new MapEntryIterator("/xyz",
-                    List.of(xyz),
-                    key -> Collections.emptyIterator(),
-                    true);
-
-    private MapEntryIterator bothIteratorVpFirst = new MapEntryIterator("/xyz",
-            List.of(global),
-            key ->  xyzMap.get(key) == null ? Collections.emptyIterator() : xyzMap.get(key).iterator(),
-            true
-            );
-
-    private MapEntryIterator bothIteratorVpLast = new MapEntryIterator("/xyz",
-            List.of(global),
-            key ->  xyzMap.get(key) == null ? Collections.emptyIterator() : xyzMap.get(key).iterator(),
-            false
-    );
-
-    @Test(expected = NoSuchElementException.class)
+    @Test
     public void testExhausted() {
         assertFalse(empty.hasNext());
-        empty.next();
+        assertThrows(NoSuchElementException.class,
+                empty::next);
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testRemove() {
         assertFalse(empty.hasNext());
-        empty.remove();
+        assertThrows(UnsupportedOperationException.class,
+                empty::remove);
     }
 
     @Test
     public void testOnlyOneEntry() {
+        MapEntryIterator noVpIterator =
+                new MapEntryIterator("/xyz",
+                        List.of(xyz),
+                        key -> Collections.emptyIterator(),
+                        true);
+
         MapEntry first = noVpIterator.next();
         assertFalse(noVpIterator.hasNext());
         assertEquals("^/xyz", first.getPattern());
@@ -99,6 +78,12 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testOnlyOneVanityPath() {
+        MapEntryIterator vpOnlyIterator =
+                new MapEntryIterator("/xyz",
+                        List.of(),
+                        key -> List.of(xyz).iterator(),
+                        true);
+
         MapEntry first = vpOnlyIterator.next();
         assertFalse(vpOnlyIterator.hasNext());
         assertEquals("^/xyz", first.getPattern());
@@ -109,6 +94,18 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testHierarchyVanityPath() {
+        MapEntry xyzAbc =
+                new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
+
+        Map<String, Iterator<MapEntry>> xyzAbcMap =
+                Map.of("/xyz", List.of(xyz).iterator(), "/xyz/def/abc", List.of(xyzAbc).iterator());
+
+        MapEntryIterator vpHierarchyOnlyIterator =
+                new MapEntryIterator("/xyz/def/abc",
+                        List.of(),
+                        key -> nullToEmpty(xyzAbcMap.get(key)),
+                        true);
+
         MapEntry first = vpHierarchyOnlyIterator.next();
         MapEntry second = vpHierarchyOnlyIterator.next();
         assertFalse(vpHierarchyOnlyIterator.hasNext());
@@ -123,6 +120,12 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testBothIteratorVpFirst() {
+        MapEntryIterator bothIteratorVpFirst = new MapEntryIterator("/xyz",
+                List.of(global),
+                key -> nullToEmpty(xyzMap.get(key)),
+                true
+        );
+
         MapEntry first = bothIteratorVpFirst.next();
         MapEntry second = bothIteratorVpFirst.next();
         assertFalse(bothIteratorVpFirst.hasNext());
@@ -130,22 +133,33 @@ public class MapEntryIteratorTest {
         assertEquals(2, first.getRedirect().length);
         assertEquals("/foo", first.getRedirect()[0]);
         assertEquals("/bar", first.getRedirect()[1]);
-        assertEquals("^/foo/global", second.getPattern());
+        assertEquals("^/foo/global/long", second.getPattern());
         assertEquals(1, second.getRedirect().length);
         assertEquals("bla", second.getRedirect()[0]);
     }
 
     @Test
-    public void testBothIteratorVpLast() {
-        MapEntry second = bothIteratorVpLast.next();
-        MapEntry first = bothIteratorVpLast.next();
-        assertFalse(bothIteratorVpLast.hasNext());
-        assertEquals("^/xyz", first.getPattern());
-        assertEquals(2, first.getRedirect().length);
-        assertEquals("/foo", first.getRedirect()[0]);
-        assertEquals("/bar", first.getRedirect()[1]);
-        assertEquals("^/foo/global", second.getPattern());
-        assertEquals(1, second.getRedirect().length);
-        assertEquals("bla", second.getRedirect()[0]);
+    public void testBothIteratorVpDefault() {
+        MapEntryIterator bothIteratorVpDefault = new MapEntryIterator("/xyz",
+                List.of(global),
+                key -> nullToEmpty(xyzMap.get(key)),
+                false
+        );
+
+        MapEntry first = bothIteratorVpDefault.next();
+        MapEntry second = bothIteratorVpDefault.next();
+        assertFalse(bothIteratorVpDefault.hasNext());
+
+        assertEquals("^/foo/global/long", first.getPattern());
+        assertEquals(1, first.getRedirect().length);
+        assertEquals("bla", first.getRedirect()[0]);
+        assertEquals("^/xyz", second.getPattern());
+        assertEquals(2, second.getRedirect().length);
+        assertEquals("/foo", second.getRedirect()[0]);
+        assertEquals("/bar", second.getRedirect()[1]);
+    }
+
+    static @NotNull Iterator<MapEntry> nullToEmpty(@Nullable Iterator<MapEntry> it) {
+        return it == null ? Collections.emptyIterator() : it;
     }
 }
