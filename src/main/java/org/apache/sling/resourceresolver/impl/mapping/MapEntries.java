@@ -73,6 +73,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class MapEntries implements
@@ -720,7 +721,8 @@ public class MapEntries implements
             key = requestPath.substring(secondIndex);
         }
 
-        return new MapEntryIterator(key, resolveMapsMap, this.factory.hasVanityPathPrecedence());
+        return new MapEntryIterator(key, resolveMapsMap.get(GLOBAL_LIST_KEY),
+                this::getCurrentMapEntryForVanityPath, this.factory.hasVanityPathPrecedence());
     }
 
     @Override
@@ -731,7 +733,7 @@ public class MapEntries implements
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.useOptimizeAliasResolution;
     }
-    
+
     @Override
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
         Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
@@ -1686,12 +1688,19 @@ public class MapEntries implements
                 log.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
             }
         }
-
     }
 
-    private final class MapEntryIterator implements Iterator<MapEntry> {
+    // return vanity path entry iterator from cache when complete and ready, otherwise from
+    // regular lockup
+    public @Nullable List<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
+        if (this.isAllVanityPathEntriesCached() && this.vanityPathsProcessed.get()) {
+            return this.resolveMapsMap.get(key);
+        } else {
+            return this.getMapEntryList(key);
+        }
+    }
 
-        private final Map<String, List<MapEntry>> resolveMapsMap;
+    static final class MapEntryIterator implements Iterator<MapEntry> {
 
         private String key;
 
@@ -1704,12 +1713,15 @@ public class MapEntries implements
         private MapEntry nextSpecial;
 
         private boolean vanityPathPrecedence;
+        private final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath;
 
-        public MapEntryIterator(final String startKey, final Map<String, List<MapEntry>> resolveMapsMap, final boolean vanityPathPrecedence) {
+        public MapEntryIterator(final String startKey, @NotNull final List<MapEntry> globalList,
+                                final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath,
+                                final boolean vanityPathPrecedence) {
             this.key = startKey;
-            this.resolveMapsMap = resolveMapsMap;
-            this.globalListIterator = this.resolveMapsMap.get(GLOBAL_LIST_KEY).iterator();
+            this.globalListIterator = globalList.iterator();
             this.vanityPathPrecedence = vanityPathPrecedence;
+            this.getCurrentMapEntryForVanityPath = getCurrentMapEntryForVanityPath;
             this.seek();
         }
 
@@ -1758,15 +1770,11 @@ public class MapEntries implements
                         key = key.substring(0, lastDotPos);
                     }
 
-                    final List<MapEntry> special;
-                    if (MapEntries.this.isAllVanityPathEntriesCached() && MapEntries.this.vanityPathsProcessed.get()) {
-                        special = this.resolveMapsMap.get(key);
-                    } else {
-                        special = MapEntries.this.getMapEntryList(key); 
-                    }
+                    final List<MapEntry> special = this.getCurrentMapEntryForVanityPath.apply(this.key);
                     if (special != null) {
                         specialIterator = special.iterator();
                     }
+
                     // recurse to the parent
                     if (key.length() > 1) {
                         final int lastSlash = key.lastIndexOf("/");
