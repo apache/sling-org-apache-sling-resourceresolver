@@ -103,7 +103,7 @@ class MapEntryIterator implements Iterator<MapEntry> {
             // map entries for that path (or stop when root is reached)
             while (!this.specialIterator.hasNext() && this.key != null) {
                 this.key = removeSelectorsAndExtension(this.key);
-                this.specialIterator = this.getCurrentMapEntryIteratorForVanityPath.apply(this.key);
+                this.specialIterator = nullIteratorToEmpty(this.getCurrentMapEntryIteratorForVanityPath.apply(this.key));
                 this.key = getParent(key);
             }
 
@@ -162,5 +162,10 @@ class MapEntryIterator implements Iterator<MapEntry> {
             value = value.substring(0, lastDotPos);
         }
         return value;
+    }
+
+    // transform a null iterator to an empty iterator
+    static @NotNull Iterator<MapEntry> nullIteratorToEmpty(@Nullable Iterator<MapEntry> it) {
+        return it == null ? Collections.emptyIterator() : it;
     }
 }

@@ -18,8 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -103,7 +101,7 @@ public class MapEntryIteratorTest {
         MapEntryIterator vpHierarchyOnlyIterator =
                 new MapEntryIterator("/xyz/def/abc",
                         List.of(),
-                        key -> nullToEmpty(xyzAbcMap.get(key)),
+                        xyzAbcMap::get,
                         true);
 
         MapEntry first = vpHierarchyOnlyIterator.next();
@@ -122,7 +120,7 @@ public class MapEntryIteratorTest {
     public void testBothIteratorVpFirst() {
         MapEntryIterator bothIteratorVpFirst = new MapEntryIterator("/xyz",
                 List.of(global),
-                key -> nullToEmpty(xyzMap.get(key)),
+                xyzMap::get,
                 true
         );
 
@@ -142,7 +140,7 @@ public class MapEntryIteratorTest {
     public void testBothIteratorVpDefault() {
         MapEntryIterator bothIteratorVpDefault = new MapEntryIterator("/xyz",
                 List.of(global),
-                key -> nullToEmpty(xyzMap.get(key)),
+                xyzMap::get,
                 false
         );
 
@@ -157,9 +155,5 @@ public class MapEntryIteratorTest {
         assertEquals(2, second.getRedirect().length);
         assertEquals("/foo", second.getRedirect()[0]);
         assertEquals("/bar", second.getRedirect()[1]);
-    }
-
-    static @NotNull Iterator<MapEntry> nullToEmpty(@Nullable Iterator<MapEntry> it) {
-        return it == null ? Collections.emptyIterator() : it;
     }
 }

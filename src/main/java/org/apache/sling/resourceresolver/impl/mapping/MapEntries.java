@@ -1697,7 +1697,7 @@ public class MapEntries implements
         } else {
             l = this.getMapEntryList(key);
         }
-        return l == null ? Collections.emptyIterator() : l.iterator();
+        return l == null ? null : l.iterator();
     }
 
     private MapEntry getMapEntry(final String url, final int status, final String... redirect) {
