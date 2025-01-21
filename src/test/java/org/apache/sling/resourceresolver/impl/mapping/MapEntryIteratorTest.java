@@ -20,7 +20,6 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +32,7 @@ import static org.junit.Assert.assertThrows;
 public class MapEntryIteratorTest {
 
     private final MapEntryIterator empty =
-            new MapEntryIterator(null, List.of(), key -> Collections.emptyIterator(), true);
+            new MapEntryIterator(null, List.of(), key -> null, true);
 
     private final MapEntry xyz =
             new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
@@ -63,7 +62,7 @@ public class MapEntryIteratorTest {
         MapEntryIterator noVpIterator =
                 new MapEntryIterator("/xyz",
                         List.of(xyz),
-                        key -> Collections.emptyIterator(),
+                        key -> null,
                         true);
 
         MapEntry first = noVpIterator.next();
