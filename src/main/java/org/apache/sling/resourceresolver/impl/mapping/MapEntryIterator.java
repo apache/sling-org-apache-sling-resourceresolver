@@ -31,7 +31,7 @@ import java.util.function.Function;
  * An {@link Iterator} that combines existing {@link MapEntry}s (usually from the "global" list)
  * with entries from the vanity path map.
  */
-public class MapEntryIterator implements Iterator<MapEntry> {
+class MapEntryIterator implements Iterator<MapEntry> {
 
     private String key;
     private MapEntry next;
