@@ -31,8 +31,8 @@ import static org.junit.Assert.assertThrows;
 
 public class MapEntryIteratorTest {
 
-    private final MapEntries.MapEntryIterator empty =
-            new MapEntries.MapEntryIterator(null, List.of(), key -> Collections.emptyList(), true);
+    private final MapEntryIterator empty =
+            new MapEntryIterator(null, List.of(), key -> Collections.emptyList(), true);
 
     private final MapEntry xyz =
             new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
@@ -59,8 +59,8 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testOnlyOneEntry() {
-        MapEntries.MapEntryIterator noVpIterator =
-                new MapEntries.MapEntryIterator("/xyz",
+        MapEntryIterator noVpIterator =
+                new MapEntryIterator("/xyz",
                         List.of(xyz),
                         key -> Collections.emptyList(),
                         true);
@@ -75,8 +75,8 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testOnlyOneVanityPath() {
-        MapEntries.MapEntryIterator vpOnlyIterator =
-                new MapEntries.MapEntryIterator("/xyz",
+        MapEntryIterator vpOnlyIterator =
+                new MapEntryIterator("/xyz",
                         List.of(),
                         key -> List.of(xyz),
                         true);
@@ -97,8 +97,8 @@ public class MapEntryIteratorTest {
         Map<String, List<MapEntry>> xyzAbcMap =
                 Map.of("/xyz", List.of(xyz), "/xyz/def/abc", List.of(xyzAbc));
 
-        MapEntries.MapEntryIterator vpHierarchyOnlyIterator =
-                new MapEntries.MapEntryIterator("/xyz/def/abc",
+        MapEntryIterator vpHierarchyOnlyIterator =
+                new MapEntryIterator("/xyz/def/abc",
                         List.of(),
                         xyzAbcMap::get,
                         true);
@@ -117,7 +117,7 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testBothIteratorVpFirst() {
-        MapEntries.MapEntryIterator bothIteratorVpFirst = new MapEntries.MapEntryIterator("/xyz",
+        MapEntryIterator bothIteratorVpFirst = new MapEntryIterator("/xyz",
                 List.of(global),
                 xyzMap::get,
                 true
@@ -137,7 +137,7 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testBothIteratorVpDefault() {
-        MapEntries.MapEntryIterator bothIteratorVpDefault = new MapEntries.MapEntryIterator("/xyz",
+        MapEntryIterator bothIteratorVpDefault = new MapEntryIterator("/xyz",
                 List.of(global),
                 xyzMap::get,
                 false
