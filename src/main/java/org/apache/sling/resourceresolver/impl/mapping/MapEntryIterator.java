@@ -19,48 +19,55 @@
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
 
+/**
+ * An {@link Iterator} that combines existing {@link MapEntry}s (usually from the "global" list)
+ * with entries from the vanity path map.
+ */
 class MapEntryIterator implements Iterator<MapEntry> {
 
     private String key;
-
     private MapEntry next;
 
-    private final Iterator<MapEntry> globalListIterator;
     private MapEntry nextGlobal;
-
-    private Iterator<MapEntry> specialIterator;
     private MapEntry nextSpecial;
 
-    private boolean vanityPathPrecedence;
-    private final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath;
+    private final @NotNull Iterator<MapEntry> globalListIterator;
+    private @NotNull Iterator<MapEntry> specialIterator = Collections.emptyIterator();
 
-    public MapEntryIterator(final String startKey, @NotNull final List<MapEntry> globalList,
-                            final Function<String, List<MapEntry>> getCurrentMapEntryForVanityPath,
+    private final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath;
+
+    private final boolean vanityPathPrecedence;
+
+    /**
+     * Creates the combined iterator
+     * @param startKey The path from which to start when finding vanity paths (which includes entries from ancestors aswell)
+     * @param globalList The "global" list of map entries
+     * @param getCurrentMapEntryIteratorForVanityPath a function that gets the current vanity path entry for a given key (the callback should take care about which phase the vanity path initialization is in)
+     * @param vanityPathPrecedence when {@code true}, vanity paths (if present) will always come first, otherwise it depends on the length of the map entry's match pattern (see {@link MapEntry#getPattern()})
+     */
+    public MapEntryIterator(final @Nullable String startKey, @NotNull List<MapEntry> globalList,
+                            final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
                             final boolean vanityPathPrecedence) {
         this.key = startKey;
         this.globalListIterator = globalList.iterator();
         this.vanityPathPrecedence = vanityPathPrecedence;
-        this.getCurrentMapEntryForVanityPath = getCurrentMapEntryForVanityPath;
+        this.getCurrentMapEntryIteratorForVanityPath = getCurrentMapEntryIteratorForVanityPath;
         this.seek();
     }
 
-    /**
-     * @see java.util.Iterator#hasNext()
-     */
     @Override
     public boolean hasNext() {
         return this.next != null;
     }
 
-    /**
-     * @see java.util.Iterator#next()
-     */
     @Override
     public MapEntry next() {
         if (this.next == null) {
@@ -71,69 +78,94 @@ class MapEntryIterator implements Iterator<MapEntry> {
         return result;
     }
 
-    /**
-     * @see java.util.Iterator#remove()
-     */
     @Override
     public void remove() {
         throw new UnsupportedOperationException();
     }
 
     private void seek() {
+
+        // compute candidate for next entry from global list
+
         if (this.nextGlobal == null && this.globalListIterator.hasNext()) {
             this.nextGlobal = this.globalListIterator.next();
         }
+
+        // compute candidate for next entry from "special" vanity path list
+
         if (this.nextSpecial == null) {
-            if (specialIterator != null && !specialIterator.hasNext()) {
-                specialIterator = null;
+            // reset specialIterator when exhausted
+            if (!this.specialIterator.hasNext()) {
+                this.specialIterator = Collections.emptyIterator();
             }
-            while (specialIterator == null && key != null) {
-                // remove selectors and extension
-                final int lastSlashPos = key.lastIndexOf('/');
-                final int lastDotPos = key.indexOf('.', lastSlashPos);
-                if (lastDotPos != -1) {
-                    key = key.substring(0, lastDotPos);
-                }
 
-                final List<MapEntry> special = this.getCurrentMapEntryForVanityPath.apply(this.key);
-                if (special != null) {
-                    specialIterator = special.iterator();
-                }
-
-                // recurse to the parent
-                if (key.length() > 1) {
-                    final int lastSlash = key.lastIndexOf("/");
-                    if (lastSlash == 0) {
-                        key = null;
-                    } else {
-                        key = key.substring(0, lastSlash);
-                    }
-                } else {
-                    key = null;
-                }
+            // given the vanity path in key, walk up the hierarchy until we find
+            // map entries for that path (or stop when root is reached)
+            while (!this.specialIterator.hasNext() && this.key != null) {
+                this.key = removeSelectorsAndExtension(this.key);
+                this.specialIterator = nullIteratorToEmpty(this.getCurrentMapEntryIteratorForVanityPath.apply(this.key));
+                this.key = getParent(key);
             }
-            if (this.specialIterator != null && this.specialIterator.hasNext()) {
+
+            if (this.specialIterator.hasNext()) {
                 this.nextSpecial = this.specialIterator.next();
             }
         }
-        if (this.nextSpecial == null) {
+
+        // choose based on presence, vanity path preferences and pattern lengths
+
+        if (useNextGlobal()) {
             this.next = this.nextGlobal;
             this.nextGlobal = null;
-        } else if (!this.vanityPathPrecedence){
-            if (this.nextGlobal == null) {
-                this.next = this.nextSpecial;
-                this.nextSpecial = null;
-            } else if (this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length()) {
-                this.next = this.nextGlobal;
-                this.nextGlobal = null;
-
-            }else {
-                this.next = this.nextSpecial;
-                this.nextSpecial = null;
-            }
         } else {
             this.next = this.nextSpecial;
             this.nextSpecial = null;
         }
+    }
+
+    private boolean useNextGlobal() {
+        if (this.nextSpecial == null) {
+            // no next special
+            return true;
+        } else if (this.nextGlobal == null) {
+            // no next global
+            return false;
+        } else if (this.vanityPathPrecedence) {
+            // vanity paths have precedence
+            return false;
+        } else {
+            // decide based on pattern length
+            return this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length();
+        }
+    }
+
+    // return parent path or null when already at root
+    private static @Nullable String getParent(@NotNull String path) {
+        if (path.length() > 1) {
+            final int lastSlash = path.lastIndexOf('/');
+            if (lastSlash == 0) {
+                path = null;
+            } else {
+                path = path.substring(0, lastSlash);
+            }
+        } else {
+            path = null;
+        }
+        return path;
+    }
+
+    // remove selectors and extensions
+    private static @NotNull String removeSelectorsAndExtension(@NotNull String value) {
+        final int lastSlashPos = value.lastIndexOf('/');
+        final int lastDotPos = value.indexOf('.', lastSlashPos);
+        if (lastDotPos != -1) {
+            value = value.substring(0, lastDotPos);
+        }
+        return value;
+    }
+
+    // transform a null iterator to an empty iterator
+    static @NotNull Iterator<MapEntry> nullIteratorToEmpty(@Nullable Iterator<MapEntry> it) {
+        return it == null ? Collections.emptyIterator() : it;
     }
 }

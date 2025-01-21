@@ -20,7 +20,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import org.junit.Test;
 
-import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -32,7 +32,7 @@ import static org.junit.Assert.assertThrows;
 public class MapEntryIteratorTest {
 
     private final MapEntryIterator empty =
-            new MapEntryIterator(null, List.of(), key -> Collections.emptyList(), true);
+            new MapEntryIterator(null, List.of(), key -> null, true);
 
     private final MapEntry xyz =
             new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
@@ -40,8 +40,8 @@ public class MapEntryIteratorTest {
     private final MapEntry global =
             new MapEntry("/foo/global/long", -1, false, -1, "bla");
 
-    private final Map<String, List<MapEntry>> xyzMap =
-            Map.of("/xyz", List.of(xyz));
+    private final Map<String, Iterator<MapEntry>> xyzMap =
+            Map.of("/xyz", List.of(xyz).iterator());
 
     @Test
     public void testExhausted() {
@@ -62,7 +62,7 @@ public class MapEntryIteratorTest {
         MapEntryIterator noVpIterator =
                 new MapEntryIterator("/xyz",
                         List.of(xyz),
-                        key -> Collections.emptyList(),
+                        key -> null,
                         true);
 
         MapEntry first = noVpIterator.next();
@@ -78,7 +78,7 @@ public class MapEntryIteratorTest {
         MapEntryIterator vpOnlyIterator =
                 new MapEntryIterator("/xyz",
                         List.of(),
-                        key -> List.of(xyz),
+                        key -> List.of(xyz).iterator(),
                         true);
 
         MapEntry first = vpOnlyIterator.next();
@@ -94,8 +94,8 @@ public class MapEntryIteratorTest {
         MapEntry xyzAbc =
                 new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
 
-        Map<String, List<MapEntry>> xyzAbcMap =
-                Map.of("/xyz", List.of(xyz), "/xyz/def/abc", List.of(xyzAbc));
+        Map<String, Iterator<MapEntry>> xyzAbcMap =
+                Map.of("/xyz", List.of(xyz).iterator(), "/xyz/def/abc", List.of(xyzAbc).iterator());
 
         MapEntryIterator vpHierarchyOnlyIterator =
                 new MapEntryIterator("/xyz/def/abc",
