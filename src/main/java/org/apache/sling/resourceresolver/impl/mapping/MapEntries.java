@@ -290,112 +290,6 @@ public class MapEntries implements
         }
     }
 
-    /**
-     * Actual vanity paths initializer. Guards itself against concurrent use by
-     * using a ReentrantLock. Does nothing if the resource resolver has already
-     * been null-ed.
-     *
-     * @throws IOException in case of problems
-     */
-    protected void initializeVanityPaths() throws IOException {
-        this.initializing.lock();
-        try {
-            if (this.factory.isVanityPathEnabled()) {
-                this.vanityBloomFilter = createVanityBloomFilter();
-                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
-                if (this.factory.isVanityPathCacheInitInBackground()) {
-                    this.log.debug("bg init starting");
-                    Thread vpinit = new Thread(vpi, "VanityPathInitializer");
-                    vpinit.start();
-                } else {
-                    vpi.run();
-                }
-            }
-        } finally {
-            this.initializing.unlock();
-        }
-    }
-
-    private class VanityPathInitializer implements Runnable {
-
-        private int SIZELIMIT = 10000;
-
-        private MapConfigurationProvider factory;
-
-        public VanityPathInitializer(MapConfigurationProvider factory) {
-            this.factory = factory;
-        }
-
-        @Override
-        public void run() {
-            try {
-                temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
-                execute();
-            } catch (Throwable t) {
-                log.error("vanity path initializer thread terminated with a throwable", t);
-            }
-        }
-
-        private void drainQueue(List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
-            final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
-
-            // send the change event only once
-            boolean sendEvent = false;
-
-            // the config needs to be reloaded only once
-            final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
-
-            while (!queue.isEmpty()) {
-                Map.Entry<String, ResourceChange.ChangeType> entry = queue.remove(0);
-                final ResourceChange.ChangeType type = entry.getValue();
-                final String path = entry.getKey();
-
-                log.trace("drain type={}, path={}", type, path);
-                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
-
-                if (changed) {
-                    sendEvent = true;
-                }
-            }
-
-            if (sendEvent) {
-                sendChangeEvent();
-            }
-        }
-
-        private void execute() {
-            try (ResourceResolver resolver = factory
-                    .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
-
-                long initStart = System.nanoTime();
-                log.debug("vanity path initialization - start");
-
-                vanityTargets = loadVanityPaths(resolver);
-
-                // process pending event
-                drainQueue(resourceChangeQueue);
-
-                vanityPathsProcessed.set(true);
-
-                // drain once more in case more events have arrived
-                drainQueue(resourceChangeQueue);
-
-                long initElapsed = System.nanoTime() - initStart;
-                long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
-
-                log.info(
-                        "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
-                        vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
-            } catch (LoginException ex) {
-                log.error("Vanity path init failed", ex);
-            } finally {
-                log.debug("dropping temporary resolver map - {}/{} entries, {} hits, {} misses", temporaryResolveMapsMap.size(),
-                        SIZELIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
-                temporaryResolveMapsMap = null;
-            }
-        }
-    }
-
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
         this.initializing.lock();
 
@@ -540,15 +434,6 @@ public class MapEntries implements
         }
     }
 
-    private boolean removeVanityPath(final String path) {
-        this.initializing.lock();
-        try {
-            return doRemoveVanity(path);
-        } finally {
-            this.initializing.unlock();
-        }
-    }
-
     /**
      * Update the configuration.
      * Does no locking and does not send an event at the end
@@ -566,40 +451,6 @@ public class MapEntries implements
         Collections.sort(globalResolveMap);
         resolveMapsMap.put(GLOBAL_LIST_KEY, globalResolveMap);
         this.mapMaps = Collections.unmodifiableSet(new TreeSet<>(newMapMaps.values()));
-    }
-
-    private boolean doAddVanity(final Resource resource) {
-        log.debug("doAddVanity getting {}", resource.getPath());
-
-        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
-    }
-
-    private boolean doRemoveVanity(final String path) {
-        final String actualContentPath = getActualContentPath(path);
-        final List <String> l = vanityTargets.remove(actualContentPath);
-        if (l != null){
-            for (final String s : l){
-                final List<MapEntry> entries = this.resolveMapsMap.get(s);
-                if (entries!= null) {
-                    for (final Iterator<MapEntry> iterator =entries.iterator(); iterator.hasNext(); ) {
-                        final MapEntry entry = iterator.next();
-                        final String redirect = getMapEntryRedirect(entry);
-                        if (redirect != null && redirect.equals(actualContentPath)) {
-                            iterator.remove();
-                        }
-                    }
-                }
-                if (entries!= null && entries.isEmpty()) {
-                    this.resolveMapsMap.remove(s);
-                }
-            }
-            if (vanityCounter.longValue() > 0) {
-                vanityCounter.addAndGet(-2);
-            }
-            return true;
-        }
-        return false;
     }
 
     private boolean doAddAlias(final Resource resource) {
@@ -747,68 +598,6 @@ public class MapEntries implements
     private static final List<MapEntry> NO_MAP_ENTRIES = Collections.emptyList();
 
     /**
-     * get the MapEntry list containing all the nodes having a specific vanityPath
-     */
-    private List<MapEntry> getMapEntryList(String vanityPath) {
-        List<MapEntry> mapEntries = null;
-
-        boolean initFinished = vanityPathsProcessed.get();
-        boolean probablyPresent = false;
-
-        if (initFinished) {
-            // total number of lookups after init (and when cache not complete)
-            long current = this.vanityPathLookups.incrementAndGet();
-            if (current >= Long.MAX_VALUE - 100000) {
-                // reset counters when we get close the limit
-                this.vanityPathLookups.set(1);
-                this.vanityPathBloomNegatives.set(0);
-                this.vanityPathBloomFalsePositives.set(0);
-                log.info("Vanity Path metrics reset to 0");
-            }
-
-            // init is done - check the bloom filter
-            probablyPresent = BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath);
-            log.trace("bloom filter lookup for {} -> {}", vanityPath, probablyPresent);
-
-            if (!probablyPresent) {
-                // filtered by Bloom filter
-                this.vanityPathBloomNegatives.incrementAndGet();
-            }
-        }
-
-        if (!initFinished || probablyPresent) {
-
-            mapEntries = this.resolveMapsMap.get(vanityPath);
-
-            if (mapEntries == null) {
-                if (!initFinished && temporaryResolveMapsMap != null) {
-                    mapEntries = temporaryResolveMapsMap.get(vanityPath);
-                    if (mapEntries != null) {
-                        temporaryResolveMapsMapHits.incrementAndGet();
-                        log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
-                    } else {
-                        temporaryResolveMapsMapMisses.incrementAndGet();
-                    }
-                }
-                if (mapEntries == null) {
-                    Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
-                    mapEntries = mapEntry.get(vanityPath);
-                    if (!initFinished && temporaryResolveMapsMap != null) {
-                        log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
-                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? NO_MAP_ENTRIES : mapEntries);
-                    }
-                }
-            }
-            if (mapEntries == null && probablyPresent) {
-                // Bloom filter had a false positive
-                this.vanityPathBloomFalsePositives.incrementAndGet();
-            }
-        }
-
-        return mapEntries == NO_MAP_ENTRIES ? null : mapEntries;
-    }
-
-    /**
      * Refresh the resource resolver if not already done
      * @param resolverRefreshed Boolean flag containing the state if the resolver
      *                          has been refreshed. True in any case when this
@@ -857,59 +646,6 @@ public class MapEntries implements
 
     // ---------- ResourceChangeListener interface
 
-    /**
-     * Handles the change to any of the node properties relevant for vanity URL
-     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider, Optional)}
-     * constructor makes sure the event listener is registered to only get
-     * appropriate events.
-     */
-    @Override
-    public void onChange(final List<ResourceChange> changes) {
-
-        final boolean inStartup = !vanityPathsProcessed.get();
-
-        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
-
-        // send the change event only once
-        boolean sendEvent = false;
-
-        // the config needs to be reloaded only once
-        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
-
-        for (final ResourceChange rc : changes) {
-
-            final ResourceChange.ChangeType type = rc.getType();
-            final String path = rc.getPath();
-
-            log.debug("onChange, type={}, path={}", rc.getType(), path);
-
-            // don't care for system area
-            if (path.startsWith(JCR_SYSTEM_PREFIX)) {
-                continue;
-            }
-
-            // during startup: just enqueue the events
-            if (inStartup) {
-                if (type == ResourceChange.ChangeType.REMOVED || type == ResourceChange.ChangeType.ADDED
-                        || type == ResourceChange.ChangeType.CHANGED) {
-                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
-                    log.trace("enqueue: {}", entry);
-                    resourceChangeQueue.add(entry);
-                }
-            } else {
-                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
-
-                if (changed) {
-                    sendEvent = true;
-                }
-            }
-        }
-
-        if (sendEvent) {
-            this.sendChangeEvent();
-        }
-    }
-
     private boolean handleResourceChange(ResourceChange.ChangeType type, String path, AtomicBoolean resolverRefreshed,
             AtomicBoolean hasReloadedConfig) {
         boolean changed = false;
@@ -949,96 +685,6 @@ public class MapEntries implements
     }
 
     // ---------- internal
-
-    private byte[] createVanityBloomFilter() throws IOException {
-        return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
-    }
-
-    private boolean isAllVanityPathEntriesCached() {
-        return this.factory.getMaxCachedVanityPathEntries() == -1;
-    }
-
-    /**
-     * get the vanity paths  Search for all nodes having a specific vanityPath
-     */
-    private Map<String, List<MapEntry>> getVanityPaths(String vanityPath) {
-
-        Map<String, List<MapEntry>> entryMap = new HashMap<>();
-
-        final String queryString = String.format(
-                "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] "
-                        + "WHERE %s AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
-                        + "ORDER BY [sling:vanityOrder] DESC",
-                QueryBuildHelper.excludeSystemPath(),
-                QueryBuildHelper.escapeString(vanityPath),
-                QueryBuildHelper.escapeString(vanityPath.substring(1)));
-
-        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
-            long totalCount = 0;
-            long totalValid = 0;
-            log.debug("start vanityPath query: {}", queryString);
-            final Iterator<Resource> i = queryResolver.findResources(queryString, "JCR-SQL2");
-            log.debug("end vanityPath query");
-            while (i.hasNext()) {
-                totalCount += 1;
-                final Resource resource = i.next();
-                boolean isValid = false;
-                for(final Path sPath : this.factory.getObservationPaths()) {
-                    if ( sPath.matches(resource.getPath())) {
-                        isValid = true;
-                        break;
-                    }
-                }
-                if ( isValid ) {
-                    totalValid += 1;
-                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
-                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
-                        entryMap = resolveMapsMap;
-                    } else {
-                        final Map <String, List<String>> targetPaths = new HashMap<>();
-                        loadVanityPath(resource, entryMap, targetPaths, true, false);
-                    }
-                }
-            }
-            log.debug("read {} ({} valid) vanityPaths", totalCount, totalValid);
-        } catch (LoginException e) {
-            log.error("Exception while obtaining queryResolver", e);
-        }
-        return entryMap;
-    }
-
-    /**
-     * Check if the path is a valid vanity path
-     * @param path The resource path to check
-     * @return {@code true} if this is valid, {@code false} otherwise
-     */
-    private boolean isValidVanityPath(final String path){
-        if (path == null) {
-            throw new IllegalArgumentException("Unexpected null path");
-        }
-
-        // ignore system tree
-        if (path.startsWith(JCR_SYSTEM_PREFIX)) {
-            log.debug("isValidVanityPath: not valid {}", path);
-            return false;
-        }
-
-        // check allow/deny list
-        if ( this.factory.getVanityPathConfig() != null ) {
-            boolean allowed = false;
-            for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
-                if ( path.startsWith(config.prefix) ) {
-                    allowed = !config.isExclude;
-                    break;
-                }
-            }
-            if ( !allowed ) {
-                log.debug("isValidVanityPath: not valid as not in allow list {}", path);
-                return false;
-            }
-        }
-        return true;
-    }
 
     private String getActualContentPath(final String path){
         final String checkPath;
@@ -1365,150 +1011,6 @@ public class MapEntries implements
         return it;
     }
 
-    /**
-     * Load vanity paths - search for all nodes (except under /jcr:system)
-     * having a sling:vanityPath property
-     */
-    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
-        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
-                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
-
-        Iterator<Resource> it;
-        try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
-        } catch (QuerySyntaxException ex) {
-            log.debug("sort with first() not supported, falling back to base query", ex);
-            it = queryUnpaged("vanity path", baseQueryString);
-        } catch (UnsupportedOperationException ex) {
-            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged("vanity path", baseQueryString);
-        }
-
-        long count = 0;
-        long countInScope = 0;
-        long processStart = System.nanoTime();
-
-        while (it.hasNext()) {
-            count += 1;
-            final Resource resource = it.next();
-            final String resourcePath = resource.getPath();
-            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
-                countInScope += 1;
-                final boolean addToCache = isAllVanityPathEntriesCached()
-                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
-            }
-        }
-        long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
-        if (!isAllVanityPathEntriesCached()) {
-            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            }
-        }
-
-        this.vanityResourcesOnStartup.set(count);
-
-        return targetPaths;
-    }
-
-    /**
-     * Load vanity path given a resource
-     * 
-     * @return first vanity path or {@code null}
-     */
-    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache, boolean updateCounter) {
-
-        if (!isValidVanityPath(resource.getPath())) {
-            return null;
-        }
-
-        final ValueMap props = resource.getValueMap();
-        long vanityOrder = props.get(PROP_VANITY_ORDER, 0L);
-
-        // url is ignoring scheme and host.port and the path is
-        // what is stored in the sling:vanityPath property
-        boolean hasVanityPath = false;
-        final String[] pVanityPaths = props.get(PROP_VANITY_PATH, new String[0]);
-        if (log.isTraceEnabled()) {
-            log.trace("vanity paths on {}: {}", resource.getPath(), Arrays.asList(pVanityPaths));
-        }
-
-        for (final String pVanityPath : pVanityPaths) {
-            final String[] result = this.getVanityPathDefinition(resource.getPath(), pVanityPath);
-            if (result != null) {
-                // redirect target is the node providing the sling:vanityPath
-                // property (or its parent if the node is called jcr:content)
-                final Resource redirectTarget;
-                if (JCR_CONTENT.equals(resource.getName())) {
-                    redirectTarget = resource.getParent();
-                    if (redirectTarget == null) {
-                        // we encountered a broken resource jcr:content resource
-                        // that apparently has no parent; skip this one and
-                        // continue with next
-                        log.warn("containingResource is null for vanity path on {}, skipping.", resource.getPath());
-                        continue;
-                    }
-                } else {
-                    redirectTarget = resource;
-                }
-
-                hasVanityPath = true;
-                final String url = result[0] + result[1];
-                final String redirect = redirectTarget.getPath();
-                final String redirectName = redirectTarget.getName();
-
-                // whether the target is attained by a external redirect or
-                // by an internal redirect is defined by the sling:redirect
-                // property
-                final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
-                        PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
-                        : -1;
-
-                final String checkPath = result[1];
-
-                boolean addedEntry;
-                if (addToCache) {
-                    if (redirectName.indexOf('.') > -1) {
-                        // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
-
-                        final int idx = redirectName.lastIndexOf('.');
-                        final String extension = redirectName.substring(idx + 1);
-
-                        // 2. entry with extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
-                    } else {
-                        // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
-
-                        // 2. entry with match supporting selectors and extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
-                    }
-                    if (addedEntry) {
-                        // 3. keep the path to return
-                        this.updateTargetPaths(targetPaths, redirect, checkPath);
-
-                        if (updateCounter) {
-                            vanityCounter.addAndGet(2);
-                        }
-
-                        // update bloom filter
-                        BloomFilterUtils.add(vanityBloomFilter, checkPath);
-                    }
-                } else {
-                    // update bloom filter
-                    BloomFilterUtils.add(vanityBloomFilter, checkPath);
-                }
-            }
-        }
-        return hasVanityPath ? pVanityPaths[0] : null;
-    }
-
     private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
         if (entry == null) {
            return;
@@ -1519,58 +1021,6 @@ public class MapEntries implements
             targetPaths.put(key, entries);
         }
         entries.add(entry);
-    }
-
-    /**
-     * Create the vanity path definition. String array containing:
-     * {protocol}/{host}[.port] {absolute path}
-     */
-    private String[] getVanityPathDefinition(final String sourcePath, final String vanityPath) {
-
-        if (vanityPath == null) {
-            log.trace("getVanityPathDefinition: null vanity path on {}", sourcePath);
-            return null;
-        }
-
-        String info = vanityPath.trim();
-
-        if (info.isEmpty()) {
-            log.trace("getVanityPathDefinition: empty vanity path on {}", sourcePath);
-            return null;
-        }
-
-        String prefix = null;
-        String path = null;
-
-        // check for URL-shaped path
-        if (info.indexOf(":/") > -1) {
-            try {
-                final URL u = new URL(info);
-                prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
-                path = u.getPath();
-            } catch (final MalformedURLException e) {
-                log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
-                return null;
-            }
-        } else {
-            prefix = "^" + ANY_SCHEME_HOST;
-
-            if (!info.startsWith("/")) {
-                path = "/" + info;
-            } else {
-                path = info;
-            }
-        }
-
-        // remove extension
-        int lastSlash = path.lastIndexOf('/');
-        int firstDot = path.indexOf('.', lastSlash + 1);
-        if (firstDot != -1) {
-            path = path.substring(0, firstDot);
-            log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
-        }
-
-        return new String[] { prefix, path };
     }
 
     private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
@@ -1688,18 +1138,6 @@ public class MapEntries implements
         }
     }
 
-    // return vanity path entry iterator from cache when complete and ready, otherwise from
-    // regular lockup
-    public @Nullable Iterator<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
-        List<MapEntry> l;
-        if (this.isAllVanityPathEntriesCached() && this.vanityPathsProcessed.get()) {
-            l = this.resolveMapsMap.get(key);
-        } else {
-            l = this.getMapEntryList(key);
-        }
-        return l == null ? null : l.iterator();
-    }
-
     private MapEntry getMapEntry(final String url, final int status, final String... redirect) {
         return getMapEntry(url, status, 0, redirect);
     }
@@ -1713,5 +1151,569 @@ public class MapEntries implements
             log.debug("ignored entry for {} due to exception", url, iae);
             return null;
         }
+    }
+
+    // ---- vanity path handling ----
+
+    /**
+     * Actual vanity paths initializer. Guards itself against concurrent use by
+     * using a ReentrantLock. Does nothing if the resource resolver has already
+     * been null-ed.
+     *
+     * @throws IOException in case of problems
+     */
+    protected void initializeVanityPaths() throws IOException {
+        this.initializing.lock();
+        try {
+            if (this.factory.isVanityPathEnabled()) {
+                this.vanityBloomFilter = createVanityBloomFilter();
+                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
+                if (this.factory.isVanityPathCacheInitInBackground()) {
+                    this.log.debug("bg init starting");
+                    Thread vpinit = new Thread(vpi, "VanityPathInitializer");
+                    vpinit.start();
+                } else {
+                    vpi.run();
+                }
+            }
+        } finally {
+            this.initializing.unlock();
+        }
+    }
+
+    private boolean removeVanityPath(final String path) {
+        this.initializing.lock();
+        try {
+            return doRemoveVanity(path);
+        } finally {
+            this.initializing.unlock();
+        }
+    }
+
+    private class VanityPathInitializer implements Runnable {
+
+        private int SIZELIMIT = 10000;
+
+        private MapConfigurationProvider factory;
+
+        public VanityPathInitializer(MapConfigurationProvider factory) {
+            this.factory = factory;
+        }
+
+        @Override
+        public void run() {
+            try {
+                temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
+                execute();
+            } catch (Throwable t) {
+                log.error("vanity path initializer thread terminated with a throwable", t);
+            }
+        }
+
+        private void drainQueue(List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
+            final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+
+            // send the change event only once
+            boolean sendEvent = false;
+
+            // the config needs to be reloaded only once
+            final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
+            while (!queue.isEmpty()) {
+                Map.Entry<String, ResourceChange.ChangeType> entry = queue.remove(0);
+                final ResourceChange.ChangeType type = entry.getValue();
+                final String path = entry.getKey();
+
+                log.trace("drain type={}, path={}", type, path);
+                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
+
+                if (changed) {
+                    sendEvent = true;
+                }
+            }
+
+            if (sendEvent) {
+                sendChangeEvent();
+            }
+        }
+
+        private void execute() {
+            try (ResourceResolver resolver = factory
+                    .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
+
+                long initStart = System.nanoTime();
+                log.debug("vanity path initialization - start");
+
+                vanityTargets = loadVanityPaths(resolver);
+
+                // process pending event
+                drainQueue(resourceChangeQueue);
+
+                vanityPathsProcessed.set(true);
+
+                // drain once more in case more events have arrived
+                drainQueue(resourceChangeQueue);
+
+                long initElapsed = System.nanoTime() - initStart;
+                long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
+
+                log.info(
+                        "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
+                        vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
+            } catch (LoginException ex) {
+                log.error("Vanity path init failed", ex);
+            } finally {
+                log.debug("dropping temporary resolver map - {}/{} entries, {} hits, {} misses", temporaryResolveMapsMap.size(),
+                        SIZELIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
+                temporaryResolveMapsMap = null;
+            }
+        }
+    }
+
+    private boolean doAddVanity(final Resource resource) {
+        log.debug("doAddVanity getting {}", resource.getPath());
+
+        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
+    }
+
+    private boolean doRemoveVanity(final String path) {
+        final String actualContentPath = getActualContentPath(path);
+        final List <String> l = vanityTargets.remove(actualContentPath);
+        if (l != null){
+            for (final String s : l){
+                final List<MapEntry> entries = this.resolveMapsMap.get(s);
+                if (entries!= null) {
+                    for (final Iterator<MapEntry> iterator =entries.iterator(); iterator.hasNext(); ) {
+                        final MapEntry entry = iterator.next();
+                        final String redirect = getMapEntryRedirect(entry);
+                        if (redirect != null && redirect.equals(actualContentPath)) {
+                            iterator.remove();
+                        }
+                    }
+                }
+                if (entries!= null && entries.isEmpty()) {
+                    this.resolveMapsMap.remove(s);
+                }
+            }
+            if (vanityCounter.longValue() > 0) {
+                vanityCounter.addAndGet(-2);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * get the MapEntry list containing all the nodes having a specific vanityPath
+     */
+    private List<MapEntry> getMapEntryList(String vanityPath) {
+        List<MapEntry> mapEntries = null;
+
+        boolean initFinished = vanityPathsProcessed.get();
+        boolean probablyPresent = false;
+
+        if (initFinished) {
+            // total number of lookups after init (and when cache not complete)
+            long current = this.vanityPathLookups.incrementAndGet();
+            if (current >= Long.MAX_VALUE - 100000) {
+                // reset counters when we get close the limit
+                this.vanityPathLookups.set(1);
+                this.vanityPathBloomNegatives.set(0);
+                this.vanityPathBloomFalsePositives.set(0);
+                log.info("Vanity Path metrics reset to 0");
+            }
+
+            // init is done - check the bloom filter
+            probablyPresent = BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath);
+            log.trace("bloom filter lookup for {} -> {}", vanityPath, probablyPresent);
+
+            if (!probablyPresent) {
+                // filtered by Bloom filter
+                this.vanityPathBloomNegatives.incrementAndGet();
+            }
+        }
+
+        if (!initFinished || probablyPresent) {
+
+            mapEntries = this.resolveMapsMap.get(vanityPath);
+
+            if (mapEntries == null) {
+                if (!initFinished && temporaryResolveMapsMap != null) {
+                    mapEntries = temporaryResolveMapsMap.get(vanityPath);
+                    if (mapEntries != null) {
+                        temporaryResolveMapsMapHits.incrementAndGet();
+                        log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
+                    } else {
+                        temporaryResolveMapsMapMisses.incrementAndGet();
+                    }
+                }
+                if (mapEntries == null) {
+                    Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
+                    mapEntries = mapEntry.get(vanityPath);
+                    if (!initFinished && temporaryResolveMapsMap != null) {
+                        log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
+                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? NO_MAP_ENTRIES : mapEntries);
+                    }
+                }
+            }
+            if (mapEntries == null && probablyPresent) {
+                // Bloom filter had a false positive
+                this.vanityPathBloomFalsePositives.incrementAndGet();
+            }
+        }
+
+        return mapEntries == NO_MAP_ENTRIES ? null : mapEntries;
+    }
+
+    /**
+     * Handles the change to any of the node properties relevant for vanity URL
+     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider, Optional)}
+     * constructor makes sure the event listener is registered to only get
+     * appropriate events.
+     */
+    @Override
+    public void onChange(final List<ResourceChange> changes) {
+
+        final boolean inStartup = !vanityPathsProcessed.get();
+
+        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+
+        // send the change event only once
+        boolean sendEvent = false;
+
+        // the config needs to be reloaded only once
+        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
+        for (final ResourceChange rc : changes) {
+
+            final ResourceChange.ChangeType type = rc.getType();
+            final String path = rc.getPath();
+
+            log.debug("onChange, type={}, path={}", rc.getType(), path);
+
+            // don't care for system area
+            if (path.startsWith(JCR_SYSTEM_PREFIX)) {
+                continue;
+            }
+
+            // during startup: just enqueue the events
+            if (inStartup) {
+                if (type == ResourceChange.ChangeType.REMOVED || type == ResourceChange.ChangeType.ADDED
+                        || type == ResourceChange.ChangeType.CHANGED) {
+                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
+                    log.trace("enqueue: {}", entry);
+                    resourceChangeQueue.add(entry);
+                }
+            } else {
+                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
+
+                if (changed) {
+                    sendEvent = true;
+                }
+            }
+        }
+
+        if (sendEvent) {
+            this.sendChangeEvent();
+        }
+    }
+
+    private byte[] createVanityBloomFilter() throws IOException {
+        return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
+    }
+
+    private boolean isAllVanityPathEntriesCached() {
+        return this.factory.getMaxCachedVanityPathEntries() == -1;
+    }
+
+    /**
+     * get the vanity paths  Search for all nodes having a specific vanityPath
+     */
+    private Map<String, List<MapEntry>> getVanityPaths(String vanityPath) {
+
+        Map<String, List<MapEntry>> entryMap = new HashMap<>();
+
+        final String queryString = String.format(
+                "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] "
+                        + "WHERE %s AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
+                        + "ORDER BY [sling:vanityOrder] DESC",
+                QueryBuildHelper.excludeSystemPath(),
+                QueryBuildHelper.escapeString(vanityPath),
+                QueryBuildHelper.escapeString(vanityPath.substring(1)));
+
+        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
+            long totalCount = 0;
+            long totalValid = 0;
+            log.debug("start vanityPath query: {}", queryString);
+            final Iterator<Resource> i = queryResolver.findResources(queryString, "JCR-SQL2");
+            log.debug("end vanityPath query");
+            while (i.hasNext()) {
+                totalCount += 1;
+                final Resource resource = i.next();
+                boolean isValid = false;
+                for(final Path sPath : this.factory.getObservationPaths()) {
+                    if ( sPath.matches(resource.getPath())) {
+                        isValid = true;
+                        break;
+                    }
+                }
+                if ( isValid ) {
+                    totalValid += 1;
+                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
+                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
+                        entryMap = resolveMapsMap;
+                    } else {
+                        final Map <String, List<String>> targetPaths = new HashMap<>();
+                        loadVanityPath(resource, entryMap, targetPaths, true, false);
+                    }
+                }
+            }
+            log.debug("read {} ({} valid) vanityPaths", totalCount, totalValid);
+        } catch (LoginException e) {
+            log.error("Exception while obtaining queryResolver", e);
+        }
+        return entryMap;
+    }
+
+    /**
+     * Check if the path is a valid vanity path
+     * @param path The resource path to check
+     * @return {@code true} if this is valid, {@code false} otherwise
+     */
+    private boolean isValidVanityPath(final String path){
+        if (path == null) {
+            throw new IllegalArgumentException("Unexpected null path");
+        }
+
+        // ignore system tree
+        if (path.startsWith(JCR_SYSTEM_PREFIX)) {
+            log.debug("isValidVanityPath: not valid {}", path);
+            return false;
+        }
+
+        // check allow/deny list
+        if ( this.factory.getVanityPathConfig() != null ) {
+            boolean allowed = false;
+            for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
+                if ( path.startsWith(config.prefix) ) {
+                    allowed = !config.isExclude;
+                    break;
+                }
+            }
+            if ( !allowed ) {
+                log.debug("isValidVanityPath: not valid as not in allow list {}", path);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Load vanity paths - search for all nodes (except under /jcr:system)
+     * having a sling:vanityPath property
+     */
+    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
+        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
+        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
+                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
+
+        Iterator<Resource> it;
+        try {
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
+            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
+        } catch (QuerySyntaxException ex) {
+            log.debug("sort with first() not supported, falling back to base query", ex);
+            it = queryUnpaged("vanity path", baseQueryString);
+        } catch (UnsupportedOperationException ex) {
+            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+            it = queryUnpaged("vanity path", baseQueryString);
+        }
+
+        long count = 0;
+        long countInScope = 0;
+        long processStart = System.nanoTime();
+
+        while (it.hasNext()) {
+            count += 1;
+            final Resource resource = it.next();
+            final String resourcePath = resource.getPath();
+            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
+                countInScope += 1;
+                final boolean addToCache = isAllVanityPathEntriesCached()
+                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
+            }
+        }
+        long processElapsed = System.nanoTime() - processStart;
+        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        if (!isAllVanityPathEntriesCached()) {
+            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
+                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
+                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            }
+        }
+
+        this.vanityResourcesOnStartup.set(count);
+
+        return targetPaths;
+    }
+
+    /**
+     * Load vanity path given a resource
+     *
+     * @return first vanity path or {@code null}
+     */
+    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache, boolean updateCounter) {
+
+        if (!isValidVanityPath(resource.getPath())) {
+            return null;
+        }
+
+        final ValueMap props = resource.getValueMap();
+        long vanityOrder = props.get(PROP_VANITY_ORDER, 0L);
+
+        // url is ignoring scheme and host.port and the path is
+        // what is stored in the sling:vanityPath property
+        boolean hasVanityPath = false;
+        final String[] pVanityPaths = props.get(PROP_VANITY_PATH, new String[0]);
+        if (log.isTraceEnabled()) {
+            log.trace("vanity paths on {}: {}", resource.getPath(), Arrays.asList(pVanityPaths));
+        }
+
+        for (final String pVanityPath : pVanityPaths) {
+            final String[] result = this.getVanityPathDefinition(resource.getPath(), pVanityPath);
+            if (result != null) {
+                // redirect target is the node providing the sling:vanityPath
+                // property (or its parent if the node is called jcr:content)
+                final Resource redirectTarget;
+                if (JCR_CONTENT.equals(resource.getName())) {
+                    redirectTarget = resource.getParent();
+                    if (redirectTarget == null) {
+                        // we encountered a broken resource jcr:content resource
+                        // that apparently has no parent; skip this one and
+                        // continue with next
+                        log.warn("containingResource is null for vanity path on {}, skipping.", resource.getPath());
+                        continue;
+                    }
+                } else {
+                    redirectTarget = resource;
+                }
+
+                hasVanityPath = true;
+                final String url = result[0] + result[1];
+                final String redirect = redirectTarget.getPath();
+                final String redirectName = redirectTarget.getName();
+
+                // whether the target is attained by a external redirect or
+                // by an internal redirect is defined by the sling:redirect
+                // property
+                final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
+                        PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
+                        : -1;
+
+                final String checkPath = result[1];
+
+                boolean addedEntry;
+                if (addToCache) {
+                    if (redirectName.indexOf('.') > -1) {
+                        // 1. entry with exact match
+                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
+
+                        final int idx = redirectName.lastIndexOf('.');
+                        final String extension = redirectName.substring(idx + 1);
+
+                        // 2. entry with extension
+                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
+                    } else {
+                        // 1. entry with exact match
+                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
+
+                        // 2. entry with match supporting selectors and extension
+                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
+                    }
+                    if (addedEntry) {
+                        // 3. keep the path to return
+                        this.updateTargetPaths(targetPaths, redirect, checkPath);
+
+                        if (updateCounter) {
+                            vanityCounter.addAndGet(2);
+                        }
+
+                        // update bloom filter
+                        BloomFilterUtils.add(vanityBloomFilter, checkPath);
+                    }
+                } else {
+                    // update bloom filter
+                    BloomFilterUtils.add(vanityBloomFilter, checkPath);
+                }
+            }
+        }
+        return hasVanityPath ? pVanityPaths[0] : null;
+    }
+
+    /**
+     * Create the vanity path definition. String array containing:
+     * {protocol}/{host}[.port] {absolute path}
+     */
+    private String[] getVanityPathDefinition(final String sourcePath, final String vanityPath) {
+
+        if (vanityPath == null) {
+            log.trace("getVanityPathDefinition: null vanity path on {}", sourcePath);
+            return null;
+        }
+
+        String info = vanityPath.trim();
+
+        if (info.isEmpty()) {
+            log.trace("getVanityPathDefinition: empty vanity path on {}", sourcePath);
+            return null;
+        }
+
+        String prefix = null;
+        String path = null;
+
+        // check for URL-shaped path
+        if (info.indexOf(":/") > -1) {
+            try {
+                final URL u = new URL(info);
+                prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
+                path = u.getPath();
+            } catch (final MalformedURLException e) {
+                log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
+                return null;
+            }
+        } else {
+            prefix = "^" + ANY_SCHEME_HOST;
+
+            if (!info.startsWith("/")) {
+                path = "/" + info;
+            } else {
+                path = info;
+            }
+        }
+
+        // remove extension
+        int lastSlash = path.lastIndexOf('/');
+        int firstDot = path.indexOf('.', lastSlash + 1);
+        if (firstDot != -1) {
+            path = path.substring(0, firstDot);
+            log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
+        }
+
+        return new String[] { prefix, path };
+    }
+
+    // return vanity path entry iterator from cache when complete and ready, otherwise from
+    // regular lockup
+    public @Nullable Iterator<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
+        List<MapEntry> l;
+        if (this.isAllVanityPathEntriesCached() && this.vanityPathsProcessed.get()) {
+            l = this.resolveMapsMap.get(key);
+        } else {
+            l = this.getMapEntryList(key);
+        }
+        return l == null ? null : l.iterator();
     }
 }
