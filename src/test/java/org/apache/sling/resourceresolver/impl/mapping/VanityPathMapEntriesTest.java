@@ -1171,7 +1171,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.setAccessible(true);
         method.invoke(mapEntries, "/target/justVanityPath");
 
-        int expected = 2;
+        final int expected = 2;
 
         entries = mapEntries.getResolveMaps();
         assertEquals(expected, entries.size());
