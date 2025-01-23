@@ -1460,7 +1460,10 @@ public class MapEntries implements
                 }
                 if ( isValid ) {
                     totalValid += 1;
-                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
+                    if (this.vanityPathsProcessed.get()
+                            && (this.factory.isMaxCachedVanityPathEntriesStartup()
+                                || this.isAllVanityPathEntriesCached()
+                                || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
                         entryMap = resolveMapsMap;
                     } else {

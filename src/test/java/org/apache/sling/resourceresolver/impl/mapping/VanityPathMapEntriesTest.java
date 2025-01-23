@@ -91,15 +91,22 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     private EventAdmin eventAdmin;
 
     private int pageSize;
+    private boolean isMaxCachedVanityPathEntriesStartup;
+
     private int prevPageSize = 1000;
 
-    @Parameters(name = "page size -> {0}")
+    @Parameters(name="{0} {1}")
     public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][] { { 1 }, { 1000 } });
+        return List.of(new Object[][] {
+                {1000, false},
+                {1, true},
+                {1000, true}}
+        );
     }
 
-    public VanityPathMapEntriesTest(int pageSize) {
+    public VanityPathMapEntriesTest(int pageSize, boolean isMaxCachedVanityPathEntriesStartup) {
         this.pageSize = pageSize;
+        this.isMaxCachedVanityPathEntriesStartup = isMaxCachedVanityPathEntriesStartup;
     }
 
     @Override
@@ -132,7 +139,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
-        when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
+        when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(isMaxCachedVanityPathEntriesStartup);
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.emptyIterator());
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(
@@ -921,7 +928,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getName()).thenReturn("justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
-
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
             if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
                 return Collections.singleton(justVanityPath).iterator();
@@ -939,7 +945,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         Field vanityCounter = MapEntries.class.getDeclaredField("vanityCounter");
         vanityCounter.setAccessible(true);
         AtomicLong counter = (AtomicLong) vanityCounter.get(mapEntries);
-        assertEquals(2, counter.longValue());
+        assertEquals(this.isMaxCachedVanityPathEntriesStartup ? 2 : 0, counter.longValue());
 
         final Resource justVanityPath2 = mock(Resource.class, "justVanityPath2");
         when(resourceResolver.getResource("/justVanityPath2")).thenReturn(justVanityPath2);
@@ -958,7 +964,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, "/target/justVanityPath");
 
         counter = (AtomicLong) vanityCounter.get(mapEntries);
-        assertEquals(4, counter.longValue());
+        assertEquals(this.isMaxCachedVanityPathEntriesStartup ? 4 : 0, counter.longValue());
     }
 
     @Test
@@ -1138,7 +1144,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         List<MapEntry> entries = mapEntries.getResolveMaps();
         assertEquals(0, entries.size());
 
-
         final Resource justVanityPath = mock(Resource.class,
                 "justVanityPath");
 
@@ -1162,26 +1167,28 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 });
 
         Method method =
-                MapEntries.class.getDeclaredMethod("getMapEntryList",String.class);
+                MapEntries.class.getDeclaredMethod("getMapEntryList", String.class);
         method.setAccessible(true);
         method.invoke(mapEntries, "/target/justVanityPath");
 
+        final int expected = 2;
+
         entries = mapEntries.getResolveMaps();
-        assertEquals(2, entries.size());
+        assertEquals(expected, entries.size());
 
         Field vanityCounter =
                 MapEntries.class.getDeclaredField("vanityCounter");
         vanityCounter.setAccessible(true);
         AtomicLong counter = (AtomicLong) vanityCounter.get(mapEntries);
-        assertEquals(2, counter.longValue());
+        assertEquals(expected, counter.longValue());
 
         method.invoke(mapEntries, "/target/justVanityPath");
 
         entries = mapEntries.getResolveMaps();
-        assertEquals(2, entries.size());
+        assertEquals(expected, entries.size());
 
         counter = (AtomicLong) vanityCounter.get(mapEntries);
-        assertEquals(2, counter.longValue());
+        assertEquals(expected, counter.longValue());
     }
 
     @Test
