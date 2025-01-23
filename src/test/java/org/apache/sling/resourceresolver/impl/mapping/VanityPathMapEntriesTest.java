@@ -90,23 +90,26 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Mock
     private EventAdmin eventAdmin;
 
-    private int pageSize;
-    private boolean isMaxCachedVanityPathEntriesStartup;
+    private final int pageSize;
+    private final boolean isMaxCachedVanityPathEntriesStartup;
+    private final boolean isVanityPathCacheInitInBackground;
 
     private int prevPageSize = 1000;
 
-    @Parameters(name="{0} {1}")
+    @Parameters(name="{0} {1} {2}")
     public static Collection<Object[]> data() {
         return List.of(new Object[][] {
-                {1000, false},
-                {1, true},
-                {1000, true}}
+                {1000, false, true},
+                {1, true, false},
+                {1000, true, false}}
         );
     }
 
-    public VanityPathMapEntriesTest(int pageSize, boolean isMaxCachedVanityPathEntriesStartup) {
+    public VanityPathMapEntriesTest(int pageSize, boolean isMaxCachedVanityPathEntriesStartup,
+                                    boolean isVanityPathCacheInitInBackground) {
         this.pageSize = pageSize;
         this.isMaxCachedVanityPathEntriesStartup = isMaxCachedVanityPathEntriesStartup;
+        this.isVanityPathCacheInitInBackground = isVanityPathCacheInitInBackground;
     }
 
     @Override
@@ -133,6 +136,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         Collections.sort(configs);
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
+        when(resourceResolverFactory.getServiceUserAuthenticationInfo(anyString())).thenReturn(Map.of());
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(configs);
@@ -140,6 +144,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
         when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(isMaxCachedVanityPathEntriesStartup);
+        when(resourceResolverFactory.isVanityPathCacheInitInBackground()).thenReturn(isVanityPathCacheInitInBackground);
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(
                 Collections.emptyIterator());
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(
@@ -149,6 +154,36 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+        waitForBgInit();
+    }
+
+    // get internal flag that signals completion of background task
+    private AtomicBoolean getVanityPathsProcessed() {
+        try {
+            Field field = MapEntries.class.getDeclaredField("vanityPathsProcessed");
+            field.setAccessible(true);
+            return (AtomicBoolean) field.get(mapEntries);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // wait for background thread to complete
+    private void waitForBgInit() {
+        while (!getVanityPathsProcessed().get()) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                // ignored
+            }
+        }
+    }
+
+    // get vanity paths (after waiting for bg init to complete)
+    private void initializeVanityPaths() throws IOException {
+        getVanityPathsProcessed().set(false);
+        mapEntries.initializeVanityPaths();
+        waitForBgInit();
     }
 
     @Override
@@ -166,8 +201,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         String oneMore = "one-more";
         prepareMapEntriesForVanityPath(false, false, containerName,
                 childName, oneMore, vanityPath);
-        mapEntries.doInit();
-        mapEntries.initializeVanityPaths();
+
+        initializeVanityPaths();
+
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
         assertNotNull(vanityMap);
         assertEquals(vanityPath, vanityMap.get("/" + containerName + "/" + childName).get(0));
@@ -184,8 +220,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         String oneMore = "one-more";
         prepareMapEntriesForVanityPath(true, true, containerName,
                 childName, oneMore, vanityPath);
-        mapEntries.doInit();
-        mapEntries.initializeVanityPaths();
+
+        initializeVanityPaths();
+
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
         assertNotNull(vanityMap);
         // not present
@@ -299,8 +336,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        mapEntries.doInit();
-        mapEntries.initializeVanityPaths();
+        initializeVanityPaths();
 
         List<MapEntry> entries = mapEntries.getResolveMaps();
 
@@ -346,8 +382,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> Collections.emptyIterator());
 
-        mapEntries.doInit();
-        mapEntries.initializeVanityPaths();
+        initializeVanityPaths();
 
         // map entries should have no alias atm
         assertTrue( mapEntries.getResolveMaps().isEmpty());
@@ -460,7 +495,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
             resources.add(getVanityPathResource(val));
         }
 
-
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
             String query = invocation.getArguments()[0].toString();
             if (matchesPagedQuery(query)) {
@@ -475,8 +509,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        mapEntries.doInit();
-        mapEntries.initializeVanityPaths();
+        initializeVanityPaths();
 
         List<MapEntry> entries = mapEntries.getResolveMaps();
         // each valid resource results in 2 entries
@@ -1254,7 +1287,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         return vp.length == 0 ? "": vp[0];
     }
 
-    private Comparator<Resource> vanityResourceComparator = (o1, o2) -> {
+    private final Comparator<Resource> vanityResourceComparator = (o1, o2) -> {
         String s1 = getFirstVanityPath(o1);
         String s2 = getFirstVanityPath(o2);
         return s1.compareTo(s2);
