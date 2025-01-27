@@ -181,7 +181,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // get vanity paths (after waiting for bg init to complete)
     private void initializeVanityPaths() throws IOException {
-        getVanityPathsProcessed().set(false);
         mapEntries.initializeVanityPaths();
         waitForBgInit();
     }
