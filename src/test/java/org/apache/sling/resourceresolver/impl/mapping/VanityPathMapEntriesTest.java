@@ -454,7 +454,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> Collections.emptyIterator());
 
-        initializeVanityPaths();
+        mapEntries.doInit();
+        mapEntries.initializeVanityPaths();
 
         // map entries should have no alias atm
         assertTrue( mapEntries.getResolveMaps().isEmpty());
