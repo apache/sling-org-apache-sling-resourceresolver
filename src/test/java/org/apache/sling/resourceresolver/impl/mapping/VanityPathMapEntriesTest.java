@@ -96,7 +96,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private int prevPageSize = 1000;
 
-    @Parameters(name="{0} {1} {2}")
+    @Parameters(name="pageSize={0}, isMaxCachedVanityPathEntriesStartup={1}, isVanityPathCacheInitInBackground={2}")
     public static Collection<Object[]> data() {
         return List.of(new Object[][] {
                 {1000, false, true},
