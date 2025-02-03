@@ -1166,10 +1166,8 @@ public class MapEntries implements
         this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
-                vanityPathsProcessed.set(false);
                 this.vanityBloomFilter = createVanityBloomFilter();
                 VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
-
                 if (this.factory.isVanityPathCacheInitInBackground()) {
                     this.log.debug("bg init starting");
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
