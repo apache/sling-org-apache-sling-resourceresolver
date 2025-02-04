@@ -136,7 +136,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private void internal_test_simple_alias_support(boolean onJcrContent) {
         prepareMapEntriesForAlias(onJcrContent, false, "alias");
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
         assertTrue(aliasMap.containsKey("child"));
@@ -155,7 +155,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private void internal_test_simple_multi_alias_support(boolean onJcrContent) {
         prepareMapEntriesForAlias(onJcrContent, false, "foo", "bar");
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
         assertTrue(aliasMap.containsKey("child"));
@@ -176,7 +176,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     public void test_simple_multi_alias_support_with_null_parent() {
         // see SLING-12383
         prepareMapEntriesForAlias(true, true, "foo", "bar");
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
         assertFalse(aliasMap.containsKey("child"));
@@ -186,7 +186,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     public void test_simple_multi_alias_support_with_blank_and_invalid() {
         // invalid aliases filtered out
         prepareMapEntriesForAlias(false, false, "", "foo", ".", "bar", "x/y", "qux", " ");
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
         assertTrue(aliasMap.containsKey("child"));
@@ -199,7 +199,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         List<String> invalidAliases = List.of(".", "..", "foo/bar", "# foo", "");
         for (String invalidAlias : invalidAliases) {
             prepareMapEntriesForAlias(false, false, invalidAlias);
-            mapEntries.doInit();
+            mapEntries.initializeAliases();
             Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
             assertEquals(Collections.emptyMap(), aliasMap);
         }
@@ -258,7 +258,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
 
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
@@ -1275,6 +1275,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             return Collections.emptyIterator();
         });
 
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
     }
 }
