@@ -186,7 +186,7 @@ public class MapEntries implements
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
 
-        this.useOptimizeAliasResolution = doInit();
+        this.useOptimizeAliasResolution = initializeAliases();
 
         this.registration = registerResourceChangeListener(bundleContext);
 
@@ -234,7 +234,7 @@ public class MapEntries implements
      * null-ed.
      * @return true if the optimizedAliasResolution is enabled, false otherwise
      */
-    protected boolean doInit() {
+    protected boolean initializeAliases() {
 
         this.initializing.lock();
         try {

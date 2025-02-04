@@ -1253,7 +1253,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
     }
 
     // utilities for testing vanity path queries
