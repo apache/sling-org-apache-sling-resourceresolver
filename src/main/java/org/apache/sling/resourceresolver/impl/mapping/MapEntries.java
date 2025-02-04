@@ -97,8 +97,6 @@ public class MapEntries implements
 
     public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
 
-    private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
-
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -158,15 +156,13 @@ public class MapEntries implements
     private final AtomicLong vanityPathBloomNegatives;
     private final AtomicLong vanityPathBloomFalsePositives;
 
-    private byte[] vanityBloomFilter;
-
     private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
     private final boolean useOptimizeAliasResolution;
 
-    final VanityPathHandler vph = new VanityPathHandler();
+    final VanityPathHandler vph;
 
     public MapEntries(final MapConfigurationProvider factory,
             final BundleContext bundleContext, 
@@ -199,7 +195,8 @@ public class MapEntries implements
         this.vanityPathBloomNegatives = new AtomicLong(0);
         this.vanityPathBloomFalsePositives = new AtomicLong(0);
 
-        vph.initializeVanityPaths();
+        this.vph = new VanityPathHandler(this.factory);
+        this.vph.initializeVanityPaths();
 
         this.metrics = metrics;
         if (metrics.isPresent()) {
@@ -1213,7 +1210,16 @@ public class MapEntries implements
 
     public class VanityPathHandler {
 
-    /**
+    private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
+
+    private final MapConfigurationProvider factory;
+    private byte[] vanityBloomFilter;
+
+    public VanityPathHandler(MapConfigurationProvider factory) {
+        this.factory = factory;
+    }
+
+   /**
      * Actual vanity path initializer. Guards itself against concurrent use by
      * using a ReentrantLock. Does nothing if the resource resolver has already
      * been null-ed.
@@ -1223,12 +1229,12 @@ public class MapEntries implements
     protected void initializeVanityPaths() throws IOException {
         MapEntries.this.initializing.lock();
         try {
-            if (MapEntries.this.factory.isVanityPathEnabled()) {
+            if (this.factory.isVanityPathEnabled()) {
                 vanityPathsProcessed.set(false);
-                MapEntries.this.vanityBloomFilter = createVanityBloomFilter();
-                VanityPathInitializer vpi = new VanityPathInitializer(MapEntries.this.factory);
+                this.vanityBloomFilter = createVanityBloomFilter();
+                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
 
-                if (MapEntries.this.factory.isVanityPathCacheInitInBackground()) {
+                if (this.factory.isVanityPathCacheInitInBackground()) {
                     MapEntries.this.log.debug("bg init starting");
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
                     vpinit.start();
@@ -1333,7 +1339,7 @@ public class MapEntries implements
     private boolean doAddVanity(final Resource resource) {
         log.debug("doAddVanity getting {}", resource.getPath());
 
-        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < MapEntries.this.factory.getMaxCachedVanityPathEntries();
+        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
         return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
     }
 
@@ -1385,7 +1391,7 @@ public class MapEntries implements
             }
 
             // init is done - check the bloom filter
-            probablyPresent = BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath);
+            probablyPresent = BloomFilterUtils.probablyContains(this.vanityBloomFilter, vanityPath);
             log.trace("bloom filter lookup for {} -> {}", vanityPath, probablyPresent);
 
             if (!probablyPresent) {
@@ -1427,11 +1433,11 @@ public class MapEntries implements
     }
 
     private byte[] createVanityBloomFilter() throws IOException {
-        return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, MapEntries.this.factory.getVanityBloomFilterMaxBytes());
+        return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
     }
 
     private boolean isAllVanityPathEntriesCached() {
-        return MapEntries.this.factory.getMaxCachedVanityPathEntries() == -1;
+        return this.factory.getMaxCachedVanityPathEntries() == -1;
     }
 
     /**
@@ -1459,7 +1465,7 @@ public class MapEntries implements
                 totalCount += 1;
                 final Resource resource = i.next();
                 boolean isValid = false;
-                for(final Path sPath : MapEntries.this.factory.getObservationPaths()) {
+                for(final Path sPath : this.factory.getObservationPaths()) {
                     if ( sPath.matches(resource.getPath())) {
                         isValid = true;
                         break;
@@ -1468,9 +1474,9 @@ public class MapEntries implements
                 if ( isValid ) {
                     totalValid += 1;
                     if (MapEntries.this.vanityPathsProcessed.get()
-                            && (MapEntries.this.factory.isMaxCachedVanityPathEntriesStartup()
+                            && (this.factory.isMaxCachedVanityPathEntriesStartup()
                             || this.isAllVanityPathEntriesCached()
-                            || vanityCounter.longValue() < MapEntries.this.factory.getMaxCachedVanityPathEntries())) {
+                            || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
                         entryMap = resolveMapsMap;
                     } else {
@@ -1503,9 +1509,9 @@ public class MapEntries implements
         }
 
         // check allow/deny list
-        if (MapEntries.this.factory.getVanityPathConfig() != null ) {
+        if (this.factory.getVanityPathConfig() != null ) {
             boolean allowed = false;
-            for(final VanityPathConfig config : MapEntries.this.factory.getVanityPathConfig()) {
+            for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
                 if ( path.startsWith(config.prefix) ) {
                     allowed = !config.isExclude;
                     break;
@@ -1548,20 +1554,20 @@ public class MapEntries implements
             count += 1;
             final Resource resource = it.next();
             final String resourcePath = resource.getPath();
-            if (Stream.of(MapEntries.this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
+            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
-                        || vanityCounter.longValue() < MapEntries.this.factory.getMaxCachedVanityPathEntries();
+                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
                 loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
         log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
         if (!isAllVanityPathEntriesCached()) {
-            if (countInScope > MapEntries.this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, MapEntries.this.factory.getMaxCachedVanityPathEntries());
-            } else if (countInScope > (MapEntries.this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, MapEntries.this.factory.getMaxCachedVanityPathEntries());
+            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
+                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
+                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
             }
         }
 
@@ -1652,11 +1658,11 @@ public class MapEntries implements
                         }
 
                         // update bloom filter
-                        BloomFilterUtils.add(vanityBloomFilter, checkPath);
+                        BloomFilterUtils.add(this.vanityBloomFilter, checkPath);
                     }
                 } else {
                     // update bloom filter
-                    BloomFilterUtils.add(vanityBloomFilter, checkPath);
+                    BloomFilterUtils.add(this.vanityBloomFilter, checkPath);
                 }
             }
         }
