@@ -830,37 +830,6 @@ public class MapEntries implements
     }
 
     /**
-     * Add an entry to the resolve map.
-     */
-    private boolean addEntry(final Map<String, List<MapEntry>> entryMap, final String key, final MapEntry entry) {
-
-        if (entry == null) {
-            log.trace("trying to add null entry for {}", key);
-            return false;
-        } else {
-            List<MapEntry> entries = entryMap.get(key);
-            if (entries == null) {
-                entries = new ArrayList<>();
-                entries.add(entry);
-                entryMap.put(key, entries);
-            } else {
-                List<MapEntry> entriesCopy = new ArrayList<>(entries);
-                entriesCopy.add(entry);
-                // and finally sort list
-                Collections.sort(entriesCopy);
-                entryMap.put(key, entriesCopy);
-                int size = entriesCopy.size();
-                if (size == 10) {
-                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
-                } else if (size == 100) {
-                    log.info(">= 100 MapEntries for {} - check your configuration", key);
-                }
-            }
-            return true;
-        }
-    }
-
-    /**
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
@@ -1629,19 +1598,19 @@ public class MapEntries implements
                 if (addToCache) {
                     if (redirectName.indexOf('.') > -1) {
                         // 1. entry with exact match
-                        MapEntries.this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
+                        addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
 
                         final int idx = redirectName.lastIndexOf('.');
                         final String extension = redirectName.substring(idx + 1);
 
                         // 2. entry with extension
-                        addedEntry = MapEntries.this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
+                        addedEntry = addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
                     } else {
                         // 1. entry with exact match
-                        MapEntries.this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
+                        addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
 
                         // 2. entry with match supporting selectors and extension
-                        addedEntry = MapEntries.this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
+                        addedEntry = addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
                     }
                     if (addedEntry) {
                         // 3. keep the path to return
@@ -1726,6 +1695,38 @@ public class MapEntries implements
         }
         return l == null ? null : l.iterator();
     }
-}
+
+        /**
+         * Add an entry to the resolve map.
+         */
+        private boolean addEntry(final Map<String, List<MapEntry>> entryMap, final String key, final MapEntry entry) {
+
+            if (entry == null) {
+                log.trace("trying to add null entry for {}", key);
+                return false;
+            } else {
+                List<MapEntry> entries = entryMap.get(key);
+                if (entries == null) {
+                    entries = new ArrayList<>();
+                    entries.add(entry);
+                    entryMap.put(key, entries);
+                } else {
+                    List<MapEntry> entriesCopy = new ArrayList<>(entries);
+                    entriesCopy.add(entry);
+                    // and finally sort list
+                    Collections.sort(entriesCopy);
+                    entryMap.put(key, entriesCopy);
+                    int size = entriesCopy.size();
+                    if (size == 10) {
+                        log.debug(">= 10 MapEntries for {} - check your configuration", key);
+                    } else if (size == 100) {
+                        log.info(">= 100 MapEntries for {} - check your configuration", key);
+                    }
+                }
+                return true;
+            }
+        }
+
+    }
 
 }
