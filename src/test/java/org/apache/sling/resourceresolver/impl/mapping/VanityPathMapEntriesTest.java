@@ -90,24 +90,20 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Mock
     private EventAdmin eventAdmin;
 
-    private final int pageSize;
     private final boolean isMaxCachedVanityPathEntriesStartup;
     private final boolean isVanityPathCacheInitInBackground;
 
-    private int prevPageSize = 1000;
-
-    @Parameters(name="pageSize={0}, isMaxCachedVanityPathEntriesStartup={1}, isVanityPathCacheInitInBackground={2}")
+    @Parameters(name="isMaxCachedVanityPathEntriesStartup={0}, isVanityPathCacheInitInBackground={1}")
     public static Collection<Object[]> data() {
         return List.of(new Object[][] {
-                {1000, false, true},
-                {1, true, false},
-                {1000, true, false}}
+                {false, true},
+                {true, false},
+                {true, false}}
         );
     }
 
-    public VanityPathMapEntriesTest(int pageSize, boolean isMaxCachedVanityPathEntriesStartup,
+    public VanityPathMapEntriesTest(boolean isMaxCachedVanityPathEntriesStartup,
                                     boolean isVanityPathCacheInitInBackground) {
-        this.pageSize = pageSize;
         this.isMaxCachedVanityPathEntriesStartup = isMaxCachedVanityPathEntriesStartup;
         this.isVanityPathCacheInitInBackground = isVanityPathCacheInitInBackground;
     }
@@ -116,9 +112,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @SuppressWarnings({ "unchecked" })
     @Before
     public void setup() throws Exception {
-        prevPageSize = Integer.getInteger("sling.vanityPath.pageSize", 2000);
-        System.setProperty("sling.vanityPath.pageSize", Integer.toString(pageSize));
-
         MockitoAnnotations.openMocks(this);
 
         final List<VanityPathConfig> configs = new ArrayList<>();
@@ -188,7 +181,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Override
     @After
     public void tearDown() {
-        System.setProperty("sling.vanityPath.pageSize", Integer.toString(prevPageSize));
         mapEntries.dispose();
     }
 
