@@ -1198,7 +1198,7 @@ public class MapEntries implements
                 VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
 
                 if (this.factory.isVanityPathCacheInitInBackground()) {
-                    MapEntries.this.log.debug("bg init starting");
+                    log.debug("bg init starting");
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
                     vpinit.start();
                 } else {
