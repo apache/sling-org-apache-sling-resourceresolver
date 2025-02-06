@@ -142,8 +142,6 @@ public class MapEntries implements
 
     private final ReentrantLock initializing = new ReentrantLock();
 
-    private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
-
     private final StringInterpolationProvider stringInterpolationProvider;
 
     private final boolean useOptimizeAliasResolution;
@@ -357,7 +355,7 @@ public class MapEntries implements
     @Override
     public void onChange(final List<ResourceChange> changes) {
 
-        final boolean inStartup = !vanityPathsProcessed.get();
+        final boolean inStartup = !vph.isReady();
 
         final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
 
@@ -1172,6 +1170,8 @@ public class MapEntries implements
     private final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
     private final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
+    private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
+
     private final MapConfigurationProvider factory;
     private byte[] vanityBloomFilter;
 
@@ -1180,6 +1180,10 @@ public class MapEntries implements
 
     public VanityPathHandler(MapConfigurationProvider factory) {
         this.factory = factory;
+    }
+
+    public boolean isReady() {
+        return this.vanityPathsProcessed.get();
     }
 
    /**
@@ -1436,7 +1440,7 @@ public class MapEntries implements
                 }
                 if ( isValid ) {
                     totalValid += 1;
-                    if (MapEntries.this.vanityPathsProcessed.get()
+                    if (this.vanityPathsProcessed.get()
                             && (this.factory.isMaxCachedVanityPathEntriesStartup()
                             || this.isAllVanityPathEntriesCached()
                             || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
@@ -1688,7 +1692,7 @@ public class MapEntries implements
     // regular lockup
     public @Nullable Iterator<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
         List<MapEntry> l;
-        if (this.isAllVanityPathEntriesCached() && MapEntries.this.vanityPathsProcessed.get()) {
+        if (this.isAllVanityPathEntriesCached() && this.vanityPathsProcessed.get()) {
             l = MapEntries.this.resolveMapsMap.get(key);
         } else {
             l = this.getMapEntryList(key);

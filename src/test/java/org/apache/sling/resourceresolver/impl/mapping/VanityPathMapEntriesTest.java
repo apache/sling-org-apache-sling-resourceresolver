@@ -151,20 +151,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         waitForBgInit();
     }
 
-    // get internal flag that signals completion of background task
-    private AtomicBoolean getVanityPathsProcessed() {
-        try {
-            Field field = MapEntries.class.getDeclaredField("vanityPathsProcessed");
-            field.setAccessible(true);
-            return (AtomicBoolean) field.get(mapEntries);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     // wait for background thread to complete
     private void waitForBgInit() {
-        while (!getVanityPathsProcessed().get()) {
+        while (!mapEntries.vph.isReady()) {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
