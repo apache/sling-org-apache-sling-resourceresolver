@@ -174,8 +174,11 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         return (AtomicLong) vanityCounter.get(mapEntries.vph);
     }
 
-    private static Map<String, List<String>> getVanityTargets(MapEntries mapEntries) {
-        return mapEntries.vph.getVanityPathMappings();
+    @SuppressWarnings("unchecked")
+    private static Map<String, List<String>> getVanityTargets(MapEntries mapEntries) throws NoSuchFieldException, IllegalAccessException {
+        Field field = MapEntries.VanityPathHandler.class.getDeclaredField("vanityTargets");
+        field.setAccessible(true);
+        return (Map<String, List<String>>) field.get(mapEntries.vph);
     }
 
     @SuppressWarnings("unchecked")
