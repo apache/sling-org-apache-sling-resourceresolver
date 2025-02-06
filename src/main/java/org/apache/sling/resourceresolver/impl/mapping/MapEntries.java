@@ -1163,14 +1163,14 @@ public class MapEntries implements
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
     private final AtomicLong vanityCounter = new AtomicLong(0);
-    private final AtomicLong vanityResourcesOnStartup = new AtomicLong(0);;
-    private final AtomicLong vanityPathLookups = new AtomicLong(0);;
-    private final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);;
-    private final AtomicLong vanityPathBloomFalsePositives = new AtomicLong(0);;
+    private final AtomicLong vanityResourcesOnStartup = new AtomicLong(0);
+    private final AtomicLong vanityPathLookups = new AtomicLong(0);
+    private final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);
+    private final AtomicLong vanityPathBloomFalsePositives = new AtomicLong(0);
     private final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
     private final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
-    private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
+    private final AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
     private final MapConfigurationProvider factory;
     private byte[] vanityBloomFilter;
@@ -1422,7 +1422,7 @@ public class MapEntries implements
                 QueryBuildHelper.escapeString(vanityPath),
                 QueryBuildHelper.escapeString(vanityPath.substring(1)));
 
-        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
+        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
             long totalCount = 0;
             long totalValid = 0;
             log.debug("start vanityPath query: {}", queryString);
