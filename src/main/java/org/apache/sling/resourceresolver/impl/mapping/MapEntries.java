@@ -622,9 +622,6 @@ public class MapEntries implements
         return vph.getVanityPathMappings();
     }
 
-    // special singleton entry for negative cache entries
-    private static final List<MapEntry> NO_MAP_ENTRIES = Collections.emptyList();
-
     /**
      * Refresh the resource resolver if not already done
      * @param resolverRefreshed Boolean flag containing the state if the resolver
@@ -1160,6 +1157,7 @@ public class MapEntries implements
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
     private final AtomicLong vanityCounter = new AtomicLong(0);
+
     private final AtomicLong vanityResourcesOnStartup = new AtomicLong(0);
     private final AtomicLong vanityPathLookups = new AtomicLong(0);
     private final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);
@@ -1173,6 +1171,9 @@ public class MapEntries implements
     private byte[] vanityBloomFilter;
 
     private Map <String,List <String>> vanityTargets = Collections.emptyMap();
+
+    // special singleton entry for negative cache entries
+    private final List<MapEntry> noMapEntries = Collections.emptyList();
 
     // Temporary cache for use while doing async vanity path query
     private Map<String, List<MapEntry>> temporaryResolveMapsMap;
@@ -1389,7 +1390,7 @@ public class MapEntries implements
                     mapEntries = mapEntry.get(vanityPath);
                     if (!initFinished && temporaryResolveMapsMap != null) {
                         log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
-                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? NO_MAP_ENTRIES : mapEntries);
+                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
                     }
                 }
             }
@@ -1399,7 +1400,7 @@ public class MapEntries implements
             }
         }
 
-        return mapEntries == NO_MAP_ENTRIES ? null : mapEntries;
+        return mapEntries == noMapEntries ? null : mapEntries;
     }
 
     private byte[] createVanityBloomFilter() throws IOException {
