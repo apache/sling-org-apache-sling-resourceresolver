@@ -126,11 +126,7 @@ public class MapEntries implements
 
     private Map<String, List<MapEntry>> resolveMapsMap;
 
-    // Temporary cache for use while doing async vanity path query
-    private Map<String, List<MapEntry>> temporaryResolveMapsMap;
     private List<Map.Entry<String, ResourceChange.ChangeType>> resourceChangeQueue;
-    private AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
-    private AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
     private Collection<MapEntry> mapMaps;
 
@@ -1174,9 +1170,14 @@ public class MapEntries implements
     private final AtomicLong vanityPathLookups = new AtomicLong(0);;
     private final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);;
     private final AtomicLong vanityPathBloomFalsePositives = new AtomicLong(0);;
+    private final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
+    private final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
     private final MapConfigurationProvider factory;
     private byte[] vanityBloomFilter;
+
+    // Temporary cache for use while doing async vanity path query
+    private Map<String, List<MapEntry>> temporaryResolveMapsMap;
 
     public VanityPathHandler(MapConfigurationProvider factory) {
         this.factory = factory;
