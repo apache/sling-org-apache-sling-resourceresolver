@@ -126,8 +126,6 @@ public class MapEntries implements
 
     private Collection<MapEntry> mapMaps;
 
-    private Map <String,List <String>> vanityTargets;
-
     /**
      * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
      */
@@ -161,7 +159,6 @@ public class MapEntries implements
 
         this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, Collections.emptyList());
         this.mapMaps = Collections.<MapEntry> emptyList();
-        this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
@@ -329,7 +326,7 @@ public class MapEntries implements
         final String actualContentPath = getActualContentPath(path);
         final String actualContentPathPrefix = actualContentPath + "/";
 
-        for (final String target : this.vanityTargets.keySet()) {
+        for (final String target : vph.getVanityPathMappings().keySet()) {
             if (target.startsWith(actualContentPathPrefix) || target.equals(actualContentPath)) {
                 changed |= vph.removeVanityPath(target);
             }
@@ -622,7 +619,7 @@ public class MapEntries implements
 
     @Override
     public Map<String, List<String>> getVanityPathMappings() {
-        return Collections.unmodifiableMap(vanityTargets);
+        return vph.getVanityPathMappings();
     }
 
     // special singleton entry for negative cache entries
@@ -1175,6 +1172,8 @@ public class MapEntries implements
     private final MapConfigurationProvider factory;
     private byte[] vanityBloomFilter;
 
+    private Map <String,List <String>> vanityTargets = Collections.emptyMap();
+
     // Temporary cache for use while doing async vanity path query
     private Map<String, List<MapEntry>> temporaryResolveMapsMap;
 
@@ -1184,6 +1183,10 @@ public class MapEntries implements
 
     public boolean isReady() {
         return this.vanityPathsProcessed.get();
+    }
+
+    public Map<String, List<String>> getVanityPathMappings() {
+         return Collections.unmodifiableMap(vanityTargets);
     }
 
    /**
