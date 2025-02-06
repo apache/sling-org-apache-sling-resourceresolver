@@ -93,10 +93,6 @@ public class MapEntries implements
 
     public static final String PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS = "sling:redirectStatus";
 
-    public static final String PROP_VANITY_PATH = "sling:vanityPath";
-
-    public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
-
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -1163,6 +1159,9 @@ public class MapEntries implements
 
     public class VanityPathHandler {
 
+    public static final String PROP_VANITY_PATH = "sling:vanityPath";
+    public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
+
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
     private final AtomicLong vanityCounter = new AtomicLong(0);
@@ -1501,7 +1500,7 @@ public class MapEntries implements
         Iterator<Resource> it;
         try {
             final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
+            it = new PagedQueryIterator("vanity path", MapEntries.VanityPathHandler.PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
             it = queryUnpaged("vanity path", baseQueryString);

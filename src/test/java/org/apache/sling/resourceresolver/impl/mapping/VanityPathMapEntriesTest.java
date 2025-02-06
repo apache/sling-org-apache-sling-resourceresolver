@@ -293,14 +293,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(oneMore.getPath()).thenReturn("/" + containerName + "/" + additionalChildName);
         when(oneMore.getName()).thenReturn(additionalChildName);
 
-        when(oneMore.getValueMap()).thenReturn(buildValueMap(MapEntries.PROP_VANITY_PATH, vanityPath + "/onemore"));
+        when(oneMore.getValueMap()).thenReturn(buildValueMap(MapEntries.VanityPathHandler.PROP_VANITY_PATH, vanityPath + "/onemore"));
 
         final Resource vanityPropHolder = onJcrContent ? content : vanity;
 
-        when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(MapEntries.PROP_VANITY_PATH, vanityPath));
+        when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(MapEntries.VanityPathHandler.PROP_VANITY_PATH, vanityPath));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains(MapEntries.PROP_VANITY_PATH)) {
+            if (invocation.getArguments()[0].toString().contains(MapEntries.VanityPathHandler.PROP_VANITY_PATH)) {
                 return List.of(vanityPropHolder, oneMore).iterator();
             } else {
                 return Collections.emptyIterator();
