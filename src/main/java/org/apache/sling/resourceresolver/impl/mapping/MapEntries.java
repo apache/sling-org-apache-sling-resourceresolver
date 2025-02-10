@@ -126,7 +126,7 @@ public class MapEntries implements
 
     private volatile ServiceRegistration<ResourceChangeListener> registration;
 
-    private Map<String, List<MapEntry>> resolveMapsMap;
+    private final Map<String, List<MapEntry>> resolveMapsMap;
 
     // Temporary cache for use while doing async vanity path query
     private Map<String, List<MapEntry>> temporaryResolveMapsMap;
@@ -176,7 +176,7 @@ public class MapEntries implements
         this.factory = factory;
         this.eventAdmin = eventAdmin;
 
-        this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, Collections.emptyList());
+        this.resolveMapsMap = new ConcurrentHashMap<>(Map.of(GLOBAL_LIST_KEY, List.of()));
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMapsMap = new ConcurrentHashMap<>();
@@ -274,8 +274,6 @@ public class MapEntries implements
                     isOptimizeAliasResolutionEnabled = false;
                 }
             }
-
-            this.resolveMapsMap = new ConcurrentHashMap<>();
 
             doUpdateConfiguration();
 
