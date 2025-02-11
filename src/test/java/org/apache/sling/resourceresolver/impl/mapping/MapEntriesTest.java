@@ -163,6 +163,12 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
+    public void internal_test_simple_alias_support_throwing_unsupported_operation_exception_exception() {
+        prepareMapEntriesForAlias(false, false, UnsupportedOperationException.class, "foo", "bar");
+        assertFalse(mapEntries.initializeAliases());
+    }
+
+    @Test
     public void test_simple_multi_alias_support() {
         internal_test_simple_multi_alias_support(false);
     }
@@ -206,7 +212,12 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(invalidAliases.size(), detectedInvalidAliases.get());
     }
 
-    private void prepareMapEntriesForAlias(boolean onJcrContent, boolean withNullParent, String... alias) {
+    private void prepareMapEntriesForAlias(boolean onJcrContent, boolean withNullParent, String... aliases) {
+        prepareMapEntriesForAlias(onJcrContent, withNullParent, null, aliases);
+    }
+
+    private void prepareMapEntriesForAlias(boolean onJcrContent, boolean withNullParent, Class<? extends Exception> queryThrowsWith,
+                                           String... aliases) {
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
 
@@ -222,15 +233,19 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(content.getPath()).thenReturn("/parent/child/jcr:content");
         when(content.getName()).thenReturn("jcr:content");
 
-        when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, alias));
+        when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, aliases));
 
-        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
-                return List.of(aliasResource).iterator();
-            } else {
-                return Collections.emptyIterator();
-            }
-        });
+        if (queryThrowsWith == null) {
+            when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                    return List.of(aliasResource).iterator();
+                } else {
+                    return Collections.emptyIterator();
+                }
+            });
+        } else {
+            when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenThrow(queryThrowsWith);
+        }
     }
 
     @Test
