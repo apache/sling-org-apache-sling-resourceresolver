@@ -158,6 +158,7 @@ public class MapEntries implements
         this.eventAdmin = eventAdmin;
 
         this.resolveMapsMap = new ConcurrentHashMap<>(Map.of(GLOBAL_LIST_KEY, Collections.emptyList()));
+
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
