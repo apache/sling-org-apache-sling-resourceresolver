@@ -284,7 +284,7 @@ public class MapEntries implements
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
-        final boolean isValidVanityPath =  vph.isValidVanityPath(path);
+        final boolean isValidVanityPath = vph.isValidVanityPath(path);
         if ( this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
@@ -1165,6 +1165,8 @@ public class MapEntries implements
 
     private final AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
+    private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
+
     private final MapConfigurationProvider factory;
     private byte[] vanityBloomFilter;
 
@@ -1206,7 +1208,7 @@ public class MapEntries implements
                 VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
 
                 if (this.factory.isVanityPathCacheInitInBackground()) {
-                    log.debug("bg init starting");
+                    this.log.debug("bg init starting");
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
                     vpinit.start();
                 } else {
@@ -1311,7 +1313,7 @@ public class MapEntries implements
         log.debug("doAddVanity getting {}", resource.getPath());
 
         boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return null != loadVanityPath(resource, this.resolveMapsMap, vanityTargets, updateTheCache, true);
+        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
     }
 
     private boolean doRemoveVanity(final String path) {
@@ -1362,7 +1364,7 @@ public class MapEntries implements
             }
 
             // init is done - check the bloom filter
-            probablyPresent = BloomFilterUtils.probablyContains(this.vanityBloomFilter, vanityPath);
+            probablyPresent = BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath);
             log.trace("bloom filter lookup for {} -> {}", vanityPath, probablyPresent);
 
             if (!probablyPresent) {
@@ -1426,7 +1428,7 @@ public class MapEntries implements
                 QueryBuildHelper.escapeString(vanityPath),
                 QueryBuildHelper.escapeString(vanityPath.substring(1)));
 
-        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
+        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
             long totalCount = 0;
             long totalValid = 0;
             log.debug("start vanityPath query: {}", queryString);
@@ -1446,10 +1448,10 @@ public class MapEntries implements
                     totalValid += 1;
                     if (this.vanityPathsProcessed.get()
                             && (this.factory.isMaxCachedVanityPathEntriesStartup()
-                            || this.isAllVanityPathEntriesCached()
-                            || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
-                        loadVanityPath(resource, this.resolveMapsMap, vanityTargets, true, true);
-                        entryMap = this.resolveMapsMap;
+                                || this.isAllVanityPathEntriesCached()
+                                || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
+                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
+                        entryMap = resolveMapsMap;
                     } else {
                         final Map <String, List<String>> targetPaths = new HashMap<>();
                         loadVanityPath(resource, entryMap, targetPaths, true, false);
@@ -1480,7 +1482,7 @@ public class MapEntries implements
         }
 
         // check allow/deny list
-        if (this.factory.getVanityPathConfig() != null ) {
+        if ( this.factory.getVanityPathConfig() != null ) {
             boolean allowed = false;
             for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
                 if ( path.startsWith(config.prefix) ) {
@@ -1529,7 +1531,7 @@ public class MapEntries implements
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, this.resolveMapsMap, targetPaths, addToCache, true);
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
@@ -1606,19 +1608,19 @@ public class MapEntries implements
                 if (addToCache) {
                     if (redirectName.indexOf('.') > -1) {
                         // 1. entry with exact match
-                        addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
+                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
 
                         final int idx = redirectName.lastIndexOf('.');
                         final String extension = redirectName.substring(idx + 1);
 
                         // 2. entry with extension
-                        addedEntry = addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
+                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
                     } else {
                         // 1. entry with exact match
-                        addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
+                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
 
                         // 2. entry with match supporting selectors and extension
-                        addedEntry = addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
+                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
                     }
                     if (addedEntry) {
                         // 3. keep the path to return
@@ -1629,11 +1631,11 @@ public class MapEntries implements
                         }
 
                         // update bloom filter
-                        BloomFilterUtils.add(this.vanityBloomFilter, checkPath);
+                        BloomFilterUtils.add(vanityBloomFilter, checkPath);
                     }
                 } else {
                     // update bloom filter
-                    BloomFilterUtils.add(this.vanityBloomFilter, checkPath);
+                    BloomFilterUtils.add(vanityBloomFilter, checkPath);
                 }
             }
         }
