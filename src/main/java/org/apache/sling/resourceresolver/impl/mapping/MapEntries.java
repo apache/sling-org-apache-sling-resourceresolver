@@ -1508,7 +1508,7 @@ public class MapEntries implements
         Iterator<Resource> it;
         try {
             final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", MapEntries.VanityPathHandler.PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
+            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
             it = queryUnpaged("vanity path", baseQueryString);
