@@ -10,3 +10,4 @@ This bundle provides the Resource Resolver and Resource Resolver Factory.
 
 The `/etc/map` mapping configurations are documented on the Sling website's 
 [Mappings for Resource Resolution](https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html) page.
+****

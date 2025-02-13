@@ -170,7 +170,7 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vph = new VanityPathHandler(this.factory);
+        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap);
         this.vph.initializeVanityPaths();
 
         this.metrics = metrics;
@@ -1169,6 +1169,7 @@ public class MapEntries implements
     private byte[] vanityBloomFilter;
 
     private Map <String,List <String>> vanityTargets = Collections.emptyMap();
+    private final Map<String, List<MapEntry>> resolveMapsMap;
 
     // special singleton entry for negative cache entries
     private final List<MapEntry> noMapEntries = Collections.emptyList();
@@ -1176,8 +1177,9 @@ public class MapEntries implements
     // Temporary cache for use while doing async vanity path query
     private Map<String, List<MapEntry>> temporaryResolveMapsMap;
 
-    public VanityPathHandler(MapConfigurationProvider factory) {
+    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap) {
         this.factory = factory;
+        this.resolveMapsMap = resolveMapsMap;
     }
 
     public boolean isReady() {
@@ -1309,7 +1311,7 @@ public class MapEntries implements
         log.debug("doAddVanity getting {}", resource.getPath());
 
         boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
+        return null != loadVanityPath(resource, this.resolveMapsMap, vanityTargets, updateTheCache, true);
     }
 
     private boolean doRemoveVanity(final String path) {
@@ -1317,7 +1319,7 @@ public class MapEntries implements
         final List <String> l = vanityTargets.remove(actualContentPath);
         if (l != null){
             for (final String s : l){
-                final List<MapEntry> entries = MapEntries.this.resolveMapsMap.get(s);
+                final List<MapEntry> entries = this.resolveMapsMap.get(s);
                 if (entries!= null) {
                     for (final Iterator<MapEntry> iterator =entries.iterator(); iterator.hasNext(); ) {
                         final MapEntry entry = iterator.next();
@@ -1328,7 +1330,7 @@ public class MapEntries implements
                     }
                 }
                 if (entries!= null && entries.isEmpty()) {
-                    MapEntries.this.resolveMapsMap.remove(s);
+                    this.resolveMapsMap.remove(s);
                 }
             }
             if (vanityCounter.longValue() > 0) {
@@ -1371,7 +1373,7 @@ public class MapEntries implements
 
         if (!initFinished || probablyPresent) {
 
-            mapEntries = MapEntries.this.resolveMapsMap.get(vanityPath);
+            mapEntries = this.resolveMapsMap.get(vanityPath);
 
             if (mapEntries == null) {
                 if (!initFinished && temporaryResolveMapsMap != null) {
@@ -1446,8 +1448,8 @@ public class MapEntries implements
                             && (this.factory.isMaxCachedVanityPathEntriesStartup()
                             || this.isAllVanityPathEntriesCached()
                             || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
-                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
-                        entryMap = resolveMapsMap;
+                        loadVanityPath(resource, this.resolveMapsMap, vanityTargets, true, true);
+                        entryMap = this.resolveMapsMap;
                     } else {
                         final Map <String, List<String>> targetPaths = new HashMap<>();
                         loadVanityPath(resource, entryMap, targetPaths, true, false);
@@ -1527,7 +1529,7 @@ public class MapEntries implements
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
+                loadVanityPath(resource, this.resolveMapsMap, targetPaths, addToCache, true);
             }
         }
         long processElapsed = System.nanoTime() - processStart;
@@ -1695,7 +1697,7 @@ public class MapEntries implements
     public @Nullable Iterator<MapEntry> getCurrentMapEntryForVanityPath(final String key) {
         List<MapEntry> l;
         if (this.isAllVanityPathEntriesCached() && this.vanityPathsProcessed.get()) {
-            l = MapEntries.this.resolveMapsMap.get(key);
+            l = this.resolveMapsMap.get(key);
         } else {
             l = this.getMapEntryList(key);
         }
