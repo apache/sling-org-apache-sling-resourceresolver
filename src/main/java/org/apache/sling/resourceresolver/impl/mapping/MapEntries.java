@@ -1003,18 +1003,6 @@ public class MapEntries implements
         return it;
     }
 
-    private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
-        if (entry == null) {
-           return;
-        }
-        List<String> entries = targetPaths.get(key);
-        if (entries == null) {
-            entries = new ArrayList<>();
-            targetPaths.put(key, entries);
-        }
-        entries.add(entry);
-    }
-
     private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
         // virtual uris
         final Map<String, String> virtuals = factory.getVirtualURLMap();
@@ -1552,6 +1540,18 @@ public class MapEntries implements
         return targetPaths;
     }
 
+    private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
+        if (entry == null) {
+            return;
+        }
+        List<String> entries = targetPaths.get(key);
+        if (entries == null) {
+            entries = new ArrayList<>();
+            targetPaths.put(key, entries);
+        }
+        entries.add(entry);
+    }
+
     /**
      * Load vanity path given a resource
      *
@@ -1627,7 +1627,7 @@ public class MapEntries implements
                     }
                     if (addedEntry) {
                         // 3. keep the path to return
-                        MapEntries.this.updateTargetPaths(targetPaths, redirect, checkPath);
+                        this.updateTargetPaths(targetPaths, redirect, checkPath);
 
                         if (updateCounter) {
                             vanityCounter.addAndGet(2);
