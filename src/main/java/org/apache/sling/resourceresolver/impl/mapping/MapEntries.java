@@ -170,7 +170,7 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap);
+        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing);
         this.vph.initializeVanityPaths();
 
         this.metrics = metrics;
@@ -390,7 +390,7 @@ public class MapEntries implements
         }
 
         if (sendEvent) {
-            MapEntries.this.sendChangeEvent();
+            this.sendChangeEvent();
         }
     }
 
@@ -1179,9 +1179,12 @@ public class MapEntries implements
     // Temporary cache for use while doing async vanity path query
     private Map<String, List<MapEntry>> temporaryResolveMapsMap;
 
-    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap) {
+    private final ReentrantLock initializing;
+
+    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap, ReentrantLock initializing) {
         this.factory = factory;
         this.resolveMapsMap = resolveMapsMap;
+        this.initializing = initializing;
     }
 
     public boolean isReady() {
@@ -1200,7 +1203,7 @@ public class MapEntries implements
      * @throws IOException in case of problems
      */
     protected void initializeVanityPaths() throws IOException {
-        MapEntries.this.initializing.lock();
+        this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
                 vanityPathsProcessed.set(false);
@@ -1216,16 +1219,16 @@ public class MapEntries implements
                 }
             }
         } finally {
-            MapEntries.this.initializing.unlock();
+            this.initializing.unlock();
         }
     }
 
     private boolean removeVanityPath(final String path) {
-        MapEntries.this.initializing.lock();
+        this.initializing.lock();
         try {
             return doRemoveVanity(path);
         } finally {
-            MapEntries.this.initializing.unlock();
+            this.initializing.unlock();
         }
     }
 
