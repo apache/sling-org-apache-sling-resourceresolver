@@ -342,59 +342,6 @@ public class MapEntries implements
     }
 
     /**
-     * Handles the change to any of the node properties relevant for vanity URL
-     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider, Optional)}
-     * constructor makes sure the event listener is registered to only get
-     * appropriate events.
-     */
-    @Override
-    public void onChange(final List<ResourceChange> changes) {
-
-        final boolean inStartup = !vph.isReady();
-
-        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
-
-        // send the change event only once
-        boolean sendEvent = false;
-
-        // the config needs to be reloaded only once
-        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
-
-        for (final ResourceChange rc : changes) {
-
-            final ResourceChange.ChangeType type = rc.getType();
-            final String path = rc.getPath();
-
-            log.debug("onChange, type={}, path={}", rc.getType(), path);
-
-            // don't care for system area
-            if (path.startsWith(JCR_SYSTEM_PREFIX)) {
-                continue;
-            }
-
-            // during startup: just enqueue the events
-            if (inStartup) {
-                if (type == ResourceChange.ChangeType.REMOVED || type == ResourceChange.ChangeType.ADDED
-                        || type == ResourceChange.ChangeType.CHANGED) {
-                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
-                    log.trace("enqueue: {}", entry);
-                    resourceChangeQueue.add(entry);
-                }
-            } else {
-                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
-
-                if (changed) {
-                    sendEvent = true;
-                }
-            }
-        }
-
-        if (sendEvent) {
-            this.sendChangeEvent();
-        }
-    }
-
-    /**
      * Remove all aliases for the content path
      * @param contentPath The content path
      * @param path Optional sub path of the vanity path
@@ -668,6 +615,59 @@ public class MapEntries implements
     }
 
     // ---------- ResourceChangeListener interface
+
+    /**
+     * Handles the change to any of the node properties relevant for vanity URL
+     * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider, Optional)}
+     * constructor makes sure the event listener is registered to only get
+     * appropriate events.
+     */
+    @Override
+    public void onChange(final List<ResourceChange> changes) {
+
+        final boolean inStartup = !vph.isReady();
+
+        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+
+        // send the change event only once
+        boolean sendEvent = false;
+
+        // the config needs to be reloaded only once
+        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
+        for (final ResourceChange rc : changes) {
+
+            final ResourceChange.ChangeType type = rc.getType();
+            final String path = rc.getPath();
+
+            log.debug("onChange, type={}, path={}", rc.getType(), path);
+
+            // don't care for system area
+            if (path.startsWith(JCR_SYSTEM_PREFIX)) {
+                continue;
+            }
+
+            // during startup: just enqueue the events
+            if (inStartup) {
+                if (type == ResourceChange.ChangeType.REMOVED || type == ResourceChange.ChangeType.ADDED
+                        || type == ResourceChange.ChangeType.CHANGED) {
+                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
+                    log.trace("enqueue: {}", entry);
+                    resourceChangeQueue.add(entry);
+                }
+            } else {
+                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
+
+                if (changed) {
+                    sendEvent = true;
+                }
+            }
+        }
+
+        if (sendEvent) {
+            this.sendChangeEvent();
+        }
+    }
 
     private boolean handleResourceChange(ResourceChange.ChangeType type, String path, AtomicBoolean resolverRefreshed,
             AtomicBoolean hasReloadedConfig) {
