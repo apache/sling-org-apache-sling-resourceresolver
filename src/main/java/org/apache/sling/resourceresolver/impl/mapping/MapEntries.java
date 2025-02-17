@@ -840,37 +840,6 @@ public class MapEntries implements
     }
 
     /**
-     * Add an entry to the resolve map.
-     */
-    private boolean addEntry(final Map<String, List<MapEntry>> entryMap, final String key, final MapEntry entry) {
-
-        if (entry == null) {
-            log.trace("trying to add null entry for {}", key);
-            return false;
-        } else {
-            List<MapEntry> entries = entryMap.get(key);
-            if (entries == null) {
-                entries = new ArrayList<>();
-                entries.add(entry);
-                entryMap.put(key, entries);
-            } else {
-                List<MapEntry> entriesCopy = new ArrayList<>(entries);
-                entriesCopy.add(entry);
-                // and finally sort list
-                Collections.sort(entriesCopy);
-                entryMap.put(key, entriesCopy);
-                int size = entriesCopy.size();
-                if (size == 10) {
-                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
-                } else if (size == 100) {
-                    log.info(">= 100 MapEntries for {} - check your configuration", key);
-                }
-            }
-            return true;
-        }
-    }
-
-    /**
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
@@ -1060,18 +1029,6 @@ public class MapEntries implements
         long queryElapsed = System.nanoTime() - queryStart;
         log.debug("end {} query; elapsed {}ms", subject, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
         return it;
-    }
-
-    private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
-        if (entry == null) {
-           return;
-        }
-        List<String> entries = targetPaths.get(key);
-        if (entries == null) {
-            entries = new ArrayList<>();
-            targetPaths.put(key, entries);
-        }
-        entries.add(entry);
     }
 
     private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
@@ -1563,6 +1520,18 @@ public class MapEntries implements
         return targetPaths;
     }
 
+    private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
+        if (entry == null) {
+            return;
+        }
+        List<String> entries = targetPaths.get(key);
+        if (entries == null) {
+            entries = new ArrayList<>();
+            targetPaths.put(key, entries);
+        }
+        entries.add(entry);
+    }
+
     /**
      * Load vanity path given a resource
      *
@@ -1718,5 +1687,36 @@ public class MapEntries implements
             l = this.getMapEntryList(key);
         }
         return l == null ? null : l.iterator();
+    }
+
+    /**
+     * Add an entry to the resolve map.
+     */
+    private boolean addEntry(final Map<String, List<MapEntry>> entryMap, final String key, final MapEntry entry) {
+
+        if (entry == null) {
+            log.trace("trying to add null entry for {}", key);
+            return false;
+        } else {
+            List<MapEntry> entries = entryMap.get(key);
+            if (entries == null) {
+                entries = new ArrayList<>();
+                entries.add(entry);
+                entryMap.put(key, entries);
+            } else {
+                List<MapEntry> entriesCopy = new ArrayList<>(entries);
+                entriesCopy.add(entry);
+                // and finally sort list
+                Collections.sort(entriesCopy);
+                entryMap.put(key, entriesCopy);
+                int size = entriesCopy.size();
+                if (size == 10) {
+                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
+                } else if (size == 100) {
+                    log.info(">= 100 MapEntries for {} - check your configuration", key);
+                }
+            }
+            return true;
+        }
     }
 }
