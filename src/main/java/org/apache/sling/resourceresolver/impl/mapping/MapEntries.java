@@ -93,12 +93,6 @@ public class MapEntries implements
 
     public static final String PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS = "sling:redirectStatus";
 
-    public static final String PROP_VANITY_PATH = "sling:vanityPath";
-
-    public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
-
-    private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
-
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -128,15 +122,9 @@ public class MapEntries implements
 
     private final Map<String, List<MapEntry>> resolveMapsMap;
 
-    // Temporary cache for use while doing async vanity path query
-    private Map<String, List<MapEntry>> temporaryResolveMapsMap;
     private List<Map.Entry<String, ResourceChange.ChangeType>> resourceChangeQueue;
-    private AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
-    private AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
     private Collection<MapEntry> mapMaps;
-
-    private Map <String,List <String>> vanityTargets;
 
     /**
      * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
@@ -152,20 +140,13 @@ public class MapEntries implements
 
     private final ReentrantLock initializing = new ReentrantLock();
 
-    private final AtomicLong vanityCounter;
-    private final AtomicLong vanityResourcesOnStartup;
-    private final AtomicLong vanityPathLookups;
-    private final AtomicLong vanityPathBloomNegatives;
-    private final AtomicLong vanityPathBloomFalsePositives;
-
-    private byte[] vanityBloomFilter;
-
-    private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
-
     private final StringInterpolationProvider stringInterpolationProvider;
 
     private final boolean useOptimizeAliasResolution;
-    public MapEntries(final MapConfigurationProvider factory, 
+
+    final VanityPathHandler vph;
+
+    public MapEntries(final MapConfigurationProvider factory,
             final BundleContext bundleContext, 
             final EventAdmin eventAdmin, 
             final StringInterpolationProvider stringInterpolationProvider, 
@@ -178,7 +159,6 @@ public class MapEntries implements
 
         this.resolveMapsMap = new ConcurrentHashMap<>(Map.of(GLOBAL_LIST_KEY, List.of()));
         this.mapMaps = Collections.<MapEntry> emptyList();
-        this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
@@ -190,21 +170,16 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vanityCounter = new AtomicLong(0);
-        this.vanityResourcesOnStartup = new AtomicLong(0);
-        this.vanityPathLookups = new AtomicLong(0);
-        this.vanityPathBloomNegatives = new AtomicLong(0);
-        this.vanityPathBloomFalsePositives = new AtomicLong(0);
-
-        initializeVanityPaths();
+        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing);
+        this.vph.initializeVanityPaths();
 
         this.metrics = metrics;
         if (metrics.isPresent()) {
-            this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
-            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityResourcesOnStartup::get);
-            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
-            this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
-            this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vanityPathBloomFalsePositives::get);
+            this.metrics.get().setNumberOfVanityPathsSupplier(vph.vanityCounter::get);
+            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vph.vanityResourcesOnStartup::get);
+            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vph.vanityPathLookups::get);
+            this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vph.vanityPathBloomNegatives::get);
+            this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vph.vanityPathBloomFalsePositives::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
             this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(detectedConflictingAliases::get);
@@ -295,7 +270,7 @@ public class MapEntries implements
             this.refreshResolverIfNecessary(resolverRefreshed);
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
-                boolean changed = doAddVanity(resource);
+                boolean changed = vph.doAddVanity(resource);
                 if (this.useOptimizeAliasResolution && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                     changed |= doAddAlias(resource);
                 }
@@ -309,7 +284,7 @@ public class MapEntries implements
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
-        final boolean isValidVanityPath =  this.isValidVanityPath(path);
+        final boolean isValidVanityPath = vph.isValidVanityPath(path);
         if ( this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
@@ -320,7 +295,7 @@ public class MapEntries implements
                     boolean changed = false;
                     if ( isValidVanityPath ) {
                         // we remove the old vanity path first
-                        changed |= doRemoveVanity(path);
+                        changed |= vph.doRemoveVanity(path);
 
                         // add back vanity path
                         Resource contentRsrc = null;
@@ -328,7 +303,7 @@ public class MapEntries implements
                             // there might be a JCR_CONTENT child resource
                             contentRsrc = resource.getChild(JCR_CONTENT);
                         }
-                        changed |= doAddVanity(contentRsrc != null ? contentRsrc : resource);
+                        changed |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                     }
                     if (this.useOptimizeAliasResolution) {
                         changed |= doUpdateAlias(resource);
@@ -349,9 +324,9 @@ public class MapEntries implements
         final String actualContentPath = getActualContentPath(path);
         final String actualContentPathPrefix = actualContentPath + "/";
 
-        for (final String target : this.vanityTargets.keySet()) {
+        for (final String target : vph.getVanityPathMappings().keySet()) {
             if (target.startsWith(actualContentPathPrefix) || target.equals(actualContentPath)) {
-                changed |= removeVanityPath(target);
+                changed |= vph.removeVanityPath(target);
             }
         }
         if (this.useOptimizeAliasResolution) {
@@ -569,7 +544,7 @@ public class MapEntries implements
         }
 
         return new MapEntryIterator(key, resolveMapsMap.get(GLOBAL_LIST_KEY),
-                this::getCurrentMapEntryForVanityPath, this.factory.hasVanityPathPrecedence());
+                vph::getCurrentMapEntryForVanityPath, this.factory.hasVanityPathPrecedence());
     }
 
     @Override
@@ -589,11 +564,8 @@ public class MapEntries implements
 
     @Override
     public Map<String, List<String>> getVanityPathMappings() {
-        return Collections.unmodifiableMap(vanityTargets);
+        return vph.getVanityPathMappings();
     }
-
-    // special singleton entry for negative cache entries
-    private static final List<MapEntry> NO_MAP_ENTRIES = Collections.emptyList();
 
     /**
      * Refresh the resource resolver if not already done
@@ -653,7 +625,7 @@ public class MapEntries implements
     @Override
     public void onChange(final List<ResourceChange> changes) {
 
-        final boolean inStartup = !vanityPathsProcessed.get();
+        final boolean inStartup = !vph.isReady();
 
         final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
 
@@ -1163,8 +1135,56 @@ public class MapEntries implements
 
     // ---- vanity path handling ----
 
-    /**
-     * Actual vanity paths initializer. Guards itself against concurrent use by
+    public class VanityPathHandler {
+
+    public static final String PROP_VANITY_PATH = "sling:vanityPath";
+    public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
+
+    private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
+
+    private final AtomicLong vanityCounter = new AtomicLong(0);
+
+    private final AtomicLong vanityResourcesOnStartup = new AtomicLong(0);
+    private final AtomicLong vanityPathLookups = new AtomicLong(0);
+    private final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);
+    private final AtomicLong vanityPathBloomFalsePositives = new AtomicLong(0);
+    private final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
+    private final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
+
+    private final AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
+
+    private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
+
+    private final MapConfigurationProvider factory;
+    private byte[] vanityBloomFilter;
+
+    private Map <String,List <String>> vanityTargets = Collections.emptyMap();
+    private final Map<String, List<MapEntry>> resolveMapsMap;
+
+    // special singleton entry for negative cache entries
+    private final List<MapEntry> noMapEntries = Collections.emptyList();
+
+    // Temporary cache for use while doing async vanity path query
+    private Map<String, List<MapEntry>> temporaryResolveMapsMap;
+
+    private final ReentrantLock initializing;
+
+    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap, ReentrantLock initializing) {
+        this.factory = factory;
+        this.resolveMapsMap = resolveMapsMap;
+        this.initializing = initializing;
+    }
+
+    public boolean isReady() {
+        return this.vanityPathsProcessed.get();
+    }
+
+    public Map<String, List<String>> getVanityPathMappings() {
+         return Collections.unmodifiableMap(vanityTargets);
+    }
+
+   /**
+     * Actual vanity path initializer. Guards itself against concurrent use by
      * using a ReentrantLock. Does nothing if the resource resolver has already
      * been null-ed.
      *
@@ -1363,7 +1383,7 @@ public class MapEntries implements
                     mapEntries = mapEntry.get(vanityPath);
                     if (!initFinished && temporaryResolveMapsMap != null) {
                         log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
-                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? NO_MAP_ENTRIES : mapEntries);
+                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
                     }
                 }
             }
@@ -1373,7 +1393,7 @@ public class MapEntries implements
             }
         }
 
-        return mapEntries == NO_MAP_ENTRIES ? null : mapEntries;
+        return mapEntries == noMapEntries ? null : mapEntries;
     }
 
     private byte[] createVanityBloomFilter() throws IOException {
@@ -1719,4 +1739,7 @@ public class MapEntries implements
             return true;
         }
     }
+
+    }
+
 }
