@@ -295,25 +295,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals("/content", actualContent);
     }
 
-    @Test
-    public void test_getMapEntryRedirect() throws Exception {
-
-        Method method = MapEntries.class.getDeclaredMethod("getMapEntryRedirect", MapEntry.class);
-        method.setAccessible(true);
-
-        MapEntry mapEntry = new MapEntry("/content", -1, false, 0, "/content");
-        String actualContent = (String) method.invoke(mapEntries, mapEntry);
-        assertEquals("/content", actualContent);
-
-        mapEntry = new MapEntry("/content", -1, false, 0, "/content$1");
-        actualContent = (String) method.invoke(mapEntries, mapEntry);
-        assertEquals("/content", actualContent);
-
-        mapEntry = new MapEntry("/content", -1, false, 0, "/content.html");
-        actualContent = (String) method.invoke(mapEntries, mapEntry);
-        assertEquals("/content", actualContent);
-    }
-
     //SLING-3727
     @Test
     public void test_doAddAliasAttributesWithDisableAliasOptimization() throws Exception {

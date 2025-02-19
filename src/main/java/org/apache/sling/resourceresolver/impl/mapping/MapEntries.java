@@ -719,23 +719,6 @@ public class MapEntries implements
         return checkPath;
     }
 
-    private String getMapEntryRedirect(final  MapEntry mapEntry) {
-        String[] redirect = mapEntry.getRedirect();
-        if (redirect.length > 1) {
-            log.warn("something went wrong, please restart the bundle");
-            return null;
-        }
-
-        String path = redirect[0];
-        if (path.endsWith("$1")) {
-            path = path.substring(0, path.length() - "$1".length());
-        } else if (path.endsWith(".html")) {
-            path = path.substring(0, path.length() - ".html".length());
-        }
-
-        return path;
-    }
-
     /**
      * Send an OSGi event
      */
@@ -1305,6 +1288,23 @@ public class MapEntries implements
 
         boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
         return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
+    }
+
+    private String getMapEntryRedirect(final MapEntry mapEntry) {
+        String[] redirect = mapEntry.getRedirect();
+        if (redirect.length > 1) {
+            log.warn("something went wrong, please restart the bundle");
+            return null;
+        }
+
+        String path = redirect[0];
+        if (path.endsWith("$1")) {
+            path = path.substring(0, path.length() - "$1".length());
+        } else if (path.endsWith(".html")) {
+            path = path.substring(0, path.length() - ".html".length());
+        }
+
+        return path;
     }
 
     private boolean doRemoveVanity(final String path) {

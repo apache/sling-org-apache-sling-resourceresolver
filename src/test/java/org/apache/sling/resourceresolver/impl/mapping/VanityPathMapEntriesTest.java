@@ -553,19 +553,19 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_getMapEntryRedirect() throws Exception {
 
-        Method method = MapEntries.class.getDeclaredMethod("getMapEntryRedirect", MapEntry.class);
+        Method method = MapEntries.VanityPathHandler.class.getDeclaredMethod("getMapEntryRedirect", MapEntry.class);
         method.setAccessible(true);
 
         MapEntry mapEntry = new MapEntry("/content", -1, false, 0, "/content");
-        String actualContent = (String) method.invoke(mapEntries, mapEntry);
+        String actualContent = (String) method.invoke(mapEntries.vph, mapEntry);
         assertEquals("/content", actualContent);
 
         mapEntry = new MapEntry("/content", -1, false, 0, "/content$1");
-        actualContent = (String) method.invoke(mapEntries, mapEntry);
+        actualContent = (String) method.invoke(mapEntries.vph, mapEntry);
         assertEquals("/content", actualContent);
 
         mapEntry = new MapEntry("/content", -1, false, 0, "/content.html");
-        actualContent = (String) method.invoke(mapEntries, mapEntry);
+        actualContent = (String) method.invoke(mapEntries.vph, mapEntry);
         assertEquals("/content", actualContent);
     }
 
