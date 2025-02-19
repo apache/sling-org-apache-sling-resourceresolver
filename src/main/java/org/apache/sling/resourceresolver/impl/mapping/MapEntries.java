@@ -1180,14 +1180,14 @@ public class MapEntries implements
     private final ReentrantLock initializing;
 
     // call back for VP init so that accumulated events get processed
-    private final Runnable drainEventQueue;
+    private final Runnable drainEventQueueHandler;
 
     public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap,
-                             ReentrantLock initializing, Runnable drainEventQueue) {
+                             ReentrantLock initializing, Runnable drainEventQueueHandler) {
         this.factory = factory;
         this.resolveMapsMap = resolveMapsMap;
         this.initializing = initializing;
-        this.drainEventQueue = drainEventQueue;
+        this.drainEventQueueHandler = drainEventQueueHandler;
     }
 
     public boolean isReady() {
@@ -1211,7 +1211,7 @@ public class MapEntries implements
             if (this.factory.isVanityPathEnabled()) {
                 vanityPathsProcessed.set(false);
                 this.vanityBloomFilter = createVanityBloomFilter();
-                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
+                VanityPathInitializer vpi = new VanityPathInitializer(this.factory, this.drainEventQueueHandler);
 
                 if (this.factory.isVanityPathCacheInitInBackground()) {
                     this.log.debug("bg init starting");
@@ -1241,8 +1241,11 @@ public class MapEntries implements
 
         private MapConfigurationProvider factory;
 
-        public VanityPathInitializer(MapConfigurationProvider factory) {
+        private final Runnable drainEventQueueHandler;
+
+        public VanityPathInitializer(MapConfigurationProvider factory, Runnable drainEventQueueHandler) {
             this.factory = factory;
+            this.drainEventQueueHandler = drainEventQueueHandler;
         }
 
         @Override
@@ -1265,12 +1268,12 @@ public class MapEntries implements
                 vanityTargets = loadVanityPaths(resolver);
 
                 // process pending events
-                VanityPathHandler.this.drainEventQueue.run();
+                drainEventQueueHandler.run();
 
                 vanityPathsProcessed.set(true);
 
                 // drain once more in case more events have arrived
-                VanityPathHandler.this.drainEventQueue.run();
+                drainEventQueueHandler.run();
 
                 long initElapsed = System.nanoTime() - initStart;
                 long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
