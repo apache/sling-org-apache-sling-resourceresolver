@@ -169,14 +169,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private static AtomicLong getVanityCounter(MapEntries mapEntries) throws NoSuchFieldException, IllegalAccessException {
-        Field vanityCounter = MapEntries.VanityPathHandler.class.getDeclaredField("vanityCounter");
+        Field vanityCounter = VanityPathHandler.class.getDeclaredField("vanityCounter");
         vanityCounter.setAccessible(true);
         return (AtomicLong) vanityCounter.get(mapEntries.vph);
     }
 
     @SuppressWarnings("unchecked")
     private static Map<String, List<String>> getVanityTargets(MapEntries mapEntries) throws NoSuchFieldException, IllegalAccessException {
-        Field field = MapEntries.VanityPathHandler.class.getDeclaredField("vanityTargets");
+        Field field = VanityPathHandler.class.getDeclaredField("vanityTargets");
         field.setAccessible(true);
         return (Map<String, List<String>>) field.get(mapEntries.vph);
     }
@@ -189,7 +189,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private static void getVanityPaths(MapEntries mapEntries, String path) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.VanityPathHandler.class.getDeclaredMethod("getVanityPaths", String.class);
+        Method method = VanityPathHandler.class.getDeclaredMethod("getVanityPaths", String.class);
         method.setAccessible(true);
         method.invoke(mapEntries.vph, path);
     }
@@ -201,7 +201,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.VanityPathHandler.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class);
+        Method method = VanityPathHandler.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class);
         method.setAccessible(true);
         method.invoke(mapEntries.vph, resourceResolver);
     }
@@ -282,14 +282,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(oneMore.getPath()).thenReturn("/" + containerName + "/" + additionalChildName);
         when(oneMore.getName()).thenReturn(additionalChildName);
 
-        when(oneMore.getValueMap()).thenReturn(buildValueMap(MapEntries.VanityPathHandler.PROP_VANITY_PATH, vanityPath + "/onemore"));
+        when(oneMore.getValueMap()).thenReturn(buildValueMap(VanityPathHandler.PROP_VANITY_PATH, vanityPath + "/onemore"));
 
         final Resource vanityPropHolder = onJcrContent ? content : vanity;
 
-        when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(MapEntries.VanityPathHandler.PROP_VANITY_PATH, vanityPath));
+        when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(VanityPathHandler.PROP_VANITY_PATH, vanityPath));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains(MapEntries.VanityPathHandler.PROP_VANITY_PATH)) {
+            if (invocation.getArguments()[0].toString().contains(VanityPathHandler.PROP_VANITY_PATH)) {
                 return List.of(vanityPropHolder, oneMore).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -553,7 +553,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_getMapEntryRedirect() throws Exception {
 
-        Method method = MapEntries.VanityPathHandler.class.getDeclaredMethod("getMapEntryRedirect", MapEntry.class);
+        Method method = VanityPathHandler.class.getDeclaredMethod("getMapEntryRedirect", MapEntry.class);
         method.setAccessible(true);
 
         MapEntry mapEntry = new MapEntry("/content", -1, false, 0, "/content");
@@ -766,7 +766,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         Map<String, List<String>> vanityTargets = getVanityTargets(mapEntries);
         assertEquals(0, vanityTargets.size());
 
-        Method method1 = MapEntries.VanityPathHandler.class.getDeclaredMethod("doRemoveVanity", String.class);
+        Method method1 = VanityPathHandler.class.getDeclaredMethod("doRemoveVanity", String.class);
         method1.setAccessible(true);
 
         Resource justVanityPath = mock(Resource.class, "justVanityPath");
@@ -888,7 +888,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_isValidVanityPath() throws Exception {
-        Method method = MapEntries.VanityPathHandler.class.getDeclaredMethod("isValidVanityPath", String.class);
+        Method method = VanityPathHandler.class.getDeclaredMethod("isValidVanityPath", String.class);
         method.setAccessible(true);
 
         assertFalse((Boolean)method.invoke(mapEntries.vph, "/jcr:system/node"));
@@ -1122,7 +1122,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 });
 
         Method method =
-                MapEntries.VanityPathHandler.class.getDeclaredMethod("getMapEntryList", String.class);
+                VanityPathHandler.class.getDeclaredMethod("getMapEntryList", String.class);
         method.setAccessible(true);
         method.invoke(mapEntries.vph, "/target/justVanityPath");
 
