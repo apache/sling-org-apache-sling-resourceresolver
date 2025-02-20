@@ -170,7 +170,7 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing);
+        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this::drainQueue);
         this.vph.initializeVanityPaths();
 
         this.metrics = metrics;
@@ -707,6 +707,33 @@ public class MapEntries implements
         return changed;
     }
 
+    private void drainQueue() {
+        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+
+        // send the change event only once
+        boolean sendEvent = false;
+
+        // the config needs to be reloaded only once
+        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
+        while (!this.resourceChangeQueue.isEmpty()) {
+            Map.Entry<String, ResourceChange.ChangeType> entry = resourceChangeQueue.remove(0);
+            final ResourceChange.ChangeType type = entry.getValue();
+            final String path = entry.getKey();
+
+            log.trace("drain type={}, path={}", type, path);
+            boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
+
+            if (changed) {
+                sendEvent = true;
+            }
+        }
+
+        if (sendEvent) {
+            sendChangeEvent();
+        }
+    }
+
     // ---------- internal
 
     private String getActualContentPath(final String path){
@@ -1152,10 +1179,15 @@ public class MapEntries implements
 
     private final ReentrantLock initializing;
 
-    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap, ReentrantLock initializing) {
+    // call back for VP init so that accumulated events get processed
+    private final Runnable drainEventQueueHandler;
+
+    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap,
+                             ReentrantLock initializing, Runnable drainEventQueueHandler) {
         this.factory = factory;
         this.resolveMapsMap = resolveMapsMap;
         this.initializing = initializing;
+        this.drainEventQueueHandler = drainEventQueueHandler;
     }
 
     public boolean isReady() {
@@ -1179,7 +1211,7 @@ public class MapEntries implements
             if (this.factory.isVanityPathEnabled()) {
                 vanityPathsProcessed.set(false);
                 this.vanityBloomFilter = createVanityBloomFilter();
-                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
+                VanityPathInitializer vpi = new VanityPathInitializer(this.factory, this.drainEventQueueHandler);
 
                 if (this.factory.isVanityPathCacheInitInBackground()) {
                     this.log.debug("bg init starting");
@@ -1209,8 +1241,11 @@ public class MapEntries implements
 
         private MapConfigurationProvider factory;
 
-        public VanityPathInitializer(MapConfigurationProvider factory) {
+        private final Runnable drainEventQueueHandler;
+
+        public VanityPathInitializer(MapConfigurationProvider factory, Runnable drainEventQueueHandler) {
             this.factory = factory;
+            this.drainEventQueueHandler = drainEventQueueHandler;
         }
 
         @Override
@@ -1223,33 +1258,6 @@ public class MapEntries implements
             }
         }
 
-        private void drainQueue(List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
-            final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
-
-            // send the change event only once
-            boolean sendEvent = false;
-
-            // the config needs to be reloaded only once
-            final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
-
-            while (!queue.isEmpty()) {
-                Map.Entry<String, ResourceChange.ChangeType> entry = queue.remove(0);
-                final ResourceChange.ChangeType type = entry.getValue();
-                final String path = entry.getKey();
-
-                log.trace("drain type={}, path={}", type, path);
-                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
-
-                if (changed) {
-                    sendEvent = true;
-                }
-            }
-
-            if (sendEvent) {
-                sendChangeEvent();
-            }
-        }
-
         private void execute() {
             try (ResourceResolver resolver = factory
                     .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
@@ -1259,13 +1267,13 @@ public class MapEntries implements
 
                 vanityTargets = loadVanityPaths(resolver);
 
-                // process pending event
-                drainQueue(resourceChangeQueue);
+                // process pending events
+                drainEventQueueHandler.run();
 
                 vanityPathsProcessed.set(true);
 
                 // drain once more in case more events have arrived
-                drainQueue(resourceChangeQueue);
+                drainEventQueueHandler.run();
 
                 long initElapsed = System.nanoTime() - initStart;
                 long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
