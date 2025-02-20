@@ -654,23 +654,23 @@ public class VanityPathHandler {
             return false;
         } else {
             List<MapEntry> entries = entryMap.get(key);
-            if (entries == null) {
-                entries = new ArrayList<>();
-                entries.add(entry);
-                entryMap.put(key, entries);
-            } else {
-                List<MapEntry> entriesCopy = new ArrayList<>(entries);
-                entriesCopy.add(entry);
-                // and finally sort list
-                Collections.sort(entriesCopy);
-                entryMap.put(key, entriesCopy);
-                int size = entriesCopy.size();
-                if (size == 10) {
-                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
-                } else if (size == 100) {
-                    log.info(">= 100 MapEntries for {} - check your configuration", key);
-                }
+
+            // copy existing list contents (when not empty), add new entry, then sort
+            List<MapEntry> entriesCopy = new ArrayList<>(entries != null ? entries : List.of());
+            entriesCopy.add(entry);
+            Collections.sort(entriesCopy);
+
+            // update map with new list
+            entryMap.put(key, entriesCopy);
+
+            // warn when list of entries for one key grows
+            int size = entriesCopy.size();
+            if (size == 10) {
+                log.debug(">= 10 MapEntries for {} - check your configuration", key);
+            } else if (size == 100) {
+                log.info(">= 100 MapEntries for {} - check your configuration", key);
             }
+
             return true;
         }
     }
