@@ -26,12 +26,10 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -48,6 +46,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
+/**
+ * All things related to the handling of vanity paths.
+ */
 public class VanityPathHandler {
 
     private static final String JCR_CONTENT = "jcr:content";
@@ -112,10 +113,8 @@ public class VanityPathHandler {
      * Actual vanity path initializer. Guards itself against concurrent use by
      * using a ReentrantLock. Does nothing if the resource resolver has already
      * been null-ed.
-     *
-     * @throws IOException in case of problems
      */
-    protected void initializeVanityPaths() throws IOException {
+    protected void initializeVanityPaths() {
         this.initializing.lock();
         try {
             if (this.factory.isVanityPathEnabled()) {
@@ -149,7 +148,7 @@ public class VanityPathHandler {
 
         private int SIZELIMIT = 10000;
 
-        private MapConfigurationProvider factory;
+        private final MapConfigurationProvider factory;
 
         public VanityPathInitializer(MapConfigurationProvider factory) {
             this.factory = factory;
@@ -311,7 +310,7 @@ public class VanityPathHandler {
         return mapEntries == noMapEntries ? null : mapEntries;
     }
 
-    private byte[] createVanityBloomFilter() throws IOException {
+    private byte[] createVanityBloomFilter() {
         return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
     }
 
@@ -334,7 +333,7 @@ public class VanityPathHandler {
                 QueryBuildHelper.escapeString(vanityPath),
                 QueryBuildHelper.escapeString(vanityPath.substring(1)));
 
-        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
+        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
             long totalCount = 0;
             long totalValid = 0;
             log.debug("start vanityPath query: {}", queryString);
@@ -456,15 +455,10 @@ public class VanityPathHandler {
     }
 
     private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
-        if (entry == null) {
-            return;
+        if (entry != null) {
+            List<String> entries = targetPaths.computeIfAbsent(key, k -> new ArrayList<>());
+            entries.add(entry);
         }
-        List<String> entries = targetPaths.get(key);
-        if (entries == null) {
-            entries = new ArrayList<>();
-            targetPaths.put(key, entries);
-        }
-        entries.add(entry);
     }
 
     /**
@@ -513,7 +507,7 @@ public class VanityPathHandler {
                 final String redirect = redirectTarget.getPath();
                 final String redirectName = redirectTarget.getName();
 
-                // whether the target is attained by a external redirect or
+                // whether the target is attained by an external redirect or
                 // by an internal redirect is defined by the sling:redirect
                 // property
                 final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
@@ -578,11 +572,10 @@ public class VanityPathHandler {
             return null;
         }
 
-        String prefix = null;
-        String path = null;
+        String prefix, path;
 
         // check for URL-shaped path
-        if (info.indexOf(":/") > -1) {
+        if (info.contains(":/")) {
             try {
                 final URL u = new URL(info);
                 prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
