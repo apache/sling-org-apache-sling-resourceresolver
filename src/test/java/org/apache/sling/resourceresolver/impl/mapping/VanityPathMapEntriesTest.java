@@ -40,7 +40,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -163,7 +162,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     // get vanity paths (after waiting for bg init to complete)
-    private void initializeVanityPaths() throws IOException {
+    private void initializeVanityPaths() {
         mapEntries.vph.initializeVanityPaths();
         waitForBgInit();
     }
@@ -213,7 +212,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_simple_vanity_path() throws IOException {
+    public void test_simple_vanity_path() {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
@@ -232,7 +231,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // see SLING-12620
     @Test
-    public void test_simple_vanity_path_support_with_null_parent() throws IOException {
+    public void test_simple_vanity_path_support_with_null_parent() {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
@@ -380,7 +379,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_updates() throws Exception {
+    public void test_vanity_path_updates() {
         Resource parent = mock(Resource.class, "parent");
         when(parent.getPath()).thenReturn("/foo/parent");
         when(parent.getName()).thenReturn("parent");
@@ -445,7 +444,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_updates_do_not_reload_multiple_times() throws IOException {
+    public void test_vanity_path_updates_do_not_reload_multiple_times() {
         Resource parent = mock(Resource.class, "parent");
         when(parent.getPath()).thenReturn("/foo/parent");
         when(parent.getName()).thenReturn("parent");
@@ -495,7 +494,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_registration_include_exclude() throws IOException {
+    public void test_vanity_path_registration_include_exclude() {
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
         final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
 
@@ -1187,8 +1186,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // utilities for testing vanity path queries
 
-    private static String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) >= '";
-    private static String VPQEND = "' ORDER BY FIRST([sling:vanityPath])";
+    private static final String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) >= '";
+    private static final String VPQEND = "' ORDER BY FIRST([sling:vanityPath])";
 
     private boolean matchesPagedQuery(String query) {
         return query.startsWith(VPQSTART) && query.endsWith(VPQEND);
