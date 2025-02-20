@@ -77,7 +77,6 @@ public class VanityPathHandler {
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
 
     private final MapConfigurationProvider factory;
-    private final @NotNull ResourceResolver resolver;
     private byte[] vanityBloomFilter;
 
     private Map<String, List<String>> vanityTargets = Collections.emptyMap();
@@ -93,12 +92,11 @@ public class VanityPathHandler {
 
     private final Runnable drain;
 
-    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap, ReentrantLock initializing,
-                             ResourceResolver resolver, Runnable drain) {
+    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap,
+                             ReentrantLock initializing, Runnable drain) {
         this.factory = factory;
         this.resolveMapsMap = resolveMapsMap;
         this.initializing = initializing;
-        this.resolver = resolver;
         this.drain = drain;
     }
 
@@ -166,7 +164,6 @@ public class VanityPathHandler {
                 log.error("vanity path initializer thread terminated with a throwable", t);
             }
         }
-
 
         private void execute() {
             try (ResourceResolver resolver = factory
@@ -422,10 +419,10 @@ public class VanityPathHandler {
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
-            it = queryUnpaged("vanity path", baseQueryString);
+            it = queryUnpaged("vanity path", baseQueryString, resolver);
         } catch (UnsupportedOperationException ex) {
             log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged("vanity path", baseQueryString);
+            it = queryUnpaged("vanity path", baseQueryString, resolver);
         }
 
         long count = 0;
@@ -678,10 +675,10 @@ public class VanityPathHandler {
         }
     }
 
-    private Iterator<Resource> queryUnpaged(String subject, String query) {
+    private Iterator<Resource> queryUnpaged(String subject, String query, ResourceResolver resolver) {
         log.debug("start {} query: {}", subject, query);
         long queryStart = System.nanoTime();
-        final Iterator<Resource> it = this.resolver.findResources(query, "JCR-SQL2");
+        final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
         log.debug("end {} query; elapsed {}ms", subject, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
         return it;

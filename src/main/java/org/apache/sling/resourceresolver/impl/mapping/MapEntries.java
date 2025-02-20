@@ -162,7 +162,7 @@ public class MapEntries implements
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this.resolver, this::drainQueue);
+        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this::drainQueue);
         this.vph.initializeVanityPaths();
 
         this.metrics = metrics;
