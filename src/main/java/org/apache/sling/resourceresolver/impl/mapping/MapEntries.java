@@ -85,8 +85,6 @@ public class MapEntries implements
 
     public static final String PROP_REDIRECT_EXTERNAL_STATUS = "sling:status";
 
-    public static final String PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS = "sling:redirectStatus";
-
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 

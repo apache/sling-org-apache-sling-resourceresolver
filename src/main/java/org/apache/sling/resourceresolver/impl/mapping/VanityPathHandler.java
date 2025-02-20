@@ -51,37 +51,27 @@ import java.util.stream.Stream;
 public class VanityPathHandler {
 
     private static final String JCR_CONTENT = "jcr:content";
-
-    private static final String JCR_CONTENT_PREFIX = JCR_CONTENT + "/";
-
     private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
-
     private static final String JCR_SYSTEM_PATH = "/jcr:system";
-
     private static final String JCR_SYSTEM_PREFIX = JCR_SYSTEM_PATH + '/';
 
     public static final String PROP_REDIRECT_EXTERNAL = "sling:redirect";
-
-    public static final String PROP_REDIRECT_EXTERNAL_STATUS = "sling:status";
-
     public static final String PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS = "sling:redirectStatus";
-
     public static final String PROP_VANITY_PATH = "sling:vanityPath";
     public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
+
+    private static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
 
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
     final AtomicLong vanityCounter = new AtomicLong(0);
-
-    static final String ANY_SCHEME_HOST = "[^/]+/[^/]+";
-
     final AtomicLong vanityResourcesOnStartup = new AtomicLong(0);
     final AtomicLong vanityPathLookups = new AtomicLong(0);
     final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);
     final AtomicLong vanityPathBloomFalsePositives = new AtomicLong(0);
-    final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
-    final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
+    private final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
+    private final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
     private final AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
@@ -697,5 +687,3 @@ public class VanityPathHandler {
         return it;
     }
 }
-
-
