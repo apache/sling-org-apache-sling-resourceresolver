@@ -26,6 +26,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -274,30 +276,38 @@ public class VanityPathHandler {
     }
 
     boolean doRemoveVanity(final String path) {
-        final String actualContentPath = getActualContentPath(path);
-        final List <String> l = vanityTargets.remove(actualContentPath);
-        if (l != null){
-            for (final String s : l){
-                final List<MapEntry> entries = this.resolveMapsMap.get(s);
-                if (entries!= null) {
-                    for (final Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext(); ) {
-                        final MapEntry entry = iterator.next();
-                        final String redirect = getMapEntryRedirect(entry);
-                        if (redirect != null && redirect.equals(actualContentPath)) {
-                            iterator.remove();
-                        }
-                    }
-                }
-                if (entries!= null && entries.isEmpty()) {
-                    this.resolveMapsMap.remove(s);
-                }
+        String actualContentPath = getActualContentPath(path);
+        List<String> targets = this.vanityTargets.remove(actualContentPath);
+
+        if (targets != null) {
+            for (String target : targets) {
+                removeEntriesFromResolvesMap(target, actualContentPath);
             }
             if (vanityCounter.longValue() > 0) {
                 vanityCounter.addAndGet(-2);
             }
             return true;
+        } else {
+            return false;
         }
-        return false;
+    }
+
+    private void removeEntriesFromResolvesMap(String target, String path) {
+        List<MapEntry> entries = Objects.requireNonNullElse(this.resolveMapsMap.get(target),
+                Collections.emptyList());
+
+        // remove all entries for the given path
+        for (Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext();) {
+            MapEntry entry = iterator.next();
+            String redirect = getMapEntryRedirect(entry);
+            if (path.equals(redirect)) {
+                iterator.remove();
+            }
+        }
+        // remove entry when now empty
+        if (entries.isEmpty()) {
+            this.resolveMapsMap.remove(target);
+        }
     }
 
     /**
@@ -648,14 +658,12 @@ public class VanityPathHandler {
             return true;
         }
     }
-    private String getActualContentPath(final String path){
-        final String checkPath;
-        if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
-            checkPath = ResourceUtil.getParent(path);
+    private String getActualContentPath(final String path) {
+        if (path.endsWith(JCR_CONTENT_SUFFIX) ) {
+            return ResourceUtil.getParent(path);
         } else {
-            checkPath = path;
+            return path;
         }
-        return checkPath;
     }
 
     private MapEntry getMapEntry(final String url, final int status, long order,
