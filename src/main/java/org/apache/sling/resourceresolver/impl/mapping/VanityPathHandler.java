@@ -674,8 +674,9 @@ public class VanityPathHandler {
             return true;
         }
     }
+
     private String getActualContentPath(final String path) {
-        if (path.endsWith(JCR_CONTENT_SUFFIX) ) {
+        if (path.endsWith(JCR_CONTENT_SUFFIX)) {
             return ResourceUtil.getParent(path);
         } else {
             return path;
