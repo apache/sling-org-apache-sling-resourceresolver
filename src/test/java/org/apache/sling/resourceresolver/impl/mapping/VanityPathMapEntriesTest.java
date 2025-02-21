@@ -40,7 +40,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -167,7 +166,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     // get vanity paths (after waiting for bg init to complete)
-    private void initializeVanityPaths() throws IOException {
+    private void initializeVanityPaths() {
         mapEntries.vph.initializeVanityPaths();
         waitForBgInit();
     }
@@ -217,7 +216,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_simple_vanity_path() throws IOException {
+    public void test_simple_vanity_path() {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
@@ -236,7 +235,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // see SLING-12620
     @Test
-    public void test_simple_vanity_path_support_with_null_parent() throws IOException {
+    public void test_simple_vanity_path_support_with_null_parent() {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
@@ -385,7 +384,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_updates() throws Exception {
+    public void test_vanity_path_updates() {
         Resource parent = mock(Resource.class, "parent");
         when(parent.getPath()).thenReturn("/foo/parent");
         when(parent.getName()).thenReturn("parent");
@@ -450,7 +449,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_updates_do_not_reload_multiple_times() throws IOException {
+    public void test_vanity_path_updates_do_not_reload_multiple_times() {
         Resource parent = mock(Resource.class, "parent");
         when(parent.getPath()).thenReturn("/foo/parent");
         when(parent.getName()).thenReturn("parent");
@@ -500,7 +499,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_registration_include_exclude() throws IOException {
+    public void test_vanity_path_registration_include_exclude() {
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
         final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
 
@@ -1195,31 +1194,31 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     // utilities for testing vanity path queries
 
     // used for paged query of all
-    private static String VPQ_PAGED_START = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE " +
+    private static final String VPQ_PAGED_START = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE " +
             QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) >= '";
-    private static String VPQ_PAGED_END = "' ORDER BY FIRST([sling:vanityPath])";
+    private static final String VPQ_PAGED_END = "' ORDER BY FIRST([sling:vanityPath])";
 
-    private static Pattern VPQ_PAGED_PATTERN = Pattern.compile(
+    private static final Pattern VPQ_PAGED_PATTERN = Pattern.compile(
      Pattern.quote(VPQ_PAGED_START) +
-            "(?<path>[\\p{Alnum}]*)" +
+             "(?<path>\\p{Alnum}*)" +
             Pattern.quote(VPQ_PAGED_END)
     );
 
     // used when paged query not available
-    private static String VPQ_SIMPLE = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base]"
+    private static final String VPQ_SIMPLE = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base]"
         + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
     // used when checking for specific vanity paths
-    private static String VPQ_SIMPLE_START = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE " +
+    private static final String VPQ_SIMPLE_START = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE " +
             QueryBuildHelper.excludeSystemPath() + " AND ([sling:vanityPath]='";
-    private static String VPQ_SIMPLE_MIDDLE = "' OR [sling:vanityPath]='";
-    private static String VPQ_SIMPLE_END = "') ORDER BY [sling:vanityOrder] DESC";
+    private static final String VPQ_SIMPLE_MIDDLE = "' OR [sling:vanityPath]='";
+    private static final String VPQ_SIMPLE_END = "') ORDER BY [sling:vanityOrder] DESC";
 
-    private static Pattern VPQ_SPECIFIC_PATTERN = Pattern.compile(
+    private static final Pattern VPQ_SPECIFIC_PATTERN = Pattern.compile(
             Pattern.quote(VPQ_SIMPLE_START) +
-            "(?<path1>[\\/\\p{Alnum}]*)" +
+            "(?<path1>[/\\p{Alnum}]*)" +
             Pattern.quote(VPQ_SIMPLE_MIDDLE) +
-            "(?<path2>[\\/\\p{Alnum}]*)" +
+            "(?<path2>[/\\p{Alnum}]*)" +
             Pattern.quote(VPQ_SIMPLE_END)
     );
 
@@ -1240,21 +1239,16 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private boolean matchesPagedQuery(String query) {
-        Matcher m = VPQ_PAGED_PATTERN.matcher(query);
-        m.find();
-        return m.matches();
+        return VPQ_PAGED_PATTERN.matcher(query).matches();
     }
 
     private String extractStartPath(String query) {
         Matcher m = VPQ_PAGED_PATTERN.matcher(query);
-        m.find();
-        return m.group("path");
+        return m.find() ? m.group("path") : "";
     }
 
     private boolean matchesSpecificQuery(String query) {
-        Matcher m = VPQ_SPECIFIC_PATTERN.matcher(query);
-        m.find();
-        return m.matches();
+        return VPQ_SPECIFIC_PATTERN.matcher(query).matches();
     }
 
     private String getFirstVanityPath(Resource r) {
