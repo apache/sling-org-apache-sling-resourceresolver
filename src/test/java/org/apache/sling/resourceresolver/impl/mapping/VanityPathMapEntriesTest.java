@@ -40,7 +40,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -58,13 +57,20 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -123,6 +129,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         configs.add(new VanityPathConfig("/justVanityPath", false));
         configs.add(new VanityPathConfig("/justVanityPath2", false));
         configs.add(new VanityPathConfig("/badVanityPath", false));
+        configs.add(new VanityPathConfig("/simpleVanityPath", false));
         configs.add(new VanityPathConfig("/redirectingVanityPath", false));
         configs.add(new VanityPathConfig("/redirectingVanityPath301", false));
         configs.add(new VanityPathConfig("/vanityPathOnJcrContent", false));
@@ -163,7 +170,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     // get vanity paths (after waiting for bg init to complete)
-    private void initializeVanityPaths() throws IOException {
+    private void initializeVanityPaths() {
         mapEntries.vph.initializeVanityPaths();
         waitForBgInit();
     }
@@ -213,7 +220,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_simple_vanity_path() throws IOException {
+    public void test_simple_vanity_path() {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
@@ -232,7 +239,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // see SLING-12620
     @Test
-    public void test_simple_vanity_path_support_with_null_parent() throws IOException {
+    public void test_simple_vanity_path_support_with_null_parent() {
         String vanityPath = "/xyz";
         String containerName = "foo";
         String childName = "child";
@@ -289,7 +296,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(VanityPathHandler.PROP_VANITY_PATH, vanityPath));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains(VanityPathHandler.PROP_VANITY_PATH)) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesPagedQuery(query)) {
                 return List.of(vanityPropHolder, oneMore).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -348,7 +356,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 String path = extractStartPath(query);
                 resources.sort(vanityResourceComparator);
                 return resources.stream().filter(e -> getFirstVanityPath(e).compareTo(path) > 0).iterator();
-            } else if (query.contains("sling:vanityPath")) {
+            } else if (query.equals(VPQ_SIMPLE)) {
                 return resources.iterator();
             } else {
                 return Collections.emptyIterator();
@@ -380,7 +388,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_updates() throws Exception {
+    public void test_vanity_path_updates() {
         Resource parent = mock(Resource.class, "parent");
         when(parent.getPath()).thenReturn("/foo/parent");
         when(parent.getName()).thenReturn("parent");
@@ -445,7 +453,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_updates_do_not_reload_multiple_times() throws IOException {
+    public void test_vanity_path_updates_do_not_reload_multiple_times() {
         Resource parent = mock(Resource.class, "parent");
         when(parent.getPath()).thenReturn("/foo/parent");
         when(parent.getName()).thenReturn("parent");
@@ -495,7 +503,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_vanity_path_registration_include_exclude() throws IOException {
+    public void test_vanity_path_registration_include_exclude() {
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
         final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
 
@@ -513,9 +521,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 String path = extractStartPath(query);
                 resources.sort(vanityResourceComparator);
                 return resources.stream().filter(e -> getFirstVanityPath(e).compareTo(path) > 0).iterator();
-            } else
-            if (query.contains("sling:vanityPath")) {
-                return resources.iterator();
             } else {
                 return Collections.emptyIterator();
             }
@@ -596,7 +601,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
         addResource(mapEntries, "/badVanityPath", new AtomicBoolean());
-
 
         assertEquals(2, entries.size());
         assertEquals(1, getVanityTargets(mapEntries).size());
@@ -918,7 +922,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -938,7 +943,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath2.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath","sling:vanityOrder", 100));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -961,7 +967,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -985,9 +992,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(badVanityPath.getName()).thenReturn("badVanityPath");
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
-
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
                 return Collections.singleton(badVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -1013,7 +1020,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -1034,7 +1042,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath2.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath","sling:vanityOrder", 100));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -1057,7 +1066,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesPagedQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -1080,7 +1090,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesPagedQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
@@ -1111,15 +1122,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath",
                 "/target/justVanityPath"));
 
-        when(resourceResolver.findResources(anyString(),
-                eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    if
-                    (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
-                        return Collections.singleton(justVanityPath).iterator();
-                    } else {
-                        return Collections.emptyIterator();
-                    }
-                });
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
+                return Collections.singleton(justVanityPath).iterator();
+            } else {
+                return Collections.emptyIterator();
+            }
+        });
 
         Method method =
                 VanityPathHandler.class.getDeclaredMethod("getMapEntryList", String.class);
@@ -1152,27 +1162,25 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getName()).thenReturn("justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
-
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-            if (invocation.getArguments()[0].toString().contains("sling:vanityPath")) {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
                 return Collections.singleton(justVanityPath).iterator();
             } else {
                 return Collections.emptyIterator();
             }
         });
 
-
         when(this.resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(2L);
 
         ArrayList<DataFuture> list = new ArrayList<>();
-        for (int i =0;i<10;i++) {
+        for (int i = 0; i < 10; i++) {
             list.add(createDataFuture(pool, mapEntries));
         }
 
-       for (DataFuture df : list) {
-           df.future.get();
+        for (DataFuture df : list) {
+            df.future.get();
         }
-
     }
 
     @Test
@@ -1185,18 +1193,144 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.initializeAliases();
     }
 
+    @Test
+    public void test_bg_init_fallback_while_no_ready() {
+        // this is only applicable when background init is enabled
+        assumeTrue(this.isVanityPathCacheInitInBackground);
+
+        AtomicInteger queryCounter = new AtomicInteger();
+
+        Lock lock = new ReentrantLock();
+        lock.lock();
+
+        String targetPath = "/foo";
+
+        final Resource simpleVanityResource = mock(Resource.class, "simpleVanityPath");
+        when(resourceResolver.getResource("/simpleVanityPath")).thenReturn(simpleVanityResource);
+        when(simpleVanityResource.getPath()).thenReturn("/simpleVanityPath");
+        when(simpleVanityResource.getName()).thenReturn("simpleVanityPath");
+        when(simpleVanityResource.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", targetPath));
+
+        // exactly one resource found, both on regular (init) or specific query
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            String query = invocation.getArguments()[0].toString();
+            try {
+                lock.lock();
+                queryCounter.incrementAndGet();
+                if (matchesSpecificQueryFor(query, targetPath) || matchesPagedQuery(query)) {
+                    return Collections.singleton(simpleVanityResource).iterator();
+                } else {
+                    return Collections.emptyIterator();
+                }
+            } finally {
+                lock.unlock();
+            }
+        });
+
+        // no query yet
+        assertEquals(0, queryCounter.get());
+
+        mapEntries.vph.initializeVanityPaths();
+
+        // still no query
+        assertEquals(0, queryCounter.get());
+
+        // should not be finished until unlocked
+        assertFalse("VPH should not be ready as it is locked", mapEntries.vph.isReady());
+
+        // do a forced lookup while init runs
+        Iterator<MapEntry> mit = mapEntries.vph.getCurrentMapEntryForVanityPath("/foo");
+        assertNotNull(mit);
+        assertEquals(1, queryCounter.get());
+
+        // intermediate map does not contain vp
+        Map<String, List<String>> intermediateVanityMap = mapEntries.getVanityPathMappings();
+        assertFalse(intermediateVanityMap.containsKey("/simpleVanityPath"));
+
+        // try another forced lookup, should be cached
+        mit = mapEntries.vph.getCurrentMapEntryForVanityPath("/foo");
+        assertNotNull(mit);
+        assertEquals(1, queryCounter.get());
+
+        // let initializer run, then wait until finished
+        lock.unlock();
+        waitForBgInit();
+
+        // now one more query should have happened
+        assertEquals(2, queryCounter.get());
+
+        // final map contains vp
+        Map<String, List<String>> finalVanityMap = mapEntries.getVanityPathMappings();
+        assertTrue(finalVanityMap.get("/simpleVanityPath").contains("/foo"));
+    }
+
     // utilities for testing vanity path queries
 
-    private static String VPQSTART = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) >= '";
-    private static String VPQEND = "' ORDER BY FIRST([sling:vanityPath])";
+    // used for paged query of all
+    private static final String VPQ_PAGED_START = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE " +
+            QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) >= '";
+    private static final String VPQ_PAGED_END = "' ORDER BY FIRST([sling:vanityPath])";
+
+    private static final Pattern VPQ_PAGED_PATTERN = Pattern.compile(
+     Pattern.quote(VPQ_PAGED_START) +
+             "(?<path>\\p{Alnum}*)" +
+            Pattern.quote(VPQ_PAGED_END)
+    );
+
+    // used when paged query not available
+    private static final String VPQ_SIMPLE = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base]"
+        + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
+
+    // used when checking for specific vanity paths
+    private static final String VPQ_SPECIFIC_START = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE " +
+            QueryBuildHelper.excludeSystemPath() + " AND ([sling:vanityPath]='";
+    private static final String VPQ_SPECIFIC_MIDDLE = "' OR [sling:vanityPath]='";
+    private static final String VPQ_SPECIFIC_END = "') ORDER BY [sling:vanityOrder] DESC";
+
+    private static final Pattern VPQ_SPECIFIC_PATTERN = Pattern.compile(
+            Pattern.quote(VPQ_SPECIFIC_START) +
+            "(?<path1>[/\\p{Alnum}]*)" +
+            Pattern.quote(VPQ_SPECIFIC_MIDDLE) +
+            "(?<path2>[/\\p{Alnum}]*)" +
+            Pattern.quote(VPQ_SPECIFIC_END)
+    );
+
+    // sanity test on matcher
+    @Test
+    public void testMatcher() {
+        assertTrue(VPQ_PAGED_PATTERN.matcher(VPQ_PAGED_START + VPQ_PAGED_END).matches());
+        assertTrue(VPQ_PAGED_PATTERN.matcher(VPQ_PAGED_START + "xyz" + VPQ_PAGED_END).matches());
+        assertEquals(1, VPQ_PAGED_PATTERN.matcher(VPQ_PAGED_START + "xyz" + VPQ_PAGED_END).groupCount());
+        Matcher m1 = VPQ_PAGED_PATTERN.matcher(VPQ_PAGED_START + "xyz" + VPQ_PAGED_END);
+        assertTrue(m1.find());
+        assertEquals("xyz", m1.group("path"));
+
+        Matcher m2 = VPQ_SPECIFIC_PATTERN.matcher(VPQ_SPECIFIC_START + "x/y" + VPQ_SPECIFIC_MIDDLE + "/x/y" + VPQ_SPECIFIC_END);
+        assertTrue(m2.find());
+        assertEquals("x/y", m2.group("path1"));
+        assertEquals("/x/y", m2.group("path2"));
+    }
 
     private boolean matchesPagedQuery(String query) {
-        return query.startsWith(VPQSTART) && query.endsWith(VPQEND);
+        return VPQ_PAGED_PATTERN.matcher(query).matches();
     }
 
     private String extractStartPath(String query) {
-        String remainder = query.substring(VPQSTART.length());
-        return remainder.substring(0, remainder.length() - VPQEND.length());
+        Matcher m = VPQ_PAGED_PATTERN.matcher(query);
+        return m.find() ? m.group("path") : "";
+    }
+
+    private boolean matchesSpecificQuery(String query) {
+        return VPQ_SPECIFIC_PATTERN.matcher(query).matches();
+    }
+
+    private boolean matchesSpecificQueryFor(String query, String path) {
+        Matcher m = VPQ_SPECIFIC_PATTERN.matcher(query);
+        if (!m.find()) {
+            return false;
+        } else {
+            return path.equals(m.group("path1")) || path.equals(m.group("path2"));
+        }
     }
 
     private String getFirstVanityPath(Resource r) {
