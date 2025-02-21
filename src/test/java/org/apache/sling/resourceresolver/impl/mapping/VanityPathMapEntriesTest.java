@@ -598,7 +598,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         addResource(mapEntries, "/badVanityPath", new AtomicBoolean());
 
-
         assertEquals(2, entries.size());
         assertEquals(1, getVanityTargets(mapEntries).size());
 
@@ -1119,15 +1118,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath",
                 "/target/justVanityPath"));
 
-        when(resourceResolver.findResources(anyString(),
-                eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    String query = invocation.getArguments()[0].toString();
-                    if (matchesSpecificQuery(query)) {
-                        return Collections.singleton(justVanityPath).iterator();
-                    } else {
-                        return Collections.emptyIterator();
-                    }
-                });
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+            String query = invocation.getArguments()[0].toString();
+            if (matchesSpecificQuery(query)) {
+                return Collections.singleton(justVanityPath).iterator();
+            } else {
+                return Collections.emptyIterator();
+            }
+        });
 
         Method method =
                 VanityPathHandler.class.getDeclaredMethod("getMapEntryList", String.class);
