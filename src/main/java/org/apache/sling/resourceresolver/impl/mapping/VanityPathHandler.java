@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -159,8 +161,8 @@ public class VanityPathHandler {
             try {
                 temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
                 execute();
-            } catch (Throwable t) {
-                log.error("vanity path initializer thread terminated with a throwable", t);
+            } catch (Exception t) {
+                log.error("vanity path initializer thread terminated with an exception", t);
             }
         }
 
@@ -197,6 +199,57 @@ public class VanityPathHandler {
         }
     }
 
+    /**
+     * Load vanity paths - search for all nodes (except under /jcr:system)
+     * having a sling:vanityPath property
+     */
+    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
+        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
+        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
+                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
+
+        Iterator<Resource> it;
+        try {
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
+            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
+        } catch (QuerySyntaxException ex) {
+            log.debug("sort with first() not supported, falling back to base query", ex);
+            it = queryUnpaged(baseQueryString, resolver);
+        } catch (UnsupportedOperationException ex) {
+            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+            it = queryUnpaged( baseQueryString, resolver);
+        }
+
+        long count = 0;
+        long countInScope = 0;
+        long processStart = System.nanoTime();
+
+        while (it.hasNext()) {
+            count += 1;
+            final Resource resource = it.next();
+            final String resourcePath = resource.getPath();
+            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
+                countInScope += 1;
+                final boolean addToCache = isAllVanityPathEntriesCached()
+                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
+            }
+        }
+        long processElapsed = System.nanoTime() - processStart;
+        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        if (!isAllVanityPathEntriesCached()) {
+            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
+                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
+                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            }
+        }
+
+        this.vanityResourcesOnStartup.set(count);
+
+        return targetPaths;
+    }
+
     boolean doAddVanity(final Resource resource) {
         log.debug("doAddVanity getting {}", resource.getPath());
 
@@ -222,30 +275,38 @@ public class VanityPathHandler {
     }
 
     boolean doRemoveVanity(final String path) {
-        final String actualContentPath = getActualContentPath(path);
-        final List <String> l = vanityTargets.remove(actualContentPath);
-        if (l != null){
-            for (final String s : l){
-                final List<MapEntry> entries = this.resolveMapsMap.get(s);
-                if (entries!= null) {
-                    for (final Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext(); ) {
-                        final MapEntry entry = iterator.next();
-                        final String redirect = getMapEntryRedirect(entry);
-                        if (redirect != null && redirect.equals(actualContentPath)) {
-                            iterator.remove();
-                        }
-                    }
-                }
-                if (entries!= null && entries.isEmpty()) {
-                    this.resolveMapsMap.remove(s);
-                }
+        String actualContentPath = getActualContentPath(path);
+        List<String> targets = this.vanityTargets.remove(actualContentPath);
+
+        if (targets != null) {
+            for (String target : targets) {
+                removeEntriesFromResolvesMap(target, actualContentPath);
             }
             if (vanityCounter.longValue() > 0) {
                 vanityCounter.addAndGet(-2);
             }
             return true;
+        } else {
+            return false;
         }
-        return false;
+    }
+
+    private void removeEntriesFromResolvesMap(String target, String path) {
+        List<MapEntry> entries = Objects.requireNonNullElse(this.resolveMapsMap.get(target),
+                Collections.emptyList());
+
+        // remove all entries for the given path
+        for (Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext();) {
+            MapEntry entry = iterator.next();
+            String redirect = getMapEntryRedirect(entry);
+            if (path.equals(redirect)) {
+                iterator.remove();
+            }
+        }
+        // remove entry when now empty
+        if (entries.isEmpty()) {
+            this.resolveMapsMap.remove(target);
+        }
     }
 
     /**
@@ -280,27 +341,20 @@ public class VanityPathHandler {
 
         if (!initFinished || probablyPresent) {
 
+            // check the cache
             mapEntries = this.resolveMapsMap.get(vanityPath);
 
             if (mapEntries == null) {
+                // try temporary map first
                 if (!initFinished && temporaryResolveMapsMap != null) {
-                    mapEntries = temporaryResolveMapsMap.get(vanityPath);
-                    if (mapEntries != null) {
-                        temporaryResolveMapsMapHits.incrementAndGet();
-                        log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
-                    } else {
-                        temporaryResolveMapsMapMisses.incrementAndGet();
-                    }
+                    mapEntries = getMapEntriesFromTemporaryMap(vanityPath);
                 }
+                // still no entries? Try regular lookup, then update the temporary map
                 if (mapEntries == null) {
-                    Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
-                    mapEntries = mapEntry.get(vanityPath);
-                    if (!initFinished && temporaryResolveMapsMap != null) {
-                        log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
-                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
-                    }
+                    mapEntries = getMapEntriesFromRepository(vanityPath, initFinished);
                 }
             }
+
             if (mapEntries == null && probablyPresent) {
                 // Bloom filter had a false positive
                 this.vanityPathBloomFalsePositives.incrementAndGet();
@@ -308,6 +362,27 @@ public class VanityPathHandler {
         }
 
         return mapEntries == noMapEntries ? null : mapEntries;
+    }
+
+    private @Nullable List<MapEntry> getMapEntriesFromRepository(String vanityPath, boolean initFinished) {
+        Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
+        List<MapEntry> mapEntries = mapEntry.get(vanityPath);
+        if (!initFinished && temporaryResolveMapsMap != null) {
+            log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
+            temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
+        }
+        return mapEntries;
+    }
+
+    private @Nullable List<MapEntry> getMapEntriesFromTemporaryMap(String vanityPath) {
+        List<MapEntry> mapEntries = temporaryResolveMapsMap.get(vanityPath);
+        if (mapEntries != null) {
+            temporaryResolveMapsMapHits.incrementAndGet();
+            log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
+        } else {
+            temporaryResolveMapsMapMisses.incrementAndGet();
+        }
+        return mapEntries;
     }
 
     private byte[] createVanityBloomFilter() {
@@ -375,7 +450,7 @@ public class VanityPathHandler {
      * @param path The resource path to check
      * @return {@code true} if this is valid, {@code false} otherwise
      */
-    boolean isValidVanityPath(final String path){
+    boolean isValidVanityPath(final String path) {
         if (path == null) {
             throw new IllegalArgumentException("Unexpected null path");
         }
@@ -387,71 +462,23 @@ public class VanityPathHandler {
         }
 
         // check allow/deny list
-        if ( this.factory.getVanityPathConfig() != null ) {
+        if (this.factory.getVanityPathConfig() != null) {
             boolean allowed = false;
-            for(final MapConfigurationProvider.VanityPathConfig config : this.factory.getVanityPathConfig()) {
-                if ( path.startsWith(config.prefix) ) {
+            for (MapConfigurationProvider.VanityPathConfig config : this.factory.getVanityPathConfig()) {
+                // process the first config entry matching the path
+                if (path.startsWith(config.prefix)) {
                     allowed = !config.isExclude;
                     break;
                 }
             }
-            if ( !allowed ) {
+            if (!allowed) {
                 log.debug("isValidVanityPath: not valid as not in allow list {}", path);
                 return false;
             }
         }
+
+        // either no allow/deny list, or no config entry found
         return true;
-    }
-
-    /**
-     * Load vanity paths - search for all nodes (except under /jcr:system)
-     * having a sling:vanityPath property
-     */
-    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
-        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
-                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
-
-        Iterator<Resource> it;
-        try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
-        } catch (QuerySyntaxException ex) {
-            log.debug("sort with first() not supported, falling back to base query", ex);
-            it = queryUnpaged("vanity path", baseQueryString, resolver);
-        } catch (UnsupportedOperationException ex) {
-            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged("vanity path", baseQueryString, resolver);
-        }
-
-        long count = 0;
-        long countInScope = 0;
-        long processStart = System.nanoTime();
-
-        while (it.hasNext()) {
-            count += 1;
-            final Resource resource = it.next();
-            final String resourcePath = resource.getPath();
-            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
-                countInScope += 1;
-                final boolean addToCache = isAllVanityPathEntriesCached()
-                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
-            }
-        }
-        long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
-        if (!isAllVanityPathEntriesCached()) {
-            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            }
-        }
-
-        this.vanityResourcesOnStartup.set(count);
-
-        return targetPaths;
     }
 
     private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
@@ -627,34 +654,33 @@ public class VanityPathHandler {
             return false;
         } else {
             List<MapEntry> entries = entryMap.get(key);
-            if (entries == null) {
-                entries = new ArrayList<>();
-                entries.add(entry);
-                entryMap.put(key, entries);
-            } else {
-                List<MapEntry> entriesCopy = new ArrayList<>(entries);
-                entriesCopy.add(entry);
-                // and finally sort list
-                Collections.sort(entriesCopy);
-                entryMap.put(key, entriesCopy);
-                int size = entriesCopy.size();
-                if (size == 10) {
-                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
-                } else if (size == 100) {
-                    log.info(">= 100 MapEntries for {} - check your configuration", key);
-                }
+
+            // copy existing list contents (when not empty), add new entry, then sort
+            List<MapEntry> entriesCopy = new ArrayList<>(entries != null ? entries : List.of());
+            entriesCopy.add(entry);
+            Collections.sort(entriesCopy);
+
+            // update map with new list
+            entryMap.put(key, entriesCopy);
+
+            // warn when list of entries for one key grows
+            int size = entriesCopy.size();
+            if (size == 10) {
+                log.debug(">= 10 MapEntries for {} - check your configuration", key);
+            } else if (size == 100) {
+                log.info(">= 100 MapEntries for {} - check your configuration", key);
             }
+
             return true;
         }
     }
-    private String getActualContentPath(final String path){
-        final String checkPath;
-        if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
-            checkPath = ResourceUtil.getParent(path);
+
+    private String getActualContentPath(final String path) {
+        if (path.endsWith(JCR_CONTENT_SUFFIX)) {
+            return ResourceUtil.getParent(path);
         } else {
-            checkPath = path;
+            return path;
         }
-        return checkPath;
     }
 
     private MapEntry getMapEntry(final String url, final int status, long order,
@@ -668,12 +694,13 @@ public class VanityPathHandler {
         }
     }
 
-    private Iterator<Resource> queryUnpaged(String subject, String query, ResourceResolver resolver) {
-        log.debug("start {} query: {}", subject, query);
+    private Iterator<Resource> queryUnpaged(String query, ResourceResolver resolver) {
+        log.debug("start vanity path query: {}", query);
         long queryStart = System.nanoTime();
         final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end {} query; elapsed {}ms", subject, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        log.debug("end vanity path query; elapsed {}ms ({})", TimeUnit.NANOSECONDS.toMillis(queryElapsed),
+                Duration.ofNanos(queryElapsed));
         return it;
     }
 }
