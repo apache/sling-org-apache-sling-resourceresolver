@@ -1083,12 +1083,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      */
     private @NotNull Map<String,String> getParentResourceTypeMap() {
         @SuppressWarnings("unchecked")
-        Map<String,String> result = (Map<String, String>) getPropertyMap().get(PARENT_RT_CACHEKEY);
-        if (result == null) {
-            result = new HashMap<>();
-            getPropertyMap().put(PARENT_RT_CACHEKEY, result);
-        }
-        return result;
+        return (Map<String, String>) getPropertyMap().computeIfAbsent(PARENT_RT_CACHEKEY, k -> new HashMap<>());
     }
     
     
