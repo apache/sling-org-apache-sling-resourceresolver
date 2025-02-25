@@ -418,10 +418,10 @@ public class VanityPathHandler {
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
-            it = queryUnpaged("vanity path", baseQueryString, resolver);
+            it = queryUnpaged(baseQueryString, resolver);
         } catch (UnsupportedOperationException ex) {
             log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged("vanity path", baseQueryString, resolver);
+            it = queryUnpaged(baseQueryString, resolver);
         }
 
         long count = 0;
@@ -668,12 +668,12 @@ public class VanityPathHandler {
         }
     }
 
-    private Iterator<Resource> queryUnpaged(String subject, String query, ResourceResolver resolver) {
-        log.debug("start {} query: {}", subject, query);
+    private Iterator<Resource> queryUnpaged(String query, ResourceResolver resolver) {
+        log.debug("start vanity path query: {}", query);
         long queryStart = System.nanoTime();
         final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end {} query; elapsed {}ms", subject, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        log.debug("end vanity path query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
         return it;
     }
 }
