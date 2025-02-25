@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -222,30 +223,43 @@ public class VanityPathHandler {
     }
 
     boolean doRemoveVanity(final String path) {
-        final String actualContentPath = getActualContentPath(path);
-        final List <String> l = vanityTargets.remove(actualContentPath);
-        if (l != null){
-            for (final String s : l){
-                final List<MapEntry> entries = this.resolveMapsMap.get(s);
-                if (entries!= null) {
-                    for (final Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext(); ) {
-                        final MapEntry entry = iterator.next();
-                        final String redirect = getMapEntryRedirect(entry);
-                        if (redirect != null && redirect.equals(actualContentPath)) {
-                            iterator.remove();
-                        }
-                    }
+        String actualContentPath = getActualContentPath(path);
+        List<String> targets = this.vanityTargets.remove(actualContentPath);
+
+        if (targets != null) {
+            for (String target : targets) {
+                int count = removeEntriesFromResolvesMap(target, actualContentPath);
+                if (vanityCounter.longValue() >= count) {
+                    vanityCounter.addAndGet(-count);
                 }
-                if (entries!= null && entries.isEmpty()) {
-                    this.resolveMapsMap.remove(s);
-                }
-            }
-            if (vanityCounter.longValue() > 0) {
-                vanityCounter.addAndGet(-2);
             }
             return true;
+        } else {
+            return false;
         }
-        return false;
+    }
+
+    private int removeEntriesFromResolvesMap(String target, String path) {
+        List<MapEntry> entries = Objects.requireNonNullElse(this.resolveMapsMap.get(target),
+                Collections.emptyList());
+
+        int count = 0;
+
+        // remove all entries for the given path
+        for (Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext();) {
+            MapEntry entry = iterator.next();
+            String redirect = getMapEntryRedirect(entry);
+            if (path.equals(redirect)) {
+                iterator.remove();
+                count += 1;
+            }
+        }
+        // remove entry when now empty
+        if (entries.isEmpty()) {
+            this.resolveMapsMap.remove(target);
+        }
+
+        return count;
     }
 
     /**
