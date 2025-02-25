@@ -519,30 +519,46 @@ public class VanityPathHandler {
 
                 final String checkPath = result[1];
 
-                boolean addedEntry;
                 if (addToCache) {
-                    if (redirectName.indexOf('.') > -1) {
-                        // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, createMapEntry(url + "$", httpStatus, vanityOrder, redirect));
+                    MapEntry entry1;
+                    MapEntry entry2;
 
-                        final int idx = redirectName.lastIndexOf('.');
-                        final String extension = redirectName.substring(idx + 1);
+                    if (redirectName.contains(".")) {
+                        // name with extension
+                        String extension = redirectName.substring(redirectName.lastIndexOf('.') + 1);
+
+                        // 1. entry with exact match
+                        entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect);
 
                         // 2. entry with extension
-                        addedEntry = this.addEntry(entryMap, checkPath, createMapEntry(url + "\\." + extension, httpStatus, vanityOrder, redirect));
+                        entry2 = createMapEntry(url + "\\." + extension, httpStatus, vanityOrder, redirect);
                     } else {
+                        // name without extension
+
                         // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, createMapEntry(url + "$", httpStatus, vanityOrder, redirect + ".html"));
+                        entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect + ".html");
 
                         // 2. entry with match supporting selectors and extension
-                        addedEntry = this.addEntry(entryMap, checkPath, createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1"));
+                        entry2 = createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1");
+
                     }
-                    if (addedEntry) {
-                        // 3. keep the path to return
+
+                    int count = 0;
+
+                    if (this.addEntry(entryMap, checkPath, entry1)) {
+                        count += 1;
+                    }
+
+                    if (this.addEntry(entryMap, checkPath, entry2)) {
+                        count += 1;
+                    }
+
+                    if (count > 0) {
+                        // keep the path to return
                         this.updateTargetPaths(targetPaths, redirect, checkPath);
 
                         if (updateCounter) {
-                            vanityCounter.addAndGet(2);
+                            vanityCounter.addAndGet(count);
                         }
 
                         // update bloom filter
