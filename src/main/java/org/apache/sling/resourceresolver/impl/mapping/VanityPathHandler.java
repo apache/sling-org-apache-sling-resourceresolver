@@ -159,8 +159,8 @@ public class VanityPathHandler {
             try {
                 temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
                 execute();
-            } catch (Throwable t) {
-                log.error("vanity path initializer thread terminated with a throwable", t);
+            } catch (Exception ex) {
+                log.error("vanity path initializer thread terminated with an exception", ex);
             }
         }
 
