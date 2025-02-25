@@ -543,11 +543,11 @@ public class VanityPathHandler {
 
                 final String checkPath = result[1];
 
-                MapEntry entry1;
-                MapEntry entry2;
-                int count = 0;
-
                 if (addToCache) {
+                    MapEntry entry1;
+                    MapEntry entry2;
+                    int count = 0;
+
                     if (redirectName.contains(".")) {
                         // name with extension
                         String extension = redirectName.substring(redirectName.lastIndexOf('.') + 1);
