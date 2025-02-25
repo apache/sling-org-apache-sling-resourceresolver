@@ -199,57 +199,6 @@ public class VanityPathHandler {
         }
     }
 
-    /**
-     * Load vanity paths - search for all nodes (except under /jcr:system)
-     * having a sling:vanityPath property
-     */
-    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
-        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
-                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
-
-        Iterator<Resource> it;
-        try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
-        } catch (QuerySyntaxException ex) {
-            log.debug("sort with first() not supported, falling back to base query", ex);
-            it = queryUnpaged(baseQueryString, resolver);
-        } catch (UnsupportedOperationException ex) {
-            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged( baseQueryString, resolver);
-        }
-
-        long count = 0;
-        long countInScope = 0;
-        long processStart = System.nanoTime();
-
-        while (it.hasNext()) {
-            count += 1;
-            final Resource resource = it.next();
-            final String resourcePath = resource.getPath();
-            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
-                countInScope += 1;
-                final boolean addToCache = isAllVanityPathEntriesCached()
-                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
-            }
-        }
-        long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
-        if (!isAllVanityPathEntriesCached()) {
-            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            }
-        }
-
-        this.vanityResourcesOnStartup.set(count);
-
-        return targetPaths;
-    }
-
     boolean doAddVanity(final Resource resource) {
         log.debug("doAddVanity getting {}", resource.getPath());
 
@@ -479,6 +428,57 @@ public class VanityPathHandler {
 
         // either no allow/deny list, or no config entry found
         return true;
+    }
+
+    /**
+     * Load vanity paths - search for all nodes (except under /jcr:system)
+     * having a sling:vanityPath property
+     */
+    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
+        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
+        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
+                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
+
+        Iterator<Resource> it;
+        try {
+            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
+            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
+        } catch (QuerySyntaxException ex) {
+            log.debug("sort with first() not supported, falling back to base query", ex);
+            it = queryUnpaged(baseQueryString, resolver);
+        } catch (UnsupportedOperationException ex) {
+            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+            it = queryUnpaged( baseQueryString, resolver);
+        }
+
+        long count = 0;
+        long countInScope = 0;
+        long processStart = System.nanoTime();
+
+        while (it.hasNext()) {
+            count += 1;
+            final Resource resource = it.next();
+            final String resourcePath = resource.getPath();
+            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
+                countInScope += 1;
+                final boolean addToCache = isAllVanityPathEntriesCached()
+                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
+            }
+        }
+        long processElapsed = System.nanoTime() - processStart;
+        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        if (!isAllVanityPathEntriesCached()) {
+            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
+                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
+                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+            }
+        }
+
+        this.vanityResourcesOnStartup.set(count);
+
+        return targetPaths;
     }
 
     private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
