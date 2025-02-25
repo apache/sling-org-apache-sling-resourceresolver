@@ -647,14 +647,13 @@ public class VanityPathHandler {
             return true;
         }
     }
-    private String getActualContentPath(final String path){
-        final String checkPath;
-        if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
-            checkPath = ResourceUtil.getParent(path);
+
+    private String getActualContentPath(final String path) {
+        if (path.endsWith(JCR_CONTENT_SUFFIX)) {
+            return ResourceUtil.getParent(path);
         } else {
-            checkPath = path;
+            return path;
         }
-        return checkPath;
     }
 
     private MapEntry createMapEntry(final String urlPattern, final int httpStatus, long order,
