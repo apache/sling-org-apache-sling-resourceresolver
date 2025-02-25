@@ -229,10 +229,10 @@ public class VanityPathHandler {
 
         if (targets != null) {
             for (String target : targets) {
-                removeEntriesFromResolvesMap(target, actualContentPath);
-            }
-            if (vanityCounter.longValue() > 0) {
-                vanityCounter.addAndGet(-2);
+                int count = removeEntriesFromResolvesMap(target, actualContentPath);
+                if (vanityCounter.longValue() >= count) {
+                    vanityCounter.addAndGet(-count);
+                }
             }
             return true;
         } else {
@@ -240,9 +240,11 @@ public class VanityPathHandler {
         }
     }
 
-    private void removeEntriesFromResolvesMap(String target, String path) {
+    private int removeEntriesFromResolvesMap(String target, String path) {
         List<MapEntry> entries = Objects.requireNonNullElse(this.resolveMapsMap.get(target),
                 Collections.emptyList());
+
+        int count = 0;
 
         // remove all entries for the given path
         for (Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext();) {
@@ -250,12 +252,15 @@ public class VanityPathHandler {
             String redirect = getMapEntryRedirect(entry);
             if (path.equals(redirect)) {
                 iterator.remove();
+                count += 1;
             }
         }
         // remove entry when now empty
         if (entries.isEmpty()) {
             this.resolveMapsMap.remove(target);
         }
+
+        return count;
     }
 
     /**
