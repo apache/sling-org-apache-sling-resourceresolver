@@ -546,7 +546,6 @@ public class VanityPathHandler {
                 if (addToCache) {
                     MapEntry entry1;
                     MapEntry entry2;
-                    int count = 0;
 
                     if (redirectName.contains(".")) {
                         // name with extension
@@ -556,7 +555,7 @@ public class VanityPathHandler {
                         entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect);
 
                         // 2. entry with extension
-                        entry2 = createMapEntry( url + "\\." + extension, httpStatus, vanityOrder, redirect);
+                        entry2 = createMapEntry(url + "\\." + extension, httpStatus, vanityOrder, redirect);
                     } else {
                         // name without extension
 
@@ -567,6 +566,8 @@ public class VanityPathHandler {
                         entry2 = createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1");
 
                     }
+
+                    int count = 0;
 
                     if (this.addEntry(entryMap, checkPath, entry1)) {
                         count += 1;
