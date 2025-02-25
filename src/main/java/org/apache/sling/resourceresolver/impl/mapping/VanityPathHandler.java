@@ -510,7 +510,7 @@ public class VanityPathHandler {
                 // whether the target is attained by an external redirect or
                 // by an internal redirect is defined by the sling:redirect
                 // property
-                final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
+                final int httpStatus = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
                         PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
                         : -1;
 
@@ -520,19 +520,19 @@ public class VanityPathHandler {
                 if (addToCache) {
                     if (redirectName.indexOf('.') > -1) {
                         // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
+                        this.addEntry(entryMap, checkPath, createMapEntry(url + "$", httpStatus, vanityOrder, redirect));
 
                         final int idx = redirectName.lastIndexOf('.');
                         final String extension = redirectName.substring(idx + 1);
 
                         // 2. entry with extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
+                        addedEntry = this.addEntry(entryMap, checkPath, createMapEntry(url + "\\." + extension, httpStatus, vanityOrder, redirect));
                     } else {
                         // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
+                        this.addEntry(entryMap, checkPath, createMapEntry(url + "$", httpStatus, vanityOrder, redirect + ".html"));
 
                         // 2. entry with match supporting selectors and extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
+                        addedEntry = this.addEntry(entryMap, checkPath, createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1"));
                     }
                     if (addedEntry) {
                         // 3. keep the path to return
@@ -657,13 +657,13 @@ public class VanityPathHandler {
         return checkPath;
     }
 
-    private MapEntry getMapEntry(final String url, final int status, long order,
-                                 final String... redirect) {
+    private MapEntry createMapEntry(final String urlPattern, final int httpStatus, long order,
+                                    final String... redirects) {
         try {
-            return new MapEntry(url, status, false, order, redirect);
+            return new MapEntry(urlPattern, httpStatus, false, order, redirects);
         } catch (IllegalArgumentException iae) {
             // ignore this entry
-            log.debug("ignored entry for {} due to exception", url, iae);
+            log.debug("ignored entry for {} due to exception", urlPattern, iae);
             return null;
         }
     }
