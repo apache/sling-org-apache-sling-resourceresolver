@@ -543,7 +543,8 @@ public class VanityPathHandler {
 
                 final String checkPath = result[1];
 
-                MapEntry entry1, entry2;
+                MapEntry entry1;
+                MapEntry entry2;
                 int count = 0;
 
                 if (addToCache) {
