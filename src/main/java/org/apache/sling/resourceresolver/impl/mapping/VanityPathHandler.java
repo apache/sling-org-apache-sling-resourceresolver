@@ -686,9 +686,9 @@ public class VanityPathHandler {
             // warn when list of entries for one key grows
             int size = entriesCopy.size();
             if (size == 10) {
-                log.debug(">= 10 MapEntries for {} - check your configuration", key);
+                log.debug("10 MapEntries for {} - check your configuration", key);
             } else if (size == 100) {
-                log.info(">= 100 MapEntries for {} - check your configuration", key);
+                log.info("100 MapEntries for {} - check your configuration", key);
             }
 
             return true;
