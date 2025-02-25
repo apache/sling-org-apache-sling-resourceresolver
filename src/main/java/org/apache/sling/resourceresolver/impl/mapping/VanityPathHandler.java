@@ -537,36 +537,50 @@ public class VanityPathHandler {
                 // whether the target is attained by an external redirect or
                 // by an internal redirect is defined by the sling:redirect
                 // property
-                final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
+                final int httpStatus = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
                         PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
                         : -1;
 
                 final String checkPath = result[1];
 
-                boolean addedEntry;
-                if (addToCache) {
-                    if (redirectName.indexOf('.') > -1) {
-                        // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
+                MapEntry entry1, entry2;
+                int count = 0;
 
-                        final int idx = redirectName.lastIndexOf('.');
-                        final String extension = redirectName.substring(idx + 1);
+                if (addToCache) {
+                    if (redirectName.contains(".")) {
+                        // name with extension
+                        String extension = redirectName.substring(redirectName.lastIndexOf('.') + 1);
+
+                        // 1. entry with exact match
+                        entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect);
 
                         // 2. entry with extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
+                        entry2 = createMapEntry( url + "\\." + extension, httpStatus, vanityOrder, redirect);
                     } else {
+                        // name without extension
+
                         // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
+                        entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect + ".html");
 
                         // 2. entry with match supporting selectors and extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
+                        entry2 = createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1");
+
                     }
-                    if (addedEntry) {
-                        // 3. keep the path to return
+
+                    if (this.addEntry(entryMap, checkPath, entry1)) {
+                        count += 1;
+                    }
+
+                    if (this.addEntry(entryMap, checkPath, entry2)) {
+                        count += 1;
+                    }
+
+                    if (count > 0) {
+                        // keep the path to return
                         this.updateTargetPaths(targetPaths, redirect, checkPath);
 
                         if (updateCounter) {
-                            vanityCounter.addAndGet(2);
+                            vanityCounter.addAndGet(count);
                         }
 
                         // update bloom filter
@@ -683,13 +697,13 @@ public class VanityPathHandler {
         }
     }
 
-    private MapEntry getMapEntry(final String url, final int status, long order,
-                                 final String... redirect) {
+    private MapEntry createMapEntry(final String urlPattern, final int httpStatus, long order,
+                                    final String... redirects) {
         try {
-            return new MapEntry(url, status, false, order, redirect);
+            return new MapEntry(urlPattern, httpStatus, false, order, redirects);
         } catch (IllegalArgumentException iae) {
             // ignore this entry
-            log.debug("ignored entry for {} due to exception", url, iae);
+            log.debug("ignored entry for {} due to exception", urlPattern, iae);
             return null;
         }
     }
