@@ -389,7 +389,8 @@ public class VanityPathHandler {
         // check allow/deny list
         if (this.factory.getVanityPathConfig() != null) {
             boolean allowed = false;
-            for(final MapConfigurationProvider.VanityPathConfig config : this.factory.getVanityPathConfig()) {
+            for (MapConfigurationProvider.VanityPathConfig config : this.factory.getVanityPathConfig()) {
+                // process the first config entry matching the path
                 if (path.startsWith(config.prefix)) {
                     allowed = !config.isExclude;
                     break;
@@ -400,6 +401,8 @@ public class VanityPathHandler {
                 return false;
             }
         }
+
+        // either no allow/deny list, or no config entry found
         return true;
     }
 
