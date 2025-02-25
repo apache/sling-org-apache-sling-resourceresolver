@@ -1104,20 +1104,25 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    //SLING-4891
-    public void test_getMapEntryList() throws Exception {
+    public void test_getMapEntryListWithoutExtension() throws Exception {
+        test_getMapEntryList(false);
+    }
+
+    @Test
+    public void test_getMapEntryListWithExtension() throws Exception {
+        test_getMapEntryList(true);
+    }
+
+   private void test_getMapEntryList(boolean withExtension) throws Exception {
 
         List<MapEntry> entries = mapEntries.getResolveMaps();
         assertEquals(0, entries.size());
+        String vpName = "justVanityPath" + (withExtension ? ".txt" : "");
 
-        final Resource justVanityPath = mock(Resource.class,
-                "justVanityPath");
-
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        final Resource justVanityPath = mock(Resource.class, vpName);
+        when(resourceResolver.getResource("/" + vpName)).thenReturn(justVanityPath);
+        when(justVanityPath.getPath()).thenReturn("/" + vpName);
+        when(justVanityPath.getName()).thenReturn(vpName);
 
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath",
                 "/target/justVanityPath"));
@@ -1140,6 +1145,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         entries = mapEntries.getResolveMaps();
         assertEquals(expected, entries.size());
+
+        if (withExtension) {
+            assertEquals("^[^/]+/[^/]+/target/justVanityPath\\.txt", entries.get(0).getPattern());
+            assertEquals("^[^/]+/[^/]+/target/justVanityPath$", entries.get(1).getPattern());
+        } else {
+            assertEquals("^[^/]+/[^/]+/target/justVanityPath(\\..*)", entries.get(0).getPattern());
+            assertEquals("^[^/]+/[^/]+/target/justVanityPath$", entries.get(1).getPattern());
+        }
 
         assertEquals(expected, getVanityCounter(mapEntries).longValue());
 
