@@ -375,7 +375,7 @@ public class VanityPathHandler {
      * @param path The resource path to check
      * @return {@code true} if this is valid, {@code false} otherwise
      */
-    boolean isValidVanityPath(final String path){
+    boolean isValidVanityPath(final String path) {
         if (path == null) {
             throw new IllegalArgumentException("Unexpected null path");
         }
@@ -387,15 +387,15 @@ public class VanityPathHandler {
         }
 
         // check allow/deny list
-        if ( this.factory.getVanityPathConfig() != null ) {
+        if (this.factory.getVanityPathConfig() != null) {
             boolean allowed = false;
             for(final MapConfigurationProvider.VanityPathConfig config : this.factory.getVanityPathConfig()) {
-                if ( path.startsWith(config.prefix) ) {
+                if (path.startsWith(config.prefix)) {
                     allowed = !config.isExclude;
                     break;
                 }
             }
-            if ( !allowed ) {
+            if (!allowed) {
                 log.debug("isValidVanityPath: not valid as not in allow list {}", path);
                 return false;
             }
