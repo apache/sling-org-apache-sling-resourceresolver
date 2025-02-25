@@ -280,27 +280,20 @@ public class VanityPathHandler {
 
         if (!initFinished || probablyPresent) {
 
+            // check the cache
             mapEntries = this.resolveMapsMap.get(vanityPath);
 
             if (mapEntries == null) {
+                // try temporary map first
                 if (!initFinished && temporaryResolveMapsMap != null) {
-                    mapEntries = temporaryResolveMapsMap.get(vanityPath);
-                    if (mapEntries != null) {
-                        temporaryResolveMapsMapHits.incrementAndGet();
-                        log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
-                    } else {
-                        temporaryResolveMapsMapMisses.incrementAndGet();
-                    }
+                    mapEntries = getMapEntriesFromTemporaryMap(vanityPath);
                 }
+                // still no entries? Try regular lookup, then update the temporary map
                 if (mapEntries == null) {
-                    Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
-                    mapEntries = mapEntry.get(vanityPath);
-                    if (!initFinished && temporaryResolveMapsMap != null) {
-                        log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
-                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
-                    }
+                    mapEntries = getMapEntriesFromRepository(vanityPath, initFinished);
                 }
             }
+
             if (mapEntries == null && probablyPresent) {
                 // Bloom filter had a false positive
                 this.vanityPathBloomFalsePositives.incrementAndGet();
@@ -308,6 +301,27 @@ public class VanityPathHandler {
         }
 
         return mapEntries == noMapEntries ? null : mapEntries;
+    }
+
+    private @Nullable List<MapEntry> getMapEntriesFromRepository(String vanityPath, boolean initFinished) {
+        Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
+        List<MapEntry> mapEntries = mapEntry.get(vanityPath);
+        if (!initFinished && temporaryResolveMapsMap != null) {
+            log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
+            temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
+        }
+        return mapEntries;
+    }
+
+    private @Nullable List<MapEntry> getMapEntriesFromTemporaryMap(String vanityPath) {
+        List<MapEntry> mapEntries = temporaryResolveMapsMap.get(vanityPath);
+        if (mapEntries != null) {
+            temporaryResolveMapsMapHits.incrementAndGet();
+            log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
+        } else {
+            temporaryResolveMapsMapMisses.incrementAndGet();
+        }
+        return mapEntries;
     }
 
     private byte[] createVanityBloomFilter() {
