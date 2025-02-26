@@ -1203,7 +1203,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
     }
 
     @Test

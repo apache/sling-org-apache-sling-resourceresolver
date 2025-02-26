@@ -245,7 +245,7 @@ public class MapEntries implements
             for (final String contentPath : ah.aliasMapsMap.keySet()) {
                 if (path.startsWith(contentPath + "/") || path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
-                    changed |= ah.removeAlias(contentPath, path, resolverRefreshed);
+                    changed |= ah.removeAlias(resolver, contentPath, path, this::refreshResolverIfNecessary, resolverRefreshed);
                 }
             }
         }

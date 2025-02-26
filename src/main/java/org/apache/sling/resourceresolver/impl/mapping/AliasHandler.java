@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 public class AliasHandler {
 
@@ -374,7 +375,8 @@ public class AliasHandler {
      * @param path Optional sub path of the vanity path
      * @return {@code true} if a change happened
      */
-    boolean removeAlias(final String contentPath, final String path, final AtomicBoolean resolverRefreshed) {
+    boolean removeAlias(ResourceResolver resolver, final String contentPath, final String path,
+                        final Consumer<AtomicBoolean> refreshResolverIfNecessary, final AtomicBoolean resolverRefreshed) {
         // if path is specified we first need to find out if it is
         // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
         // otherwise we can discard the event
@@ -409,14 +411,14 @@ public class AliasHandler {
         try {
             final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
-                this.refreshResolverIfNecessary(resolverRefreshed);
+                refreshResolverIfNecessary.accept(resolverRefreshed);
 
                 String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
                 if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
                     this.aliasMapsMap.remove(contentPath);
                 }
 
-                Resource containingResource = this.resolver != null ? this.resolver.getResource(resourcePath) : null;
+                Resource containingResource = resolver != null ? resolver.getResource(resourcePath) : null;
 
                 if (containingResource != null) {
                     if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
