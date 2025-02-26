@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -159,8 +160,8 @@ public class VanityPathHandler {
             try {
                 temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
                 execute();
-            } catch (Throwable t) {
-                log.error("vanity path initializer thread terminated with a throwable", t);
+            } catch (Exception ex) {
+                log.error("vanity path initializer thread terminated with an exception", ex);
             }
         }
 
@@ -222,30 +223,43 @@ public class VanityPathHandler {
     }
 
     boolean doRemoveVanity(final String path) {
-        final String actualContentPath = getActualContentPath(path);
-        final List <String> l = vanityTargets.remove(actualContentPath);
-        if (l != null){
-            for (final String s : l){
-                final List<MapEntry> entries = this.resolveMapsMap.get(s);
-                if (entries!= null) {
-                    for (final Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext(); ) {
-                        final MapEntry entry = iterator.next();
-                        final String redirect = getMapEntryRedirect(entry);
-                        if (redirect != null && redirect.equals(actualContentPath)) {
-                            iterator.remove();
-                        }
-                    }
+        String actualContentPath = getActualContentPath(path);
+        List<String> targets = this.vanityTargets.remove(actualContentPath);
+
+        if (targets != null) {
+            for (String target : targets) {
+                int count = removeEntriesFromResolvesMap(target, actualContentPath);
+                if (vanityCounter.longValue() >= count) {
+                    vanityCounter.addAndGet(-count);
                 }
-                if (entries!= null && entries.isEmpty()) {
-                    this.resolveMapsMap.remove(s);
-                }
-            }
-            if (vanityCounter.longValue() > 0) {
-                vanityCounter.addAndGet(-2);
             }
             return true;
+        } else {
+            return false;
         }
-        return false;
+    }
+
+    private int removeEntriesFromResolvesMap(String target, String path) {
+        List<MapEntry> entries = Objects.requireNonNullElse(this.resolveMapsMap.get(target),
+                Collections.emptyList());
+
+        int count = 0;
+
+        // remove all entries for the given path
+        for (Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext();) {
+            MapEntry entry = iterator.next();
+            String redirect = getMapEntryRedirect(entry);
+            if (path.equals(redirect)) {
+                iterator.remove();
+                count += 1;
+            }
+        }
+        // remove entry when now empty
+        if (entries.isEmpty()) {
+            this.resolveMapsMap.remove(target);
+        }
+
+        return count;
     }
 
     /**
@@ -280,27 +294,20 @@ public class VanityPathHandler {
 
         if (!initFinished || probablyPresent) {
 
+            // check the cache
             mapEntries = this.resolveMapsMap.get(vanityPath);
 
             if (mapEntries == null) {
+                // try temporary map first
                 if (!initFinished && temporaryResolveMapsMap != null) {
-                    mapEntries = temporaryResolveMapsMap.get(vanityPath);
-                    if (mapEntries != null) {
-                        temporaryResolveMapsMapHits.incrementAndGet();
-                        log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
-                    } else {
-                        temporaryResolveMapsMapMisses.incrementAndGet();
-                    }
+                    mapEntries = getMapEntriesFromTemporaryMap(vanityPath);
                 }
+                // still no entries? Try regular lookup, then update the temporary map
                 if (mapEntries == null) {
-                    Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
-                    mapEntries = mapEntry.get(vanityPath);
-                    if (!initFinished && temporaryResolveMapsMap != null) {
-                        log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
-                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
-                    }
+                    mapEntries = getMapEntriesFromRepository(vanityPath, initFinished);
                 }
             }
+
             if (mapEntries == null && probablyPresent) {
                 // Bloom filter had a false positive
                 this.vanityPathBloomFalsePositives.incrementAndGet();
@@ -308,6 +315,27 @@ public class VanityPathHandler {
         }
 
         return mapEntries == noMapEntries ? null : mapEntries;
+    }
+
+    private @Nullable List<MapEntry> getMapEntriesFromRepository(String vanityPath, boolean initFinished) {
+        Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
+        List<MapEntry> mapEntries = mapEntry.get(vanityPath);
+        if (!initFinished && temporaryResolveMapsMap != null) {
+            log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
+            temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? noMapEntries : mapEntries);
+        }
+        return mapEntries;
+    }
+
+    private @Nullable List<MapEntry> getMapEntriesFromTemporaryMap(String vanityPath) {
+        List<MapEntry> mapEntries = temporaryResolveMapsMap.get(vanityPath);
+        if (mapEntries != null) {
+            temporaryResolveMapsMapHits.incrementAndGet();
+            log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
+        } else {
+            temporaryResolveMapsMapMisses.incrementAndGet();
+        }
+        return mapEntries;
     }
 
     private byte[] createVanityBloomFilter() {
@@ -344,12 +372,12 @@ public class VanityPathHandler {
                 final Resource resource = i.next();
                 boolean isValid = false;
                 for(final Path sPath : this.factory.getObservationPaths()) {
-                    if ( sPath.matches(resource.getPath())) {
+                    if (sPath.matches(resource.getPath())) {
                         isValid = true;
                         break;
                     }
                 }
-                if ( isValid ) {
+                if (isValid) {
                     totalValid += 1;
                     if (this.vanityPathsProcessed.get()
                             && (this.factory.isMaxCachedVanityPathEntriesStartup()
@@ -375,7 +403,7 @@ public class VanityPathHandler {
      * @param path The resource path to check
      * @return {@code true} if this is valid, {@code false} otherwise
      */
-    boolean isValidVanityPath(final String path){
+    boolean isValidVanityPath(final String path) {
         if (path == null) {
             throw new IllegalArgumentException("Unexpected null path");
         }
@@ -387,19 +415,22 @@ public class VanityPathHandler {
         }
 
         // check allow/deny list
-        if ( this.factory.getVanityPathConfig() != null ) {
+        if (this.factory.getVanityPathConfig() != null) {
             boolean allowed = false;
-            for(final MapConfigurationProvider.VanityPathConfig config : this.factory.getVanityPathConfig()) {
-                if ( path.startsWith(config.prefix) ) {
+            for (MapConfigurationProvider.VanityPathConfig config : this.factory.getVanityPathConfig()) {
+                // process the first config entry matching the path
+                if (path.startsWith(config.prefix)) {
                     allowed = !config.isExclude;
                     break;
                 }
             }
-            if ( !allowed ) {
+            if (!allowed) {
                 log.debug("isValidVanityPath: not valid as not in allow list {}", path);
                 return false;
             }
         }
+
+        // either no allow/deny list, or no config entry found
         return true;
     }
 
@@ -418,10 +449,10 @@ public class VanityPathHandler {
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
-            it = queryUnpaged("vanity path", baseQueryString, resolver);
+            it = queryUnpaged(baseQueryString, resolver);
         } catch (UnsupportedOperationException ex) {
             log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged("vanity path", baseQueryString, resolver);
+            it = queryUnpaged(baseQueryString, resolver);
         }
 
         long count = 0;
@@ -510,36 +541,54 @@ public class VanityPathHandler {
                 // whether the target is attained by an external redirect or
                 // by an internal redirect is defined by the sling:redirect
                 // property
-                final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
+                final int httpStatus = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
                         PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
                         : -1;
 
                 final String checkPath = result[1];
 
-                boolean addedEntry;
                 if (addToCache) {
-                    if (redirectName.indexOf('.') > -1) {
-                        // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect));
+                    MapEntry entry1;
+                    MapEntry entry2;
 
-                        final int idx = redirectName.lastIndexOf('.');
-                        final String extension = redirectName.substring(idx + 1);
+                    if (redirectName.contains(".")) {
+                        // name with extension
+                        String extension = redirectName.substring(redirectName.lastIndexOf('.') + 1);
+
+                        // 1. entry with exact match
+                        entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect);
 
                         // 2. entry with extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, vanityOrder, redirect));
+                        // ("\\." matches a single dot)
+                        entry2 = createMapEntry(url + "\\." + extension, httpStatus, vanityOrder, redirect);
                     } else {
+                        // name without extension
+
                         // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, vanityOrder, redirect + ".html"));
+                        entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect + ".html");
 
                         // 2. entry with match supporting selectors and extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, vanityOrder, redirect + "$1"));
+                        // ("(\\..*)" matches a single dot followed by any characters)
+                        entry2 = createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1");
+
                     }
-                    if (addedEntry) {
-                        // 3. keep the path to return
+
+                    int count = 0;
+
+                    if (this.addEntry(entryMap, checkPath, entry1)) {
+                        count += 1;
+                    }
+
+                    if (this.addEntry(entryMap, checkPath, entry2)) {
+                        count += 1;
+                    }
+
+                    if (count > 0) {
+                        // keep the path to return
                         this.updateTargetPaths(targetPaths, redirect, checkPath);
 
                         if (updateCounter) {
-                            vanityCounter.addAndGet(2);
+                            vanityCounter.addAndGet(count);
                         }
 
                         // update bloom filter
@@ -627,53 +676,52 @@ public class VanityPathHandler {
             return false;
         } else {
             List<MapEntry> entries = entryMap.get(key);
-            if (entries == null) {
-                entries = new ArrayList<>();
-                entries.add(entry);
-                entryMap.put(key, entries);
-            } else {
-                List<MapEntry> entriesCopy = new ArrayList<>(entries);
-                entriesCopy.add(entry);
-                // and finally sort list
-                Collections.sort(entriesCopy);
-                entryMap.put(key, entriesCopy);
-                int size = entriesCopy.size();
-                if (size == 10) {
-                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
-                } else if (size == 100) {
-                    log.info(">= 100 MapEntries for {} - check your configuration", key);
-                }
+
+            // copy existing list contents (when not empty), add new entry, then sort
+            List<MapEntry> entriesCopy = new ArrayList<>(entries != null ? entries : List.of());
+            entriesCopy.add(entry);
+            Collections.sort(entriesCopy);
+
+            // update map with new list
+            entryMap.put(key, entriesCopy);
+
+            // warn when list of entries for one key grows
+            int size = entriesCopy.size();
+            if (size == 10) {
+                log.debug("10 MapEntries for {} - check your configuration", key);
+            } else if (size == 100) {
+                log.info("100 MapEntries for {} - check your configuration", key);
             }
+
             return true;
         }
     }
-    private String getActualContentPath(final String path){
-        final String checkPath;
-        if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
-            checkPath = ResourceUtil.getParent(path);
+
+    private String getActualContentPath(final String path) {
+        if (path.endsWith(JCR_CONTENT_SUFFIX)) {
+            return ResourceUtil.getParent(path);
         } else {
-            checkPath = path;
+            return path;
         }
-        return checkPath;
     }
 
-    private MapEntry getMapEntry(final String url, final int status, long order,
-                                 final String... redirect) {
+    private MapEntry createMapEntry(final String urlPattern, final int httpStatus, long order,
+                                    final String... redirects) {
         try {
-            return new MapEntry(url, status, false, order, redirect);
+            return new MapEntry(urlPattern, httpStatus, false, order, redirects);
         } catch (IllegalArgumentException iae) {
             // ignore this entry
-            log.debug("ignored entry for {} due to exception", url, iae);
+            log.debug("ignored entry for {} due to exception", urlPattern, iae);
             return null;
         }
     }
 
-    private Iterator<Resource> queryUnpaged(String subject, String query, ResourceResolver resolver) {
-        log.debug("start {} query: {}", subject, query);
+    private Iterator<Resource> queryUnpaged(String query, ResourceResolver resolver) {
+        log.debug("start vanity path query: {}", query);
         long queryStart = System.nanoTime();
         final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end {} query; elapsed {}ms", subject, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        log.debug("end vanity path query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
         return it;
     }
 }
