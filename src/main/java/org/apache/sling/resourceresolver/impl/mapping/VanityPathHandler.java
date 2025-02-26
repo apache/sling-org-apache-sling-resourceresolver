@@ -559,6 +559,7 @@ public class VanityPathHandler {
                         entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect);
 
                         // 2. entry with extension
+                        // ("\\." matches a single dot)
                         entry2 = createMapEntry(url + "\\." + extension, httpStatus, vanityOrder, redirect);
                     } else {
                         // name without extension
@@ -567,6 +568,7 @@ public class VanityPathHandler {
                         entry1 = createMapEntry(url + "$", httpStatus, vanityOrder, redirect + ".html");
 
                         // 2. entry with match supporting selectors and extension
+                        // ("(\\..*)" matches a single dot followed by any characters)
                         entry2 = createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1");
 
                     }
