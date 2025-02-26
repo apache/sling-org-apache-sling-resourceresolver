@@ -372,12 +372,12 @@ public class VanityPathHandler {
                 final Resource resource = i.next();
                 boolean isValid = false;
                 for(final Path sPath : this.factory.getObservationPaths()) {
-                    if ( sPath.matches(resource.getPath())) {
+                    if (sPath.matches(resource.getPath())) {
                         isValid = true;
                         break;
                     }
                 }
-                if ( isValid ) {
+                if (isValid) {
                     totalValid += 1;
                     if (this.vanityPathsProcessed.get()
                             && (this.factory.isMaxCachedVanityPathEntriesStartup()
