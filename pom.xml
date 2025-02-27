@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.sling</groupId>
         <artifactId>sling-bundle-parent</artifactId>
-        <version>52</version>
+        <version>62</version>
         <relativePath />
     </parent>
 
@@ -44,6 +44,8 @@
     </scm>
 
     <properties>
+        <sling.java.version>11</sling.java.version>
+        <spotless.check.skip>true</spotless.check.skip>
         <site.jira.version.id>12314286</site.jira.version.id>
         <site.javadoc.exclude>**.internal.**</site.javadoc.exclude>
         <project.build.outputTimestamp>1737986342</project.build.outputTimestamp>
