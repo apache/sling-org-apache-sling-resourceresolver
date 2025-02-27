@@ -77,6 +77,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * Tests related to {@link MapEntries} that are specific to vanity paths.
+ */
 @RunWith(Parameterized.class)
 public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
