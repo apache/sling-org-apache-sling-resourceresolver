@@ -84,11 +84,13 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     public AliasMapEntriesTest() {
     }
 
+    private AutoCloseable mockCloser;
+
     @Override
     @SuppressWarnings({ "unchecked" })
     @Before
     public void setup() throws Exception {
-        MockitoAnnotations.openMocks(this);
+        this.mockCloser = MockitoAnnotations.openMocks(this);
 
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
@@ -127,8 +129,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Override
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         mapEntries.dispose();
+        mockCloser.close();
     }
 
     private static void addResource(MapEntries mapEntries, String path, AtomicBoolean bool) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {

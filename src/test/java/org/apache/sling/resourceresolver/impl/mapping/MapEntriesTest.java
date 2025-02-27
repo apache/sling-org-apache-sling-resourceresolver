@@ -80,11 +80,13 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     public MapEntriesTest() {
     }
 
+    private AutoCloseable mockCloser;
+
     @Override
     @SuppressWarnings({ "unchecked" })
     @Before
     public void setup() throws Exception {
-        MockitoAnnotations.openMocks(this);
+        this.mockCloser = MockitoAnnotations.openMocks(this);
 
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
@@ -115,8 +117,9 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Override
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         mapEntries.dispose();
+        mockCloser.close();
     }
 
     @Test
