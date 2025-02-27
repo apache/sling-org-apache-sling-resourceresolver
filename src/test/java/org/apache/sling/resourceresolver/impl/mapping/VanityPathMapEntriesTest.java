@@ -77,6 +77,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * Tests related to {@link MapEntries} that are specific to vanity paths.
+ */
 @RunWith(Parameterized.class)
 public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
@@ -115,11 +118,13 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         this.isVanityPathCacheInitInBackground = isVanityPathCacheInitInBackground;
     }
 
+    private AutoCloseable mockCloser;
+
     @Override
     @SuppressWarnings({ "unchecked" })
     @Before
     public void setup() throws Exception {
-        MockitoAnnotations.openMocks(this);
+        this.mockCloser = MockitoAnnotations.openMocks(this);
 
         final List<VanityPathConfig> configs = new ArrayList<>();
         configs.add(new VanityPathConfig("/libs/", false));
@@ -215,8 +220,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Override
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         mapEntries.dispose();
+        mockCloser.close();
     }
 
     @Test
