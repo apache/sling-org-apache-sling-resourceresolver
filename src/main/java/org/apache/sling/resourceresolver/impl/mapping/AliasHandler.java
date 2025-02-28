@@ -38,10 +38,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 
 public class AliasHandler {
 
@@ -376,7 +374,7 @@ public class AliasHandler {
      * @return {@code true} if a change happened
      */
     boolean removeAlias(ResourceResolver resolver, final String contentPath, final String path,
-                        final Consumer<AtomicBoolean> refreshResolverIfNecessary, final AtomicBoolean resolverRefreshed) {
+                        final Runnable notifyOfChange) {
         // if path is specified we first need to find out if it is
         // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
         // otherwise we can discard the event
@@ -411,7 +409,7 @@ public class AliasHandler {
         try {
             final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
-                refreshResolverIfNecessary.accept(resolverRefreshed);
+                notifyOfChange.run();
 
                 String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
                 if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
