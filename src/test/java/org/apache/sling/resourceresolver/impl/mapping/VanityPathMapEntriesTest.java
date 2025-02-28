@@ -138,6 +138,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         configs.add(new VanityPathConfig("/redirectingVanityPath", false));
         configs.add(new VanityPathConfig("/redirectingVanityPath301", false));
         configs.add(new VanityPathConfig("/vanityPathOnJcrContent", false));
+        configs.add(new VanityPathConfig("/eventTest", false));
 
         Collections.sort(configs);
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
@@ -1213,7 +1214,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_bg_init_fallback_while_no_ready() {
+    public void test_bg_init_fallback_while_not_ready() {
         // this is only applicable when background init is enabled
         assumeTrue(this.isVanityPathCacheInitInBackground);
 
@@ -1258,7 +1259,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertFalse("VPH should not be ready as it is locked", mapEntries.vph.isReady());
 
         // do a forced lookup while init runs
-        Iterator<MapEntry> mit = mapEntries.vph.getCurrentMapEntryForVanityPath("/foo");
+        Iterator<MapEntry> mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
         assertNotNull(mit);
         assertEquals(1, queryCounter.get());
 
@@ -1271,16 +1272,35 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertNotNull(mit);
         assertEquals(1, queryCounter.get());
 
+        // send a change event; this will be queud while init is running
+        // and then processed later on
+        Resource eventTest = mock(Resource.class, "eventTest");
+        when(eventTest.getName()).thenReturn("eventTest");
+        when(eventTest.getPath()).thenReturn("/eventTest");
+        when(eventTest.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/baa"));
+        Resource eventTestTarget = mock(Resource.class, "eventTestTarget");
+        when(eventTestTarget.getName()).thenReturn("baa");
+        when(eventTestTarget.getPath()).thenReturn("/baa");
+        when(eventTestTarget.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/baa"));
+
+        when(resourceResolver.getResource(eventTest.getPath())).thenReturn(eventTest);
+        when(resourceResolver.getResource(eventTestTarget.getPath())).thenReturn(eventTestTarget);
+
+        mapEntries.onChange(List.of(
+                new ResourceChange(ChangeType.ADDED, eventTest.getPath(), false)
+        ));
+
         // let initializer run, then wait until finished
         lock.unlock();
         waitForBgInit();
 
-        // now one more query should have happened
+        // now one more query should have happened (only direct lookup uses a query)
         assertEquals(2, queryCounter.get());
 
-        // final map contains vp
+        // final map contains both vps (from direct lookup and from event)
         Map<String, List<String>> finalVanityMap = mapEntries.getVanityPathMappings();
-        assertTrue(finalVanityMap.get("/simpleVanityPath").contains("/foo"));
+        assertTrue(finalVanityMap.get("/simpleVanityPath").contains(targetPath));
+        assertTrue(finalVanityMap.get("/eventTest").contains("/baa"));
     }
 
     // utilities for testing vanity path queries
