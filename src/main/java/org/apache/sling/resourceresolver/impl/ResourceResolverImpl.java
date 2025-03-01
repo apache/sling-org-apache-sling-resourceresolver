@@ -102,7 +102,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     private final ResourceResolverContext context;
 
     protected final Map<ResourceTypeInformation,Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
-    
+
+    // Store the resourceSupertype mapping (supertype can be null)
+    protected final Map<String,Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
+
     private Map<String,Object> propertyMap;
 
 
@@ -1058,11 +1061,11 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     public String getParentResourceType(final Resource resource) {
         String resourceSuperType = null;
         if ( resource != null ) {
-            if (getParentResourceTypeMap().containsKey(resource.getPath())) {
-                resourceSuperType = getParentResourceTypeMap().get(resource.getPath());
+            if (parentResourceTypeMap.containsKey(resource.getPath())) {
+                resourceSuperType = parentResourceTypeMap.get(resource.getPath()).orElse(null);
             } else {
                 resourceSuperType = getParentResourceTypeInternal(resource);
-                getParentResourceTypeMap().put(resource.getPath(), resourceSuperType);
+                parentResourceTypeMap.put(resource.getPath(), Optional.ofNullable(resourceSuperType));
             }
         }
         return resourceSuperType;
@@ -1076,17 +1079,6 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         }
         return resourceSuperType;
     }
-    
-    /**
-     * get the map to hold the resourceType - parentResourceType relations
-     * @return the map
-     */
-    private @NotNull Map<String,String> getParentResourceTypeMap() {
-        @SuppressWarnings("unchecked")
-        return (Map<String, String>) getPropertyMap().computeIfAbsent(PARENT_RT_CACHEKEY, k -> new HashMap<>());
-    }
-    
-    
 
     /**
      * @see org.apache.sling.api.resource.ResourceResolver#getParentResourceType(java.lang.String)
@@ -1151,6 +1143,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     public void refresh() {
         this.control.refresh(this.context);
         resourceTypeLookupCache.clear();
+        parentResourceTypeMap.clear();
     }
 
     @Override
