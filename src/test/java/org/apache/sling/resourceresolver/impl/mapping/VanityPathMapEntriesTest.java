@@ -1252,7 +1252,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries.vph.initializeVanityPaths();
 
-        // still no query
+        // still no query as we have blocked the query
         assertEquals(0, queryCounter.get());
 
         // should not be finished until unlocked
@@ -1268,20 +1268,21 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertFalse(intermediateVanityMap.containsKey("/simpleVanityPath"));
 
         // try another forced lookup, should be cached
-        mit = mapEntries.vph.getCurrentMapEntryForVanityPath("/foo");
+        mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
         assertNotNull(mit);
         assertEquals(1, queryCounter.get());
 
-        // send a change event; this will be queud while init is running
-        // and then processed later on
+        // send a change event for a resouce with vanity path;
+        // this will be queued while init is running and then processed later on
         Resource eventTest = mock(Resource.class, "eventTest");
         when(eventTest.getName()).thenReturn("eventTest");
         when(eventTest.getPath()).thenReturn("/eventTest");
         when(eventTest.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/baa"));
+
+        // target for the resource got which we sent the event
         Resource eventTestTarget = mock(Resource.class, "eventTestTarget");
         when(eventTestTarget.getName()).thenReturn("baa");
         when(eventTestTarget.getPath()).thenReturn("/baa");
-        when(eventTestTarget.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/baa"));
 
         when(resourceResolver.getResource(eventTest.getPath())).thenReturn(eventTest);
         when(resourceResolver.getResource(eventTestTarget.getPath())).thenReturn(eventTestTarget);
