@@ -57,7 +57,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -1218,7 +1217,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         // this is only applicable when background init is enabled
         assumeTrue(this.isVanityPathCacheInitInBackground);
 
-        AtomicInteger queryCounter = new AtomicInteger();
+        List<String> queries = Collections.synchronizedList(new ArrayList<>());
 
         Lock lock = new ReentrantLock();
         lock.lock();
@@ -1236,7 +1235,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
             String query = invocation.getArguments()[0].toString();
             try {
                 lock.lock();
-                queryCounter.incrementAndGet();
+                queries.add(query);
                 if (matchesSpecificQueryFor(query, targetPath) || matchesPagedQuery(query)) {
                     return Collections.singleton(simpleVanityResource).iterator();
                 } else {
@@ -1247,13 +1246,13 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        // no query yet
-        assertEquals(0, queryCounter.get());
+        assertEquals("test not started, query counter should be 0, queries were: " +
+                dumpQueries(queries), 0, queries.size());
 
         mapEntries.vph.initializeVanityPaths();
 
-        // still no query as we have blocked the query
-        assertEquals(0, queryCounter.get());
+        assertEquals("test started, but query is blocked, query counter should still be 0, queries were: " +
+                dumpQueries(queries), 0, queries.size());
 
         // should not be finished until unlocked
         assertFalse("VPH should not be ready as it is locked", mapEntries.vph.isReady());
@@ -1261,18 +1260,21 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         // do a forced lookup while init runs
         Iterator<MapEntry> mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
         assertNotNull(mit);
-        assertEquals(1, queryCounter.get());
+        assertEquals("after lookup bypassing background init, exactly 1 query should have happened, but queries were: " +
+                dumpQueries(queries), 1, queries.size());
 
         // intermediate map does not contain vp
         Map<String, List<String>> intermediateVanityMap = mapEntries.getVanityPathMappings();
-        assertFalse(intermediateVanityMap.containsKey("/simpleVanityPath"));
+        assertFalse("while bg init is running, vanity map should not be updated yet",
+                intermediateVanityMap.containsKey("/simpleVanityPath"));
 
         // try another forced lookup, should be cached
         mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
         assertNotNull(mit);
-        assertEquals(1, queryCounter.get());
+        assertEquals("second lookup for the same path during background init should be cached, so no query should have happened, queries were: " +
+                dumpQueries(queries), 1, queries.size());
 
-        // send a change event for a resouce with vanity path;
+        // send a change event for a resource with vanity path;
         // this will be queued while init is running and then processed later on
         Resource eventTest = mock(Resource.class, "eventTest");
         when(eventTest.getName()).thenReturn("eventTest");
@@ -1295,13 +1297,18 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         lock.unlock();
         waitForBgInit();
 
-        // now one more query should have happened (only direct lookup uses a query)
-        assertEquals(2, queryCounter.get());
+        // now one more query should have happened
+        assertEquals("query done by background init, total number should now be 2, but queries were: " +
+                dumpQueries(queries), 2, queries.size());
 
         // final map contains both vps (from direct lookup and from event)
         Map<String, List<String>> finalVanityMap = mapEntries.getVanityPathMappings();
         assertTrue(finalVanityMap.get("/simpleVanityPath").contains(targetPath));
         assertTrue(finalVanityMap.get("/eventTest").contains("/baa"));
+    }
+
+    private static String dumpQueries(List<String> queries) {
+        return queries.size() + " (" + queries + ")";
     }
 
     // utilities for testing vanity path queries
