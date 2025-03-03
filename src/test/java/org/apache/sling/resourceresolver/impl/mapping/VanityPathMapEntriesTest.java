@@ -68,6 +68,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
@@ -165,7 +166,11 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     // wait for background thread to complete
     private void waitForBgInit() {
+        long start = System.currentTimeMillis();
         while (!mapEntries.vph.isReady()) {
+            // give up after five seconds
+            assertFalse("init should be done withing five seconds",
+                    System.currentTimeMillis() - start > 5000);
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
@@ -1281,6 +1286,16 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         // final map contains vp
         Map<String, List<String>> finalVanityMap = mapEntries.getVanityPathMappings();
         assertTrue(finalVanityMap.get("/simpleVanityPath").contains("/foo"));
+    }
+
+    @Test
+    public void test_runtime_exception_during_init() {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).
+                thenThrow(new RuntimeException("forced to check behavior for fatal init errors"));
+        // should not fail
+        mapEntries.vph.initializeVanityPaths();
+        // but state should not change to "ready"
+        assertThrows("init should not be reported to be done", AssertionError.class, () -> waitForBgInit());
     }
 
     // utilities for testing vanity path queries
