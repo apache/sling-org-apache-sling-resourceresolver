@@ -16,41 +16,33 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.sling.resourceresolver.impl.helper;
-
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+package org.apache.sling.resourceresolver.impl.mapping;
 
 /**
- * Abstract base class for an iterator
+ * Utilities related to construction of JCR-SQL2 queries
  */
-public abstract class AbstractIterator<T> implements Iterator<T> {
+public class QueryBuildHelper {
 
-    private T nextElement;
+    private static final String JCR_SYSTEM_PATH = "/jcr:system";
 
-    /** Abstract method to be overriden by subclasses */
-    protected abstract T seek();
-
-    @Override
-    public boolean hasNext() {
-        if (nextElement == null) {
-            nextElement = seek();
-        }
-        return nextElement != null;
+    private QueryBuildHelper() {
+        // no instances for you
     }
 
-    @Override
-    public T next() {
-        if (nextElement == null && !hasNext()) {
-            throw new NoSuchElementException();
-        }
-        final T result = nextElement;
-        nextElement = null;
-        return result;
+    /**
+     * Escape string literal for use in JCR-SQL2 query string
+     * @param input literal to escape
+     * @return escaped literal
+     */
+    public static String escapeString(String input) {
+        return input.replace("'", "''");
     }
 
-    @Override
-    public void remove() {
-        throw new UnsupportedOperationException();
+    /**
+     * Generate query condition to exclude JCR system path
+     * @return query condition
+     */
+    public static String excludeSystemPath() {
+        return String.format("NOT isdescendantnode('%s')", escapeString(JCR_SYSTEM_PATH));
     }
 }

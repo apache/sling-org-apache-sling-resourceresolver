@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -325,15 +324,15 @@ public class ResourceResolverFactoryActivator {
 
                         @Override
                         public void providerAdded() {
-                            factoryRegistrationHandler.maybeRegisterFactory(null, null);
+                            factoryRegistrationHandler.maybeRegisterFactory();
                         }
 
                         @Override
-                        public void providerRemoved(final String name, final String pid, final boolean stateful, final boolean isUsed) {
+                        public void providerRemoved(final boolean stateful, final boolean isUsed) {
                             if ( isUsed && (stateful || config.resource_resolver_providerhandling_paranoid()) ) {
                                 factoryRegistrationHandler.unregisterFactory();
                             }
-                            factoryRegistrationHandler.maybeRegisterFactory(name, pid);
+                            factoryRegistrationHandler.maybeRegisterFactory();
                         }
                     });
         }

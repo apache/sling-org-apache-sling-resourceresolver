@@ -113,11 +113,11 @@ public class ResourceResolverControlTest {
         // sub-provider
         subProvider = Mockito.mock(ResourceProvider.class);
         ResourceProviderInfo info = fixture.registerResourceProvider(subProvider, "/some/path", AuthType.required);
-        ResourceProviderHandler handler = new ResourceProviderHandler(bc, info);
+        ResourceProviderHandler handler = new ResourceProviderHandler(info, bc.getService(info.getServiceReference()));
         // second sub provider
         ResourceProvider<?> subProvider2 = Mockito.mock(ResourceProvider.class);
         ResourceProviderInfo info2 = fixture.registerResourceProvider(subProvider2, "/foo/path", AuthType.required);
-        ResourceProviderHandler handler2 = new ResourceProviderHandler(bc, info2);
+        ResourceProviderHandler handler2 = new ResourceProviderHandler(info2, bc.getService(info2.getServiceReference()));
 
         when(subProvider.getQueryLanguageProvider()).thenReturn(new SimpleQueryLanguageProvider(QL_MOCK, QL_ANOTHER_MOCK) {
             @Override
@@ -147,7 +147,7 @@ public class ResourceResolverControlTest {
 
         rootProvider = mock(ResourceProvider.class);
         ResourceProviderInfo rootInfo = fixture.registerResourceProvider(rootProvider, "/", AuthType.required);
-        ResourceProviderHandler rootHandler = new ResourceProviderHandler(bc, rootInfo);
+        ResourceProviderHandler rootHandler = new ResourceProviderHandler(rootInfo, bc.getService(rootInfo.getServiceReference()));
         when(rootProvider.getQueryLanguageProvider()).thenReturn(new SimpleQueryLanguageProvider(QL_NOOP));
         rootHandler.activate();
 
@@ -670,11 +670,11 @@ public class ResourceResolverControlTest {
         // root provider
         final ResourceProvider<?> rootProvider = Mockito.mock(ResourceProvider.class);
         ResourceProviderInfo info = fixture.registerResourceProvider(rootProvider, "/", AuthType.required);
-        ResourceProviderHandler handler = new ResourceProviderHandler(bc, info);
+        ResourceProviderHandler handler = new ResourceProviderHandler(info, bc.getService(info.getServiceReference()));
         // sub provider
         ResourceProvider<?> subProvider = Mockito.mock(ResourceProvider.class);
         ResourceProviderInfo subInfo = fixture.registerResourceProvider(subProvider, "/libs", AuthType.required, 0, false, ResourceProviderInfo.Mode.PASSTHROUGH);
-        ResourceProviderHandler subHandler = new ResourceProviderHandler(bc, subInfo);
+        ResourceProviderHandler subHandler = new ResourceProviderHandler(subInfo, bc.getService(subInfo.getServiceReference()));
 
         handler.activate();
         subHandler.activate();

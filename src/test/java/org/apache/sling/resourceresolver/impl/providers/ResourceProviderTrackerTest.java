@@ -116,7 +116,7 @@ public class ResourceProviderTrackerTest {
             }
 
             @Override
-            public void providerRemoved(String name, String pid, boolean stateful, boolean used) {
+            public void providerRemoved(boolean stateful, boolean used) {
                 removedCalled.set(true);
             }
 
@@ -170,7 +170,7 @@ public class ResourceProviderTrackerTest {
             }
 
             @Override
-            public void providerRemoved(String name, String pid, boolean stateful, boolean used) {
+            public void providerRemoved(boolean stateful, boolean used) {
                 removedCalled.set(true);
             }
 
@@ -201,8 +201,8 @@ public class ResourceProviderTrackerTest {
         ResourceProvider<Object> rp2 = mock(ResourceProvider.class);
         final ResourceProviderInfo infoOverlay = fixture.registerResourceProvider(rp2, "/", AuthType.no, 1000);
 
-        // check added and removed is called
-        assertTrue(addedCalled.get());
+        // check only removed is called
+        assertFalse(addedCalled.get());
         assertTrue(removedCalled.get());
 
         // verify a single provider
@@ -215,8 +215,8 @@ public class ResourceProviderTrackerTest {
         // unregister overlay provider
         fixture.unregisterResourceProvider(infoOverlay);
 
-        // check added and removed is called
-        assertTrue(addedCalled.get());
+        // check only removed is called
+        assertFalse(addedCalled.get());
         assertTrue(removedCalled.get());
 
         // verify a single provider
@@ -286,14 +286,12 @@ public class ResourceProviderTrackerTest {
 
         @Override
         public void providerAdded() {
-            // TODO Auto-generated method stub
-
+            // do nothing
         }
 
         @Override
-        public void providerRemoved(String name, String pid, boolean stateful, boolean used) {
-            // TODO Auto-generated method stub
-
+        public void providerRemoved(boolean stateful, boolean used) {
+            // do nothing
         }
     }
 }

@@ -35,7 +35,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
         Resource sivOne = setupEtcMapResource("$[config:siv.one]", http,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node"});
 
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-node/", "/content/simple-node/");
         expectedEtcMapping.assertEtcMap("String Interpolation for simple match", mapEntries.getResolveMaps());
     }
@@ -49,7 +49,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
         );
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match"});
 
-        mapEntries.doInit();
+        mapEntries.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-match/", "/content/simple-match/");
         expectedEtcMapping.assertEtcMap("String Interpolation for simple match", mapEntries.getResolveMaps());
     }

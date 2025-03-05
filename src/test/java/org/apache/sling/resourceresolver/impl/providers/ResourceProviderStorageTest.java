@@ -54,9 +54,9 @@ public class ResourceProviderStorageTest {
 
         final List<ResourceProviderHandler> handlers = new ArrayList<>();
         // first in right order
-        handlers.add(new ResourceProviderHandler(null, i3));
-        handlers.add(new ResourceProviderHandler(null, i2));
-        handlers.add(new ResourceProviderHandler(null, i1));
+        handlers.add(new ResourceProviderHandler(i3, null));
+        handlers.add(new ResourceProviderHandler(i2, null));
+        handlers.add(new ResourceProviderHandler(i1, null));
 
         final List<ResourceProviderHandler> correctOrder = new ArrayList<>(handlers);
         assertEquals(correctOrder, new ResourceProviderStorage(handlers).getAdaptableHandlers());

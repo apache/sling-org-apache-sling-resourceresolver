@@ -368,7 +368,7 @@ public class MockedResourceResolverImplTest {
         Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_ADAPTABLE))).thenReturn(true);
 
         ResourceProviderInfo info = new ResourceProviderInfo(ref);
-        final ResourceProviderHandler handler = new ResourceProviderHandler(bc, info);
+        final ResourceProviderHandler handler = new ResourceProviderHandler(info, (ResourceProvider<Object>) bc.getService(ref));
         handler.activate();
         return handler;
     }

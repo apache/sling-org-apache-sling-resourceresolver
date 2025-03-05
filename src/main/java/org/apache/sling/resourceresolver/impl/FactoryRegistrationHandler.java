@@ -81,7 +81,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
 
         if (reRegister) {
             unregisterFactory();
-            maybeRegisterFactory(null, null);
+            maybeRegisterFactory();
         }
     }
 
@@ -107,7 +107,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
     /**
      * Check the preconditions and if it changed, either register factory or unregister
      */
-    void maybeRegisterFactory(final String unavailableName, final String unavailableServicePid) {
+    void maybeRegisterFactory() {
         if (!factoryRegistrationWorker.isShutdown()) {
             LOG.debug("submitting maybeRegisterFactory");
             factoryRegistrationWorker.execute(() -> {
@@ -115,7 +115,7 @@ public class FactoryRegistrationHandler implements AutoCloseable {
                 final ResourceResolverFactoryActivator localActivator;
                 try {
                     configurationLock.lock();
-                    preconditionsOk = factoryPreconditions.checkPreconditions(unavailableName, unavailableServicePid);
+                    preconditionsOk = factoryPreconditions.checkPreconditions();
                     localActivator = activator;
                 } finally {
                     configurationLock.unlock();

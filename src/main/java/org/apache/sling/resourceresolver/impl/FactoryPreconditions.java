@@ -19,7 +19,6 @@
 package org.apache.sling.resourceresolver.impl;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -132,7 +131,7 @@ public class FactoryPreconditions {
         return rps;
     }
 
-    public boolean checkPreconditions(final String unavailableName, final String unavailableServicePid) {
+    public boolean checkPreconditions() {
         boolean canRegister = true;
         for (final RequiredProvider rp : requiredProviders) {
             canRegister = false;
@@ -145,14 +144,6 @@ public class FactoryPreconditions {
                 }
                 @SuppressWarnings("rawtypes") final ServiceReference ref = info.getServiceReference();
                 final Object servicePid = ref.getProperty(Constants.SERVICE_PID);
-                if (unavailableServicePid != null && unavailableServicePid.equals(servicePid)) {
-                    // ignore this service
-                    continue;
-                }
-                if (unavailableName != null && unavailableName.equals(info.getName())) {
-                    // ignore this service
-                    continue;
-                }
                 if (rp.name != null && rp.name.equals(info.getName())) {
                     canRegister = true;
                     break;
