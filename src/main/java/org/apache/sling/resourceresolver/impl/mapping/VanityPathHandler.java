@@ -72,8 +72,8 @@ public class VanityPathHandler {
     final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);
     final AtomicLong vanityPathBloomFalsePositives = new AtomicLong(0);
 
-    private final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
-    private final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
+    final AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
+    final AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
     private final AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);

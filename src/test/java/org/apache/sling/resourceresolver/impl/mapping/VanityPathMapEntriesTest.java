@@ -1251,33 +1251,53 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
             }
         });
 
-        assertEquals("test not started, query counter should be 0, queries were: " +
-                dumpQueries(queries), 0, queries.size());
+        Iterator<MapEntry> mit;
+        int expectedQueryCount = 0;
+        int expectedCacheHits = 0;
+        int expectedCacheMisses = 0;
+
+        checkCounters("before tests",
+                queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
 
         mapEntries.vph.initializeVanityPaths();
+        assertFalse("VPH should not be ready until unblocked", mapEntries.vph.isReady());
+        checkCounters("after launch background it",
+                queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
 
-        assertEquals("test started, but query is blocked, query counter should still be 0, queries were: " +
-                dumpQueries(queries), 0, queries.size());
+        // do a forced lookup while background init runs, but is blocked
+        mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
+        // expectedCacheMisses += 1;
+        expectedQueryCount += 1;
+        assertNotNull("map entry expected from query to repository", mit);
+        checkCounters("after first forced lookup",
+                queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
 
-        // should not be finished until unlocked
-        assertFalse("VPH should not be ready as it is locked", mapEntries.vph.isReady());
-
-        // do a forced lookup while init runs
-        Iterator<MapEntry> mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
-        assertNotNull(mit);
-        assertEquals("after lookup bypassing background init, exactly 1 query should have happened, but queries were: " +
-                dumpQueries(queries), 1, queries.size());
-
-        // intermediate map does not contain vp
+        // intermediate map does not contain vanity path
         Map<String, List<String>> intermediateVanityMap = mapEntries.getVanityPathMappings();
         assertFalse("while bg init is running, vanity map should not be updated yet",
                 intermediateVanityMap.containsKey("/simpleVanityPath"));
 
+        // do a forced lookup for a non-existing resource while init runs
+        mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath + "-notfound");
+        expectedQueryCount += 1;
+        expectedCacheMisses += 1;
+        assertNull("should be null for non-existing resource", mit);
+        checkCounters("after first forced lookup for non-existing resource",
+                queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
+
+        // do a second forced lookup for a non-existing resource while init runs
+        mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath + "-notfound");
+        expectedCacheHits += 1;
+        assertNull("should be null for non-existing resource", mit);
+        checkCounters("after second forced lookup for the same non-existing resource",
+                queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
+
         // try another forced lookup, should be cached
         mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
+        expectedCacheHits += 1;
         assertNotNull(mit);
-        assertEquals("second lookup for the same path during background init should be cached, so no query should have happened, queries were: " +
-                dumpQueries(queries), 1, queries.size());
+        checkCounters("after second forced lookup for existing resource",
+                queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
 
         // send a change event for a resource with vanity path;
         // this will be queued while init is running and then processed later on
@@ -1301,10 +1321,11 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         // let initializer run, then wait until finished
         lock.unlock();
         waitForBgInit();
+        expectedQueryCount += 1;
 
         // now one more query should have happened
-        assertEquals("query done by background init, total number should now be 2, but queries were: " +
-                dumpQueries(queries), 2, queries.size());
+        checkCounters("after initializer run",
+                queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
 
         // final map contains both vps (from direct lookup and from event)
         Map<String, List<String>> finalVanityMap = mapEntries.getVanityPathMappings();
@@ -1312,8 +1333,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertTrue(finalVanityMap.get("/eventTest").contains("/baa"));
     }
 
+    private void checkCounters(String testName, List<String> queries, int expectedQueries, int expectedCacheHits, int expectedCacheMisses) {
+        assertEquals(testName + " - queries: " + dumpQueries(queries), expectedQueries, queries.size());
+        assertEquals(testName + " - cache hits", expectedCacheHits, mapEntries.vph.temporaryResolveMapsMapHits.get());
+        assertEquals(testName + " - cache misses", expectedCacheMisses, mapEntries.vph.temporaryResolveMapsMapMisses.get());
+    }
+
     private static String dumpQueries(List<String> queries) {
-        return queries.size() + " (" + queries + ")";
+        return queries.size() + "queries (" + queries + ")";
     }
 
     @Test
