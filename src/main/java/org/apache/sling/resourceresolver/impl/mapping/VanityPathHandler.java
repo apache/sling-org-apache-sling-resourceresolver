@@ -88,6 +88,7 @@ public class VanityPathHandler {
     private final List<MapEntry> noMapEntries = Collections.emptyList();
 
     // Temporary cache for use while doing async vanity path query
+    private static int TEMPORARY_CACHE_SIZE_LIMIT = 10000;
     private Map<String, List<MapEntry>> temporaryResolveMapsMap;
 
     private final ReentrantLock initializing;
@@ -121,6 +122,7 @@ public class VanityPathHandler {
             if (this.factory.isVanityPathEnabled()) {
                 vanityPathsProcessed.set(false);
                 this.vanityBloomFilter = createVanityBloomFilter();
+                this.temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(TEMPORARY_CACHE_SIZE_LIMIT));
                 VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
 
                 if (this.factory.isVanityPathCacheInitInBackground()) {
@@ -147,8 +149,6 @@ public class VanityPathHandler {
 
     private class VanityPathInitializer implements Runnable {
 
-        private int SIZELIMIT = 10000;
-
         private final MapConfigurationProvider factory;
 
         public VanityPathInitializer(MapConfigurationProvider factory) {
@@ -158,7 +158,6 @@ public class VanityPathHandler {
         @Override
         public void run() {
             try {
-                temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
                 execute();
             } catch (Exception ex) {
                 log.error("vanity path initializer thread terminated with an exception", ex);
@@ -192,7 +191,7 @@ public class VanityPathHandler {
                 log.error("Vanity path init failed", ex);
             } finally {
                 log.debug("dropping temporary resolver map - {}/{} entries, {} hits, {} misses", temporaryResolveMapsMap.size(),
-                        SIZELIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
+                        TEMPORARY_CACHE_SIZE_LIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
                 temporaryResolveMapsMap = null;
             }
         }

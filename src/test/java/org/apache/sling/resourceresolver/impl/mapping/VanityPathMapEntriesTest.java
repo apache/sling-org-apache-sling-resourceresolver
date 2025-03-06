@@ -1266,8 +1266,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         // do a forced lookup while background init runs, but is blocked
         mit = mapEntries.vph.getCurrentMapEntryForVanityPath(targetPath);
-        // expectedCacheMisses += 1;
         expectedQueryCount += 1;
+        expectedCacheMisses += 1;
         assertNotNull("map entry expected from query to repository", mit);
         checkCounters("after first forced lookup",
                 queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
@@ -1333,14 +1333,16 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertTrue(finalVanityMap.get("/eventTest").contains("/baa"));
     }
 
-    private void checkCounters(String testName, List<String> queries, int expectedQueries, int expectedCacheHits, int expectedCacheMisses) {
+    // checks for the expected list of queries and the cache statistics
+    private void checkCounters(String testName, List<String> queries,
+                               int expectedQueries, int expectedCacheHits, int expectedCacheMisses) {
         assertEquals(testName + " - queries: " + dumpQueries(queries), expectedQueries, queries.size());
         assertEquals(testName + " - cache hits", expectedCacheHits, mapEntries.vph.temporaryResolveMapsMapHits.get());
         assertEquals(testName + " - cache misses", expectedCacheMisses, mapEntries.vph.temporaryResolveMapsMapMisses.get());
     }
 
     private static String dumpQueries(List<String> queries) {
-        return queries.size() + "queries (" + queries + ")";
+        return queries.size() + " queries (" + queries + ")";
     }
 
     @Test
@@ -1350,7 +1352,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         // should not fail
         mapEntries.vph.initializeVanityPaths();
         // but state should not change to "ready"
-        assertThrows("init should not be reported to be done", AssertionError.class, () -> waitForBgInit());
+        assertThrows("init should not be reported to be done", AssertionError.class, this::waitForBgInit);
     }
 
     // utilities for testing vanity path queries
