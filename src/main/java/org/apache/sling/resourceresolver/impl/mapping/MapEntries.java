@@ -121,10 +121,6 @@ public class MapEntries implements
      */
     private Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
-    private final AtomicLong aliasResourcesOnStartup;
-    private final AtomicLong detectedConflictingAliases;
-    private final AtomicLong detectedInvalidAliases;
-
     private final ReentrantLock initializing = new ReentrantLock();
 
     private final StringInterpolationProvider stringInterpolationProvider;
@@ -150,10 +146,6 @@ public class MapEntries implements
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
-        this.aliasResourcesOnStartup = new AtomicLong(0);
-        this.detectedConflictingAliases = new AtomicLong(0);
-        this.detectedInvalidAliases = new AtomicLong(0);
-
         this.ah = new AliasHandler(this.factory, this.initializing);
 
         this.useOptimizeAliasResolution = ah.initializeAliases();
@@ -166,10 +158,10 @@ public class MapEntries implements
         this.metrics = metrics;
         if (metrics.isPresent()) {
             // aliases
-            this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(detectedConflictingAliases::get);
-            this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(detectedInvalidAliases::get);
+            this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(ah.detectedConflictingAliases::get);
+            this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(ah.detectedInvalidAliases::get);
             this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
-            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
+            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(ah.aliasResourcesOnStartup::get);
 
             // vanity paths
             this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vph.vanityResourcesOnStartup::get);
@@ -777,9 +769,17 @@ public class MapEntries implements
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
+    final AtomicLong aliasResourcesOnStartup;
+    final AtomicLong detectedConflictingAliases;
+    final AtomicLong detectedInvalidAliases;
+
     public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing) {
         this.factory = factory;
         this.initializing = initializing;
+
+        this.aliasResourcesOnStartup = new AtomicLong(0);
+        this.detectedConflictingAliases = new AtomicLong(0);
+        this.detectedInvalidAliases = new AtomicLong(0);
     }
 
     /**
@@ -1003,7 +1003,7 @@ public class MapEntries implements
         log.info("alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
                 count, TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond, diagnostics);
 
-        MapEntries.this.aliasResourcesOnStartup.set(count);
+        this.aliasResourcesOnStartup.set(count);
 
         return map;
     }
