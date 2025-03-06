@@ -159,7 +159,7 @@ public class MapEntries implements
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
 
-        this.ah = new AliasHandler();
+        this.ah = new AliasHandler(this.factory);
 
         this.useOptimizeAliasResolution = ah.initializeAliases();
 
@@ -767,6 +767,12 @@ public class MapEntries implements
 
  class AliasHandler {
 
+   private final MapConfigurationProvider factory;
+
+    public AliasHandler(MapConfigurationProvider factory) {
+        this.factory = factory;
+    }
+
     /**
      * Actual initializer. Guards itself against concurrent use by using a
      * ReentrantLock. Does nothing if the resource resolver has already been
@@ -778,15 +784,15 @@ public class MapEntries implements
         MapEntries.this.initializing.lock();
         try {
             final ResourceResolver resolver = MapEntries.this.resolver;
-            final MapConfigurationProvider factory = MapEntries.this.factory;
+            final MapConfigurationProvider factory = this.factory;
             if (resolver == null || factory == null) {
-                return MapEntries.this.factory.isOptimizeAliasResolutionEnabled();
+                return this.factory.isOptimizeAliasResolutionEnabled();
             }
 
             List<String> conflictingAliases = new ArrayList<>();
             List<String> invalidAliases = new ArrayList<>();
 
-            boolean isOptimizeAliasResolutionEnabled = MapEntries.this.factory.isOptimizeAliasResolutionEnabled();
+            boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
 
             //optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
@@ -997,7 +1003,7 @@ public class MapEntries implements
      * generate alias query based on configured alias locations
      */
     private String generateAliasQuery() {
-        final Set<String> allowedLocations = MapEntries.this.factory.getAllowedAliasLocations();
+        final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
         StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
 
