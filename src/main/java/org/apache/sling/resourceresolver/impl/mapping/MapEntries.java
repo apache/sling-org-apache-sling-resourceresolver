@@ -771,7 +771,9 @@ public class MapEntries implements
 
     private final ReentrantLock initializing;
 
-     public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing) {
+    private final Logger log = LoggerFactory.getLogger(AliasHandler.class);
+
+    public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing) {
         this.factory = factory;
         this.initializing = initializing;
     }
