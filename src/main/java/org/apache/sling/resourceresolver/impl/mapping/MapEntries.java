@@ -792,9 +792,7 @@ public class MapEntries implements
 
         this.initializing.lock();
         try {
-            final ResourceResolver resolver = MapEntries.this.resolver;
-            final MapConfigurationProvider factory = this.factory;
-            if (resolver == null || factory == null) {
+            if (this.factory == null) {
                 return this.factory.isOptimizeAliasResolutionEnabled();
             }
 
