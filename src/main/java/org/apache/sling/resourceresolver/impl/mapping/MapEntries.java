@@ -75,8 +75,6 @@ public class MapEntries implements
 
     private static final String JCR_CONTENT = "jcr:content";
 
-    private static final String JCR_CONTENT_PREFIX = JCR_CONTENT + "/";
-
     private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
 
     private static final String PROP_REG_EXP = "sling:match";
@@ -766,6 +764,12 @@ public class MapEntries implements
     // Alias handling code
 
  class AliasHandler {
+
+    private static final String JCR_CONTENT = "jcr:content";
+
+    private static final String JCR_CONTENT_PREFIX = JCR_CONTENT + "/";
+
+    private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
 
     private final MapConfigurationProvider factory;
 
