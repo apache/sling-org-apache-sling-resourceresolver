@@ -1261,7 +1261,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries.vph.initializeVanityPaths();
         assertFalse("VPH should not be ready until unblocked", mapEntries.vph.isReady());
-        checkCounters("after launch background it",
+        checkCounters("after launch of background init",
                 queries, expectedQueryCount, expectedCacheHits, expectedCacheMisses);
 
         // do a forced lookup while background init runs, but is blocked
