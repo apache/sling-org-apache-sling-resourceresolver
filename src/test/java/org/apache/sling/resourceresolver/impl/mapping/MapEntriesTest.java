@@ -205,6 +205,6 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
             return Collections.emptyIterator();
         });
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
     }
 }

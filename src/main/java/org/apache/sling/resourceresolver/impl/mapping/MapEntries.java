@@ -136,6 +136,7 @@ public class MapEntries implements
 
     private final boolean useOptimizeAliasResolution;
 
+    final AliasHandler ah;
     final VanityPathHandler vph;
 
     public MapEntries(final MapConfigurationProvider factory,
@@ -158,7 +159,9 @@ public class MapEntries implements
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
 
-        this.useOptimizeAliasResolution = initializeAliases();
+        this.ah = new AliasHandler();
+
+        this.useOptimizeAliasResolution = ah.initializeAliases();
 
         this.registration = registerResourceChangeListener(bundleContext);
 
@@ -206,7 +209,7 @@ public class MapEntries implements
             if (resource != null) {
                 boolean changed = vph.doAddVanity(resource);
                 if (this.useOptimizeAliasResolution && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                    changed |= doAddAlias(resource);
+                    changed |= ah.doAddAlias(resource);
                 }
                 return changed;
             }
@@ -240,7 +243,7 @@ public class MapEntries implements
                         changed |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                     }
                     if (this.useOptimizeAliasResolution) {
-                        changed |= doUpdateAlias(resource);
+                        changed |= ah.doUpdateAlias(resource);
                     }
 
                     return changed;
@@ -268,7 +271,7 @@ public class MapEntries implements
             for (final String contentPath : this.aliasMapsMap.keySet()) {
                 if (path.startsWith(contentPath + "/") || path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
-                    changed |= removeAlias(contentPath, path, resolverRefreshed);
+                    changed |= ah.removeAlias(contentPath, path, resolverRefreshed);
                 }
             }
         }
@@ -377,6 +380,17 @@ public class MapEntries implements
 
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.useOptimizeAliasResolution;
+    }
+
+    @Override
+    public Map<String, List<String>> getVanityPathMappings() {
+        return vph.getVanityPathMappings();
+    }
+
+    @Override
+    public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
+        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
+        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
     }
 
     /**
@@ -701,6 +715,11 @@ public class MapEntries implements
         }
     }
 
+    @Override
+    public void logDisableAliasOptimization() {
+        this.ah.logDisableAliasOptimization(null);
+    }
+
     private MapEntry getMapEntry(final String url, final int status, final String... redirect) {
         return getMapEntry(url, status, 0, redirect);
     }
@@ -746,6 +765,8 @@ public class MapEntries implements
 
     // Alias handling code
 
+ class AliasHandler {
+
     /**
      * Actual initializer. Guards itself against concurrent use by using a
      * ReentrantLock. Does nothing if the resource resolver has already been
@@ -754,24 +775,24 @@ public class MapEntries implements
      */
     protected boolean initializeAliases() {
 
-        this.initializing.lock();
+        MapEntries.this.initializing.lock();
         try {
-            final ResourceResolver resolver = this.resolver;
-            final MapConfigurationProvider factory = this.factory;
+            final ResourceResolver resolver = MapEntries.this.resolver;
+            final MapConfigurationProvider factory = MapEntries.this.factory;
             if (resolver == null || factory == null) {
-                return this.factory.isOptimizeAliasResolutionEnabled();
+                return MapEntries.this.factory.isOptimizeAliasResolutionEnabled();
             }
 
             List<String> conflictingAliases = new ArrayList<>();
             List<String> invalidAliases = new ArrayList<>();
 
-            boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
+            boolean isOptimizeAliasResolutionEnabled = MapEntries.this.factory.isOptimizeAliasResolutionEnabled();
 
             //optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
                     final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver, conflictingAliases, invalidAliases);
-                    this.aliasMapsMap = loadedMap;
+                    MapEntries.this.aliasMapsMap = loadedMap;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -801,13 +822,13 @@ public class MapEntries implements
 
         } finally {
 
-            this.initializing.unlock();
+            MapEntries.this.initializing.unlock();
 
         }
     }
 
     private boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, this.aliasMapsMap, null, null);
+        return loadAlias(resource, MapEntries.this.aliasMapsMap, null, null);
     }
 
     /**
@@ -847,18 +868,18 @@ public class MapEntries implements
             return false;
         }
 
-        this.initializing.lock();
+        MapEntries.this.initializing.lock();
         try {
             final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
-                this.refreshResolverIfNecessary(resolverRefreshed);
+                MapEntries.this.refreshResolverIfNecessary(resolverRefreshed);
 
                 String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
                 if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
-                    this.aliasMapsMap.remove(contentPath);
+                    MapEntries.this.aliasMapsMap.remove(contentPath);
                 }
 
-                Resource containingResource = this.resolver != null ? this.resolver.getResource(resourcePath) : null;
+                Resource containingResource = MapEntries.this.resolver != null ? MapEntries.this.resolver.getResource(resourcePath) : null;
 
                 if (containingResource != null) {
                     if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
@@ -872,7 +893,7 @@ public class MapEntries implements
             }
             return aliasMapEntry != null;
         } finally {
-            this.initializing.unlock();
+            MapEntries.this.initializing.unlock();
         }
     }
 
@@ -894,7 +915,7 @@ public class MapEntries implements
             if (aliasMapEntry != null) {
                 aliasMapEntry.remove(containingResourceName);
                 if (aliasMapEntry.isEmpty()) {
-                    this.aliasMapsMap.remove(parentPath);
+                    MapEntries.this.aliasMapsMap.remove(parentPath);
                 }
             }
 
@@ -916,15 +937,9 @@ public class MapEntries implements
         return false;
     }
 
-    @Override
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
         Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
         return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
-    }
-
-    @Override
-    public Map<String, List<String>> getVanityPathMappings() {
-        return vph.getVanityPathMappings();
     }
 
     /**
@@ -973,7 +988,7 @@ public class MapEntries implements
         log.info("alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
                 count, TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond, diagnostics);
 
-        this.aliasResourcesOnStartup.set(count);
+        MapEntries.this.aliasResourcesOnStartup.set(count);
 
         return map;
     }
@@ -982,7 +997,7 @@ public class MapEntries implements
      * generate alias query based on configured alias locations
      */
     private String generateAliasQuery() {
-        final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
+        final Set<String> allowedLocations = MapEntries.this.factory.getAllowedAliasLocations();
 
         StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
 
@@ -1096,7 +1111,7 @@ public class MapEntries implements
     /**
      * Check alias syntax
      */
-    private static boolean isAliasInvalid(String alias) {
+    private boolean isAliasInvalid(String alias) {
         boolean invalid = alias.equals("..") || alias.equals(".") || alias.isEmpty();
         if (!invalid) {
             for (final char c : alias.toCharArray()) {
@@ -1124,7 +1139,6 @@ public class MapEntries implements
 
     private final long LOGGING_ERROR_PERIOD = 1000 * 60 * 5;
 
-    @Override
     public void logDisableAliasOptimization() {
         this.logDisableAliasOptimization(null);
     }
@@ -1139,4 +1153,5 @@ public class MapEntries implements
             }
         }
     }
+}
 }
