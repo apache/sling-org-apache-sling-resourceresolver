@@ -159,7 +159,7 @@ public class MapEntries implements
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
 
-        this.ah = new AliasHandler(this.factory);
+        this.ah = new AliasHandler(this.factory, this.initializing);
 
         this.useOptimizeAliasResolution = ah.initializeAliases();
 
@@ -767,10 +767,13 @@ public class MapEntries implements
 
  class AliasHandler {
 
-   private final MapConfigurationProvider factory;
+    private final MapConfigurationProvider factory;
 
-    public AliasHandler(MapConfigurationProvider factory) {
+    private final ReentrantLock initializing;
+
+     public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing) {
         this.factory = factory;
+        this.initializing = initializing;
     }
 
     /**
@@ -781,7 +784,7 @@ public class MapEntries implements
      */
     protected boolean initializeAliases() {
 
-        MapEntries.this.initializing.lock();
+        this.initializing.lock();
         try {
             final ResourceResolver resolver = MapEntries.this.resolver;
             final MapConfigurationProvider factory = this.factory;
@@ -828,7 +831,7 @@ public class MapEntries implements
 
         } finally {
 
-            MapEntries.this.initializing.unlock();
+            this.initializing.unlock();
 
         }
     }
@@ -874,7 +877,7 @@ public class MapEntries implements
             return false;
         }
 
-        MapEntries.this.initializing.lock();
+        this.initializing.lock();
         try {
             final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
@@ -899,7 +902,7 @@ public class MapEntries implements
             }
             return aliasMapEntry != null;
         } finally {
-            MapEntries.this.initializing.unlock();
+            this.initializing.unlock();
         }
     }
 
@@ -1144,10 +1147,6 @@ public class MapEntries implements
     private final AtomicLong lastTimeLogged = new AtomicLong(-1);
 
     private final long LOGGING_ERROR_PERIOD = 1000 * 60 * 5;
-
-    public void logDisableAliasOptimization() {
-        this.logDisableAliasOptimization(null);
-    }
 
     private void logDisableAliasOptimization(final Exception e) {
         if ( e != null ) {
