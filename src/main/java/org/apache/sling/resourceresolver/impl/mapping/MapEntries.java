@@ -806,7 +806,7 @@ public class MapEntries implements
             //optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver, conflictingAliases, invalidAliases);
+                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(conflictingAliases, invalidAliases);
                     MapEntries.this.aliasMapsMap = loadedMap;
 
                     // warn if there are more than a few defunct aliases
@@ -961,8 +961,10 @@ public class MapEntries implements
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
-    private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver,
-                                                                     List<String> conflictingAliases, List<String> invalidAliases) {
+    private Map<String, Map<String, Collection<String>>> loadAliases(List<String> conflictingAliases, List<String> invalidAliases) throws LoginException {
+
+        final ResourceResolver resolver = factory
+                .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
 
         final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
         final String baseQueryString = generateAliasQuery();
