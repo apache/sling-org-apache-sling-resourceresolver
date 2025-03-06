@@ -125,9 +125,6 @@ public class MapEntries implements
     private final AtomicLong detectedConflictingAliases;
     private final AtomicLong detectedInvalidAliases;
 
-    // keep track of some defunct aliases for diagnostics (thus size-limited)
-    private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
-
     private final ReentrantLock initializing = new ReentrantLock();
 
     private final StringInterpolationProvider stringInterpolationProvider;
@@ -776,6 +773,9 @@ public class MapEntries implements
     private final ReentrantLock initializing;
 
     private final Logger log = LoggerFactory.getLogger(AliasHandler.class);
+
+    // keep track of some defunct aliases for diagnostics (thus size-limited)
+    private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
     public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing) {
         this.factory = factory;
