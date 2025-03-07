@@ -140,7 +140,7 @@ public class MapEntries implements
         this.mapMaps = Collections.<MapEntry> emptyList();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
-        this.ah = new AliasHandler(this.factory, this.initializing);
+        this.ah = new AliasHandler(this.factory, this.initializing, this::doUpdateConfiguration);
 
         this.useOptimizeAliasResolution = ah.initializeAliases();
 
@@ -768,6 +768,7 @@ public class MapEntries implements
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
+    private Runnable doUpdateConfiguration;
    /**
     * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
     */
@@ -777,10 +778,12 @@ public class MapEntries implements
     final AtomicLong detectedConflictingAliases;
     final AtomicLong detectedInvalidAliases;
 
-    public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing) {
+    public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing,
+                        Runnable doUpdateConfiguration) {
         this.factory = factory;
         this.initializing = initializing;
         this.aliasMapsMap = new ConcurrentHashMap<>();
+        this.doUpdateConfiguration = doUpdateConfiguration;
 
         this.aliasResourcesOnStartup = new AtomicLong(0);
         this.detectedConflictingAliases = new AtomicLong(0);
@@ -837,8 +840,7 @@ public class MapEntries implements
                 }
             }
 
-            doUpdateConfiguration();
-
+            doUpdateConfiguration.run();
             sendChangeEvent();
 
             return isOptimizeAliasResolutionEnabled;
