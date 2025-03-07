@@ -792,8 +792,9 @@ public class MapEntries implements
 
         this.initializing.lock();
         try {
+            // already disposed?
             if (this.factory == null) {
-                return this.factory.isOptimizeAliasResolutionEnabled();
+                return false;
             }
 
             List<String> conflictingAliases = new ArrayList<>();
