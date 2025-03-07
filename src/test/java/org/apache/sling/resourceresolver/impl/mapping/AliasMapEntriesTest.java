@@ -81,6 +81,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     private AtomicLong detectedInvalidAliases;
     private AtomicLong detectedConflictingAliases;
 
+    private static final Runnable NOOP = () -> {};
+
     public AliasMapEntriesTest() {
     }
 
@@ -122,7 +124,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         detectedInvalidAliasesField.setAccessible(true);
         this.detectedInvalidAliases = (AtomicLong) detectedInvalidAliasesField.get(mapEntries.ah);
 
-        final Field detectedConflictingAliasesField =  MapEntries.AliasHandler.class.getDeclaredField("detectedConflictingAliases");
+        final Field detectedConflictingAliasesField = MapEntries.AliasHandler.class.getDeclaredField("detectedConflictingAliases");
         detectedConflictingAliasesField.setAccessible(true);
         this.detectedConflictingAliases = (AtomicLong) detectedConflictingAliasesField.get(mapEntries.ah);
     }
@@ -146,10 +148,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, path, bool);
     }
 
-    private static void removeAlias(MapEntries mapEntries, String contentPath,  String path, AtomicBoolean bool) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.AliasHandler.class.getDeclaredMethod("removeAlias", String.class, String.class, AtomicBoolean.class);
+    private static void removeAlias(MapEntries mapEntries, ResourceResolver resourceResolver, String contentPath, String path, Runnable callback) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        Method method = MapEntries.AliasHandler.class.getDeclaredMethod("removeAlias", ResourceResolver.class, String.class, String.class, Runnable.class);
         method.setAccessible(true);
-        method.invoke(mapEntries.ah, contentPath, path, bool);
+        method.invoke(mapEntries.ah, resourceResolver, contentPath, path, callback);
     }
 
     private static void updateResource(MapEntries mapEntries, String path, AtomicBoolean bool) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
@@ -379,7 +381,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(result.getName()).thenReturn("child");
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
-        removeAlias(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child", NOOP);
 
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertEquals(Collections.emptyMap(), aliasMap);
@@ -659,7 +661,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         when(resourceResolver.getResource("/parent/child")).thenReturn(null);
-        removeAlias(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child", NOOP);
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
@@ -678,7 +680,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         when(resourceResolver.getResource("/parent/child")).thenReturn(null);
-        removeAlias(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child", NOOP);
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
@@ -720,7 +722,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(null);
         when(result.getChild("jcr:content")).thenReturn(null);
-        removeAlias(mapEntries, "/parent", "/parent/child/jcr:content", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child/jcr:content", NOOP);
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
@@ -740,7 +742,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(null);
         when(result.getChild("jcr:content")).thenReturn(null);
-        removeAlias(mapEntries, "/parent", "/parent/child/jcr:content", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child/jcr:content", NOOP);
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
@@ -784,7 +786,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         // remove child jcr:content node
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(null);
         when(childRsrc.getChild("jcr:content")).thenReturn(null);
-        removeAlias(mapEntries, "/parent", "/parent/child/jcr:content", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child/jcr:content", NOOP);
 
         // test with one node
         assertEquals(1, aliasMap.size());
@@ -805,7 +807,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(List.of("alias", "aliasJcrContent"), aliasMapEntry.get("child"));
 
         when(resourceResolver.getResource("/parent/child")).thenReturn(null);
-        removeAlias(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child", NOOP);
         when(resourceResolver.getResource("/parent/child")).thenReturn(childRsrc);
         addResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
 
@@ -826,7 +828,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.getResource("/parent/child/jcr:content")).thenReturn(null);
         when(childRsrc.getChild("jcr:content")).thenReturn(null);
-        removeAlias(mapEntries, "/parent", "/parent/child/jcr:content", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child/jcr:content", NOOP);
 
         assertEquals(1, aliasMap.size());
         aliasMapEntry = mapEntries.getAliasMap("/parent");
@@ -845,7 +847,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMapEntry.size());
 
         when(resourceResolver.getResource("/parent/child")).thenReturn( null);
-        removeAlias(mapEntries, "/parent", "/parent/child", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child", NOOP);
 
         assertEquals(0, aliasMap.size());
         aliasMapEntry = mapEntries.getAliasMap("/parent");
@@ -876,7 +878,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         when(resourceResolver.getResource("/parent")).thenReturn(null);
-        removeAlias(mapEntries, "/", "/parent", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/", "/parent", NOOP);
 
         aliasMapEntry = mapEntries.getAliasMap("/");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
@@ -895,7 +897,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         when(resourceResolver.getResource("/parent")).thenReturn(null);
-        removeAlias(mapEntries, "/", "/parent", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/", "/parent", NOOP);
 
         aliasMapEntry = mapEntries.getAliasMap("/");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
@@ -937,7 +939,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.getResource("/parent/jcr:content")).thenReturn(null);
         when(result.getChild("jcr:content")).thenReturn(null);
-        removeAlias(mapEntries, "/", "/parent/jcr:content", new AtomicBoolean());
+        removeAlias(mapEntries, resourceResolver, "/", "/parent/jcr:content", NOOP);
 
         aliasMapEntry = mapEntries.getAliasMap("/");
         assertEquals(Collections.emptyMap(), aliasMapEntry);

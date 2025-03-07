@@ -252,7 +252,7 @@ public class MapEntries implements
             for (final String contentPath : ah.aliasMapsMap.keySet()) {
                 if (path.startsWith(contentPath + "/") || path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
-                    changed |= ah.removeAlias(contentPath, path, resolverRefreshed);
+                    changed |= ah.removeAlias(resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
                 }
             }
         }
@@ -865,7 +865,8 @@ public class MapEntries implements
      * @param path Optional sub path of the vanity path
      * @return {@code true} if a change happened
      */
-    private boolean removeAlias(final String contentPath, final String path, final AtomicBoolean resolverRefreshed) {
+    private boolean removeAlias(ResourceResolver resolver, final String contentPath, final String path,
+                                final Runnable notifyOfChange) {
         // if path is specified we first need to find out if it is
         // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
         // otherwise we can discard the event
@@ -900,14 +901,14 @@ public class MapEntries implements
         try {
             final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
-                MapEntries.this.refreshResolverIfNecessary(resolverRefreshed);
+                notifyOfChange.run();
 
                 String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
                 if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
                     this.aliasMapsMap.remove(contentPath);
                 }
 
-                Resource containingResource = MapEntries.this.resolver != null ? MapEntries.this.resolver.getResource(resourcePath) : null;
+                Resource containingResource = resolver != null ? resolver.getResource(resourcePath) : null;
 
                 if (containingResource != null) {
                     if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
