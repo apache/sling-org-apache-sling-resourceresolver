@@ -44,7 +44,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1150,5 +1149,13 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
+    }
+
+    @Test
+    public void test_initAliasesAfterDispose() {
+        AliasHandler ah = mapEntries.ah;
+        mapEntries.dispose();
+        boolean enabled = ah.initializeAliases();
+        assertFalse("return value (isOptimizeAliasResolutionEnabled) should be false", enabled);
     }
 }

@@ -117,8 +117,8 @@ public class MapEntries implements
 
     private final boolean useOptimizeAliasResolution;
 
-    final AliasHandler ah;
-    final VanityPathHandler vph;
+    AliasHandler ah;
+    VanityPathHandler vph;
 
     public MapEntries(final MapConfigurationProvider factory,
             final BundleContext bundleContext, 
@@ -278,6 +278,11 @@ public class MapEntries implements
      * Cleans up this class.
      */
     public void dispose() {
+
+        if (this.ah != null) {
+            ah.dispose();
+            ah = null;
+        }
 
         if (this.registration != null) {
             this.registration.unregister();

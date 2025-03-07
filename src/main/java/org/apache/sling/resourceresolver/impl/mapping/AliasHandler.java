@@ -49,7 +49,7 @@ public class AliasHandler {
 
     private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
 
-    private final MapConfigurationProvider factory;
+    private MapConfigurationProvider factory;
 
     private final ReentrantLock initializing;
 
@@ -83,6 +83,10 @@ public class AliasHandler {
         this.detectedInvalidAliases = new AtomicLong(0);
     }
 
+    public void dispose() {
+        this.factory = null;
+    }
+
     /**
      * Actual initializer. Guards itself against concurrent use by using a
      * ReentrantLock. Does nothing if the resource resolver has already been
@@ -93,9 +97,11 @@ public class AliasHandler {
 
         this.initializing.lock();
         try {
+            // already disposed?
             if (this.factory == null) {
-                return this.factory.isOptimizeAliasResolutionEnabled();
+                return false;
             }
+
 
             List<String> conflictingAliases = new ArrayList<>();
             List<String> invalidAliases = new ArrayList<>();
