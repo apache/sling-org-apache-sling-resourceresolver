@@ -116,11 +116,6 @@ public class MapEntries implements
 
     private Collection<MapEntry> mapMaps;
 
-    /**
-     * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
-     */
-    private Map<String, Map<String, Collection<String>>> aliasMapsMap;
-
     private final ReentrantLock initializing = new ReentrantLock();
 
     private final StringInterpolationProvider stringInterpolationProvider;
@@ -143,7 +138,6 @@ public class MapEntries implements
 
         this.resolveMapsMap = new ConcurrentHashMap<>(Map.of(GLOBAL_LIST_KEY, List.of()));
         this.mapMaps = Collections.<MapEntry> emptyList();
-        this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.ah = new AliasHandler(this.factory, this.initializing);
@@ -160,7 +154,7 @@ public class MapEntries implements
             // aliases
             this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(ah.detectedConflictingAliases::get);
             this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(ah.detectedInvalidAliases::get);
-            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
+            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) ah.aliasMapsMap.size());
             this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(ah.aliasResourcesOnStartup::get);
 
             // vanity paths
@@ -255,7 +249,7 @@ public class MapEntries implements
         }
         if (this.useOptimizeAliasResolution) {
             final String pathPrefix = path + "/";
-            for (final String contentPath : this.aliasMapsMap.keySet()) {
+            for (final String contentPath : ah.aliasMapsMap.keySet()) {
                 if (path.startsWith(contentPath + "/") || path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
                     changed |= ah.removeAlias(contentPath, path, resolverRefreshed);
@@ -376,7 +370,7 @@ public class MapEntries implements
 
     @Override
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
-        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
+        Map<String, Collection<String>> aliasMapForParent = ah.aliasMapsMap.get(parentPath);
         return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
     }
 
@@ -769,6 +763,11 @@ public class MapEntries implements
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
+   /**
+    * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
+    */
+    private Map<String, Map<String, Collection<String>>> aliasMapsMap;
+
     final AtomicLong aliasResourcesOnStartup;
     final AtomicLong detectedConflictingAliases;
     final AtomicLong detectedInvalidAliases;
@@ -776,6 +775,7 @@ public class MapEntries implements
     public AliasHandler(MapConfigurationProvider factory, ReentrantLock initializing) {
         this.factory = factory;
         this.initializing = initializing;
+        this.aliasMapsMap = new ConcurrentHashMap<>();
 
         this.aliasResourcesOnStartup = new AtomicLong(0);
         this.detectedConflictingAliases = new AtomicLong(0);
@@ -805,7 +805,7 @@ public class MapEntries implements
             if (isOptimizeAliasResolutionEnabled) {
                 try {
                     final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(conflictingAliases, invalidAliases);
-                    MapEntries.this.aliasMapsMap = loadedMap;
+                    this.aliasMapsMap = loadedMap;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -841,7 +841,7 @@ public class MapEntries implements
     }
 
     private boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, MapEntries.this.aliasMapsMap, null, null);
+        return loadAlias(resource, this.aliasMapsMap, null, null);
     }
 
     /**
@@ -889,7 +889,7 @@ public class MapEntries implements
 
                 String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
                 if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
-                    MapEntries.this.aliasMapsMap.remove(contentPath);
+                    this.aliasMapsMap.remove(contentPath);
                 }
 
                 Resource containingResource = MapEntries.this.resolver != null ? MapEntries.this.resolver.getResource(resourcePath) : null;
@@ -928,7 +928,7 @@ public class MapEntries implements
             if (aliasMapEntry != null) {
                 aliasMapEntry.remove(containingResourceName);
                 if (aliasMapEntry.isEmpty()) {
-                    MapEntries.this.aliasMapsMap.remove(parentPath);
+                    this.aliasMapsMap.remove(parentPath);
                 }
             }
 
