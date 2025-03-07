@@ -1150,7 +1150,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_initAliasesAfterDispose() throws Exception {
+    public void test_initAliasesAfterDispose() {
         mapEntries.dispose();
         boolean enabled = mapEntries.initializeAliases();
         assertFalse("return value (isOptimizeAliasResolutionEnabled) should be false", enabled);
