@@ -64,7 +64,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void root_node_to_content_mapping() throws Exception {
         setupEtcMapResource("localhost.8080", http,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/localhost.8080/", "/content/simple-node/");
         expectedEtcMapping.assertEtcMap("Etc Mapping for simple node", mapEntries.getResolveMaps());
     }
@@ -76,7 +76,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
             PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
         );
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/localhost.8080/", "/content/simple-match/");
         expectedEtcMapping.assertEtcMap("Etc Mapping for simple match", mapEntries.getResolveMaps());
     }
@@ -87,7 +87,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void internal_to_external_node_mapping() throws Exception {
         setupEtcMapResource("example.com.80", http,PROP_REDIRECT_EXTERNAL, "http://www.example.com/");
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/example.com.80/", "http://www.example.com/");
         expectedEtcMapping.assertEtcMap("Etc Mapping for internal to external based on node", mapEntries.getResolveMaps());
     }
@@ -96,7 +96,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void internal_root_to_content_node_mapping() throws Exception {
         setupEtcMapResource("www.example.com.80", http,PROP_REDIRECT_INTERNAL, "/example");
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping().addEtcMapEntry("^http/www.example.com.80/", true, "/example/");
         expectedEtcMapping.assertEtcMap("Etc Mapping for internal root to content", mapEntries.getResolveMaps());
     }
@@ -108,7 +108,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
             PROP_REDIRECT_EXTERNAL, "http://www.example.com/"
         );
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping().addEtcMapEntry("^http/.+\\.example\\.com\\.80", false, "http://www.example.com/");
         expectedEtcMapping.assertEtcMap("Etc Mapping for host redirect match mapping", mapEntries.getResolveMaps());
     }
@@ -123,7 +123,7 @@ public class EtcMappingMapEntriesTest extends AbstractMappingMapEntriesTest {
         setupEtcMapResource("gateway", localhost, PROP_REDIRECT_INTERNAL, "http://gbiv.com");
         setupEtcMapResource("(stories)", localhost, PROP_REDIRECT_INTERNAL, "/anecdotes/$1");
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping()
             .addEtcMapEntry("^http/localhost\\.\\d*", true, "/content")
             .addEtcMapEntry("^http/localhost\\.\\d*/cgi-bin/", true, "/scripts/")
