@@ -122,8 +122,8 @@ public class MapEntries implements
 
     private final boolean useOptimizeAliasResolution;
 
-    final AliasHandler ah;
-    final VanityPathHandler vph;
+    AliasHandler ah;
+    VanityPathHandler vph;
 
     public MapEntries(final MapConfigurationProvider factory,
             final BundleContext bundleContext, 
@@ -281,6 +281,11 @@ public class MapEntries implements
      * Cleans up this class.
      */
     public void dispose() {
+
+        if (this.ah != null) {
+            ah.dispose();
+            ah = null;
+        }
 
         if (this.registration != null) {
             this.registration.unregister();
@@ -754,7 +759,7 @@ public class MapEntries implements
 
     private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
 
-    private final MapConfigurationProvider factory;
+    private MapConfigurationProvider factory;
 
     private final ReentrantLock initializing;
 
@@ -782,7 +787,11 @@ public class MapEntries implements
         this.detectedInvalidAliases = new AtomicLong(0);
     }
 
-    /**
+    public void dispose() {
+        this.factory = null;
+    }
+
+   /**
      * Actual initializer. Guards itself against concurrent use by using a
      * ReentrantLock. Does nothing if the resource resolver has already been
      * null-ed.
