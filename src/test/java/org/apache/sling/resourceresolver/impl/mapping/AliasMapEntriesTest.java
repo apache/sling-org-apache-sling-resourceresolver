@@ -1148,4 +1148,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertEquals(Collections.emptyMap(), aliasMapEntry);
     }
+
+    @Test
+    public void test_initAliasesAfterDispose() throws Exception {
+        mapEntries.dispose();
+        boolean enabled = mapEntries.initializeAliases();
+        assertFalse("return value (isOptimizeAliasResolutionEnabled) should be false", enabled);
+    }
 }
