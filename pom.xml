@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>org.apache.sling.resourceresolver</artifactId>
-    <version>1.12.6</version>
+    <version>1.12.7-SNAPSHOT</version>
 
     <name>Apache Sling Resource Resolver</name>
     <description>
@@ -46,7 +46,7 @@
     <properties>
         <site.jira.version.id>12314286</site.jira.version.id>
         <site.javadoc.exclude>**.internal.**</site.javadoc.exclude>
-        <project.build.outputTimestamp>1742815336</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1742815428</project.build.outputTimestamp>
     </properties>
 
     <build>
