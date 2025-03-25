@@ -120,9 +120,9 @@ public abstract class AbstractMappingMapEntriesTest {
         setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {});
         mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
-        final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMapsMap");
+        final Field aliasMapField = MapEntries.AliasHandler.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
-        this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
+        this.aliasMap = (Map<String, Map<String, String>>) aliasMapField.get(mapEntries.ah);
     }
 
     List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {
