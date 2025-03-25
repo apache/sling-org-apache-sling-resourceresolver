@@ -129,7 +129,7 @@ public class MapEntry implements Comparable<MapEntry> {
     public static String toURI(final String uriPath) {
         for (int i = 0; i < PATH_TO_URL_MATCH.length; i++) {
             final Matcher m = PATH_TO_URL_MATCH[i].matcher(uriPath);
-            if (m.find()) {
+            if (m.matches()) {
                 return m.replaceAll(PATH_TO_URL_REPLACEMENT[i]);
             }
         }
