@@ -1,0 +1,11 @@
+{
+  "jenkins": {
+     "starterITExecutions": {
+        "13-SNAPSHOT": {
+           "jdks": [8, 11, 17]
+         }
+      },
+     "additionalMavenParams": "-DskipTests -DskipITs",
+     "sonarQubeEnabled": false
+   }
+}
