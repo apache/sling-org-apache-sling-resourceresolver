@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.util.Collections;
@@ -38,7 +37,7 @@ import org.jetbrains.annotations.NotNull;
 import org.osgi.service.component.annotations.Component;
 
 @Component(service = ResourceProvider.class)
-public class InMemoryResourceProvider extends ResourceProvider<Void>{
+public class InMemoryResourceProvider extends ResourceProvider<Void> {
 
     private final Map<String, Map<String, Object>> resources = new HashMap<>();
 
@@ -49,12 +48,11 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
     }
 
     @Override
-    public Resource getResource(ResolveContext<Void> ctx, String path, ResourceContext resourceContext,
-            Resource parent) {
+    public Resource getResource(
+            ResolveContext<Void> ctx, String path, ResourceContext resourceContext, Resource parent) {
 
         Map<String, Object> vals = resources.get(path);
-        if ( vals == null )
-            return null;
+        if (vals == null) return null;
 
         return new InMemoryResource(path, ctx.getResourceResolver(), vals);
     }
@@ -63,9 +61,9 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
     public Iterator<Resource> listChildren(ResolveContext<Void> ctx, Resource parent) {
 
         return resources.entrySet().stream()
-            .filter( e -> parent.getPath().equals(ResourceUtil.getParent(e.getKey())) )
-            .map( e -> (Resource) new InMemoryResource(e.getKey(), ctx.getResourceResolver(), e.getValue()) )
-            .iterator();
+                .filter(e -> parent.getPath().equals(ResourceUtil.getParent(e.getKey())))
+                .map(e -> (Resource) new InMemoryResource(e.getKey(), ctx.getResourceResolver(), e.getValue()))
+                .iterator();
     }
 
     public void putResource(String path) {
@@ -97,7 +95,7 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
 
             @Override
             public String[] getSupportedLanguages(@NotNull ResolveContext<Void> ctx) {
-                return new String[] { "sql", "JCR-SQL2" };
+                return new String[] {"sql", "JCR-SQL2"};
             }
 
             @Override
@@ -105,24 +103,26 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
 
                 // we don't explicitly filter paths under jcr:system, but we don't expect to have such resources either
                 // and this stub provider is not the proper location to test JCR queries
-                if  ( "JCR-SQL2".equals(language) && "SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL".equals(query) ) {
-                    return resourcesWithProperty(ctx, "sling:alias")
-                        .iterator();
+                if ("JCR-SQL2".equals(language)
+                        && "SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL"
+                                .equals(query)) {
+                    return resourcesWithProperty(ctx, "sling:alias").iterator();
                 }
 
-                if ( "JCR-SQL2".equals(language) && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) > '' ORDER BY FIRST([sling:vanityPath])".equals(query) ) {
+                if ("JCR-SQL2".equals(language)
+                        && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL AND FIRST([sling:vanityPath]) > '' ORDER BY FIRST([sling:vanityPath])"
+                                .equals(query)) {
                     if (supportsPagedQuery) {
-                        return resourcesWithProperty(ctx, "sling:vanityPath")
-                                .iterator();
-                    }
-                    else {
+                        return resourcesWithProperty(ctx, "sling:vanityPath").iterator();
+                    } else {
                         throw new QuerySyntaxException("paged queries not supported", query, language);
                     }
                 }
 
-                if ( "JCR-SQL2".equals(language) && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL".equals(query) ) {
-                        return resourcesWithProperty(ctx, "sling:vanityPath")
-                                .iterator();
+                if ("JCR-SQL2".equals(language)
+                        && "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:vanityPath] IS NOT NULL"
+                                .equals(query)) {
+                    return resourcesWithProperty(ctx, "sling:vanityPath").iterator();
                 }
 
                 throw new UnsupportedOperationException("Unsupported query: '" + query + "'");
@@ -130,9 +130,9 @@ public class InMemoryResourceProvider extends ResourceProvider<Void>{
 
             private List<Resource> resourcesWithProperty(ResolveContext<Void> ctx, String propertyName) {
                 return resources.entrySet().stream()
-                    .filter( e -> e.getValue().containsKey(propertyName) )
-                    .map( e -> getResource(ctx, e.getKey(), null, null))
-                    .collect(Collectors.toList());
+                        .filter(e -> e.getValue().containsKey(propertyName))
+                        .map(e -> getResource(ctx, e.getKey(), null, null))
+                        .collect(Collectors.toList());
             }
 
             @Override

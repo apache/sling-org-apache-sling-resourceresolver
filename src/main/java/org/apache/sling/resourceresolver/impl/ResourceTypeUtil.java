@@ -41,8 +41,10 @@ public class ResourceTypeUtil {
      * @param anotherResourceType Another resource type to compare with {@link resourceType}.
      * @return <code>true</code> if the resource type equals the given resource type.
      */
-    public static boolean areResourceTypesEqual(@NotNull String resourceType, @NotNull String anotherResourceType, @NotNull List<String> searchPath) {
-        return relativizeResourceType(resourceType, searchPath).equals(relativizeResourceType(anotherResourceType, searchPath));
+    public static boolean areResourceTypesEqual(
+            @NotNull String resourceType, @NotNull String anotherResourceType, @NotNull List<String> searchPath) {
+        return relativizeResourceType(resourceType, searchPath)
+                .equals(relativizeResourceType(anotherResourceType, searchPath));
     }
 
     /**
@@ -62,5 +64,4 @@ public class ResourceTypeUtil {
         }
         return resourceType;
     }
-
 }

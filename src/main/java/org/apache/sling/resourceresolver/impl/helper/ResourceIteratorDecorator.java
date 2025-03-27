@@ -31,8 +31,7 @@ public class ResourceIteratorDecorator implements Iterator<Resource> {
 
     private final Iterator<Resource> iterator;
 
-    public ResourceIteratorDecorator(final ResourceDecoratorTracker tracker,
-            final Iterator<Resource> iterator) {
+    public ResourceIteratorDecorator(final ResourceDecoratorTracker tracker, final Iterator<Resource> iterator) {
         this.tracker = tracker;
         this.iterator = iterator;
     }

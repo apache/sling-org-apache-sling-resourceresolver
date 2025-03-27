@@ -18,6 +18,13 @@
  */
 package org.apache.sling.resourceresolver.impl.console;
 
+import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -31,13 +38,6 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.request.ResponseUtil;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -77,7 +77,8 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
 
     private final transient BundleContext bundleContext;
 
-    public ResourceResolverWebConsolePlugin(final BundleContext context,
+    public ResourceResolverWebConsolePlugin(
+            final BundleContext context,
             final CommonResourceResolverFactoryImpl resolverFactory,
             final RuntimeService runtimeService) {
         this.resolverFactory = resolverFactory;
@@ -85,8 +86,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         this.bundleContext = context;
 
         Dictionary<String, Object> props = new Hashtable<String, Object>();
-        props.put(Constants.SERVICE_DESCRIPTION,
-                "Apache Sling Resource Resolver Web Console Plugin");
+        props.put(Constants.SERVICE_DESCRIPTION, "Apache Sling Resource Resolver Web Console Plugin");
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
         props.put(Constants.SERVICE_PID, getClass().getName());
         props.put("felix.webconsole.label", "jcrresolver");
@@ -106,9 +106,8 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
     }
 
     @Override
-    protected void doGet(final HttpServletRequest request,
-            final HttpServletResponse response) throws ServletException,
-    IOException {
+    protected void doGet(final HttpServletRequest request, final HttpServletResponse response)
+            throws ServletException, IOException {
         final String msg = request.getParameter(PAR_MSG);
         final String test;
         if (msg != null) {
@@ -133,8 +132,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         pw.println("<tr class='content'>");
         pw.println("<td class='content'>Namespace Mangling</td>");
         pw.print("<td class='content' colspan='2'>");
-        pw.print(resolverFactory.isMangleNamespacePrefixes() ? "Enabled"
-                : "Disabled");
+        pw.print(resolverFactory.isMangleNamespacePrefixes() ? "Enabled" : "Disabled");
         pw.print("</td>");
         pw.println("</tr>");
         pw.println("<tr class='content'>");
@@ -168,10 +166,8 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
             pw.print(ResponseUtil.escapeXml(test));
         }
         pw.println("' class='input' size='50'>");
-        pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT
-                + "' value='Resolve' class='submit'>");
-        pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT
-                + "' value='Map' class='submit'>");
+        pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT + "' value='Resolve' class='submit'>");
+        pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT + "' value='Map' class='submit'>");
         pw.print("</form>");
         pw.print("</td>");
         pw.println("</tr>");
@@ -205,12 +201,11 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         dumpDTOsHtml(pw);
 
         pw.println("</table>");
-
     }
 
     @Override
-    protected void doPost(HttpServletRequest request,
-            HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
         final String test = request.getParameter(ATTR_TEST);
         String msg = null;
@@ -221,7 +216,8 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                 // prepare the request for the resource resolver
                 HttpServletRequest helper = new ResolverRequest(request, test);
 
-                resolver = resolverFactory.getServiceResourceResolver(this.resolverFactory.getServiceUserAuthenticationInfo("console"));
+                resolver = resolverFactory.getServiceResourceResolver(
+                        this.resolverFactory.getServiceUserAuthenticationInfo("console"));
 
                 // map or resolve as instructed
                 Object result;
@@ -249,43 +245,34 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                     resolver.close();
                 }
             }
-
         }
 
         // finally redirect
-        final String path = request.getContextPath() + request.getServletPath()
-        + request.getPathInfo();
+        final String path = request.getContextPath() + request.getServletPath() + request.getPathInfo();
         final String redirectTo;
         if (msg == null) {
             redirectTo = path;
         } else {
-            redirectTo = path + '?' + PAR_MSG + '=' + encodeParam(msg) + '&'
-                    + PAR_TEST + '=' + encodeParam(test);
+            redirectTo = path + '?' + PAR_MSG + '=' + encodeParam(msg) + '&' + PAR_TEST + '=' + encodeParam(test);
         }
         response.sendRedirect(redirectTo);
     }
 
     private static String mappingsToString(Collection<String> allMappings) {
-        if ( allMappings.size() == 0 )
-            return ""; // should not happen
-        if ( allMappings.size() == 1)
-            return allMappings.iterator().next();
+        if (allMappings.size() == 0) return ""; // should not happen
+        if (allMappings.size() == 1) return allMappings.iterator().next();
 
         StringBuilder out = new StringBuilder();
-        for ( Iterator<String> it = allMappings.iterator(); it.hasNext(); ) {
-            if ( out.length() == 0 ) {
+        for (Iterator<String> it = allMappings.iterator(); it.hasNext(); ) {
+            if (out.length() == 0) {
                 out.append("Primary: ").append(it.next());
-                if ( it.hasNext() )
-                    out.append(". Other candidates:");
-            }
-            else
-                out.append(' ').append(it.next()).append(',');
+                if (it.hasNext()) out.append(". Other candidates:");
+            } else out.append(' ').append(it.next()).append(',');
         }
 
         out.setCharAt(out.length() - 1, '.');
 
         return out.toString();
-
     }
 
     private String encodeParam(final String value) {
@@ -315,8 +302,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
 
     // ---------- internal
 
-    private void dumpMapHtml(PrintWriter pw, String title, String description,
-            Collection<MapEntry> list) {
+    private void dumpMapHtml(PrintWriter pw, String title, String description, Collection<MapEntry> list) {
 
         titleHtml(pw, title, description);
 
@@ -355,7 +341,6 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
                 pw.print(String.valueOf(entry.getStatus()));
             }
             pw.println("</td></tr>");
-
         }
     }
 
@@ -379,8 +364,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         pw.println("</tr>");
     }
 
-    private void dumpMapText(PrintWriter pw, String title,
-            Collection<MapEntry> list) {
+    private void dumpMapText(PrintWriter pw, String title, Collection<MapEntry> list) {
 
         pw.println(title);
 
@@ -389,8 +373,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
 
         for (MapEntry entry : list) {
             final List<String> redir = Arrays.asList(entry.getRedirect());
-            final String status = entry.isInternal() ? "internal"
-                    : "external: " + entry.getStatus();
+            final String status = entry.isInternal() ? "internal" : "external: " + entry.getStatus();
             pw.printf(format, entry.getPattern(), redir, status);
         }
     }
@@ -398,13 +381,13 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
     @SuppressWarnings("rawtypes")
     private ServiceReference<ResourceProvider<?>> getServiceReference(final long id) {
         try {
-            final Collection<ServiceReference<ResourceProvider>> refs = this.bundleContext.getServiceReferences(ResourceProvider.class,
-                    "(" + Constants.SERVICE_ID + "=" + String.valueOf(id) + ")");
-            if ( refs != null && !refs.isEmpty() ) {
+            final Collection<ServiceReference<ResourceProvider>> refs = this.bundleContext.getServiceReferences(
+                    ResourceProvider.class, "(" + Constants.SERVICE_ID + "=" + String.valueOf(id) + ")");
+            if (refs != null && !refs.isEmpty()) {
                 final ServiceReference rp = refs.iterator().next();
                 return rp;
             }
-        } catch ( final InvalidSyntaxException ise) {
+        } catch (final InvalidSyntaxException ise) {
             // ignore
         }
         return null;
@@ -421,17 +404,17 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         pw.println("</tr>");
 
         final RuntimeDTO runtimeDTO = this.runtimeService.getRuntimeDTO();
-        for(final ResourceProviderDTO dto : runtimeDTO.providers) {
+        for (final ResourceProviderDTO dto : runtimeDTO.providers) {
             // get service reference
             final ServiceReference<ResourceProvider<?>> ref = this.getServiceReference(dto.serviceId);
             final StringBuilder sb = new StringBuilder();
-            if ( dto.name != null ) {
+            if (dto.name != null) {
                 sb.append(dto.name);
                 sb.append(' ');
             } else {
                 sb.append("<unnamed> ");
             }
-            if ( ref != null ) {
+            if (ref != null) {
                 sb.append("(serviceId = ");
                 sb.append(dto.serviceId);
                 sb.append(", bundleId = ");
@@ -471,7 +454,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
             pw.println("</td></tr>");
         }
 
-        if ( runtimeDTO.failedProviders.length > 0 ) {
+        if (runtimeDTO.failedProviders.length > 0) {
             titleHtml(pw, "Failed Resource Providers", "Lists all failed providers.");
 
             pw.println("<tr class='content'>");
@@ -480,17 +463,17 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
             pw.println("<th class='content'>Reason</th>");
             pw.println("</tr>");
 
-            for(final ResourceProviderFailureDTO dto : runtimeDTO.failedProviders) {
+            for (final ResourceProviderFailureDTO dto : runtimeDTO.failedProviders) {
                 // get service reference
                 final ServiceReference<ResourceProvider<?>> ref = this.getServiceReference(dto.serviceId);
                 final StringBuilder sb = new StringBuilder();
-                if ( dto.name != null ) {
+                if (dto.name != null) {
                     sb.append(dto.name);
                     sb.append(' ');
                 } else {
                     sb.append("<unnamed> ");
                 }
-                if ( ref != null ) {
+                if (ref != null) {
                     sb.append("(serviceId = ");
                     sb.append(dto.serviceId);
                     sb.append(", bundleId = ");
@@ -521,17 +504,17 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         pw.printf(format, "Provider", "Path", "Configuration");
 
         final RuntimeDTO runtimeDTO = this.runtimeService.getRuntimeDTO();
-        for(final ResourceProviderDTO dto : runtimeDTO.providers) {
+        for (final ResourceProviderDTO dto : runtimeDTO.providers) {
             // get service reference
             final ServiceReference<ResourceProvider<?>> ref = this.getServiceReference(dto.serviceId);
             final StringBuilder sb = new StringBuilder();
-            if ( dto.name != null ) {
+            if (dto.name != null) {
                 sb.append(dto.name);
                 sb.append(' ');
             } else {
                 sb.append("<unnamed> ");
             }
-            if ( ref != null ) {
+            if (ref != null) {
                 sb.append("(serviceId = ");
                 sb.append(dto.serviceId);
                 sb.append(", bundleId = ");
@@ -556,21 +539,21 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
             pw.printf(format, sb.toString(), dto.path, config.toString());
         }
         pw.println();
-        if ( runtimeDTO.failedProviders.length > 0 ) {
+        if (runtimeDTO.failedProviders.length > 0) {
             pw.println("Failed Resource Providers");
             pw.printf(format, "Provider", "Path", "Reason");
 
-            for(final ResourceProviderFailureDTO dto : runtimeDTO.failedProviders) {
+            for (final ResourceProviderFailureDTO dto : runtimeDTO.failedProviders) {
                 // get service reference
                 final ServiceReference<ResourceProvider<?>> ref = this.getServiceReference(dto.serviceId);
                 final StringBuilder sb = new StringBuilder();
-                if ( dto.name != null ) {
+                if (dto.name != null) {
                     sb.append(dto.name);
                     sb.append(' ');
                 } else {
                     sb.append("<unnamed> ");
                 }
-                if ( ref != null ) {
+                if (ref != null) {
                     sb.append("(serviceId = ");
                     sb.append(dto.serviceId);
                     sb.append(", bundleId = ");
@@ -602,8 +585,7 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
 
         private final URI uri;
 
-        public ResolverRequest(HttpServletRequest request, String uriString)
-                throws URIException {
+        public ResolverRequest(HttpServletRequest request, String uriString) throws URIException {
             super(request);
             uri = new URI(uriString, false);
         }
@@ -636,5 +618,4 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
             }
         }
     }
-
 }

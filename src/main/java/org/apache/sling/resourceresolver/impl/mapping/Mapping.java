@@ -68,8 +68,7 @@ public class Mapping {
     // 1 - external path prefix
     // 2 - direction (Outbound (>), Bidirectional (:), Inbound (>))
     // 3 - internap path prefix
-    private static final Pattern CONFIG_SPLITTER = Pattern
-            .compile("(.+)([:<>])(.+)");
+    private static final Pattern CONFIG_SPLITTER = Pattern.compile("(.+)([:<>])(.+)");
 
     /** the 'from' (inside, repository) mapping */
     private final String from;
@@ -96,14 +95,14 @@ public class Mapping {
         this.fromLength = this.from.length();
         this.toLength = this.to.length();
 
-        this.direction = ">".equals(parts[1]) ? Mapping.INBOUND : ("<"
-                .equals(parts[1]) ? Mapping.OUTBOUND : Mapping.BOTH);
+        this.direction =
+                ">".equals(parts[1]) ? Mapping.INBOUND : ("<".equals(parts[1]) ? Mapping.OUTBOUND : Mapping.BOTH);
     }
 
     @Override
     public String toString() {
-        return "Mapping (from=" + from + ", to=" + to + ", direction="
-                + direction + ", lengths=" + fromLength + "/" + toLength;
+        return "Mapping (from=" + from + ", to=" + to + ", direction=" + direction + ", lengths=" + fromLength + "/"
+                + toLength;
     }
 
     /**
@@ -112,7 +111,7 @@ public class Mapping {
      * <code>uriPath</code> does not start with the <em>to</em> prefix, or if
      * this mapping is not defined as a 'inward' mapping, <code>null</code> is
      * returned.
-     * 
+     *
      * @param uriPath
      *            The URI path for which to replace the <em>to</em> prefix by
      *            the <em>from</em> prefix.
@@ -121,8 +120,9 @@ public class Mapping {
      *         or {@link #mapsInbound()} returns <code>false</code>.
      */
     public String mapUri(String uriPath) {
-        return (this.mapsInbound() && uriPath.startsWith(this.to)) ? this.from
-                + uriPath.substring(this.toLength) : null;
+        return (this.mapsInbound() && uriPath.startsWith(this.to))
+                ? this.from + uriPath.substring(this.toLength)
+                : null;
     }
 
     /**
@@ -131,7 +131,7 @@ public class Mapping {
      * <code>uriPath</code> does not start with the <em>from</em> prefix, or if
      * this mapping is not defined as a 'outward' mapping, <code>null</code> is
      * returned.
-     * 
+     *
      * @param handle
      *            The URI path for which to replace the <em>from</em> prefix by
      *            the <em>to</em> prefix.
@@ -140,8 +140,9 @@ public class Mapping {
      *         or {@link #mapsOutbound()} returns <code>false</code>.
      */
     public String mapHandle(String handle) {
-        return (this.mapsOutbound() && handle.startsWith(this.from)) ? this.to
-                + handle.substring(this.fromLength) : null;
+        return (this.mapsOutbound() && handle.startsWith(this.from))
+                ? this.to + handle.substring(this.fromLength)
+                : null;
     }
 
     // TODO: temporary
@@ -156,7 +157,7 @@ public class Mapping {
 
     /**
      * Checks, if this mapping is defined for inbound mapping.
-     * 
+     *
      * @return <code>true</code> if this mapping is defined for inbound mapping;
      *         <code>false</code> otherwise
      */
@@ -166,7 +167,7 @@ public class Mapping {
 
     /**
      * Checks, if this mapping is defined for outbound mapping.
-     * 
+     *
      * @return <code>true</code> if this mapping is defined for outbound
      *         mapping; <code>false</code> otherwise
      */
@@ -190,19 +191,17 @@ public class Mapping {
         // standard case of mapping <path>[<:>]<path>
         Matcher mapMatch = CONFIG_SPLITTER.matcher(map);
         if (mapMatch.matches()) {
-            return new String[] { mapMatch.group(1), mapMatch.group(2),
-                    mapMatch.group(3) };
+            return new String[] {mapMatch.group(1), mapMatch.group(2), mapMatch.group(3)};
         }
 
         // backwards compatibility using "-" instead of ":"
         int dash = map.indexOf('-');
         if (dash > 0) {
-            return new String[] { map.substring(0, dash),
-                    map.substring(dash, dash + 1),
-                    map.substring(dash + 1, map.length()) };
+            return new String[] {
+                map.substring(0, dash), map.substring(dash, dash + 1), map.substring(dash + 1, map.length())
+            };
         }
 
-        return new String[] { map, "-", map };
+        return new String[] {map, "-", map};
     }
-
 }

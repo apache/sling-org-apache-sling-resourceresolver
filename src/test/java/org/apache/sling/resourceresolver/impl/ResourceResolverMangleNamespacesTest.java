@@ -18,15 +18,12 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.junit.Assert.assertEquals;
+import javax.jcr.Session;
 
 import java.util.Arrays;
 import java.util.Iterator;
 
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.NotNull;
-import javax.jcr.Session;
-
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
@@ -34,13 +31,15 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorageP
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import jakarta.servlet.http.HttpServletRequest;
+import static org.junit.Assert.assertEquals;
 
 /** Test ResourceResolverImpl.mangleNamespaces methods */
 public class ResourceResolverMangleNamespacesTest {
@@ -73,8 +72,8 @@ public class ResourceResolverMangleNamespacesTest {
 
             @SuppressWarnings("unchecked")
             @Override
-            public @Nullable <AdapterType> AdapterType adaptTo(final  @NotNull ResolveContext<Object> ctx,
-                    final @NotNull Class<AdapterType> type) {
+            public @Nullable <AdapterType> AdapterType adaptTo(
+                    final @NotNull ResolveContext<Object> ctx, final @NotNull Class<AdapterType> type) {
                 if (type.equals(Session.class)) {
                     return (AdapterType) activeSession;
                 } else {
@@ -83,7 +82,8 @@ public class ResourceResolverMangleNamespacesTest {
             }
 
             @Override
-            public Resource getResource(ResolveContext<Object> ctx, String path, ResourceContext rCtx, Resource parent) {
+            public Resource getResource(
+                    ResolveContext<Object> ctx, String path, ResourceContext rCtx, Resource parent) {
                 return null;
             }
 
@@ -99,7 +99,8 @@ public class ResourceResolverMangleNamespacesTest {
 
             @Override
             public ResourceProviderStorage getResourceProviderStorage() {
-                return new ResourceProviderStorage(Arrays.asList(MockedResourceResolverImplTest.createRPHandler(rp, "rp1", 0, "/")));
+                return new ResourceProviderStorage(
+                        Arrays.asList(MockedResourceResolverImplTest.createRPHandler(rp, "rp1", 0, "/")));
             }
         });
     }
@@ -116,14 +117,14 @@ public class ResourceResolverMangleNamespacesTest {
 
     @Test
     public void testUnmangleHttp() {
-        final Resource r = rr.resolve((HttpServletRequest)null, "http://example.com/path/_with_mangling");
+        final Resource r = rr.resolve((HttpServletRequest) null, "http://example.com/path/_with_mangling");
         assertEquals("/http://example.com/path/with:mangling", r.getPath());
     }
 
     @Test
     public void testUnmangleNoSession() {
         activeSession = null;
-        final Resource r = rr.resolve((HttpServletRequest)null, "http://example.com/path/_with_mangling");
+        final Resource r = rr.resolve((HttpServletRequest) null, "http://example.com/path/_with_mangling");
         assertEquals("/http://example.com/path/_with_mangling", r.getPath());
     }
 
@@ -134,7 +135,7 @@ public class ResourceResolverMangleNamespacesTest {
 
     @Test
     public void testUnmanglePath() {
-        final Resource r = rr.resolve((HttpServletRequest)null, "/example.com/path/_with_mangling");
+        final Resource r = rr.resolve((HttpServletRequest) null, "/example.com/path/_with_mangling");
         assertEquals("/example.com/path/with:mangling", r.getPath());
     }
 

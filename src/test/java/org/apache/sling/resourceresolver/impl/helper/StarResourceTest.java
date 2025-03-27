@@ -18,33 +18,37 @@
  */
 package org.apache.sling.resourceresolver.impl.helper;
 
-import static org.junit.Assert.assertEquals;
-
 import org.apache.sling.api.resource.ResourceMetadata;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /** Test the StarResource */
 public class StarResourceTest {
 
-	private void assertSplit(String requestPath, String path, String pathInfo) {
-		final ResourceMetadata rm = StarResource.getResourceMetadata(requestPath);
-		assertEquals("For requestPath=" + requestPath + ", path matches", path, rm.getResolutionPath());
-		assertEquals("For requestPath=" + requestPath + ", pathInfo matches", pathInfo, rm.getResolutionPathInfo());
-	}
+    private void assertSplit(String requestPath, String path, String pathInfo) {
+        final ResourceMetadata rm = StarResource.getResourceMetadata(requestPath);
+        assertEquals("For requestPath=" + requestPath + ", path matches", path, rm.getResolutionPath());
+        assertEquals("For requestPath=" + requestPath + ", pathInfo matches", pathInfo, rm.getResolutionPathInfo());
+    }
 
-	@Test public void testSimplePath() {
-		assertSplit("/foo/*.html", "/foo/*", ".html");
-	}
+    @Test
+    public void testSimplePath() {
+        assertSplit("/foo/*.html", "/foo/*", ".html");
+    }
 
-	@Test public void testNoExtension() {
-		assertSplit("/foo/*", "/foo/*", "");
-	}
+    @Test
+    public void testNoExtension() {
+        assertSplit("/foo/*", "/foo/*", "");
+    }
 
-	@Test public void testNoStar() {
-		assertSplit("/foo/bar.html", "/foo/bar.html", null);
-	}
+    @Test
+    public void testNoStar() {
+        assertSplit("/foo/bar.html", "/foo/bar.html", null);
+    }
 
-	@Test public void testTwoStars() {
-		assertSplit("/foo/*.html/*.txt", "/foo/*", ".html/*.txt");
-	}
+    @Test
+    public void testTwoStars() {
+        assertSplit("/foo/*.html/*.txt", "/foo/*", ".html/*.txt");
+    }
 }

@@ -18,18 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.apache.commons.collections4.map.LRUMap;
-import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.QuerySyntaxException;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.ValueMap;
-import org.apache.sling.api.resource.path.Path;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -46,6 +34,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
+
+import org.apache.commons.collections4.map.LRUMap;
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.QuerySyntaxException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.path.Path;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * All things related to the handling of vanity paths.
@@ -95,8 +95,11 @@ public class VanityPathHandler {
 
     private final Runnable drain;
 
-    public VanityPathHandler(MapConfigurationProvider factory, Map<String, List<MapEntry>> resolveMapsMap,
-                             ReentrantLock initializing, Runnable drain) {
+    public VanityPathHandler(
+            MapConfigurationProvider factory,
+            Map<String, List<MapEntry>> resolveMapsMap,
+            ReentrantLock initializing,
+            Runnable drain) {
         this.factory = factory;
         this.resolveMapsMap = resolveMapsMap;
         this.initializing = initializing;
@@ -165,8 +168,8 @@ public class VanityPathHandler {
         }
 
         private void execute() {
-            try (ResourceResolver resolver = factory
-                    .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
+            try (ResourceResolver resolver =
+                    factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
 
                 long initStart = System.nanoTime();
                 log.debug("vanity path initialization - start");
@@ -182,16 +185,24 @@ public class VanityPathHandler {
                 VanityPathHandler.this.drain.run();
 
                 long initElapsed = System.nanoTime() - initStart;
-                long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
+                long resourcesPerSecond = (vanityResourcesOnStartup.get()
+                        * TimeUnit.SECONDS.toNanos(1)
+                        / (initElapsed == 0 ? 1 : initElapsed));
 
                 log.info(
                         "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
-                        vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
+                        vanityResourcesOnStartup.get(),
+                        TimeUnit.NANOSECONDS.toMillis(initElapsed),
+                        resourcesPerSecond);
             } catch (LoginException ex) {
                 log.error("Vanity path init failed", ex);
             } finally {
-                log.debug("dropping temporary resolver map - {}/{} entries, {} hits, {} misses", temporaryResolveMapsMap.size(),
-                        TEMPORARY_CACHE_SIZE_LIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
+                log.debug(
+                        "dropping temporary resolver map - {}/{} entries, {} hits, {} misses",
+                        temporaryResolveMapsMap.size(),
+                        TEMPORARY_CACHE_SIZE_LIMIT,
+                        temporaryResolveMapsMapHits.get(),
+                        temporaryResolveMapsMapMisses.get());
                 temporaryResolveMapsMap = null;
             }
         }
@@ -200,7 +211,8 @@ public class VanityPathHandler {
     boolean doAddVanity(final Resource resource) {
         log.debug("doAddVanity getting {}", resource.getPath());
 
-        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
+        boolean updateTheCache = isAllVanityPathEntriesCached()
+                || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
         return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
     }
 
@@ -239,13 +251,12 @@ public class VanityPathHandler {
     }
 
     private int removeEntriesFromResolvesMap(String target, String path) {
-        List<MapEntry> entries = Objects.requireNonNullElse(this.resolveMapsMap.get(target),
-                Collections.emptyList());
+        List<MapEntry> entries = Objects.requireNonNullElse(this.resolveMapsMap.get(target), Collections.emptyList());
 
         int count = 0;
 
         // remove all entries for the given path
-        for (Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext();) {
+        for (Iterator<MapEntry> iterator = entries.iterator(); iterator.hasNext(); ) {
             MapEntry entry = iterator.next();
             String redirect = getMapEntryRedirect(entry);
             if (path.equals(redirect)) {
@@ -338,7 +349,8 @@ public class VanityPathHandler {
     }
 
     private byte[] createVanityBloomFilter() {
-        return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
+        return BloomFilterUtils.createFilter(
+                VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
     }
 
     private boolean isAllVanityPathEntriesCached() {
@@ -360,7 +372,8 @@ public class VanityPathHandler {
                 QueryBuildHelper.escapeString(vanityPath),
                 QueryBuildHelper.escapeString(vanityPath.substring(1)));
 
-        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
+        try (ResourceResolver queryResolver =
+                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
             long totalCount = 0;
             long totalValid = 0;
             log.debug("start vanityPath query: {}", queryString);
@@ -370,7 +383,7 @@ public class VanityPathHandler {
                 totalCount += 1;
                 final Resource resource = i.next();
                 boolean isValid = false;
-                for(final Path sPath : this.factory.getObservationPaths()) {
+                for (final Path sPath : this.factory.getObservationPaths()) {
                     if (sPath.matches(resource.getPath())) {
                         isValid = true;
                         break;
@@ -380,12 +393,12 @@ public class VanityPathHandler {
                     totalValid += 1;
                     if (this.vanityPathsProcessed.get()
                             && (this.factory.isMaxCachedVanityPathEntriesStartup()
-                            || this.isAllVanityPathEntriesCached()
-                            || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
+                                    || this.isAllVanityPathEntriesCached()
+                                    || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
                         loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
                         entryMap = resolveMapsMap;
                     } else {
-                        final Map <String, List<String>> targetPaths = new HashMap<>();
+                        final Map<String, List<String>> targetPaths = new HashMap<>();
                         loadVanityPath(resource, entryMap, targetPaths, true, false);
                     }
                 }
@@ -439,12 +452,14 @@ public class VanityPathHandler {
      */
     private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
-                + " WHERE " + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
+        final String baseQueryString =
+                "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]" + " WHERE "
+                        + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
         Iterator<Resource> it;
         try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
+            final String queryStringWithSort =
+                    baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
             it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
@@ -470,12 +485,21 @@ public class VanityPathHandler {
             }
         }
         long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
+        log.debug(
+                "processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms",
+                count,
+                countInScope,
+                TimeUnit.NANOSECONDS.toMillis(processElapsed));
         if (!isAllVanityPathEntriesCached()) {
             if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
+                log.warn(
+                        "Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.",
+                        countInScope,
+                        this.factory.getMaxCachedVanityPathEntries());
             } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
+                log.info(
+                        "Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})",
+                        countInScope, this.factory.getMaxCachedVanityPathEntries());
             }
         }
 
@@ -496,7 +520,12 @@ public class VanityPathHandler {
      *
      * @return first vanity path or {@code null}
      */
-    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache, boolean updateCounter) {
+    private String loadVanityPath(
+            final Resource resource,
+            final Map<String, List<MapEntry>> entryMap,
+            final Map<String, List<String>> targetPaths,
+            boolean addToCache,
+            boolean updateCounter) {
 
         if (!isValidVanityPath(resource.getPath())) {
             return null;
@@ -540,8 +569,9 @@ public class VanityPathHandler {
                 // whether the target is attained by an external redirect or
                 // by an internal redirect is defined by the sling:redirect
                 // property
-                final int httpStatus = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
-                        PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
+                final int httpStatus = props.get(PROP_REDIRECT_EXTERNAL, false)
+                        ? props.get(
+                                PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
                         : -1;
 
                 final String checkPath = result[1];
@@ -569,7 +599,6 @@ public class VanityPathHandler {
                         // 2. entry with match supporting selectors and extension
                         // ("(\\..*)" matches a single dot followed by any characters)
                         entry2 = createMapEntry(url + "(\\..*)", httpStatus, vanityOrder, redirect + "$1");
-
                     }
 
                     int count = 0;
@@ -650,7 +679,7 @@ public class VanityPathHandler {
             log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
         }
 
-        return new String[] { prefix, path };
+        return new String[] {prefix, path};
     }
 
     // return vanity path entry iterator from cache when complete and ready, otherwise from
@@ -704,8 +733,8 @@ public class VanityPathHandler {
         }
     }
 
-    private MapEntry createMapEntry(final String urlPattern, final int httpStatus, long order,
-                                    final String... redirects) {
+    private MapEntry createMapEntry(
+            final String urlPattern, final int httpStatus, long order, final String... redirects) {
         try {
             return new MapEntry(urlPattern, httpStatus, false, order, redirects);
         } catch (IllegalArgumentException iae) {

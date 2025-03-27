@@ -18,11 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.providers;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,6 +39,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.osgi.service.event.EventAdmin;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+
 public class ResourceProviderTrackerTest {
 
     @Rule
@@ -52,7 +52,7 @@ public class ResourceProviderTrackerTest {
     private EventAdmin eventAdmin;
     private ResourceProviderInfo rp2Info;
     private Fixture fixture;
-    
+
     @Before
     public void prepare() throws Exception {
         eventAdmin = context.getService(EventAdmin.class);
@@ -72,7 +72,8 @@ public class ResourceProviderTrackerTest {
         fixture.registerResourceProvider(rp3, "invalid", AuthType.no);
 
         ResourceProviderTracker tracker = new ResourceProviderTracker();
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
+        tracker.setObservationReporterGenerator(
+                new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
         tracker.activate(context.bundleContext(), eventAdmin, new DoNothingChangeListener());
         return tracker;
     }
@@ -102,7 +103,8 @@ public class ResourceProviderTrackerTest {
     @Test
     public void testActivationDeactivation() throws Exception {
         final ResourceProviderTracker tracker = new ResourceProviderTracker();
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
+        tracker.setObservationReporterGenerator(
+                new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
 
         // create boolean markers for the listener
         final AtomicBoolean addedCalled = new AtomicBoolean(false);
@@ -119,7 +121,6 @@ public class ResourceProviderTrackerTest {
             public void providerRemoved(boolean stateful, boolean used) {
                 removedCalled.set(true);
             }
-
         };
         // activate and check that no listener is called yet
         tracker.activate(context.bundleContext(), eventAdmin, listener);
@@ -156,7 +157,8 @@ public class ResourceProviderTrackerTest {
     @Test
     public void testReactivation() throws Exception {
         final ResourceProviderTracker tracker = new ResourceProviderTracker();
-        tracker.setObservationReporterGenerator(new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
+        tracker.setObservationReporterGenerator(
+                new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
 
         // create boolean markers for the listener
         final AtomicBoolean addedCalled = new AtomicBoolean(false);
@@ -173,7 +175,6 @@ public class ResourceProviderTrackerTest {
             public void providerRemoved(boolean stateful, boolean used) {
                 removedCalled.set(true);
             }
-
         };
         // activate and check that no listener is called yet
         tracker.activate(context.bundleContext(), eventAdmin, listener);
@@ -251,12 +252,10 @@ public class ResourceProviderTrackerTest {
 
     static final class NoDothingObservationReporter implements ObservationReporter {
         @Override
-        public void reportChanges(Iterable<ResourceChange> changes, boolean distribute) {
-        }
+        public void reportChanges(Iterable<ResourceChange> changes, boolean distribute) {}
 
         @Override
-        public void reportChanges(ObserverConfiguration config, Iterable<ResourceChange> changes, boolean distribute) {
-        }
+        public void reportChanges(ObserverConfiguration config, Iterable<ResourceChange> changes, boolean distribute) {}
 
         @Override
         public List<ObserverConfiguration> getObserverConfigurations() {

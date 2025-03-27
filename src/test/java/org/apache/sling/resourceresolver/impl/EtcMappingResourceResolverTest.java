@@ -1,20 +1,28 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to You under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.resourceresolver.impl;
+
+import javax.servlet.http.HttpServletRequest;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -23,8 +31,8 @@ import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
-import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProvider;
+import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderConfiguration;
 import org.apache.sling.resourceresolver.impl.mapping.StringInterpolationProviderImpl;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
@@ -39,11 +47,6 @@ import org.mockito.MockitoAnnotations;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import static java.util.Arrays.asList;
 import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
@@ -133,7 +136,8 @@ public class EtcMappingResourceResolverTest {
         setInaccessibleField("serviceUserMapper", activator, serviceUserMapper);
         commonFactory = spy(new CommonResourceResolverFactoryImpl(activator));
         when(bundleContext.getBundle()).thenReturn(bundle);
-        when(serviceUserMapper.getServiceUserID(nullable(Bundle.class),nullable(String.class))).thenReturn("mapping");
+        when(serviceUserMapper.getServiceUserID(nullable(Bundle.class), nullable(String.class)))
+                .thenReturn("mapping");
         // Activate method is package private so we use reflection to to call it
         callInaccessibleMethod("activate", null, commonFactory, BundleContext.class, bundleContext);
         final Bundle usingBundle = mock(Bundle.class);
@@ -164,22 +168,29 @@ public class EtcMappingResourceResolverTest {
      * @param isExternal External flag of the ResourceChange event
      */
     void refreshMapEntries(String path, boolean isExternal) {
-        ((MapEntries) commonFactory.getMapEntries()).onChange(
-            asList(
-                new ResourceChange(ResourceChange.ChangeType.ADDED, path, isExternal)
-            )
-        );
+        ((MapEntries) commonFactory.getMapEntries())
+                .onChange(asList(new ResourceChange(ResourceChange.ChangeType.ADDED, path, isExternal)));
     }
 
     @Test
     public void root_node_to_content_mapping() throws Exception {
-        buildResource(http.getPath() + "/localhost.8080", http, resourceResolver, resourceProvider, PROP_REDIRECT_EXTERNAL, "/content/simple-node");
+        buildResource(
+                http.getPath() + "/localhost.8080",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REDIRECT_EXTERNAL,
+                "/content/simple-node");
         // This updates the map entries so that the newly added resources are added.
-        // ATTENTION: only call this after all etc-mapping resources are defined as this lock their Resource Meta Data and prevents a re-update
+        // ATTENTION: only call this after all etc-mapping resources are defined as this lock their Resource Meta Data
+        // and prevents a re-update
         refreshMapEntries("/etc/map", true);
 
-        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/localhost.8080/", "/content/simple-node/");
-        expectedEtcMapping.assertEtcMap("Etc Mapping for root node to content", commonFactory.getMapEntries().getResolveMaps());
+        ExpectedEtcMapping expectedEtcMapping =
+                new ExpectedEtcMapping("^http/localhost.8080/", "/content/simple-node/");
+        expectedEtcMapping.assertEtcMap(
+                "Etc Mapping for root node to content",
+                commonFactory.getMapEntries().getResolveMaps());
 
         HttpServletRequest request = createRequestFromUrl("http://localhost:8080/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
@@ -188,29 +199,47 @@ public class EtcMappingResourceResolverTest {
 
     @Test
     public void match_to_content_mapping() throws Exception {
-        buildResource("test-node", http, resourceResolver, resourceProvider,
-            PROP_REG_EXP, "localhost.8080/",
-            PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
-        );
+        buildResource(
+                "test-node",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REG_EXP,
+                "localhost.8080/",
+                PROP_REDIRECT_EXTERNAL,
+                "/content/simple-match/");
         refreshMapEntries("/etc/map", true);
 
-        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/localhost.8080/", "/content/simple-match/");
-        expectedEtcMapping.assertEtcMap("Etc Mapping for match to content", commonFactory.getMapEntries().getResolveMaps());
+        ExpectedEtcMapping expectedEtcMapping =
+                new ExpectedEtcMapping("^http/localhost.8080/", "/content/simple-match/");
+        expectedEtcMapping.assertEtcMap(
+                "Etc Mapping for match to content",
+                commonFactory.getMapEntries().getResolveMaps());
 
         HttpServletRequest request = createRequestFromUrl("http://localhost:8080/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
         checkRedirectResource(resolvedResource, "/content/simple-match/", 302);
     }
 
-    // The following tests are based on the example from the https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html page
+    // The following tests are based on the example from the
+    // https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html page
 
     @Test
     public void internal_to_external_node_mapping() throws Exception {
-        buildResource("example.com.80", http, resourceResolver, resourceProvider, PROP_REDIRECT_EXTERNAL, "http://www.example.com/");
+        buildResource(
+                "example.com.80",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REDIRECT_EXTERNAL,
+                "http://www.example.com/");
         refreshMapEntries("/etc/map", true);
 
-        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/example.com.80/", "http://www.example.com/");
-        expectedEtcMapping.assertEtcMap("Etc Mapping for internal to external based on node", commonFactory.getMapEntries().getResolveMaps());
+        ExpectedEtcMapping expectedEtcMapping =
+                new ExpectedEtcMapping("^http/example.com.80/", "http://www.example.com/");
+        expectedEtcMapping.assertEtcMap(
+                "Etc Mapping for internal to external based on node",
+                commonFactory.getMapEntries().getResolveMaps());
 
         HttpServletRequest request = createRequestFromUrl("http://example.com/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
@@ -221,11 +250,15 @@ public class EtcMappingResourceResolverTest {
     public void internal_root_to_content_node_mapping() throws Exception {
         buildResource("/example", null, resourceResolver, resourceProvider);
 
-        buildResource("www.example.com.80", http, resourceResolver, resourceProvider, PROP_REDIRECT_INTERNAL, "/example");
+        buildResource(
+                "www.example.com.80", http, resourceResolver, resourceProvider, PROP_REDIRECT_INTERNAL, "/example");
         refreshMapEntries("/etc/map", true);
 
-        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping().addEtcMapEntry("^http/www.example.com.80/", true, "/example/");
-        expectedEtcMapping.assertEtcMap("Etc Mapping for internal root to content", commonFactory.getMapEntries().getResolveMaps());
+        ExpectedEtcMapping expectedEtcMapping =
+                new ExpectedEtcMapping().addEtcMapEntry("^http/www.example.com.80/", true, "/example/");
+        expectedEtcMapping.assertEtcMap(
+                "Etc Mapping for internal root to content",
+                commonFactory.getMapEntries().getResolveMaps());
 
         HttpServletRequest request = createRequestFromUrl("http://www.example.com:80/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
@@ -234,14 +267,22 @@ public class EtcMappingResourceResolverTest {
 
     @Test
     public void host_redirect_match_mapping() throws Exception {
-        buildResource("any_example.com.80", http, resourceResolver, resourceProvider,
-            PROP_REG_EXP, ".+\\.example\\.com\\.80",
-            PROP_REDIRECT_EXTERNAL, "http://www.example.com/"
-        );
+        buildResource(
+                "any_example.com.80",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REG_EXP,
+                ".+\\.example\\.com\\.80",
+                PROP_REDIRECT_EXTERNAL,
+                "http://www.example.com/");
         refreshMapEntries("/etc/map", true);
 
-        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping().addEtcMapEntry("^http/.+\\.example\\.com\\.80", false, "http://www.example.com/");
-        expectedEtcMapping.assertEtcMap("Etc Mapping for host redirect match mapping", commonFactory.getMapEntries().getResolveMaps());
+        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping()
+                .addEtcMapEntry("^http/.+\\.example\\.com\\.80", false, "http://www.example.com/");
+        expectedEtcMapping.assertEtcMap(
+                "Etc Mapping for host redirect match mapping",
+                commonFactory.getMapEntries().getResolveMaps());
 
         HttpServletRequest request = createRequestFromUrl("http://www.example.com");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
@@ -250,22 +291,31 @@ public class EtcMappingResourceResolverTest {
 
     @Test
     public void nested_internal_mixed_mapping() throws Exception {
-        Resource localhost = buildResource("localhost_any", http, resourceResolver, resourceProvider,
-            PROP_REG_EXP, "localhost\\.\\d*",
-            PROP_REDIRECT_INTERNAL, "/content"
-        );
-        buildResource("cgi-bin", localhost, resourceResolver, resourceProvider,PROP_REDIRECT_INTERNAL, "/scripts");
-        buildResource("gateway", localhost, resourceResolver, resourceProvider,PROP_REDIRECT_INTERNAL, "http://gbiv.com");
-        buildResource("(stories)", localhost, resourceResolver, resourceProvider,PROP_REDIRECT_INTERNAL, "/anecdotes/$1");
+        Resource localhost = buildResource(
+                "localhost_any",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REG_EXP,
+                "localhost\\.\\d*",
+                PROP_REDIRECT_INTERNAL,
+                "/content");
+        buildResource("cgi-bin", localhost, resourceResolver, resourceProvider, PROP_REDIRECT_INTERNAL, "/scripts");
+        buildResource(
+                "gateway", localhost, resourceResolver, resourceProvider, PROP_REDIRECT_INTERNAL, "http://gbiv.com");
+        buildResource(
+                "(stories)", localhost, resourceResolver, resourceProvider, PROP_REDIRECT_INTERNAL, "/anecdotes/$1");
 
         refreshMapEntries("/etc/map", true);
 
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping()
-            .addEtcMapEntry("^http/localhost\\.\\d*", true, "/content")
-            .addEtcMapEntry("^http/localhost\\.\\d*/cgi-bin/", true, "/scripts/")
-            .addEtcMapEntry("^http/localhost\\.\\d*/gateway/", true, "http://gbiv.com/")
-            .addEtcMapEntry("^http/localhost\\.\\d*/(stories)/", true, "/anecdotes/$1/");
-        expectedEtcMapping.assertEtcMap("Etc Mapping for nested internal mixed mapping", commonFactory.getMapEntries().getResolveMaps());
+                .addEtcMapEntry("^http/localhost\\.\\d*", true, "/content")
+                .addEtcMapEntry("^http/localhost\\.\\d*/cgi-bin/", true, "/scripts/")
+                .addEtcMapEntry("^http/localhost\\.\\d*/gateway/", true, "http://gbiv.com/")
+                .addEtcMapEntry("^http/localhost\\.\\d*/(stories)/", true, "/anecdotes/$1/");
+        expectedEtcMapping.assertEtcMap(
+                "Etc Mapping for nested internal mixed mapping",
+                commonFactory.getMapEntries().getResolveMaps());
 
         buildResource("/content", null, resourceResolver, resourceProvider);
         Resource scripts = buildResource("/scripts", null, resourceResolver, resourceProvider);
@@ -281,22 +331,34 @@ public class EtcMappingResourceResolverTest {
         checkInternalResource(resolvedResource, "/scripts");
         resolvedResource = resourceResolver.resolve(request, "/cgi-bin/child/");
         checkInternalResource(resolvedResource, "/scripts/child");
-//AS TODO: Does not redirect -> investigate later
-//        resolvedResource = resourceResolver.resolve(request, "/gateway/");
-//        checkRedirectResource(resolvedResource, "http://gbiv.com/", 302);
+        // AS TODO: Does not redirect -> investigate later
+        //        resolvedResource = resourceResolver.resolve(request, "/gateway/");
+        //        checkRedirectResource(resolvedResource, "http://gbiv.com/", 302);
         resolvedResource = resourceResolver.resolve(request, "/stories/");
         checkInternalResource(resolvedResource, "/anecdotes/stories");
     }
 
     @Test
     public void simple_node_string_interpolation() throws Exception {
-        buildResource("$[config:siv.one]", http, resourceResolver, resourceProvider,PROP_REDIRECT_EXTERNAL, "/content/simple-node");
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-node.80"});
+        buildResource(
+                "$[config:siv.one]",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REDIRECT_EXTERNAL,
+                "/content/simple-node");
+        setupStringInterpolationProvider(
+                stringInterpolationProvider,
+                stringInterpolationProviderConfiguration,
+                new String[] {"siv.one=test-simple-node.80"});
 
         refreshMapEntries("/etc/map", true);
 
-        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-node.80/", "/content/simple-node/");
-        expectedEtcMapping.assertEtcMap("String Interpolation for simple match", commonFactory.getMapEntries().getResolveMaps());
+        ExpectedEtcMapping expectedEtcMapping =
+                new ExpectedEtcMapping("^http/test-simple-node.80/", "/content/simple-node/");
+        expectedEtcMapping.assertEtcMap(
+                "String Interpolation for simple match",
+                commonFactory.getMapEntries().getResolveMaps());
 
         Resource content = buildResource("/content", null, resourceResolver, resourceProvider);
         Resource simpleNode = buildResource("/content/simple-node", content, resourceResolver, resourceProvider);
@@ -308,16 +370,27 @@ public class EtcMappingResourceResolverTest {
 
     @Test
     public void simple_match_string_interpolation() throws Exception {
-        buildResource("test-node", http, resourceResolver, resourceProvider,
-            PROP_REG_EXP, "$[config:siv.one]/",
-            PROP_REDIRECT_EXTERNAL, "/content/simple-match/"
-        );
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {"siv.one=test-simple-match.80"});
+        buildResource(
+                "test-node",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REG_EXP,
+                "$[config:siv.one]/",
+                PROP_REDIRECT_EXTERNAL,
+                "/content/simple-match/");
+        setupStringInterpolationProvider(
+                stringInterpolationProvider,
+                stringInterpolationProviderConfiguration,
+                new String[] {"siv.one=test-simple-match.80"});
 
         refreshMapEntries("/etc/map", true);
 
-        ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/test-simple-match.80/", "/content/simple-match/");
-        expectedEtcMapping.assertEtcMap("String Interpolation for simple match", commonFactory.getMapEntries().getResolveMaps());
+        ExpectedEtcMapping expectedEtcMapping =
+                new ExpectedEtcMapping("^http/test-simple-match.80/", "/content/simple-match/");
+        expectedEtcMapping.assertEtcMap(
+                "String Interpolation for simple match",
+                commonFactory.getMapEntries().getResolveMaps());
 
         HttpServletRequest request = createRequestFromUrl("http://test-simple-match:80/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
@@ -337,11 +410,19 @@ public class EtcMappingResourceResolverTest {
      */
     @Test
     public void endless_circular_mapping() throws Exception {
-        buildResource(http.getPath() + "/localhost.8080", http, resourceResolver, resourceProvider, PROP_REDIRECT_EXTERNAL, "/content");
+        buildResource(
+                http.getPath() + "/localhost.8080",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REDIRECT_EXTERNAL,
+                "/content");
         refreshMapEntries("/etc/map", true);
 
         ExpectedEtcMapping expectedEtcMapping = new ExpectedEtcMapping("^http/localhost.8080/", "/content/");
-        expectedEtcMapping.assertEtcMap("Etc Mapping for root node to content", commonFactory.getMapEntries().getResolveMaps());
+        expectedEtcMapping.assertEtcMap(
+                "Etc Mapping for root node to content",
+                commonFactory.getMapEntries().getResolveMaps());
 
         buildResource("/content/test", null, resourceResolver, resourceProvider);
         buildResource("/content/content/test", null, resourceResolver, resourceProvider);

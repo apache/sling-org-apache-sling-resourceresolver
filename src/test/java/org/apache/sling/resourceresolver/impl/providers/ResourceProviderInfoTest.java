@@ -18,21 +18,22 @@
  */
 package org.apache.sling.resourceresolver.impl.providers;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.sling.api.resource.runtime.dto.AuthType;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.osgi.framework.ServiceReference;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 public class ResourceProviderInfoTest {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Test public void testValidInfo() {
+    @Test
+    public void testValidInfo() {
         final ServiceReference<ResourceProvider> ref = Mockito.mock(ServiceReference.class);
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_ROOT)).thenReturn("/test");
 
@@ -45,7 +46,8 @@ public class ResourceProviderInfoTest {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Test public void testValidAuthInfo() {
+    @Test
+    public void testValidAuthInfo() {
         final ServiceReference<ResourceProvider> ref = Mockito.mock(ServiceReference.class);
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_ROOT)).thenReturn("/test");
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_AUTHENTICATE)).thenReturn(AuthType.lazy.name());
@@ -59,7 +61,8 @@ public class ResourceProviderInfoTest {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Test public void testInvalidAuthInfo() {
+    @Test
+    public void testInvalidAuthInfo() {
         final ServiceReference<ResourceProvider> ref = Mockito.mock(ServiceReference.class);
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_ROOT)).thenReturn("/test");
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_AUTHENTICATE)).thenReturn("hello");
@@ -73,10 +76,12 @@ public class ResourceProviderInfoTest {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Test public void testValidMode() {
+    @Test
+    public void testValidMode() {
         final ServiceReference<ResourceProvider> ref = Mockito.mock(ServiceReference.class);
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_ROOT)).thenReturn("/test");
-        Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_MODE)).thenReturn(ResourceProviderInfo.Mode.PASSTHROUGH.name().toLowerCase());
+        Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_MODE))
+                .thenReturn(ResourceProviderInfo.Mode.PASSTHROUGH.name().toLowerCase());
 
         final ResourceProviderInfo info = new ResourceProviderInfo(ref);
         assertEquals("/test", info.getPath());
@@ -87,7 +92,8 @@ public class ResourceProviderInfoTest {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Test public void testInvalidMode() {
+    @Test
+    public void testInvalidMode() {
         final ServiceReference<ResourceProvider> ref = Mockito.mock(ServiceReference.class);
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_ROOT)).thenReturn("/test");
         Mockito.when(ref.getProperty(ResourceProvider.PROPERTY_MODE)).thenReturn("hello");

@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.sling.resourceresolver.impl.params;
 
 import java.util.Collections;
@@ -30,7 +29,13 @@ class PathParser {
      * selectors and extension: {@code /content/test;v='1.0'.sel.html}
      */
     private enum ParserState {
-        INIT, V1_EXTENSION, V1_PARAMS, V2_PARAMS, V2_EXTENSION, SUFFIX, INVALID
+        INIT,
+        V1_EXTENSION,
+        V1_PARAMS,
+        V2_PARAMS,
+        V2_EXTENSION,
+        SUFFIX,
+        INVALID
     }
 
     private String rawPath;
@@ -62,7 +67,7 @@ class PathParser {
 
     /**
      * Parses path containing parameters. Results will be available in {@link #rawPath} and {@link parameters}.
-     * 
+     *
      * @param path
      */
     public void parse(String path) {
@@ -166,6 +171,4 @@ class PathParser {
             parametersString = path.substring(from, to);
         }
     }
-
-
 }

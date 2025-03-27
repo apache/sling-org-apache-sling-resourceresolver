@@ -1,19 +1,20 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The SF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.resourceresolver.impl;
 
@@ -84,11 +85,11 @@ public class SimpleValueMapImpl implements ValueMap {
     @SuppressWarnings("unchecked")
     public <T> T get(@NotNull String name, @NotNull Class<T> type) {
         Object o = delegate.get(name);
-        if ( type.equals(String[].class) && ! ( o instanceof String[])) {
+        if (type.equals(String[].class) && !(o instanceof String[])) {
             // According to ValueMap if the value cannot be converted it should return null
             // If 'o' is null this would return String[] {null} instead so we do not convert it here
-            if(o != null) {
-                o = new String[]{String.valueOf(o)};
+            if (o != null) {
+                o = new String[] {String.valueOf(o)};
             }
         }
         return (T) o;
@@ -97,10 +98,9 @@ public class SimpleValueMapImpl implements ValueMap {
     @NotNull
     @SuppressWarnings("unchecked")
     public <T> T get(@NotNull String name, @NotNull T defaultValue) {
-        if ( delegate.containsKey(name)) {
+        if (delegate.containsKey(name)) {
             return (T) delegate.get(name);
-        } 
+        }
         return defaultValue;
     }
-
 }

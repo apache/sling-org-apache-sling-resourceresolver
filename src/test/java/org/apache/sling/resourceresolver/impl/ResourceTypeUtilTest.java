@@ -18,30 +18,33 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 public class ResourceTypeUtilTest {
 
-    private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] { "/apps/", "/libs/" });
+    private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] {"/apps/", "/libs/"});
 
-    @Test public void testAreResourceTypesEqual() {
+    @Test
+    public void testAreResourceTypesEqual() {
         assertTrue(ResourceTypeUtil.areResourceTypesEqual("some/type", "/apps/some/type", SEARCH_PATHS));
         assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "some/type", SEARCH_PATHS));
         assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/apps/some/type", SEARCH_PATHS));
         assertTrue(ResourceTypeUtil.areResourceTypesEqual("some/type", "some/type", SEARCH_PATHS));
         assertTrue(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/libs/some/type", SEARCH_PATHS));
-        assertFalse(ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/libs/some/type", Collections.EMPTY_LIST));
+        assertFalse(
+                ResourceTypeUtil.areResourceTypesEqual("/apps/some/type", "/libs/some/type", Collections.EMPTY_LIST));
     }
 
-    @Test public void testRelativizeResourceType() {
+    @Test
+    public void testRelativizeResourceType() {
         assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("relative/type", SEARCH_PATHS));
         assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("/apps/relative/type", SEARCH_PATHS));
         assertEquals("relative/type", ResourceTypeUtil.relativizeResourceType("/libs/relative/type", SEARCH_PATHS));

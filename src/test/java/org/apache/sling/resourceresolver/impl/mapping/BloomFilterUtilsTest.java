@@ -1,27 +1,31 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import java.math.BigInteger;
 import java.util.HashSet;
 import java.util.Random;
+
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test the bloom filter utility class.
@@ -73,8 +77,7 @@ public class BloomFilterUtilsTest {
                 }
                 if (falsePositives < best) {
                     best = falsePositives;
-                    System.out.println("mul: " + mul + " shift: "
-                            + shift + " falsePositives: " + best);
+                    System.out.println("mul: " + mul + " shift: " + shift + " falsePositives: " + best);
                 }
             }
         }
@@ -97,26 +100,26 @@ public class BloomFilterUtilsTest {
 
     private static char randomChar(Random r) {
         switch (r.nextInt(101) / 100) {
-        case 0:
-        case 1:
-            // 20% ascii
-            return (char) (32 + r.nextInt(127 - 32));
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-            // 40% a-z
-            return (char) ('a' + r.nextInt('z' - 'a'));
-        case 6:
-            // 10% A-Z
-            return (char) ('A' + r.nextInt('Z' - 'A'));
-        case 7:
-        case 8:
-            // 20% 0-9
-            return (char) ('0' + r.nextInt('9' - '0'));
-        case 9:
-            // 10% aeiou
-            return "aeiou".charAt(r.nextInt("aeiou".length()));
+            case 0:
+            case 1:
+                // 20% ascii
+                return (char) (32 + r.nextInt(127 - 32));
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                // 40% a-z
+                return (char) ('a' + r.nextInt('z' - 'a'));
+            case 6:
+                // 10% A-Z
+                return (char) ('A' + r.nextInt('Z' - 'A'));
+            case 7:
+            case 8:
+                // 20% 0-9
+                return (char) ('0' + r.nextInt('9' - '0'));
+            case 9:
+                // 10% aeiou
+                return "aeiou".charAt(r.nextInt("aeiou".length()));
         }
         // 1% unicode
         return (char) r.nextInt(65535);
@@ -125,16 +128,13 @@ public class BloomFilterUtilsTest {
     private static String randomName(Random r) {
         int i = r.nextInt(1000);
         // like TPC-C lastName, but lowercase
-        String[] n = {
-                "bar", "ought", "able", "pri", "pres", "ese", "anti",
-                "cally", "ation", "eing" };
+        String[] n = {"bar", "ought", "able", "pri", "pres", "ese", "anti", "cally", "ation", "eing"};
         StringBuilder buff = new StringBuilder();
         buff.append(n[i / 100]);
         buff.append(n[(i / 10) % 10]);
         buff.append(n[i % 10]);
         return buff.toString();
     }
-
 
     private static int hash(int oldHash, int mul, int shift) {
         return oldHash ^ ((oldHash * mul) >> shift);
@@ -193,6 +193,7 @@ public class BloomFilterUtilsTest {
         }
         assertEquals(4594, falsePositives);
     }
+
     @Test
     public void negativeHashCode() {
         BloomFilterUtils.add(new byte[0], new Object() {
@@ -202,5 +203,4 @@ public class BloomFilterUtilsTest {
             }
         });
     }
-
 }

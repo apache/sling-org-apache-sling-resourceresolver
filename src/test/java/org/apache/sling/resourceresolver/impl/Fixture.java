@@ -35,56 +35,64 @@ import org.osgi.framework.ServiceRegistration;
 /**
  * The <tt>Fixture</tt> holds reusable, shared, test setup code
  */
-public class Fixture { 
+public class Fixture {
 
     private final BundleContext bc;
-    private final Map<ResourceProviderInfo, ServiceRegistration> providerRegistrations = new HashMap<ResourceProviderInfo, ServiceRegistration>();
-    
+    private final Map<ResourceProviderInfo, ServiceRegistration> providerRegistrations =
+            new HashMap<ResourceProviderInfo, ServiceRegistration>();
+
     public Fixture(BundleContext bc) {
         this.bc = bc;
     }
 
-    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, 
-            AuthType authType) throws InvalidSyntaxException {
-        return registerResourceProvider(rp,  root, authType, 0);
+    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, AuthType authType)
+            throws InvalidSyntaxException {
+        return registerResourceProvider(rp, root, authType, 0);
     }
 
-    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, 
-            AuthType authType, int serviceRanking) throws InvalidSyntaxException {
+    public ResourceProviderInfo registerResourceProvider(
+            ResourceProvider<?> rp, String root, AuthType authType, int serviceRanking) throws InvalidSyntaxException {
         return registerResourceProvider(rp, root, authType, serviceRanking, true, null);
     }
 
-    public ResourceProviderInfo registerResourceProvider(ResourceProvider<?> rp, String root, 
-    AuthType authType, int serviceRanking, boolean modifiable, ResourceProviderInfo.Mode mode) throws InvalidSyntaxException {
-            Dictionary<String, Object> props = new Hashtable<>();
+    public ResourceProviderInfo registerResourceProvider(
+            ResourceProvider<?> rp,
+            String root,
+            AuthType authType,
+            int serviceRanking,
+            boolean modifiable,
+            ResourceProviderInfo.Mode mode)
+            throws InvalidSyntaxException {
+        Dictionary<String, Object> props = new Hashtable<>();
         props.put(ResourceProvider.PROPERTY_ROOT, root);
         props.put(ResourceProvider.PROPERTY_AUTHENTICATE, authType.name());
         props.put(ResourceProvider.PROPERTY_MODIFIABLE, modifiable);
         if (serviceRanking != 0) {
             props.put(Constants.SERVICE_RANKING, serviceRanking);
         }
-        if ( mode != null ) {
+        if (mode != null) {
             props.put(ResourceProvider.PROPERTY_MODE, mode.name());
         }
-        
+
         ServiceRegistration registration = bc.registerService(ResourceProvider.class.getName(), rp, props);
-        
+
         ServiceReference sr = registration.getReference();
-        
+
         ResourceProviderInfo providerInfo = new ResourceProviderInfo(sr);
 
         providerRegistrations.put(providerInfo, registration);
-        
+
         return providerInfo;
     }
-    
+
     public void unregisterResourceProvider(ResourceProviderInfo info) {
-        
+
         ServiceRegistration registration = providerRegistrations.remove(info);
-        if ( registration == null ) {
-            throw new IllegalArgumentException("No " + ServiceRegistration.class.getSimpleName() + " found for " + info);
+        if (registration == null) {
+            throw new IllegalArgumentException(
+                    "No " + ServiceRegistration.class.getSimpleName() + " found for " + info);
         }
-        
+
         registration.unregister();
     }
 }

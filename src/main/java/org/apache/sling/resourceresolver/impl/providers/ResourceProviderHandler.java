@@ -104,13 +104,13 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
     public int compareTo(final ResourceProviderHandler o) {
         final ResourceProviderInfo localInfo = this.info;
         final ResourceProviderInfo otherInfo = o.info;
-        if ( localInfo == null ) {
-            if ( otherInfo == null ) {
+        if (localInfo == null) {
+            if (otherInfo == null) {
                 return 0;
             }
             return 1;
         }
-        if ( otherInfo == null ) {
+        if (otherInfo == null) {
             return -1;
         }
         return localInfo.compareTo(otherInfo);
@@ -142,6 +142,6 @@ public class ResourceProviderHandler implements Comparable<ResourceProviderHandl
 
     @Override
     public String toString() {
-        return "[" + getClass().getSimpleName() +"# provider: " + provider + " ]";
+        return "[" + getClass().getSimpleName() + "# provider: " + provider + " ]";
     }
 }

@@ -18,14 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.observation;
 
-import static org.apache.sling.api.resource.observation.ResourceChangeListener.PATHS;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,9 +34,17 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.osgi.framework.ServiceReference;
 
+import static org.apache.sling.api.resource.observation.ResourceChangeListener.PATHS;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 public class BasicObservationReporterTest {
 
-    private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] { "/apps/", "/libs/" });
+    private static final List<String> SEARCH_PATHS = Arrays.asList(new String[] {"/apps/", "/libs/"});
 
     @Test
     public void testRootProvider() {
@@ -53,9 +53,12 @@ public class BasicObservationReporterTest {
         ResourceChangeListenerInfo appsApp2PathListener = resourceChangeListenerInfo("/apps/app2");
         ResourceChangeListenerInfo globListener = resourceChangeListenerInfo("glob:/apps/**/*.html");
 
-        BasicObservationReporter underTest = new BasicObservationReporter(SEARCH_PATHS,
-                Collections.unmodifiableList(Arrays.asList(allPathListener, appsPathListener, appsApp2PathListener, globListener)),
-                new Path("/"), PathSet.EMPTY_SET);
+        BasicObservationReporter underTest = new BasicObservationReporter(
+                SEARCH_PATHS,
+                Collections.unmodifiableList(
+                        Arrays.asList(allPathListener, appsPathListener, appsApp2PathListener, globListener)),
+                new Path("/"),
+                PathSet.EMPTY_SET);
 
         underTest.reportChanges(changes("/apps/app1/path1.html"), false);
         underTest.reportChanges(changes("/content/path2/jcr:content"), false);
@@ -73,9 +76,12 @@ public class BasicObservationReporterTest {
         ResourceChangeListenerInfo appsApp2PathListener = resourceChangeListenerInfo("/apps/app2");
         ResourceChangeListenerInfo globListener = resourceChangeListenerInfo("glob:/apps/**/*.html");
 
-        BasicObservationReporter underTest = new BasicObservationReporter(SEARCH_PATHS,
-                Collections.unmodifiableList(Arrays.asList(allPathListener, appsPathListener, appsApp2PathListener, globListener)),
-                new Path("/apps/app1"), PathSet.EMPTY_SET);
+        BasicObservationReporter underTest = new BasicObservationReporter(
+                SEARCH_PATHS,
+                Collections.unmodifiableList(
+                        Arrays.asList(allPathListener, appsPathListener, appsApp2PathListener, globListener)),
+                new Path("/apps/app1"),
+                PathSet.EMPTY_SET);
 
         underTest.reportChanges(changes("/apps/app1/path1.html"), false);
 
@@ -105,11 +111,10 @@ public class BasicObservationReporterTest {
     @SuppressWarnings("unchecked")
     private static void assertListener(ResourceChangeListenerInfo info, String... paths) {
         Set<String> expectedPaths = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(paths)));
-        ArgumentCaptor<List<ResourceChange>> argument = (ArgumentCaptor)ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<ResourceChange>> argument = (ArgumentCaptor) ArgumentCaptor.forClass(List.class);
         if (paths.length == 0) {
             verifyNoMoreInteractions(info.getListener());
-        }
-        else {
+        } else {
             verify(info.getListener(), atLeastOnce()).onChange(argument.capture());
             Set<String> actualPaths = new HashSet<>();
             for (List<ResourceChange> changeList : argument.getAllValues()) {
@@ -120,5 +125,4 @@ public class BasicObservationReporterTest {
             assertEquals(expectedPaths, actualPaths);
         }
     }
-
 }

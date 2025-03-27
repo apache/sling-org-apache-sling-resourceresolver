@@ -18,14 +18,14 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * An {@link Iterator} that combines existing {@link MapEntry}s (usually from the "global" list)
@@ -53,9 +53,11 @@ class MapEntryIterator implements Iterator<MapEntry> {
      * @param getCurrentMapEntryIteratorForVanityPath a function that gets the current vanity path entry for a given key (the callback should take care about which phase the vanity path initialization is in)
      * @param vanityPathPrecedence when {@code true}, vanity paths (if present) will always come first, otherwise it depends on the length of the map entry's match pattern (see {@link MapEntry#getPattern()})
      */
-    public MapEntryIterator(final @Nullable String startKey, @NotNull List<MapEntry> globalList,
-                            final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
-                            final boolean vanityPathPrecedence) {
+    public MapEntryIterator(
+            final @Nullable String startKey,
+            @NotNull List<MapEntry> globalList,
+            final @NotNull Function<String, Iterator<MapEntry>> getCurrentMapEntryIteratorForVanityPath,
+            final boolean vanityPathPrecedence) {
         this.key = startKey;
         this.globalListIterator = globalList.iterator();
         this.vanityPathPrecedence = vanityPathPrecedence;
@@ -103,7 +105,8 @@ class MapEntryIterator implements Iterator<MapEntry> {
             // map entries for that path (or stop when root is reached)
             while (!this.specialIterator.hasNext() && this.key != null) {
                 this.key = removeSelectorsAndExtension(this.key);
-                this.specialIterator = nullIteratorToEmpty(this.getCurrentMapEntryIteratorForVanityPath.apply(this.key));
+                this.specialIterator =
+                        nullIteratorToEmpty(this.getCurrentMapEntryIteratorForVanityPath.apply(this.key));
                 this.key = getParent(key);
             }
 
@@ -135,7 +138,8 @@ class MapEntryIterator implements Iterator<MapEntry> {
             return false;
         } else {
             // decide based on pattern length
-            return this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length();
+            return this.nextGlobal.getPattern().length()
+                    >= this.nextSpecial.getPattern().length();
         }
     }
 
