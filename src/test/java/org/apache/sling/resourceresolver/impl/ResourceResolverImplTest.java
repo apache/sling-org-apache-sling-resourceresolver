@@ -28,7 +28,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
 
 import java.io.Closeable;
@@ -744,8 +746,21 @@ public class ResourceResolverImplTest {
         Mockito.verify(valueWithException,Mockito.times(1)).close();
 
     }
-
-
+    
+    @Test
+    public void testGetParentResourceType() {
+        final PathBasedResourceResolverImpl resolver = Mockito.spy(getPathBasedResourceResolver());
+        
+        resolver.add(new SyntheticResourceWithSupertype(resolver, "/types/1", "/types/component", "/types/2"));
+        resolver.add(new SyntheticResourceWithSupertype(resolver, "/content/type1", "/types/1", null));
+        
+        assertEquals("/types/2",resolver.getParentResourceType(resolver.getResource("/types/1")));
+        assertEquals("/types/2",resolver.getParentResourceType(resolver.getResource("/content/type1")));
+        
+        // Ensure that the next call will be served from the cache
+        resolver.getParentResourceType(resolver.getResource("/types/1"));
+        Mockito.verify(resolver, times(2)).getParentResourceTypeInternal(any(Resource.class));
+    }
 
     private PathBasedResourceResolverImpl getPathBasedResourceResolver() {
         return getPathBasedResourceResolver(new String[] {""});

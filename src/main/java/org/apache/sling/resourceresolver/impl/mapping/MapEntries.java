@@ -18,8 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.apache.commons.collections4.map.LRUMap;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
@@ -30,10 +28,8 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
-import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
-import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.BundleContext;
@@ -47,8 +43,6 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,7 +56,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -74,7 +67,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Stream;
 
 public class MapEntries implements
     MapEntriesHandler,
@@ -92,14 +84,6 @@ public class MapEntries implements
     public static final String PROP_REDIRECT_EXTERNAL = "sling:redirect";
 
     public static final String PROP_REDIRECT_EXTERNAL_STATUS = "sling:status";
-
-    public static final String PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS = "sling:redirectStatus";
-
-    public static final String PROP_VANITY_PATH = "sling:vanityPath";
-
-    public static final String PROP_VANITY_ORDER = "sling:vanityOrder";
-
-    private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
@@ -128,17 +112,11 @@ public class MapEntries implements
 
     private volatile ServiceRegistration<ResourceChangeListener> registration;
 
-    private Map<String, List<MapEntry>> resolveMapsMap;
+    private final Map<String, List<MapEntry>> resolveMapsMap;
 
-    // Temporary cache for use while doing async vanity path query
-    private Map<String, List<MapEntry>> temporaryResolveMapsMap;
     private List<Map.Entry<String, ResourceChange.ChangeType>> resourceChangeQueue;
-    private AtomicLong temporaryResolveMapsMapHits = new AtomicLong();
-    private AtomicLong temporaryResolveMapsMapMisses = new AtomicLong();
 
     private Collection<MapEntry> mapMaps;
-
-    private Map <String,List <String>> vanityTargets;
 
     /**
      * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
@@ -154,20 +132,13 @@ public class MapEntries implements
 
     private final ReentrantLock initializing = new ReentrantLock();
 
-    private final AtomicLong vanityCounter;
-    private final AtomicLong vanityResourcesOnStartup;
-    private final AtomicLong vanityPathLookups;
-    private final AtomicLong vanityPathBloomNegatives;
-    private final AtomicLong vanityPathBloomFalsePositives;
-
-    private byte[] vanityBloomFilter;
-
-    private AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
-
     private final StringInterpolationProvider stringInterpolationProvider;
 
     private final boolean useOptimizeAliasResolution;
-    public MapEntries(final MapConfigurationProvider factory, 
+
+    final VanityPathHandler vph;
+
+    public MapEntries(final MapConfigurationProvider factory,
             final BundleContext bundleContext, 
             final EventAdmin eventAdmin, 
             final StringInterpolationProvider stringInterpolationProvider, 
@@ -178,9 +149,8 @@ public class MapEntries implements
         this.factory = factory;
         this.eventAdmin = eventAdmin;
 
-        this.resolveMapsMap = Collections.singletonMap(GLOBAL_LIST_KEY, Collections.emptyList());
+        this.resolveMapsMap = new ConcurrentHashMap<>(Map.of(GLOBAL_LIST_KEY, List.of()));
         this.mapMaps = Collections.<MapEntry> emptyList();
-        this.vanityTargets = Collections.<String,List <String>>emptyMap();
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
@@ -188,30 +158,27 @@ public class MapEntries implements
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
 
-        this.useOptimizeAliasResolution = doInit();
+        this.useOptimizeAliasResolution = initializeAliases();
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vanityCounter = new AtomicLong(0);
-        this.vanityResourcesOnStartup = new AtomicLong(0);
-        this.vanityPathLookups = new AtomicLong(0);
-        this.vanityPathBloomNegatives = new AtomicLong(0);
-        this.vanityPathBloomFalsePositives = new AtomicLong(0);
-
-        initializeVanityPaths();
+        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this::drainQueue);
+        this.vph.initializeVanityPaths();
 
         this.metrics = metrics;
         if (metrics.isPresent()) {
-            this.metrics.get().setNumberOfVanityPathsSupplier(vanityCounter::get);
-            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vanityResourcesOnStartup::get);
-            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vanityPathLookups::get);
-            this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vanityPathBloomNegatives::get);
-            this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vanityPathBloomFalsePositives::get);
-            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
-            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
+            // aliases
             this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(detectedConflictingAliases::get);
             this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(detectedInvalidAliases::get);
-            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(detectedInvalidAliases::get);
+            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) aliasMapsMap.size());
+            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(aliasResourcesOnStartup::get);
+
+            // vanity paths
+            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vph.vanityResourcesOnStartup::get);
+            this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vph.vanityPathBloomFalsePositives::get);
+            this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vph.vanityPathBloomNegatives::get);
+            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vph.vanityPathLookups::get);
+            this.metrics.get().setNumberOfVanityPathsSupplier(vph.vanityCounter::get);
         }
     }
 
@@ -230,174 +197,6 @@ public class MapEntries implements
         return bundleContext.registerService(ResourceChangeListener.class, this, props);
     }
 
-    /**
-     * Actual initializer. Guards itself against concurrent use by using a
-     * ReentrantLock. Does nothing if the resource resolver has already been
-     * null-ed.
-     * @return true if the optimizedAliasResolution is enabled, false otherwise
-     */
-    protected boolean doInit() {
-
-        this.initializing.lock();
-        try {
-            final ResourceResolver resolver = this.resolver;
-            final MapConfigurationProvider factory = this.factory;
-            if (resolver == null || factory == null) {
-                return this.factory.isOptimizeAliasResolutionEnabled();
-            }
-
-            List<String> conflictingAliases = new ArrayList<>();
-            List<String> invalidAliases = new ArrayList<>();
-
-            boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
-
-            //optimization made in SLING-2521
-            if (isOptimizeAliasResolutionEnabled) {
-                try {
-                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver, conflictingAliases, invalidAliases);
-                    this.aliasMapsMap = loadedMap;
-
-                    // warn if there are more than a few defunct aliases
-                    if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
-                        log.warn("There are {} conflicting aliases; excerpt: {}",  conflictingAliases.size(), conflictingAliases);
-                    } else if (!conflictingAliases.isEmpty()) {
-                        log.warn("There are {} conflicting aliases: {}",  conflictingAliases.size(), conflictingAliases);
-                    }
-                    if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
-                        log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
-                    } else if (!invalidAliases.isEmpty()) {
-                        log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
-                    }
-                } catch (final Exception e) {
-
-                    logDisableAliasOptimization(e);
-
-                    // disable optimize alias resolution
-                    isOptimizeAliasResolutionEnabled = false;
-                }
-            }
-
-            this.resolveMapsMap = new ConcurrentHashMap<>();
-
-            doUpdateConfiguration();
-
-            sendChangeEvent();
-
-            return isOptimizeAliasResolutionEnabled;
-
-        } finally {
-
-            this.initializing.unlock();
-
-        }
-    }
-
-    /**
-     * Actual vanity paths initializer. Guards itself against concurrent use by
-     * using a ReentrantLock. Does nothing if the resource resolver has already
-     * been null-ed.
-     *
-     * @throws IOException in case of problems
-     */
-    protected void initializeVanityPaths() throws IOException {
-        this.initializing.lock();
-        try {
-            if (this.factory.isVanityPathEnabled()) {
-                this.vanityBloomFilter = createVanityBloomFilter();
-                VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
-                if (this.factory.isVanityPathCacheInitInBackground()) {
-                    this.log.debug("bg init starting");
-                    Thread vpinit = new Thread(vpi, "VanityPathInitializer");
-                    vpinit.start();
-                } else {
-                    vpi.run();
-                }
-            }
-        } finally {
-            this.initializing.unlock();
-        }
-    }
-
-    private class VanityPathInitializer implements Runnable {
-
-        private int SIZELIMIT = 10000;
-
-        private MapConfigurationProvider factory;
-
-        public VanityPathInitializer(MapConfigurationProvider factory) {
-            this.factory = factory;
-        }
-
-        @Override
-        public void run() {
-            try {
-                temporaryResolveMapsMap = Collections.synchronizedMap(new LRUMap<>(SIZELIMIT));
-                execute();
-            } catch (Throwable t) {
-                log.error("vanity path initializer thread terminated with a throwable", t);
-            }
-        }
-
-        private void drainQueue(List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
-            final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
-
-            // send the change event only once
-            boolean sendEvent = false;
-
-            // the config needs to be reloaded only once
-            final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
-
-            while (!queue.isEmpty()) {
-                Map.Entry<String, ResourceChange.ChangeType> entry = queue.remove(0);
-                final ResourceChange.ChangeType type = entry.getValue();
-                final String path = entry.getKey();
-
-                log.trace("drain type={}, path={}", type, path);
-                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
-
-                if (changed) {
-                    sendEvent = true;
-                }
-            }
-
-            if (sendEvent) {
-                sendChangeEvent();
-            }
-        }
-
-        private void execute() {
-            try (ResourceResolver resolver = factory
-                    .getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
-
-                long initStart = System.nanoTime();
-                log.debug("vanity path initialization - start");
-
-                vanityTargets = loadVanityPaths(resolver);
-
-                // process pending event
-                drainQueue(resourceChangeQueue);
-
-                vanityPathsProcessed.set(true);
-
-                // drain once more in case more events have arrived
-                drainQueue(resourceChangeQueue);
-
-                long initElapsed = System.nanoTime() - initStart;
-                long resourcesPerSecond = (vanityResourcesOnStartup.get() * TimeUnit.SECONDS.toNanos(1) / (initElapsed == 0 ? 1 : initElapsed));
-
-                log.info(
-                        "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
-                        vanityResourcesOnStartup.get(), TimeUnit.NANOSECONDS.toMillis(initElapsed), resourcesPerSecond);
-            } catch (LoginException ex) {
-                log.error("Vanity path init failed", ex);
-            } finally {
-                log.debug("dropping temporary resolver map - {}/{} entries, {} hits, {} misses", temporaryResolveMapsMap.size(),
-                        SIZELIMIT, temporaryResolveMapsMapHits.get(), temporaryResolveMapsMapMisses.get());
-                temporaryResolveMapsMap = null;
-            }
-        }
-    }
-
     private boolean addResource(final String path, final AtomicBoolean resolverRefreshed) {
         this.initializing.lock();
 
@@ -405,7 +204,7 @@ public class MapEntries implements
             this.refreshResolverIfNecessary(resolverRefreshed);
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
-                boolean changed = doAddVanity(resource);
+                boolean changed = vph.doAddVanity(resource);
                 if (this.useOptimizeAliasResolution && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                     changed |= doAddAlias(resource);
                 }
@@ -419,7 +218,7 @@ public class MapEntries implements
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
-        final boolean isValidVanityPath =  this.isValidVanityPath(path);
+        final boolean isValidVanityPath = vph.isValidVanityPath(path);
         if ( this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
@@ -430,7 +229,7 @@ public class MapEntries implements
                     boolean changed = false;
                     if ( isValidVanityPath ) {
                         // we remove the old vanity path first
-                        changed |= doRemoveVanity(path);
+                        changed |= vph.doRemoveVanity(path);
 
                         // add back vanity path
                         Resource contentRsrc = null;
@@ -438,7 +237,7 @@ public class MapEntries implements
                             // there might be a JCR_CONTENT child resource
                             contentRsrc = resource.getChild(JCR_CONTENT);
                         }
-                        changed |= doAddVanity(contentRsrc != null ? contentRsrc : resource);
+                        changed |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                     }
                     if (this.useOptimizeAliasResolution) {
                         changed |= doUpdateAlias(resource);
@@ -459,9 +258,9 @@ public class MapEntries implements
         final String actualContentPath = getActualContentPath(path);
         final String actualContentPathPrefix = actualContentPath + "/";
 
-        for (final String target : this.vanityTargets.keySet()) {
+        for (final String target : vph.getVanityPathMappings().keySet()) {
             if (target.startsWith(actualContentPathPrefix) || target.equals(actualContentPath)) {
-                changed |= removeVanityPath(target);
+                changed |= vph.removeVanityPath(target);
             }
         }
         if (this.useOptimizeAliasResolution) {
@@ -474,81 +273,6 @@ public class MapEntries implements
             }
         }
         return changed;
-    }
-
-    /**
-     * Remove all aliases for the content path
-     * @param contentPath The content path
-     * @param path Optional sub path of the vanity path
-     * @return {@code true} if a change happened
-     */
-    private boolean removeAlias(final String contentPath, final String path, final AtomicBoolean resolverRefreshed) {
-        // if path is specified we first need to find out if it is
-        // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
-        // otherwise we can discard the event
-        boolean handle = true;
-        final String resourcePath;
-        if ( path != null  && path.length() > contentPath.length()) {
-            final String subPath = path.substring(contentPath.length() + 1);
-            final int firstSlash = subPath.indexOf('/');
-            if ( firstSlash == -1 ) {
-                if ( subPath.equals(JCR_CONTENT) ) {
-                    handle = false;
-                }
-                resourcePath = path;
-            } else if ( subPath.lastIndexOf('/') == firstSlash) {
-                if ( subPath.startsWith(JCR_CONTENT_PREFIX) || !subPath.endsWith(JCR_CONTENT_SUFFIX) ) {
-                    handle = false;
-                }
-                resourcePath = ResourceUtil.getParent(path);
-            } else {
-                handle = false;
-                resourcePath = null;
-            }
-        }
-        else {
-            resourcePath = contentPath;
-        }
-        if ( !handle ) {
-            return false;
-        }
-
-        this.initializing.lock();
-        try {
-            final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
-            if (aliasMapEntry != null) {
-                this.refreshResolverIfNecessary(resolverRefreshed);
-
-                String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
-                if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
-                    this.aliasMapsMap.remove(contentPath);
-                }
-
-                Resource containingResource = this.resolver != null ? this.resolver.getResource(resourcePath) : null;
-
-                if (containingResource != null) {
-                    if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                        doAddAlias(containingResource);
-                    }
-                    final Resource child = containingResource.getChild(JCR_CONTENT);
-                    if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                        doAddAlias(child);
-                    }
-                }
-            }
-            return aliasMapEntry != null;
-        } finally {
-            this.initializing.unlock();
-        }
-    }
-
-    private boolean removeVanityPath(final String path) {
-        this.initializing.lock();
-        try {
-            return doRemoveVanity(path);
-        } finally {
-            this.initializing.unlock();
-        }
     }
 
     /**
@@ -569,85 +293,6 @@ public class MapEntries implements
         resolveMapsMap.put(GLOBAL_LIST_KEY, globalResolveMap);
         this.mapMaps = Collections.unmodifiableSet(new TreeSet<>(newMapMaps.values()));
     }
-
-    private boolean doAddVanity(final Resource resource) {
-        log.debug("doAddVanity getting {}", resource.getPath());
-
-        boolean updateTheCache = isAllVanityPathEntriesCached() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache);
-    }
-
-    private boolean doRemoveVanity(final String path) {
-        final String actualContentPath = getActualContentPath(path);
-        final List <String> l = vanityTargets.remove(actualContentPath);
-        if (l != null){
-            for (final String s : l){
-                final List<MapEntry> entries = this.resolveMapsMap.get(s);
-                if (entries!= null) {
-                    for (final Iterator<MapEntry> iterator =entries.iterator(); iterator.hasNext(); ) {
-                        final MapEntry entry = iterator.next();
-                        final String redirect = getMapEntryRedirect(entry);
-                        if (redirect != null && redirect.equals(actualContentPath)) {
-                            iterator.remove();
-                        }
-                    }
-                }
-                if (entries!= null && entries.isEmpty()) {
-                    this.resolveMapsMap.remove(s);
-                }
-            }
-            if (vanityCounter.longValue() > 0) {
-                vanityCounter.addAndGet(-2);
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, this.aliasMapsMap, null, null);
-    }
-
-    /**
-     * Update alias from a resource
-     * @param resource The resource
-     * @return {@code true} if any change
-     */
-    private boolean doUpdateAlias(final Resource resource) {
-
-        // resource containing the alias
-        final Resource containingResource = getResourceToBeAliased(resource);
-
-        if ( containingResource != null ) {
-            final String containingResourceName = containingResource.getName();
-            final String parentPath = ResourceUtil.getParent(containingResource.getPath());
-
-            final Map<String, Collection<String>> aliasMapEntry = parentPath == null ? null : aliasMapsMap.get(parentPath);
-            if (aliasMapEntry != null) {
-                aliasMapEntry.remove(containingResourceName);
-                if (aliasMapEntry.isEmpty()) {
-                    this.aliasMapsMap.remove(parentPath);
-                }
-            }
-
-            boolean changed = aliasMapEntry != null;
-
-            if ( containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS) ) {
-                changed |= doAddAlias(containingResource);
-            }
-            final Resource child = containingResource.getChild(JCR_CONTENT);
-            if ( child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS) ) {
-                changed |= doAddAlias(child);
-            }
-
-            return changed;
-        } else {
-            log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
-        }
-
-        return false;
-    }
-
     /**
      * Cleans up this class.
      */
@@ -721,7 +366,8 @@ public class MapEntries implements
             key = requestPath.substring(secondIndex);
         }
 
-        return new MapEntryIterator(key, resolveMapsMap, this.factory.hasVanityPathPrecedence());
+        return new MapEntryIterator(key, resolveMapsMap.get(GLOBAL_LIST_KEY),
+                vph::getCurrentMapEntryForVanityPath, this.factory.hasVanityPathPrecedence());
     }
 
     @Override
@@ -731,82 +377,6 @@ public class MapEntries implements
 
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.useOptimizeAliasResolution;
-    }
-    
-    @Override
-    public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
-        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
-        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
-    }
-
-    @Override
-    public Map<String, List<String>> getVanityPathMappings() {
-        return Collections.unmodifiableMap(vanityTargets);
-    }
-
-    // special singleton entry for negative cache entries
-    private static final List<MapEntry> NO_MAP_ENTRIES = Collections.emptyList();
-
-    /**
-     * get the MapEntry list containing all the nodes having a specific vanityPath
-     */
-    private List<MapEntry> getMapEntryList(String vanityPath) {
-        List<MapEntry> mapEntries = null;
-
-        boolean initFinished = vanityPathsProcessed.get();
-        boolean probablyPresent = false;
-
-        if (initFinished) {
-            // total number of lookups after init (and when cache not complete)
-            long current = this.vanityPathLookups.incrementAndGet();
-            if (current >= Long.MAX_VALUE - 100000) {
-                // reset counters when we get close the limit
-                this.vanityPathLookups.set(1);
-                this.vanityPathBloomNegatives.set(0);
-                this.vanityPathBloomFalsePositives.set(0);
-                log.info("Vanity Path metrics reset to 0");
-            }
-
-            // init is done - check the bloom filter
-            probablyPresent = BloomFilterUtils.probablyContains(vanityBloomFilter, vanityPath);
-            log.trace("bloom filter lookup for {} -> {}", vanityPath, probablyPresent);
-
-            if (!probablyPresent) {
-                // filtered by Bloom filter
-                this.vanityPathBloomNegatives.incrementAndGet();
-            }
-        }
-
-        if (!initFinished || probablyPresent) {
-
-            mapEntries = this.resolveMapsMap.get(vanityPath);
-
-            if (mapEntries == null) {
-                if (!initFinished && temporaryResolveMapsMap != null) {
-                    mapEntries = temporaryResolveMapsMap.get(vanityPath);
-                    if (mapEntries != null) {
-                        temporaryResolveMapsMapHits.incrementAndGet();
-                        log.trace("getMapEntryList: using temp map entries for {} -> {}", vanityPath, mapEntries);
-                    } else {
-                        temporaryResolveMapsMapMisses.incrementAndGet();
-                    }
-                }
-                if (mapEntries == null) {
-                    Map<String, List<MapEntry>> mapEntry = getVanityPaths(vanityPath);
-                    mapEntries = mapEntry.get(vanityPath);
-                    if (!initFinished && temporaryResolveMapsMap != null) {
-                        log.trace("getMapEntryList: caching map entries for {} -> {}", vanityPath, mapEntries);
-                        temporaryResolveMapsMap.put(vanityPath, mapEntries == null ? NO_MAP_ENTRIES : mapEntries);
-                    }
-                }
-            }
-            if (mapEntries == null && probablyPresent) {
-                // Bloom filter had a false positive
-                this.vanityPathBloomFalsePositives.incrementAndGet();
-            }
-        }
-
-        return mapEntries == NO_MAP_ENTRIES ? null : mapEntries;
     }
 
     /**
@@ -867,7 +437,7 @@ public class MapEntries implements
     @Override
     public void onChange(final List<ResourceChange> changes) {
 
-        final boolean inStartup = !vanityPathsProcessed.get();
+        final boolean inStartup = !vph.isReady();
 
         final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
 
@@ -951,99 +521,6 @@ public class MapEntries implements
 
     // ---------- internal
 
-    private byte[] createVanityBloomFilter() throws IOException {
-        return BloomFilterUtils.createFilter(VANITY_BLOOM_FILTER_MAX_ENTRIES, this.factory.getVanityBloomFilterMaxBytes());
-    }
-
-    private boolean isAllVanityPathEntriesCached() {
-        return this.factory.getMaxCachedVanityPathEntries() == -1;
-    }
-
-    // escapes string for use as literal in JCR SQL within single quotes
-    private static String queryLiteral(String input) {
-        return input.replace("'", "''");
-    }
-
-    /**
-     * get the vanity paths  Search for all nodes having a specific vanityPath
-     */
-    private Map<String, List<MapEntry>> getVanityPaths(String vanityPath) {
-
-        Map<String, List<MapEntry>> entryMap = new HashMap<>();
-
-        final String queryString = String.format(
-                "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus] FROM [nt:base] "
-                        + "WHERE NOT isdescendantnode('%s') AND ([sling:vanityPath]='%s' OR [sling:vanityPath]='%s') "
-                        + "ORDER BY [sling:vanityOrder] DESC",
-                JCR_SYSTEM_PATH, queryLiteral(vanityPath), queryLiteral(vanityPath.substring(1)));
-
-        try (ResourceResolver queryResolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));) {
-            long totalCount = 0;
-            long totalValid = 0;
-            log.debug("start vanityPath query: {}", queryString);
-            final Iterator<Resource> i = queryResolver.findResources(queryString, "JCR-SQL2");
-            log.debug("end vanityPath query");
-            while (i.hasNext()) {
-                totalCount += 1;
-                final Resource resource = i.next();
-                boolean isValid = false;
-                for(final Path sPath : this.factory.getObservationPaths()) {
-                    if ( sPath.matches(resource.getPath())) {
-                        isValid = true;
-                        break;
-                    }
-                }
-                if ( isValid ) {
-                    totalValid += 1;
-                    if (this.vanityPathsProcessed.get() && (this.factory.isMaxCachedVanityPathEntriesStartup() || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
-                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true);
-                        entryMap = resolveMapsMap;
-                    } else {
-                        final Map <String, List<String>> targetPaths = new HashMap<>();
-                        loadVanityPath(resource, entryMap, targetPaths, true);
-                    }
-                }
-            }
-            log.debug("read {} ({} valid) vanityPaths", totalCount, totalValid);
-        } catch (LoginException e) {
-            log.error("Exception while obtaining queryResolver", e);
-        }
-        return entryMap;
-    }
-
-    /**
-     * Check if the path is a valid vanity path
-     * @param path The resource path to check
-     * @return {@code true} if this is valid, {@code false} otherwise
-     */
-    private boolean isValidVanityPath(final String path){
-        if (path == null) {
-            throw new IllegalArgumentException("Unexpected null path");
-        }
-
-        // ignore system tree
-        if (path.startsWith(JCR_SYSTEM_PREFIX)) {
-            log.debug("isValidVanityPath: not valid {}", path);
-            return false;
-        }
-
-        // check allow/deny list
-        if ( this.factory.getVanityPathConfig() != null ) {
-            boolean allowed = false;
-            for(final VanityPathConfig config : this.factory.getVanityPathConfig()) {
-                if ( path.startsWith(config.prefix) ) {
-                    allowed = !config.isExclude;
-                    break;
-                }
-            }
-            if ( !allowed ) {
-                log.debug("isValidVanityPath: not valid as not in allow list {}", path);
-                return false;
-            }
-        }
-        return true;
-    }
-
     private String getActualContentPath(final String path){
         final String checkPath;
         if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
@@ -1052,23 +529,6 @@ public class MapEntries implements
             checkPath = path;
         }
         return checkPath;
-    }
-
-    private String getMapEntryRedirect(final  MapEntry mapEntry) {
-        String[] redirect = mapEntry.getRedirect();
-        if (redirect.length > 1) {
-            log.warn("something went wrong, please restart the bundle");
-            return null;
-        }
-
-        String path = redirect[0];
-        if (path.endsWith("$1")) {
-            path = path.substring(0, path.length() - "$1".length());
-        } else if (path.endsWith(".html")) {
-            path = path.substring(0, path.length() - ".html".length());
-        }
-
-        return path;
     }
 
     /**
@@ -1146,35 +606,324 @@ public class MapEntries implements
         }
     }
 
-    /**
-     * Add an entry to the resolve map.
-     */
-    private boolean addEntry(final Map<String, List<MapEntry>> entryMap, final String key, final MapEntry entry) {
-
-        if (entry == null) {
-            log.trace("trying to add null entry for {}", key);
-            return false;
-        } else {
-            List<MapEntry> entries = entryMap.get(key);
-            if (entries == null) {
-                entries = new ArrayList<>();
-                entries.add(entry);
-                entryMap.put(key, entries);
-            } else {
-                List<MapEntry> entriesCopy = new ArrayList<>(entries);
-                entriesCopy.add(entry);
-                // and finally sort list
-                Collections.sort(entriesCopy);
-                entryMap.put(key, entriesCopy);
-                int size = entriesCopy.size();
-                if (size == 10) {
-                    log.debug(">= 10 MapEntries for {} - check your configuration", key);
-                } else if (size == 100) {
-                    log.info(">= 100 MapEntries for {} - check your configuration", key);
+    private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
+        // virtual uris
+        final Map<String, String> virtuals = factory.getVirtualURLMap();
+        if (virtuals != null) {
+            for (final Entry<String, String> virtualEntry : virtuals.entrySet()) {
+                final String extPath = virtualEntry.getKey();
+                final String intPath = virtualEntry.getValue();
+                if (!extPath.equals(intPath)) {
+                    // this regular expression must match the whole URL !!
+                    final String url = "^" + ANY_SCHEME_HOST + extPath + "$";
+                    final String redirect = intPath;
+                    MapEntry mapEntry = getMapEntry(url, -1, redirect);
+                    if (mapEntry!=null){
+                        entries.add(mapEntry);
+                    }
                 }
             }
-            return true;
         }
+
+        // URL Mappings
+        final Mapping[] mappings = factory.getMappings();
+        if (mappings != null) {
+            final Map<String, List<String>> map = new HashMap<>();
+            for (final Mapping mapping : mappings) {
+                if (mapping.mapsInbound()) {
+                    final String url = mapping.getTo();
+                    final String alias = mapping.getFrom();
+                    if (url.length() > 0) {
+                        List<String> aliasList = map.get(url);
+                        if (aliasList == null) {
+                            aliasList = new ArrayList<>();
+                            map.put(url, aliasList);
+                        }
+                        aliasList.add(alias);
+                    }
+                }
+            }
+
+            for (final Entry<String, List<String>> entry : map.entrySet()) {
+                MapEntry mapEntry = getMapEntry(ANY_SCHEME_HOST + entry.getKey(), -1, entry.getValue().toArray(new String[0]));
+                if (mapEntry!=null){
+                    entries.add(mapEntry);
+                }
+            }
+        }
+    }
+
+    private void loadMapConfiguration(final MapConfigurationProvider factory, final Map<String, MapEntry> entries) {
+        // URL Mappings
+        final Mapping[] mappings = factory.getMappings();
+        if (mappings != null) {
+            for (int i = mappings.length - 1; i >= 0; i--) {
+                final Mapping mapping = mappings[i];
+                if (mapping.mapsOutbound()) {
+                    final String url = mapping.getTo();
+                    final String alias = mapping.getFrom();
+                    if (!url.equals(alias)) {
+                        addMapEntry(entries, alias, url, -1);
+                    }
+                }
+            }
+        }
+
+        // virtual uris
+        final Map<String, String> virtuals = factory.getVirtualURLMap();
+        if (virtuals != null) {
+            for (final Entry<String, String> virtualEntry : virtuals.entrySet()) {
+                final String extPath = virtualEntry.getKey();
+                final String intPath = virtualEntry.getValue();
+                if (!extPath.equals(intPath)) {
+                    // this regular expression must match the whole URL !!
+                    final String path = "^" + intPath + "$";
+                    final String url = extPath;
+                    addMapEntry(entries, path, url, -1);
+                }
+            }
+        }
+    }
+
+    private void addMapEntry(final Map<String, MapEntry> entries, final String path, final String url, final int status) {
+        MapEntry entry = entries.get(path);
+        if (entry == null) {
+            entry = getMapEntry(path, status, url);
+        } else {
+            final String[] redir = entry.getRedirect();
+            final String[] newRedir = new String[redir.length + 1];
+            System.arraycopy(redir, 0, newRedir, 0, redir.length);
+            newRedir[redir.length] = url;
+            entry = getMapEntry(entry.getPattern(), entry.getStatus(), newRedir);
+        }
+        if (entry!=null){
+            entries.put(path, entry);
+        }
+    }
+
+    private MapEntry getMapEntry(final String url, final int status, final String... redirect) {
+        return getMapEntry(url, status, 0, redirect);
+    }
+
+    private MapEntry getMapEntry(final String url, final int status, long order,
+            final String... redirect) {
+        try {
+            return new MapEntry(url, status, false, order, redirect);
+        } catch (IllegalArgumentException iae) {
+            // ignore this entry
+            log.debug("ignored entry for {} due to exception", url, iae);
+            return null;
+        }
+    }
+
+
+    private void drainQueue() {
+        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+
+        // send the change event only once
+        boolean sendEvent = false;
+
+        // the config needs to be reloaded only once
+        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
+        while (!resourceChangeQueue.isEmpty()) {
+            Map.Entry<String, ResourceChange.ChangeType> entry = resourceChangeQueue.remove(0);
+            final ResourceChange.ChangeType type = entry.getValue();
+            final String path = entry.getKey();
+
+            log.trace("drain type={}, path={}", type, path);
+            boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
+
+            if (changed) {
+                sendEvent = true;
+            }
+        }
+
+        if (sendEvent) {
+            sendChangeEvent();
+        }
+    }
+
+    // Alias handling code
+
+    /**
+     * Actual initializer. Guards itself against concurrent use by using a
+     * ReentrantLock. Does nothing if the resource resolver has already been
+     * null-ed.
+     * @return true if the optimizedAliasResolution is enabled, false otherwise
+     */
+    protected boolean initializeAliases() {
+
+        this.initializing.lock();
+        try {
+            // already disposed?
+            if (this.resolver == null || this.factory == null) {
+                return false;
+            }
+
+            List<String> conflictingAliases = new ArrayList<>();
+            List<String> invalidAliases = new ArrayList<>();
+
+            boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
+
+            //optimization made in SLING-2521
+            if (isOptimizeAliasResolutionEnabled) {
+                try {
+                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver, conflictingAliases, invalidAliases);
+                    this.aliasMapsMap = loadedMap;
+
+                    // warn if there are more than a few defunct aliases
+                    if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                        log.warn("There are {} conflicting aliases; excerpt: {}",  conflictingAliases.size(), conflictingAliases);
+                    } else if (!conflictingAliases.isEmpty()) {
+                        log.warn("There are {} conflicting aliases: {}",  conflictingAliases.size(), conflictingAliases);
+                    }
+                    if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                        log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
+                    } else if (!invalidAliases.isEmpty()) {
+                        log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
+                    }
+                } catch (final Exception e) {
+
+                    logDisableAliasOptimization(e);
+
+                    // disable optimize alias resolution
+                    isOptimizeAliasResolutionEnabled = false;
+                }
+            }
+
+            doUpdateConfiguration();
+
+            sendChangeEvent();
+
+            return isOptimizeAliasResolutionEnabled;
+
+        } finally {
+
+            this.initializing.unlock();
+
+        }
+    }
+
+    private boolean doAddAlias(final Resource resource) {
+        return loadAlias(resource, this.aliasMapsMap, null, null);
+    }
+
+    /**
+     * Remove all aliases for the content path
+     * @param contentPath The content path
+     * @param path Optional sub path of the vanity path
+     * @return {@code true} if a change happened
+     */
+    private boolean removeAlias(final String contentPath, final String path, final AtomicBoolean resolverRefreshed) {
+        // if path is specified we first need to find out if it is
+        // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
+        // otherwise we can discard the event
+        boolean handle = true;
+        final String resourcePath;
+        if ( path != null  && path.length() > contentPath.length()) {
+            final String subPath = path.substring(contentPath.length() + 1);
+            final int firstSlash = subPath.indexOf('/');
+            if ( firstSlash == -1 ) {
+                if ( subPath.equals(JCR_CONTENT) ) {
+                    handle = false;
+                }
+                resourcePath = path;
+            } else if ( subPath.lastIndexOf('/') == firstSlash) {
+                if ( subPath.startsWith(JCR_CONTENT_PREFIX) || !subPath.endsWith(JCR_CONTENT_SUFFIX) ) {
+                    handle = false;
+                }
+                resourcePath = ResourceUtil.getParent(path);
+            } else {
+                handle = false;
+                resourcePath = null;
+            }
+        }
+        else {
+            resourcePath = contentPath;
+        }
+        if ( !handle ) {
+            return false;
+        }
+
+        this.initializing.lock();
+        try {
+            final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
+            if (aliasMapEntry != null) {
+                this.refreshResolverIfNecessary(resolverRefreshed);
+
+                String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
+                if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
+                    this.aliasMapsMap.remove(contentPath);
+                }
+
+                Resource containingResource = this.resolver != null ? this.resolver.getResource(resourcePath) : null;
+
+                if (containingResource != null) {
+                    if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                        doAddAlias(containingResource);
+                    }
+                    final Resource child = containingResource.getChild(JCR_CONTENT);
+                    if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                        doAddAlias(child);
+                    }
+                }
+            }
+            return aliasMapEntry != null;
+        } finally {
+            this.initializing.unlock();
+        }
+    }
+
+    /**
+     * Update alias from a resource
+     * @param resource The resource
+     * @return {@code true} if any change
+     */
+    private boolean doUpdateAlias(final Resource resource) {
+
+        // resource containing the alias
+        final Resource containingResource = getResourceToBeAliased(resource);
+
+        if ( containingResource != null ) {
+            final String containingResourceName = containingResource.getName();
+            final String parentPath = ResourceUtil.getParent(containingResource.getPath());
+
+            final Map<String, Collection<String>> aliasMapEntry = parentPath == null ? null : aliasMapsMap.get(parentPath);
+            if (aliasMapEntry != null) {
+                aliasMapEntry.remove(containingResourceName);
+                if (aliasMapEntry.isEmpty()) {
+                    this.aliasMapsMap.remove(parentPath);
+                }
+            }
+
+            boolean changed = aliasMapEntry != null;
+
+            if ( containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS) ) {
+                changed |= doAddAlias(containingResource);
+            }
+            final Resource child = containingResource.getChild(JCR_CONTENT);
+            if ( child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS) ) {
+                changed |= doAddAlias(child);
+            }
+
+            return changed;
+        } else {
+            log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
+        }
+
+        return false;
+    }
+
+    @Override
+    public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
+        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
+        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
+    }
+
+    @Override
+    public Map<String, List<String>> getVanityPathMappings() {
+        return vph.getVanityPathMappings();
     }
 
     /**
@@ -1182,7 +931,7 @@ public class MapEntries implements
      * configured alias locations having the sling:alias property
      */
     private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver,
-            List<String> conflictingAliases, List<String> invalidAliases) {
+                                                                     List<String> conflictingAliases, List<String> invalidAliases) {
 
         final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
         final String baseQueryString = generateAliasQuery();
@@ -1237,15 +986,14 @@ public class MapEntries implements
         StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
 
         if (allowedLocations.isEmpty()) {
-            String jcrSystemPath = StringUtils.removeEnd(JCR_SYSTEM_PREFIX, "/");
-            baseQuery.append(" NOT isdescendantnode('").append(queryLiteral(jcrSystemPath)).append("')");
+            baseQuery.append(" ").append(QueryBuildHelper.excludeSystemPath());
         } else {
             Iterator<String> pathIterator = allowedLocations.iterator();
             baseQuery.append(" (");
             String sep = "";
             while (pathIterator.hasNext()) {
                 String prefix = pathIterator.next();
-                baseQuery.append(sep).append("isdescendantnode('").append(queryLiteral(prefix)).append("')");
+                baseQuery.append(sep).append("isdescendantnode('").append(QueryBuildHelper.escapeString(prefix)).append("')");
                 sep = " OR ";
             }
             baseQuery.append(")");
@@ -1259,7 +1007,7 @@ public class MapEntries implements
      * Load alias given a resource
      */
     private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map,
-            List<String> conflictingAliases, List<String> invalidAliases) {
+                              List<String> conflictingAliases, List<String> invalidAliases) {
 
         // resource containing the alias
         final Resource containingResource = getResourceToBeAliased(resource);
@@ -1290,7 +1038,7 @@ public class MapEntries implements
      * Load alias given a an alias array, return success flag.
      */
     private boolean loadAliasFromArray(final String[] aliasArray, Map<String, Map<String, Collection<String>>> map,
-            List<String> conflictingAliases, List<String> invalidAliases, final String resourceName, final String parentPath) {
+                                       List<String> conflictingAliases, List<String> invalidAliases, final String resourceName, final String parentPath) {
 
         boolean hasAlias = false;
 
@@ -1370,453 +1118,6 @@ public class MapEntries implements
         return it;
     }
 
-    /**
-     * Utility class for running paged queries.
-     */
-    protected class PagedQueryIterator implements Iterator<Resource> {
-
-        private ResourceResolver resolver;
-        private String subject;
-        private String propertyName;
-        private String query;
-        private String lastKey = "";
-        private String lastValue = null;
-        private Iterator<Resource> it;
-        private int count = 0;
-        private int page = 0;
-        private int pageSize;
-        private Resource next = null;
-        private String[] defaultValue = new String[0];
-        private int largestPage = 0;
-        private String largestKeyValue = "";
-        private int largestKeyCount = 0;
-        private int currentKeyCount = 0;
-
-        /**
-         * @param subject name of the query, will be used only for logging
-         * @param propertyName name of multivalued string property to query on (used for diagnostics)
-         * @param resolver resource resolver
-         * @param query query string in SQL2 syntax
-         * @param pageSize page size (start a new query after page size is exceeded)
-         */
-        public PagedQueryIterator(String subject, String propertyName, ResourceResolver resolver, String query, int pageSize) {
-            this.subject = subject;
-            this.propertyName = propertyName;
-            this.resolver = resolver;
-            this.query = query;
-            this.pageSize = pageSize;
-            nextPage();
-        }
-
-        private void nextPage() {
-            count = 0;
-            String tquery = String.format(query, queryLiteral(lastKey));
-            log.debug("start {} query (page {}): {}", subject, page, tquery);
-            long queryStart = System.nanoTime();
-            this.it = resolver.findResources(tquery, "JCR-SQL2");
-            long queryElapsed = System.nanoTime() - queryStart;
-            log.debug("end {} query (page {}); elapsed {}ms", subject, page, TimeUnit.NANOSECONDS.toMillis(queryElapsed));
-            page += 1;
-        }
-
-        private Resource getNext() throws NoSuchElementException {
-            Resource resource = it.next();
-            count += 1;
-            final String[] values = resource.getValueMap().get(propertyName, defaultValue);
-
-            if (values.length > 0) {
-                String value = values[0];
-                if (value.compareTo(lastKey) < 0) {
-                    String message = String.format("unexpected query result in page %d, %s of '%s' despite querying for > '%s'",
-                            (page - 1), propertyName, value, lastKey);
-                    log.error(message);
-                    throw new RuntimeException(message);
-                }
-                if (lastValue != null && value.compareTo(lastValue) < 0) {
-                    String message = String.format("unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
-                            (page - 1), propertyName, value, lastValue);
-                    log.error(message);
-                    throw new RuntimeException(message);
-                }
-
-                // keep information about large key counts
-                if (value.equals(lastValue)) {
-                    currentKeyCount += 1;
-                } else {
-                    if (currentKeyCount > largestKeyCount) {
-                        largestKeyCount = currentKeyCount + 1;
-                        largestKeyValue = lastValue;
-                    }
-                    currentKeyCount = 0;
-                }
-
-                // start next page?
-                if (count > pageSize && !value.equals(lastValue)) {
-                    updatePageStats();
-                    lastKey = value;
-                    nextPage();
-                    return getNext();
-                }
-                lastValue = value;
-            }
-
-            return resource;
-        }
-
-        @Override
-        public boolean hasNext() {
-            if (next == null) {
-                try {
-                    next = getNext();
-                } catch (NoSuchElementException ex) {
-                    if (currentKeyCount > largestKeyCount) {
-                        largestKeyCount = currentKeyCount + 1;
-                        largestKeyValue = lastValue;
-                    }
-                    updatePageStats();
-                    // there are no more
-                    next = null;
-                }
-            }
-            return next != null;
-        }
-
-        @Override
-        public Resource next() throws NoSuchElementException {
-            Resource result = next != null ? next : getNext();
-            next = null;
-            return result;
-        }
-
-        private void updatePageStats() {
-            largestPage = Math.max(largestPage, count - 1);
-            log.debug("read {} query (page {}); {} entries, last key was: {}, largest page so far: {}", subject, page - 1,
-                    count, lastKey, largestPage);
-        }
-
-        public @NotNull String getStatistics() {
-            return String.format(" (max. page size: %d, number of pages: %d)", largestPage, page);
-        }
-
-        public @NotNull String getWarning() {
-            int warnAt = pageSize * 10;
-            if (largestKeyCount > warnAt) {
-                return String.format(
-                        "Largest number of aliases with the same 'first' selector exceeds expectation of %d (value '%s' appears %d times)",
-                        warnAt, largestKeyValue, largestKeyCount);
-            } else {
-                return "";
-            }
-        }
-    }
-
-    /**
-     * Load vanity paths - search for all nodes (except under /jcr:system)
-     * having a sling:vanityPath property
-     */
-    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
-        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String baseQueryString = "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]"
-                + " WHERE NOT isdescendantnode('" + queryLiteral(JCR_SYSTEM_PATH) + "')"
-                + " AND [sling:vanityPath] IS NOT NULL";
-
-        boolean supportsSort = true;
-        Iterator<Resource> it;
-        try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
-        } catch (QuerySyntaxException ex) {
-            log.debug("sort with first() not supported, falling back to base query", ex);
-            supportsSort = false;
-            it = queryUnpaged("vanity path", baseQueryString);
-        } catch (UnsupportedOperationException ex) {
-            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            supportsSort = false;
-            it = queryUnpaged("vanity path", baseQueryString);
-        }
-
-        long count = 0;
-        long countInScope = 0;
-        long processStart = System.nanoTime();
-        String previousVanityPath = null;
-
-        while (it.hasNext()) {
-            count += 1;
-            final Resource resource = it.next();
-            final String resourcePath = resource.getPath();
-            if (Stream.of(this.factory.getObservationPaths()).anyMatch(path -> path.matches(resourcePath))) {
-                countInScope += 1;
-                final boolean addToCache = isAllVanityPathEntriesCached()
-                        || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                String firstVanityPath = loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache);
-                if (supportsSort && firstVanityPath != null) {
-                    if (previousVanityPath != null && firstVanityPath.compareTo(previousVanityPath) < 0) {
-                        log.error("Sorting by first(vanityPath) does not appear to work; got " + firstVanityPath + " after " + previousVanityPath);
-                    }
-                    previousVanityPath = firstVanityPath;
-               }
-            }
-        }
-        long processElapsed = System.nanoTime() - processStart;
-        log.debug("processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms", count, countInScope, TimeUnit.NANOSECONDS.toMillis(processElapsed));
-        if (!isAllVanityPathEntriesCached()) {
-            if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
-                log.warn("Number of resources with sling:vanityPath property ({}) exceeds configured cache size ({}); handling of uncached vanity paths will be much slower. Consider increasing the cache size or decreasing the number of vanity paths.", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            } else if (countInScope > (this.factory.getMaxCachedVanityPathEntries() / 10) * 9) {
-                log.info("Number of resources with sling:vanityPath property in scope ({}) within 10% of configured cache size ({})", countInScope, this.factory.getMaxCachedVanityPathEntries());
-            }
-        }
-
-        this.vanityResourcesOnStartup.set(count);
-
-        return targetPaths;
-    }
-
-    /**
-     * Load vanity path given a resource
-     * 
-     * @return first vanity path or {@code null}
-     */
-    private String loadVanityPath(final Resource resource, final Map<String, List<MapEntry>> entryMap, final Map <String, List<String>> targetPaths, boolean addToCache) {
-
-        if (!isValidVanityPath(resource.getPath())) {
-            return null;
-        }
-
-        final ValueMap props = resource.getValueMap();
-        long vanityOrder = props.get(PROP_VANITY_ORDER, 0L);
-
-        // url is ignoring scheme and host.port and the path is
-        // what is stored in the sling:vanityPath property
-        boolean hasVanityPath = false;
-        final String[] pVanityPaths = props.get(PROP_VANITY_PATH, new String[0]);
-        if (log.isTraceEnabled()) {
-            log.trace("vanity paths on {}: {}", resource.getPath(), Arrays.asList(pVanityPaths));
-        }
-
-        for (final String pVanityPath : pVanityPaths) {
-            final String[] result = this.getVanityPathDefinition(resource.getPath(), pVanityPath);
-            if (result != null) {
-                hasVanityPath = true;
-                final String url = result[0] + result[1];
-                // redirect target is the node providing the
-                // sling:vanityPath
-                // property (or its parent if the node is called
-                // jcr:content)
-                final Resource redirectTarget;
-                if (JCR_CONTENT.equals(resource.getName())) {
-                    redirectTarget = resource.getParent();
-                } else {
-                    redirectTarget = resource;
-                }
-                final String redirect = redirectTarget.getPath();
-                final String redirectName = redirectTarget.getName();
-
-                // whether the target is attained by a external redirect or
-                // by an internal redirect is defined by the sling:redirect
-                // property
-                final int status = props.get(PROP_REDIRECT_EXTERNAL, false) ? props.get(
-                        PROP_REDIRECT_EXTERNAL_REDIRECT_STATUS, factory.getDefaultVanityPathRedirectStatus())
-                        : -1;
-
-                final String checkPath = result[1];
-
-                boolean addedEntry;
-                if (addToCache) {
-                    if (redirectName.indexOf('.') > -1) {
-                        // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, false, vanityOrder, redirect));
-
-                        final int idx = redirectName.lastIndexOf('.');
-                        final String extension = redirectName.substring(idx + 1);
-
-                        // 2. entry with extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "\\." + extension, status, false, vanityOrder, redirect));
-                    } else {
-                        // 1. entry with exact match
-                        this.addEntry(entryMap, checkPath, getMapEntry(url + "$", status, false, vanityOrder, redirect + ".html"));
-
-                        // 2. entry with match supporting selectors and extension
-                        addedEntry = this.addEntry(entryMap, checkPath, getMapEntry(url + "(\\..*)", status, false, vanityOrder, redirect + "$1"));
-                    }
-                    if (addedEntry) {
-                        // 3. keep the path to return
-                        this.updateTargetPaths(targetPaths, redirect, checkPath);
-                        //increment only if the instance variable
-                        if (entryMap == resolveMapsMap) {
-                            vanityCounter.addAndGet(2);
-                        }
-
-                        // update bloom filter
-                        BloomFilterUtils.add(vanityBloomFilter, checkPath);
-                    }
-                } else {
-                    // update bloom filter
-                    BloomFilterUtils.add(vanityBloomFilter, checkPath);
-                }
-            }
-        }
-        return hasVanityPath ? pVanityPaths[0] : null;
-    }
-
-    private void updateTargetPaths(final Map<String, List<String>> targetPaths, final String key, final String entry) {
-        if (entry == null) {
-           return;
-        }
-        List<String> entries = targetPaths.get(key);
-        if (entries == null) {
-            entries = new ArrayList<>();
-            targetPaths.put(key, entries);
-        }
-        entries.add(entry);
-    }
-
-    /**
-     * Create the vanity path definition. String array containing:
-     * {protocol}/{host}[.port] {absolute path}
-     */
-    private String[] getVanityPathDefinition(final String sourcePath, final String vanityPath) {
-
-        if (vanityPath == null) {
-            log.trace("getVanityPathDefinition: null vanity path on {}", sourcePath);
-            return null;
-        }
-
-        String info = vanityPath.trim();
-
-        if (info.isEmpty()) {
-            log.trace("getVanityPathDefinition: empty vanity path on {}", sourcePath);
-            return null;
-        }
-
-        String prefix = null;
-        String path = null;
-
-        // check for URL-shaped path
-        if (info.indexOf(":/") > -1) {
-            try {
-                final URL u = new URL(info);
-                prefix = u.getProtocol() + '/' + u.getHost() + '.' + u.getPort();
-                path = u.getPath();
-            } catch (final MalformedURLException e) {
-                log.warn("Ignoring malformed vanity path '{}' on {}", info, sourcePath);
-                return null;
-            }
-        } else {
-            prefix = "^" + ANY_SCHEME_HOST;
-
-            if (!info.startsWith("/")) {
-                path = "/" + info;
-            } else {
-                path = info;
-            }
-        }
-
-        // remove extension
-        int lastSlash = path.lastIndexOf('/');
-        int firstDot = path.indexOf('.', lastSlash + 1);
-        if (firstDot != -1) {
-            path = path.substring(0, firstDot);
-            log.warn("Removing extension from vanity path '{}' on {}", info, sourcePath);
-        }
-
-        return new String[] { prefix, path };
-    }
-
-    private void loadConfiguration(final MapConfigurationProvider factory, final List<MapEntry> entries) {
-        // virtual uris
-        final Map<String, String> virtuals = factory.getVirtualURLMap();
-        if (virtuals != null) {
-            for (final Entry<String, String> virtualEntry : virtuals.entrySet()) {
-                final String extPath = virtualEntry.getKey();
-                final String intPath = virtualEntry.getValue();
-                if (!extPath.equals(intPath)) {
-                    // this regular expression must match the whole URL !!
-                    final String url = "^" + ANY_SCHEME_HOST + extPath + "$";
-                    final String redirect = intPath;
-                    MapEntry mapEntry = getMapEntry(url, -1, false, redirect);
-                    if (mapEntry!=null){
-                        entries.add(mapEntry);
-                    }
-                }
-            }
-        }
-
-        // URL Mappings
-        final Mapping[] mappings = factory.getMappings();
-        if (mappings != null) {
-            final Map<String, List<String>> map = new HashMap<>();
-            for (final Mapping mapping : mappings) {
-                if (mapping.mapsInbound()) {
-                    final String url = mapping.getTo();
-                    final String alias = mapping.getFrom();
-                    if (url.length() > 0) {
-                        List<String> aliasList = map.get(url);
-                        if (aliasList == null) {
-                            aliasList = new ArrayList<>();
-                            map.put(url, aliasList);
-                        }
-                        aliasList.add(alias);
-                    }
-                }
-            }
-
-            for (final Entry<String, List<String>> entry : map.entrySet()) {
-                MapEntry mapEntry = getMapEntry(ANY_SCHEME_HOST + entry.getKey(), -1, false, entry.getValue().toArray(new String[0]));
-                if (mapEntry!=null){
-                    entries.add(mapEntry);
-                }
-            }
-        }
-    }
-
-    private void loadMapConfiguration(final MapConfigurationProvider factory, final Map<String, MapEntry> entries) {
-        // URL Mappings
-        final Mapping[] mappings = factory.getMappings();
-        if (mappings != null) {
-            for (int i = mappings.length - 1; i >= 0; i--) {
-                final Mapping mapping = mappings[i];
-                if (mapping.mapsOutbound()) {
-                    final String url = mapping.getTo();
-                    final String alias = mapping.getFrom();
-                    if (!url.equals(alias)) {
-                        addMapEntry(entries, alias, url, -1);
-                    }
-                }
-            }
-        }
-
-        // virtual uris
-        final Map<String, String> virtuals = factory.getVirtualURLMap();
-        if (virtuals != null) {
-            for (final Entry<String, String> virtualEntry : virtuals.entrySet()) {
-                final String extPath = virtualEntry.getKey();
-                final String intPath = virtualEntry.getValue();
-                if (!extPath.equals(intPath)) {
-                    // this regular expression must match the whole URL !!
-                    final String path = "^" + intPath + "$";
-                    final String url = extPath;
-                    addMapEntry(entries, path, url, -1);
-                }
-            }
-        }
-    }
-
-    private void addMapEntry(final Map<String, MapEntry> entries, final String path, final String url, final int status) {
-        MapEntry entry = entries.get(path);
-        if (entry == null) {
-            entry = getMapEntry(path, status, false, url);
-        } else {
-            final String[] redir = entry.getRedirect();
-            final String[] newRedir = new String[redir.length + 1];
-            System.arraycopy(redir, 0, newRedir, 0, redir.length);
-            newRedir[redir.length] = url;
-            entry = getMapEntry(entry.getPattern(), entry.getStatus(), false, newRedir);
-        }
-        if (entry!=null){
-            entries.put(path, entry);
-        }
-    }
 
     private final AtomicLong lastTimeLogged = new AtomicLong(-1);
 
@@ -1836,148 +1137,5 @@ public class MapEntries implements
                 log.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
             }
         }
-
-    }
-
-    private final class MapEntryIterator implements Iterator<MapEntry> {
-
-        private final Map<String, List<MapEntry>> resolveMapsMap;
-
-        private String key;
-
-        private MapEntry next;
-
-        private final Iterator<MapEntry> globalListIterator;
-        private MapEntry nextGlobal;
-
-        private Iterator<MapEntry> specialIterator;
-        private MapEntry nextSpecial;
-
-        private boolean vanityPathPrecedence;
-
-        public MapEntryIterator(final String startKey, final Map<String, List<MapEntry>> resolveMapsMap, final boolean vanityPathPrecedence) {
-            this.key = startKey;
-            this.resolveMapsMap = resolveMapsMap;
-            this.globalListIterator = this.resolveMapsMap.get(GLOBAL_LIST_KEY).iterator();
-            this.vanityPathPrecedence = vanityPathPrecedence;
-            this.seek();
-        }
-
-        /**
-         * @see java.util.Iterator#hasNext()
-         */
-        @Override
-        public boolean hasNext() {
-            return this.next != null;
-        }
-
-        /**
-         * @see java.util.Iterator#next()
-         */
-        @Override
-        public MapEntry next() {
-            if (this.next == null) {
-                throw new NoSuchElementException();
-            }
-            final MapEntry result = this.next;
-            this.seek();
-            return result;
-        }
-
-        /**
-         * @see java.util.Iterator#remove()
-         */
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-
-        private void seek() {
-            if (this.nextGlobal == null && this.globalListIterator.hasNext()) {
-                this.nextGlobal = this.globalListIterator.next();
-            }
-            if (this.nextSpecial == null) {
-                if (specialIterator != null && !specialIterator.hasNext()) {
-                    specialIterator = null;
-                }
-                while (specialIterator == null && key != null) {
-                    // remove selectors and extension
-                    final int lastSlashPos = key.lastIndexOf('/');
-                    final int lastDotPos = key.indexOf('.', lastSlashPos);
-                    if (lastDotPos != -1) {
-                        key = key.substring(0, lastDotPos);
-                    }
-
-                    final List<MapEntry> special;
-                    if (MapEntries.this.isAllVanityPathEntriesCached() && MapEntries.this.vanityPathsProcessed.get()) {
-                        special = this.resolveMapsMap.get(key);
-                    } else {
-                        special = MapEntries.this.getMapEntryList(key); 
-                    }
-                    if (special != null) {
-                        specialIterator = special.iterator();
-                    }
-                    // recurse to the parent
-                    if (key.length() > 1) {
-                        final int lastSlash = key.lastIndexOf("/");
-                        if (lastSlash == 0) {
-                            key = null;
-                        } else {
-                            key = key.substring(0, lastSlash);
-                        }
-                    } else {
-                        key = null;
-                    }
-                }
-                if (this.specialIterator != null && this.specialIterator.hasNext()) {
-                    this.nextSpecial = this.specialIterator.next();
-                }
-            }
-            if (this.nextSpecial == null) {
-                this.next = this.nextGlobal;
-                this.nextGlobal = null;
-            } else if (!this.vanityPathPrecedence){
-                if (this.nextGlobal == null) {
-                    this.next = this.nextSpecial;
-                    this.nextSpecial = null;
-                } else if (this.nextGlobal.getPattern().length() >= this.nextSpecial.getPattern().length()) {
-                    this.next = this.nextGlobal;
-                    this.nextGlobal = null;
-
-                }else {
-                    this.next = this.nextSpecial;
-                    this.nextSpecial = null;
-                }
-            } else {
-                this.next = this.nextSpecial;
-                this.nextSpecial = null;
-            }
-        }
-    };
-
-    private MapEntry getMapEntry(String url, final int status, final boolean trailingSlash,
-            final String... redirect){
-
-        MapEntry mapEntry = null;
-        try{
-            mapEntry = new MapEntry(url, status, trailingSlash, 0, redirect);
-        }catch (IllegalArgumentException iae){
-            //ignore this entry
-            log.debug("ignored entry due exception ",iae);
-        }
-        return mapEntry;
-    }
-
-    private MapEntry getMapEntry(String url, final int status, final boolean trailingSlash, long order,
-            final String... redirect){
-
-        MapEntry mapEntry = null;
-        try{
-            mapEntry = new MapEntry(url, status, trailingSlash, order, redirect);
-        }catch (IllegalArgumentException iae){
-            //ignore this entry
-            log.debug("ignored entry due exception ",iae);
-        }
-        return mapEntry;
     }
 }

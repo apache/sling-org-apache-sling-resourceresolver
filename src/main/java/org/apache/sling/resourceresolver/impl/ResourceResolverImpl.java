@@ -87,6 +87,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     // positives for the String.endsWith check for names like
     // "xyzjcr:content"
     public static final String JCR_CONTENT_LEAF = "/jcr:content";
+    
+    
+    protected static final String PARENT_RT_CACHEKEY = ResourceResolverImpl.class.getName() + ".PARENT_RT";
+    
 
     /** The factory which created this resource resolver. */
     private final CommonResourceResolverFactoryImpl factory;
@@ -1110,10 +1114,21 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         checkClosed();
         String resourceSuperType = null;
         if ( resource != null ) {
-            resourceSuperType = resource.getResourceSuperType();
-            if (resourceSuperType == null) {
-                resourceSuperType = this.getParentResourceType(resource.getResourceType());
+            if (parentResourceTypeMap.containsKey(resource.getPath())) {
+                resourceSuperType = parentResourceTypeMap.get(resource.getPath()).orElse(null);
+            } else {
+                resourceSuperType = getParentResourceTypeInternal(resource);
+                parentResourceTypeMap.put(resource.getPath(), Optional.ofNullable(resourceSuperType));
             }
+        }
+        return resourceSuperType;
+    }
+
+    String getParentResourceTypeInternal(final Resource resource) {
+        String resourceSuperType;
+        resourceSuperType = resource.getResourceSuperType();
+        if (resourceSuperType == null) {
+            resourceSuperType = this.getParentResourceType(resource.getResourceType());
         }
         return resourceSuperType;
     }
@@ -1184,6 +1199,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         checkClosed();
         this.control.refresh(this.context);
         resourceTypeLookupCache.clear();
+        parentResourceTypeMap.clear();
     }
 
     @Override
