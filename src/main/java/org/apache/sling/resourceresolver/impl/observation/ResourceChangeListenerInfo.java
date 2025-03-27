@@ -18,9 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.observation;
 
-import static org.apache.sling.api.resource.observation.ResourceChangeListener.CHANGES;
-import static org.apache.sling.api.resource.observation.ResourceChangeListener.PATHS;
-
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -38,14 +35,19 @@ import org.apache.sling.api.resource.path.PathSet;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.converter.Converters;
 
+import static org.apache.sling.api.resource.observation.ResourceChangeListener.CHANGES;
+import static org.apache.sling.api.resource.observation.ResourceChangeListener.PATHS;
+
 /**
  * Information about a resource change listener.
  */
 public class ResourceChangeListenerInfo implements Comparable<ResourceChangeListenerInfo> {
 
-    private static final Set<ChangeType> DEFAULT_CHANGE_RESOURCE_TYPES = EnumSet.of(ChangeType.ADDED, ChangeType.REMOVED, ChangeType.CHANGED);
+    private static final Set<ChangeType> DEFAULT_CHANGE_RESOURCE_TYPES =
+            EnumSet.of(ChangeType.ADDED, ChangeType.REMOVED, ChangeType.CHANGED);
 
-    private static final Set<ChangeType> DEFAULT_CHANGE_PROVIDER_TYPES = EnumSet.of(ChangeType.PROVIDER_ADDED, ChangeType.PROVIDER_REMOVED);
+    private static final Set<ChangeType> DEFAULT_CHANGE_PROVIDER_TYPES =
+            EnumSet.of(ChangeType.PROVIDER_ADDED, ChangeType.PROVIDER_REMOVED);
 
     private final PathSet paths;
 
@@ -61,26 +63,28 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
 
     private volatile ResourceChangeListener listener;
 
-    public ResourceChangeListenerInfo(final ServiceReference<ResourceChangeListener> ref, final List<String> searchPaths) {
+    public ResourceChangeListenerInfo(
+            final ServiceReference<ResourceChangeListener> ref, final List<String> searchPaths) {
         boolean configValid = true;
         final Set<String> pathsSet = new HashSet<>();
-        final String paths[] = Converters.standardConverter().convert(ref.getProperty(PATHS)).to(String[].class);
-        for(final String p : paths) {
+        final String paths[] =
+                Converters.standardConverter().convert(ref.getProperty(PATHS)).to(String[].class);
+        for (final String p : paths) {
             boolean isGlobPattern = false;
             String normalisedPath = ResourceUtil.normalize(p);
             if (p.startsWith(Path.GLOB_PREFIX)) {
                 isGlobPattern = true;
-                normalisedPath =  ResourceUtil.normalize(p.substring(Path.GLOB_PREFIX.length()));
+                normalisedPath = ResourceUtil.normalize(p.substring(Path.GLOB_PREFIX.length()));
             }
             if (!".".equals(p) && normalisedPath.isEmpty()) {
                 configValid = false;
-            } else if ( normalisedPath.startsWith("/") && !isGlobPattern ) {
+            } else if (normalisedPath.startsWith("/") && !isGlobPattern) {
                 pathsSet.add(normalisedPath);
             } else if (normalisedPath.startsWith("/") && isGlobPattern) {
                 pathsSet.add(Path.GLOB_PREFIX + normalisedPath);
             } else {
-                for(final String sp : searchPaths) {
-                    if ( p.equals(".") ) {
+                for (final String sp : searchPaths) {
+                    if (p.equals(".")) {
                         pathsSet.add(sp);
                     } else {
                         if (isGlobPattern) {
@@ -92,31 +96,33 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
                 }
             }
         }
-        if ( pathsSet.isEmpty() ) {
+        if (pathsSet.isEmpty()) {
             configValid = false;
         } else {
             // check for sub paths
             final Iterator<String> iter = pathsSet.iterator();
-            while ( iter.hasNext() ) {
+            while (iter.hasNext()) {
                 final String path = iter.next();
                 boolean remove = false;
-                for(final String p : pathsSet) {
-                    if ( p.length() > path.length() && path.startsWith(p + "/") ) {
+                for (final String p : pathsSet) {
+                    if (p.length() > path.length() && path.startsWith(p + "/")) {
                         remove = true;
                         break;
                     }
                 }
-                if ( remove ) {
+                if (remove) {
                     iter.remove();
                 }
             }
         }
         this.paths = PathSet.fromStringCollection(pathsSet);
-        if (ref.getProperty(CHANGES) != null ) {
+        if (ref.getProperty(CHANGES) != null) {
             final Set<ChangeType> rts = new HashSet<>();
             final Set<ChangeType> pts = new HashSet<>();
             try {
-                for (final String changeName : Converters.standardConverter().convert(ref.getProperty(CHANGES)).to(String[].class)) {
+                for (final String changeName : Converters.standardConverter()
+                        .convert(ref.getProperty(CHANGES))
+                        .to(String[].class)) {
                     final ChangeType ct = ChangeType.valueOf(changeName);
                     if (ct.ordinal() < ChangeType.PROVIDER_ADDED.ordinal()) {
                         rts.add(ct);
@@ -127,16 +133,16 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
             } catch (final Exception e) {
                 configValid = false;
             }
-            if ( rts.isEmpty() ) {
+            if (rts.isEmpty()) {
                 this.resourceChangeTypes = Collections.emptySet();
-            } else if ( rts.size() == 3 ) {
+            } else if (rts.size() == 3) {
                 this.resourceChangeTypes = DEFAULT_CHANGE_RESOURCE_TYPES;
             } else {
                 this.resourceChangeTypes = Collections.unmodifiableSet(rts);
             }
-            if ( pts.isEmpty() ) {
+            if (pts.isEmpty()) {
                 this.providerChangeTypes = Collections.emptySet();
-            } else if ( pts.size() == 2 ) {
+            } else if (pts.size() == 2) {
                 this.providerChangeTypes = DEFAULT_CHANGE_PROVIDER_TYPES;
             } else {
                 this.providerChangeTypes = Collections.unmodifiableSet(pts);
@@ -148,9 +154,11 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
             this.providerChangeTypes = DEFAULT_CHANGE_PROVIDER_TYPES;
         }
 
-        if ( ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT) != null ) {
+        if (ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT) != null) {
             this.propertyNamesHint = new HashSet<>();
-            for(final String val : Converters.standardConverter().convert(ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT)).to(String[].class) ) {
+            for (final String val : Converters.standardConverter()
+                    .convert(ref.getProperty(ResourceChangeListener.PROPERTY_NAMES_HINT))
+                    .to(String[].class)) {
                 this.propertyNamesHint.add(val);
             }
         } else {
@@ -197,23 +205,23 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
     }
 
     private int compareSet(final Set<String> t, final Set<String> o) {
-        if ( t == null && o == null ) {
+        if (t == null && o == null) {
             return 0;
         }
-        if ( t == null ) {
+        if (t == null) {
             return -1;
         }
-        if ( o == null ) {
+        if (o == null) {
             return 1;
         }
         final Set<String> tPaths = new TreeSet<>(t);
         final Set<String> oPaths = new TreeSet<>(o);
 
         int result = tPaths.size() - oPaths.size();
-        if ( result == 0 ) {
+        if (result == 0) {
             final Iterator<String> tPathsIter = tPaths.iterator();
             final Iterator<String> oPathsIter = oPaths.iterator();
-            while ( result == 0 && tPathsIter.hasNext() ) {
+            while (result == 0 && tPathsIter.hasNext()) {
                 result = tPathsIter.next().compareTo(oPathsIter.next());
             }
         }
@@ -222,10 +230,10 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
 
     private int compareChangeTypes(final Set<ChangeType> t, final Set<ChangeType> o) {
         int result = t.size() - o.size();
-        if ( result == 0 ) {
+        if (result == 0) {
             final Iterator<ChangeType> tIter = t.iterator();
             final Iterator<ChangeType> oIter = o.iterator();
-            while ( result == 0 && tIter.hasNext() ) {
+            while (result == 0 && tIter.hasNext()) {
                 result = tIter.next().compareTo(oIter.next());
             }
         }
@@ -236,15 +244,15 @@ public class ResourceChangeListenerInfo implements Comparable<ResourceChangeList
     public int compareTo(final ResourceChangeListenerInfo o) {
         // paths first
         int result = compareSet(this.paths.toStringSet(), o.paths.toStringSet());
-        if ( result == 0 ) {
+        if (result == 0) {
             // hints
             result = compareSet(this.propertyNamesHint, o.propertyNamesHint);
-            if ( result == 0 ) {
+            if (result == 0) {
                 // external next
                 result = Boolean.valueOf(this.external).compareTo(o.external);
-                if ( result == 0 ) {
+                if (result == 0) {
                     result = compareChangeTypes(this.resourceChangeTypes, o.resourceChangeTypes);
-                    if ( result == 0 ) {
+                    if (result == 0) {
                         result = compareChangeTypes(this.providerChangeTypes, o.providerChangeTypes);
                     }
                 }

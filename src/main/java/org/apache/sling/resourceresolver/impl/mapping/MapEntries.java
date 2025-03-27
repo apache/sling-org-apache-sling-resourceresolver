@@ -18,28 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.apache.sling.api.SlingConstants;
-import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.QuerySyntaxException;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.ValueMap;
-import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
-import org.apache.sling.api.resource.observation.ResourceChange;
-import org.apache.sling.api.resource.observation.ResourceChangeListener;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
-import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.event.Event;
-import org.osgi.service.event.EventAdmin;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
@@ -68,10 +46,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class MapEntries implements
-    MapEntriesHandler,
-    ResourceChangeListener,
-    ExternalResourceChangeListener {
+import org.apache.sling.api.SlingConstants;
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.QuerySyntaxException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
+import org.apache.sling.api.resource.observation.ResourceChange;
+import org.apache.sling.api.resource.observation.ResourceChangeListener;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class MapEntries implements MapEntriesHandler, ResourceChangeListener, ExternalResourceChangeListener {
 
     private static final String JCR_CONTENT = "jcr:content";
 
@@ -138,19 +135,20 @@ public class MapEntries implements
 
     final VanityPathHandler vph;
 
-    public MapEntries(final MapConfigurationProvider factory,
-            final BundleContext bundleContext, 
-            final EventAdmin eventAdmin, 
-            final StringInterpolationProvider stringInterpolationProvider, 
-            final Optional<ResourceResolverMetrics> metrics) 
-                    throws LoginException, IOException {
+    public MapEntries(
+            final MapConfigurationProvider factory,
+            final BundleContext bundleContext,
+            final EventAdmin eventAdmin,
+            final StringInterpolationProvider stringInterpolationProvider,
+            final Optional<ResourceResolverMetrics> metrics)
+            throws LoginException, IOException {
 
         this.resolver = factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"));
         this.factory = factory;
         this.eventAdmin = eventAdmin;
 
         this.resolveMapsMap = new ConcurrentHashMap<>(Map.of(GLOBAL_LIST_KEY, List.of()));
-        this.mapMaps = Collections.<MapEntry> emptyList();
+        this.mapMaps = Collections.<MapEntry>emptyList();
         this.aliasMapsMap = new ConcurrentHashMap<>();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
@@ -182,7 +180,8 @@ public class MapEntries implements
         }
     }
 
-    private ServiceRegistration<ResourceChangeListener> registerResourceChangeListener(final BundleContext bundleContext) {
+    private ServiceRegistration<ResourceChangeListener> registerResourceChangeListener(
+            final BundleContext bundleContext) {
         final Dictionary<String, Object> props = new Hashtable<>(); // NOSONAR - required by OSGi APIs
         final String[] paths = new String[factory.getObservationPaths().length];
         for (int i = 0; i < paths.length; i++) {
@@ -205,7 +204,8 @@ public class MapEntries implements
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
                 boolean changed = vph.doAddVanity(resource);
-                if (this.useOptimizeAliasResolution && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                if (this.useOptimizeAliasResolution
+                        && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                     changed |= doAddAlias(resource);
                 }
                 return changed;
@@ -219,7 +219,7 @@ public class MapEntries implements
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
         final boolean isValidVanityPath = vph.isValidVanityPath(path);
-        if ( this.useOptimizeAliasResolution || isValidVanityPath) {
+        if (this.useOptimizeAliasResolution || isValidVanityPath) {
             this.initializing.lock();
 
             try {
@@ -227,13 +227,13 @@ public class MapEntries implements
                 final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
                 if (resource != null) {
                     boolean changed = false;
-                    if ( isValidVanityPath ) {
+                    if (isValidVanityPath) {
                         // we remove the old vanity path first
                         changed |= vph.doRemoveVanity(path);
 
                         // add back vanity path
                         Resource contentRsrc = null;
-                        if ( !resource.getName().equals(JCR_CONTENT)) {
+                        if (!resource.getName().equals(JCR_CONTENT)) {
                             // there might be a JCR_CONTENT child resource
                             contentRsrc = resource.getChild(JCR_CONTENT);
                         }
@@ -266,7 +266,8 @@ public class MapEntries implements
         if (this.useOptimizeAliasResolution) {
             final String pathPrefix = path + "/";
             for (final String contentPath : this.aliasMapsMap.keySet()) {
-                if (path.startsWith(contentPath + "/") || path.equals(contentPath)
+                if (path.startsWith(contentPath + "/")
+                        || path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
                     changed |= removeAlias(contentPath, path, resolverRefreshed);
                 }
@@ -322,7 +323,8 @@ public class MapEntries implements
 
         try {
             if (!initLocked) {
-                log.warn("dispose: Could not acquire initialization lock within 10 seconds; ongoing intialization may fail");
+                log.warn(
+                        "dispose: Could not acquire initialization lock within 10 seconds; ongoing intialization may fail");
             }
 
             // immediately set the resolver field to null to indicate
@@ -366,8 +368,11 @@ public class MapEntries implements
             key = requestPath.substring(secondIndex);
         }
 
-        return new MapEntryIterator(key, resolveMapsMap.get(GLOBAL_LIST_KEY),
-                vph::getCurrentMapEntryForVanityPath, this.factory.hasVanityPathPrecedence());
+        return new MapEntryIterator(
+                key,
+                resolveMapsMap.get(GLOBAL_LIST_KEY),
+                vph::getCurrentMapEntryForVanityPath,
+                this.factory.hasVanityPathPrecedence());
     }
 
     @Override
@@ -386,7 +391,7 @@ public class MapEntries implements
      *                          method returns
      */
     private void refreshResolverIfNecessary(final AtomicBoolean resolverRefreshed) {
-        if ( resolverRefreshed.compareAndSet(false, true) ) {
+        if (resolverRefreshed.compareAndSet(false, true)) {
             this.resolver.refresh();
         }
     }
@@ -402,13 +407,14 @@ public class MapEntries implements
      *         the path does not affect a config change, {@code null} if the config has already
      *         been reloaded.
      */
-    private Boolean handleConfigurationUpdate(final String path,
+    private Boolean handleConfigurationUpdate(
+            final String path,
             final AtomicBoolean hasReloadedConfig,
             final AtomicBoolean resolverRefreshed,
             final boolean isDelete) {
-        if ( this.factory.isMapConfiguration(path)
-             || (isDelete && this.factory.getMapRoot().startsWith(path + "/")) ) {
-            if ( hasReloadedConfig.compareAndSet(false, true) ) {
+        if (this.factory.isMapConfiguration(path)
+                || (isDelete && this.factory.getMapRoot().startsWith(path + "/"))) {
+            if (hasReloadedConfig.compareAndSet(false, true)) {
                 this.initializing.lock();
 
                 try {
@@ -461,7 +467,8 @@ public class MapEntries implements
 
             // during startup: just enqueue the events
             if (inStartup) {
-                if (type == ResourceChange.ChangeType.REMOVED || type == ResourceChange.ChangeType.ADDED
+                if (type == ResourceChange.ChangeType.REMOVED
+                        || type == ResourceChange.ChangeType.ADDED
                         || type == ResourceChange.ChangeType.CHANGED) {
                     Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
                     log.trace("enqueue: {}", entry);
@@ -481,7 +488,10 @@ public class MapEntries implements
         }
     }
 
-    private boolean handleResourceChange(ResourceChange.ChangeType type, String path, AtomicBoolean resolverRefreshed,
+    private boolean handleResourceChange(
+            ResourceChange.ChangeType type,
+            String path,
+            AtomicBoolean resolverRefreshed,
             AtomicBoolean hasReloadedConfig) {
         boolean changed = false;
 
@@ -521,9 +531,9 @@ public class MapEntries implements
 
     // ---------- internal
 
-    private String getActualContentPath(final String path){
+    private String getActualContentPath(final String path) {
         final String checkPath;
-        if ( path.endsWith(JCR_CONTENT_SUFFIX) ) {
+        if (path.endsWith(JCR_CONTENT_SUFFIX)) {
             checkPath = ResourceUtil.getParent(path);
         } else {
             checkPath = path;
@@ -537,13 +547,14 @@ public class MapEntries implements
     private void sendChangeEvent() {
         final EventAdmin local = this.eventAdmin;
         if (local != null) {
-            final Event event = new Event(SlingConstants.TOPIC_RESOURCE_RESOLVER_MAPPING_CHANGED,
-                            (Dictionary<String, ?>) null);
+            final Event event =
+                    new Event(SlingConstants.TOPIC_RESOURCE_RESOLVER_MAPPING_CHANGED, (Dictionary<String, ?>) null);
             local.postEvent(event);
         }
     }
 
-    private void loadResolverMap(final ResourceResolver resolver, final List<MapEntry> entries, final Map<String, MapEntry> mapEntries) {
+    private void loadResolverMap(
+            final ResourceResolver resolver, final List<MapEntry> entries, final Map<String, MapEntry> mapEntries) {
         // the standard map configuration
         final Resource res = resolver.getResource(this.factory.getMapRoot());
         if (res != null) {
@@ -551,8 +562,12 @@ public class MapEntries implements
         }
     }
 
-    private void gather(final ResourceResolver resolver, final List<MapEntry> entries, final Map<String, MapEntry> mapEntries,
-                    final Resource parent, final String parentPath) {
+    private void gather(
+            final ResourceResolver resolver,
+            final List<MapEntry> entries,
+            final Map<String, MapEntry> mapEntries,
+            final Resource parent,
+            final String parentPath) {
         // scheme list
         final Iterator<Resource> children = parent.listChildren();
         while (children.hasNext()) {
@@ -585,11 +600,11 @@ public class MapEntries implements
 
             // add resolution entries for this node
             MapEntry childResolveEntry = null;
-            try{
-                childResolveEntry=MapEntry.createResolveEntry(childPath, child, trailingSlash);
-            }catch (IllegalArgumentException iae){
-                //ignore this entry
-                log.debug("ignored entry due exception ",iae);
+            try {
+                childResolveEntry = MapEntry.createResolveEntry(childPath, child, trailingSlash);
+            } catch (IllegalArgumentException iae) {
+                // ignore this entry
+                log.debug("ignored entry due exception ", iae);
             }
             if (childResolveEntry != null) {
                 entries.add(childResolveEntry);
@@ -602,7 +617,6 @@ public class MapEntries implements
                     addMapEntry(mapEntries, mapEntry.getPattern(), mapEntry.getRedirect()[0], mapEntry.getStatus());
                 }
             }
-
         }
     }
 
@@ -618,7 +632,7 @@ public class MapEntries implements
                     final String url = "^" + ANY_SCHEME_HOST + extPath + "$";
                     final String redirect = intPath;
                     MapEntry mapEntry = getMapEntry(url, -1, redirect);
-                    if (mapEntry!=null){
+                    if (mapEntry != null) {
                         entries.add(mapEntry);
                     }
                 }
@@ -645,8 +659,9 @@ public class MapEntries implements
             }
 
             for (final Entry<String, List<String>> entry : map.entrySet()) {
-                MapEntry mapEntry = getMapEntry(ANY_SCHEME_HOST + entry.getKey(), -1, entry.getValue().toArray(new String[0]));
-                if (mapEntry!=null){
+                MapEntry mapEntry = getMapEntry(
+                        ANY_SCHEME_HOST + entry.getKey(), -1, entry.getValue().toArray(new String[0]));
+                if (mapEntry != null) {
                     entries.add(mapEntry);
                 }
             }
@@ -685,7 +700,8 @@ public class MapEntries implements
         }
     }
 
-    private void addMapEntry(final Map<String, MapEntry> entries, final String path, final String url, final int status) {
+    private void addMapEntry(
+            final Map<String, MapEntry> entries, final String path, final String url, final int status) {
         MapEntry entry = entries.get(path);
         if (entry == null) {
             entry = getMapEntry(path, status, url);
@@ -696,7 +712,7 @@ public class MapEntries implements
             newRedir[redir.length] = url;
             entry = getMapEntry(entry.getPattern(), entry.getStatus(), newRedir);
         }
-        if (entry!=null){
+        if (entry != null) {
             entries.put(path, entry);
         }
     }
@@ -705,8 +721,7 @@ public class MapEntries implements
         return getMapEntry(url, status, 0, redirect);
     }
 
-    private MapEntry getMapEntry(final String url, final int status, long order,
-            final String... redirect) {
+    private MapEntry getMapEntry(final String url, final int status, long order, final String... redirect) {
         try {
             return new MapEntry(url, status, false, order, redirect);
         } catch (IllegalArgumentException iae) {
@@ -715,7 +730,6 @@ public class MapEntries implements
             return null;
         }
     }
-
 
     private void drainQueue() {
         final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
@@ -766,17 +780,21 @@ public class MapEntries implements
 
             boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
 
-            //optimization made in SLING-2521
+            // optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final Map<String, Map<String, Collection<String>>> loadedMap = this.loadAliases(resolver, conflictingAliases, invalidAliases);
+                    final Map<String, Map<String, Collection<String>>> loadedMap =
+                            this.loadAliases(resolver, conflictingAliases, invalidAliases);
                     this.aliasMapsMap = loadedMap;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
-                        log.warn("There are {} conflicting aliases; excerpt: {}",  conflictingAliases.size(), conflictingAliases);
+                        log.warn(
+                                "There are {} conflicting aliases; excerpt: {}",
+                                conflictingAliases.size(),
+                                conflictingAliases);
                     } else if (!conflictingAliases.isEmpty()) {
-                        log.warn("There are {} conflicting aliases: {}",  conflictingAliases.size(), conflictingAliases);
+                        log.warn("There are {} conflicting aliases: {}", conflictingAliases.size(), conflictingAliases);
                     }
                     if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
                         log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
@@ -801,7 +819,6 @@ public class MapEntries implements
         } finally {
 
             this.initializing.unlock();
-
         }
     }
 
@@ -821,16 +838,16 @@ public class MapEntries implements
         // otherwise we can discard the event
         boolean handle = true;
         final String resourcePath;
-        if ( path != null  && path.length() > contentPath.length()) {
+        if (path != null && path.length() > contentPath.length()) {
             final String subPath = path.substring(contentPath.length() + 1);
             final int firstSlash = subPath.indexOf('/');
-            if ( firstSlash == -1 ) {
-                if ( subPath.equals(JCR_CONTENT) ) {
+            if (firstSlash == -1) {
+                if (subPath.equals(JCR_CONTENT)) {
                     handle = false;
                 }
                 resourcePath = path;
-            } else if ( subPath.lastIndexOf('/') == firstSlash) {
-                if ( subPath.startsWith(JCR_CONTENT_PREFIX) || !subPath.endsWith(JCR_CONTENT_SUFFIX) ) {
+            } else if (subPath.lastIndexOf('/') == firstSlash) {
+                if (subPath.startsWith(JCR_CONTENT_PREFIX) || !subPath.endsWith(JCR_CONTENT_SUFFIX)) {
                     handle = false;
                 }
                 resourcePath = ResourceUtil.getParent(path);
@@ -838,11 +855,10 @@ public class MapEntries implements
                 handle = false;
                 resourcePath = null;
             }
-        }
-        else {
+        } else {
             resourcePath = contentPath;
         }
-        if ( !handle ) {
+        if (!handle) {
             return false;
         }
 
@@ -853,7 +869,8 @@ public class MapEntries implements
                 this.refreshResolverIfNecessary(resolverRefreshed);
 
                 String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
-                if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath)) &&  (aliasMapEntry.isEmpty())) {
+                if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath))
+                        && (aliasMapEntry.isEmpty())) {
                     this.aliasMapsMap.remove(contentPath);
                 }
 
@@ -885,11 +902,12 @@ public class MapEntries implements
         // resource containing the alias
         final Resource containingResource = getResourceToBeAliased(resource);
 
-        if ( containingResource != null ) {
+        if (containingResource != null) {
             final String containingResourceName = containingResource.getName();
             final String parentPath = ResourceUtil.getParent(containingResource.getPath());
 
-            final Map<String, Collection<String>> aliasMapEntry = parentPath == null ? null : aliasMapsMap.get(parentPath);
+            final Map<String, Collection<String>> aliasMapEntry =
+                    parentPath == null ? null : aliasMapsMap.get(parentPath);
             if (aliasMapEntry != null) {
                 aliasMapEntry.remove(containingResourceName);
                 if (aliasMapEntry.isEmpty()) {
@@ -899,11 +917,11 @@ public class MapEntries implements
 
             boolean changed = aliasMapEntry != null;
 
-            if ( containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS) ) {
+            if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                 changed |= doAddAlias(containingResource);
             }
             final Resource child = containingResource.getChild(JCR_CONTENT);
-            if ( child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS) ) {
+            if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                 changed |= doAddAlias(child);
             }
 
@@ -930,15 +948,16 @@ public class MapEntries implements
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
-    private Map<String, Map<String, Collection<String>>> loadAliases(final ResourceResolver resolver,
-                                                                     List<String> conflictingAliases, List<String> invalidAliases) {
+    private Map<String, Map<String, Collection<String>>> loadAliases(
+            final ResourceResolver resolver, List<String> conflictingAliases, List<String> invalidAliases) {
 
         final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
         final String baseQueryString = generateAliasQuery();
 
         Iterator<Resource> it;
         try {
-            final String queryStringWithSort = baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
+            final String queryStringWithSort =
+                    baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
             it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
         } catch (QuerySyntaxException ex) {
             log.debug("sort with first() not supported, falling back to base query", ex);
@@ -960,7 +979,7 @@ public class MapEntries implements
 
         String diagnostics = "";
         if (it instanceof PagedQueryIterator) {
-            PagedQueryIterator pit = (PagedQueryIterator)it;
+            PagedQueryIterator pit = (PagedQueryIterator) it;
 
             if (!pit.getWarning().isEmpty()) {
                 log.warn(pit.getWarning());
@@ -969,8 +988,12 @@ public class MapEntries implements
             diagnostics = pit.getStatistics();
         }
 
-        log.info("alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
-                count, TimeUnit.NANOSECONDS.toMillis(processElapsed), resourcePerSecond, diagnostics);
+        log.info(
+                "alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
+                count,
+                TimeUnit.NANOSECONDS.toMillis(processElapsed),
+                resourcePerSecond,
+                diagnostics);
 
         this.aliasResourcesOnStartup.set(count);
 
@@ -993,7 +1016,11 @@ public class MapEntries implements
             String sep = "";
             while (pathIterator.hasNext()) {
                 String prefix = pathIterator.next();
-                baseQuery.append(sep).append("isdescendantnode('").append(QueryBuildHelper.escapeString(prefix)).append("')");
+                baseQuery
+                        .append(sep)
+                        .append("isdescendantnode('")
+                        .append(QueryBuildHelper.escapeString(prefix))
+                        .append("')");
                 sep = " OR ";
             }
             baseQuery.append(")");
@@ -1006,8 +1033,11 @@ public class MapEntries implements
     /**
      * Load alias given a resource
      */
-    private boolean loadAlias(final Resource resource, Map<String, Map<String, Collection<String>>> map,
-                              List<String> conflictingAliases, List<String> invalidAliases) {
+    private boolean loadAlias(
+            final Resource resource,
+            Map<String, Map<String, Collection<String>>> map,
+            List<String> conflictingAliases,
+            List<String> invalidAliases) {
 
         // resource containing the alias
         final Resource containingResource = getResourceToBeAliased(resource);
@@ -1019,7 +1049,9 @@ public class MapEntries implements
             final Resource parent = containingResource.getParent();
 
             if (parent == null) {
-                log.warn("{} is null for alias on {}, skipping.", containingResource == resource ? "parent" : "grandparent",
+                log.warn(
+                        "{} is null for alias on {}, skipping.",
+                        containingResource == resource ? "parent" : "grandparent",
                         resource.getPath());
                 return false;
             } else {
@@ -1027,7 +1059,12 @@ public class MapEntries implements
                 if (aliasArray == null) {
                     return false;
                 } else {
-                    return loadAliasFromArray(aliasArray, map, conflictingAliases, invalidAliases, containingResource.getName(),
+                    return loadAliasFromArray(
+                            aliasArray,
+                            map,
+                            conflictingAliases,
+                            invalidAliases,
+                            containingResource.getName(),
                             parent.getPath());
                 }
             }
@@ -1037,8 +1074,13 @@ public class MapEntries implements
     /**
      * Load alias given a an alias array, return success flag.
      */
-    private boolean loadAliasFromArray(final String[] aliasArray, Map<String, Map<String, Collection<String>>> map,
-                                       List<String> conflictingAliases, List<String> invalidAliases, final String resourceName, final String parentPath) {
+    private boolean loadAliasFromArray(
+            final String[] aliasArray,
+            Map<String, Map<String, Collection<String>>> map,
+            List<String> conflictingAliases,
+            List<String> invalidAliases,
+            final String resourceName,
+            final String parentPath) {
 
         boolean hasAlias = false;
 
@@ -1048,28 +1090,39 @@ public class MapEntries implements
         for (final String alias : aliasArray) {
             if (isAliasInvalid(alias)) {
                 long invalids = detectedInvalidAliases.incrementAndGet();
-                log.warn("Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.",
-                        alias, parentPath, invalids);
+                log.warn(
+                        "Encountered invalid alias '{}' under parent path '{}' (total so far: {}). Refusing to use it.",
+                        alias,
+                        parentPath,
+                        invalids);
                 if (invalidAliases != null && invalids < MAX_REPORT_DEFUNCT_ALIASES) {
                     invalidAliases.add((String.format("'%s'/'%s'", parentPath, alias)));
                 }
             } else {
-                Map<String, Collection<String>> parentMap = map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
+                Map<String, Collection<String>> parentMap =
+                        map.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
                 Optional<String> siblingResourceNameWithDuplicateAlias = parentMap.entrySet().stream()
                         .filter(entry -> !entry.getKey().equals(resourceName)) // ignore entry for the current resource
                         .filter(entry -> entry.getValue().contains(alias))
-                        .findFirst().map(Map.Entry::getKey);
+                        .findFirst()
+                        .map(Map.Entry::getKey);
                 if (siblingResourceNameWithDuplicateAlias.isPresent()) {
                     long conflicting = detectedConflictingAliases.incrementAndGet();
                     log.warn(
                             "Encountered duplicate alias '{}' under parent path '{}'. Refusing to replace current target '{}' with '{}' (total duplicated aliases so far: {}).",
-                            alias, parentPath, siblingResourceNameWithDuplicateAlias.get(), resourceName, conflicting);
+                            alias,
+                            parentPath,
+                            siblingResourceNameWithDuplicateAlias.get(),
+                            resourceName,
+                            conflicting);
                     if (conflictingAliases != null && conflicting < MAX_REPORT_DEFUNCT_ALIASES) {
-                        conflictingAliases.add((String.format("'%s': '%s'/'%s' vs '%s'/'%s'", parentPath, resourceName,
-                                alias, siblingResourceNameWithDuplicateAlias.get(), alias)));
+                        conflictingAliases.add((String.format(
+                                "'%s': '%s'/'%s' vs '%s'/'%s'",
+                                parentPath, resourceName, alias, siblingResourceNameWithDuplicateAlias.get(), alias)));
                     }
                 } else {
-                    Collection<String> existingAliases = parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
+                    Collection<String> existingAliases =
+                            parentMap.computeIfAbsent(resourceName, name -> new CopyOnWriteArrayList<>());
                     existingAliases.add(alias);
                     hasAlias = true;
                 }
@@ -1084,7 +1137,8 @@ public class MapEntries implements
      * @param resource resource to check
      * @return parent of jcr:content resource (may be null), otherwise the resource itself
      */
-    @Nullable private Resource getResourceToBeAliased(Resource resource) {
+    @Nullable
+    private Resource getResourceToBeAliased(Resource resource) {
         if (JCR_CONTENT.equals(resource.getName())) {
             return resource.getParent();
         } else {
@@ -1118,7 +1172,6 @@ public class MapEntries implements
         return it;
     }
 
-
     private final AtomicLong lastTimeLogged = new AtomicLong(-1);
 
     private final long LOGGING_ERROR_PERIOD = 1000 * 60 * 5;
@@ -1129,12 +1182,16 @@ public class MapEntries implements
     }
 
     private void logDisableAliasOptimization(final Exception e) {
-        if ( e != null ) {
-            log.error("Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.", e);
+        if (e != null) {
+            log.error(
+                    "Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.",
+                    e);
         } else {
             final long now = System.currentTimeMillis();
-            if ( now - lastTimeLogged.getAndSet(now) > LOGGING_ERROR_PERIOD) {
-                log.error("A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.", e);
+            if (now - lastTimeLogged.getAndSet(now) > LOGGING_ERROR_PERIOD) {
+                log.error(
+                        "A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.",
+                        e);
             }
         }
     }

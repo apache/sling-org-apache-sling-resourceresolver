@@ -18,23 +18,23 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Iterator;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceWrapper;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 /** Test ResourceDecorator handling in ResourceResolverImpl */
 public class ResourceDecorationTest extends ResourceDecoratorTestBase {
 
     private static final String DECORATED_NAME = "decorated";
     private static final String DECORATED_PATH = "/decoratedPath";
-    
+
     /** Wrap any resource so that its name is DECORATED_NAME */
     protected Resource wrapResourceForTest(Resource resource) {
         return new ResourceWrapper(resource) {
@@ -49,81 +49,86 @@ public class ResourceDecorationTest extends ResourceDecoratorTestBase {
             }
         };
     }
-    
+
     private void assertDecorated(Resource r) {
         assertEquals("Expecting " + r + " to be decorated", DECORATED_NAME, r.getName());
     }
-    
+
     private void assertDecorated(Iterator<Resource> it, int expectedCount) {
         assertNotNull(it);
         assertTrue("Expecting non-empty Iterator", it.hasNext());
         int count = 0;
-        while(it.hasNext()) {
+        while (it.hasNext()) {
             count++;
             assertDecorated(it.next());
         }
         assertEquals("Expecting " + expectedCount + " items in Iterator", expectedCount, count);
     }
-    
+
     @Test
     public void resolveRootIsDecorated() {
-        final Resource r = resolver.resolve((String)null); 
+        final Resource r = resolver.resolve((String) null);
         assertDecorated(r);
         assertExistent(r, true);
     }
-    
+
     @Test
     public void getRootIsDecorated() {
-        final Resource r = resolver.getResource("/"); 
+        final Resource r = resolver.getResource("/");
         assertDecorated(r);
         assertExistent(r, true);
     }
-    
+
     @Test
     public void getNonExistingIsNull() {
-        assertNull(resolver.getResource("/non-existing/something")); 
+        assertNull(resolver.getResource("/non-existing/something"));
     }
-    
+
     @Test
     public void existentIsDecorated() {
         final Resource r = resolver.resolve("/tmp/C");
         assertDecorated(r);
         assertExistent(r, true);
     }
-    
+
     @Test
     public void NonExistentIsDecorated() {
         final Resource r = resolver.resolve("/foo");
         assertDecorated(r);
         assertExistent(r, false);
     }
-    
+
     @Test
     public void childrenAreDecorated() {
-        final Resource root = resolver.resolve((String)null);
+        final Resource root = resolver.resolve((String) null);
         final Iterator<Resource> it = resolver.listChildren(root);
         assertTrue("Expecting root to have children", it.hasNext());
         assertDecorated(it, 2);
     }
-    
+
     @Test
     public void listChildrenDecorates() {
         final Resource testVar = resolver.resolve("/var");
         assertDecorated(resolver.listChildren(testVar), 3);
     }
-    
+
     @Test
     public void findDecorates() {
         assertDecorated(resolver.findResources("foo", QUERY_LANGUAGE), 4);
     }
 
     @Test
-    public void testMapDecorated(){
-        String mappedPathWithExtension=resolver.map("/var/map_test.html");
-        assertEquals("Expecting " + mappedPathWithExtension + " to be decorated", DECORATED_PATH+".html", mappedPathWithExtension);
+    public void testMapDecorated() {
+        String mappedPathWithExtension = resolver.map("/var/map_test.html");
+        assertEquals(
+                "Expecting " + mappedPathWithExtension + " to be decorated",
+                DECORATED_PATH + ".html",
+                mappedPathWithExtension);
 
-        String mappedPathWithoutExtension=resolver.map("/var/map_test");
-        assertEquals("Expecting " + mappedPathWithoutExtension + " to be decorated", DECORATED_PATH, mappedPathWithoutExtension);
+        String mappedPathWithoutExtension = resolver.map("/var/map_test");
+        assertEquals(
+                "Expecting " + mappedPathWithoutExtension + " to be decorated",
+                DECORATED_PATH,
+                mappedPathWithoutExtension);
     }
-
 }

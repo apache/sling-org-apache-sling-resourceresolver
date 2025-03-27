@@ -18,15 +18,15 @@
  */
 package org.apache.sling.resourceresolver.util.events;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.sling.resourceresolver.util.events.ServiceEventUtil.ServiceEventDTO;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceEvent;
 import org.osgi.framework.ServiceListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 abstract class AbstractAwaitingListener implements ServiceListener, AutoCloseable {
 
@@ -50,7 +50,12 @@ abstract class AbstractAwaitingListener implements ServiceListener, AutoCloseabl
     public void serviceChanged(ServiceEvent event) {
         final ServiceEventDTO eventDTO = ServiceEventDTO.create(event);
         final boolean matchingServiceEvent = isMatchingServiceEvent(event);
-        LOG.info("serviceChanged({}, {}) => {} | {}", eventDTO.getEventType(), eventDTO.getClasses(), matchingServiceEvent, this);
+        LOG.info(
+                "serviceChanged({}, {}) => {} | {}",
+                eventDTO.getEventType(),
+                eventDTO.getClasses(),
+                matchingServiceEvent,
+                this);
         if (matchingServiceEvent) {
             latch.countDown();
         }
@@ -71,5 +76,4 @@ abstract class AbstractAwaitingListener implements ServiceListener, AutoCloseabl
         bundleContext.removeServiceListener(this);
         LOG.info("removeServiceListener({})", this);
     }
-
 }

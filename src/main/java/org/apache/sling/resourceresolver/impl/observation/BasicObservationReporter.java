@@ -54,25 +54,23 @@ public class BasicObservationReporter implements ObservationReporter {
      * @param searchPath The search path
      * @param infos The listeners map
      */
-    public BasicObservationReporter(
-            final List<String> searchPath,
-            final Collection<ResourceChangeListenerInfo> infos) {
+    public BasicObservationReporter(final List<String> searchPath, final Collection<ResourceChangeListenerInfo> infos) {
         this.searchPath = searchPath;
         final Set<String> paths = new HashSet<>();
         final List<ResourceChangeListenerInfo> result = new ArrayList<>();
-        for(final ResourceChangeListenerInfo info : infos) {
-            if ( !info.getProviderChangeTypes().isEmpty() ) {
-                for(final Path p : info.getPaths()) {
+        for (final ResourceChangeListenerInfo info : infos) {
+            if (!info.getProviderChangeTypes().isEmpty()) {
+                for (final Path p : info.getPaths()) {
                     paths.add(p.getPath());
                 }
                 result.add(info);
             }
         }
         final BasicObserverConfiguration cfg = new BasicObserverConfiguration(PathSet.fromStringCollection(paths));
-        for(final ResourceChangeListenerInfo i : infos) {
+        for (final ResourceChangeListenerInfo i : infos) {
             cfg.addListener(i);
         }
-        this.configs = Collections.singletonList((ObserverConfiguration)cfg);
+        this.configs = Collections.singletonList((ObserverConfiguration) cfg);
     }
 
     /**
@@ -91,17 +89,18 @@ public class BasicObservationReporter implements ObservationReporter {
         this.searchPath = searchPath;
 
         final List<ObserverConfiguration> observerConfigs = new ArrayList<>();
-        for(final ResourceChangeListenerInfo info : infos) {
-            if ( !info.getResourceChangeTypes().isEmpty() ) {
+        for (final ResourceChangeListenerInfo info : infos) {
+            if (!info.getResourceChangeTypes().isEmpty()) {
                 // find the set of paths that match the provider
                 final Set<Path> paths = new HashSet<>();
-                for(final Path p : info.getPaths()) {
+                for (final Path p : info.getPaths()) {
                     // add when there is an intersection between provider path and resource change listener path
-                    boolean add = providerPath.matches(p.getPath()) || (!p.isPattern() && p.matches(providerPath.getPath()));
-                    if ( add ) {
-                        if ( p.isPattern() ) {
-                            for(final Path exclude : excludePaths) {
-                                if ( p.getPath().startsWith(Path.GLOB_PREFIX + exclude.getPath() + "/")) {
+                    boolean add =
+                            providerPath.matches(p.getPath()) || (!p.isPattern() && p.matches(providerPath.getPath()));
+                    if (add) {
+                        if (p.isPattern()) {
+                            for (final Path exclude : excludePaths) {
+                                if (p.getPath().startsWith(Path.GLOB_PREFIX + exclude.getPath() + "/")) {
                                     logger.debug("ResourceChangeListener {} is shadowed by {}", info, exclude);
                                     add = false;
                                     break;
@@ -109,51 +108,53 @@ public class BasicObservationReporter implements ObservationReporter {
                             }
                         } else {
                             final Path exclude = excludePaths.matches(p.getPath());
-                            if ( exclude != null ) {
+                            if (exclude != null) {
                                 logger.debug("ResourceChangeListener {} is shadowed by {}", info, exclude);
                                 add = false;
                             }
                         }
                     }
-                    if ( add ) {
+                    if (add) {
                         paths.add(p);
                     }
                 }
-                if ( !paths.isEmpty() ) {
+                if (!paths.isEmpty()) {
                     final PathSet pathSet = PathSet.fromPathCollection(paths);
                     // search for an existing configuration with the same paths and hints
                     BasicObserverConfiguration found = null;
-                    for(final ObserverConfiguration c : observerConfigs) {
-                        if ( c.getPaths().equals(pathSet)
-                            && (( c.getPropertyNamesHint() == null && info.getPropertyNamesHint() == null)
-                               || c.getPropertyNamesHint() != null && c.getPropertyNamesHint().equals(info.getPropertyNamesHint()))) {
-                            found = (BasicObserverConfiguration)c;
+                    for (final ObserverConfiguration c : observerConfigs) {
+                        if (c.getPaths().equals(pathSet)
+                                && ((c.getPropertyNamesHint() == null && info.getPropertyNamesHint() == null)
+                                        || c.getPropertyNamesHint() != null
+                                                && c.getPropertyNamesHint().equals(info.getPropertyNamesHint()))) {
+                            found = (BasicObserverConfiguration) c;
                             break;
                         }
                     }
                     final BasicObserverConfiguration config;
-                    if ( found != null ) {
+                    if (found != null) {
                         // check external and types
                         boolean createNew = false;
-                        if ( !found.includeExternal() && info.isExternal() ) {
+                        if (!found.includeExternal() && info.isExternal()) {
                             createNew = true;
                         }
-                        if ( !found.getChangeTypes().equals(info.getResourceChangeTypes()) ) {
+                        if (!found.getChangeTypes().equals(info.getResourceChangeTypes())) {
                             createNew = true;
                         }
-                        if ( createNew ) {
+                        if (createNew) {
                             // create new/updated config
                             observerConfigs.remove(found);
                             final Set<ResourceChange.ChangeType> types = new HashSet<>();
                             types.addAll(found.getChangeTypes());
                             types.addAll(info.getResourceChangeTypes());
-                            config = new BasicObserverConfiguration(pathSet,
-                                types,
-                                info.isExternal() || found.includeExternal(),
-                                found.getExcludedPaths(),
-                                found.getPropertyNamesHint());
+                            config = new BasicObserverConfiguration(
+                                    pathSet,
+                                    types,
+                                    info.isExternal() || found.includeExternal(),
+                                    found.getExcludedPaths(),
+                                    found.getPropertyNamesHint());
                             observerConfigs.add(config);
-                            for(final ResourceChangeListenerInfo i : found.getListeners()) {
+                            for (final ResourceChangeListenerInfo i : found.getListeners()) {
                                 config.addListener(i);
                             }
 
@@ -162,11 +163,12 @@ public class BasicObservationReporter implements ObservationReporter {
                         }
                     } else {
                         // create new config
-                        config = new BasicObserverConfiguration(pathSet,
-                            info.getResourceChangeTypes(),
-                            info.isExternal(),
-                            excludePaths.getSubset(pathSet),
-                            info.getPropertyNamesHint());
+                        config = new BasicObserverConfiguration(
+                                pathSet,
+                                info.getResourceChangeTypes(),
+                                info.isExternal(),
+                                excludePaths.getSubset(pathSet),
+                                info.getPropertyNamesHint());
                         observerConfigs.add(config);
                     }
                     config.addListener(info);
@@ -183,38 +185,38 @@ public class BasicObservationReporter implements ObservationReporter {
 
     @Override
     public void reportChanges(final Iterable<ResourceChange> changes, final boolean distribute) {
-        for(final ObserverConfiguration cfg : this.configs) {
+        for (final ObserverConfiguration cfg : this.configs) {
             final List<ResourceChange> filteredChanges = filterChanges(changes, cfg);
-            if (!filteredChanges.isEmpty() ) {
+            if (!filteredChanges.isEmpty()) {
                 this.reportChanges(cfg, filteredChanges, distribute);
             }
         }
     }
 
     @Override
-    public void reportChanges(final ObserverConfiguration config,
-            final Iterable<ResourceChange> changes,
-            final boolean distribute) {
-        if ( config != null && config instanceof BasicObserverConfiguration ) {
-            final BasicObserverConfiguration observerConfig = (BasicObserverConfiguration)config;
+    public void reportChanges(
+            final ObserverConfiguration config, final Iterable<ResourceChange> changes, final boolean distribute) {
+        if (config != null && config instanceof BasicObserverConfiguration) {
+            final BasicObserverConfiguration observerConfig = (BasicObserverConfiguration) config;
 
             ResourceChangeListenerInfo previousInfo = null;
             List<ResourceChange> filteredChanges = null;
-            for(final ResourceChangeListenerInfo info : observerConfig.getListeners()) {
-                if ( previousInfo == null || !equals(previousInfo, info) ) {
+            for (final ResourceChangeListenerInfo info : observerConfig.getListeners()) {
+                if (previousInfo == null || !equals(previousInfo, info)) {
                     filteredChanges = filterChanges(changes, info);
                     previousInfo = info;
                 }
-                if ( !filteredChanges.isEmpty() ) {
+                if (!filteredChanges.isEmpty()) {
                     final ResourceChangeListener listener = info.getListener();
-                    if ( listener != null ) {
+                    if (listener != null) {
                         listener.onChange(filteredChanges);
                     }
                 }
             }
             // TODO implement distribute
-            if ( distribute ) {
-                logger.error("Distrubte flag is send for observation events, however distribute is currently not implemented!");
+            if (distribute) {
+                logger.error(
+                        "Distrubte flag is send for observation events, however distribute is currently not implemented!");
             }
         }
     }
@@ -226,14 +228,14 @@ public class BasicObservationReporter implements ObservationReporter {
      * @return {@code true} if external and change types are equally configured
      */
     private boolean equals(final ResourceChangeListenerInfo infoA, final ResourceChangeListenerInfo infoB) {
-        if ( infoA.isExternal() && !infoB.isExternal() ) {
+        if (infoA.isExternal() && !infoB.isExternal()) {
             return false;
         }
-        if ( !infoA.isExternal() && infoB.isExternal() ) {
+        if (!infoA.isExternal() && infoB.isExternal()) {
             return false;
         }
         return infoA.getResourceChangeTypes().equals(infoB.getResourceChangeTypes())
-            && infoA.getProviderChangeTypes().equals(infoB.getProviderChangeTypes());
+                && infoA.getProviderChangeTypes().equals(infoB.getProviderChangeTypes());
     }
 
     /**
@@ -242,7 +244,8 @@ public class BasicObservationReporter implements ObservationReporter {
      * @param config The configuration
      * @return The filtered list.
      */
-    private List<ResourceChange> filterChanges(final Iterable<ResourceChange> changes, final ObserverConfiguration config) {
+    private List<ResourceChange> filterChanges(
+            final Iterable<ResourceChange> changes, final ObserverConfiguration config) {
         final ResourceChangeListImpl filtered = new ResourceChangeListImpl(this.searchPath);
         for (final ResourceChange c : changes) {
             if (matches(c, config)) {
@@ -259,7 +262,8 @@ public class BasicObservationReporter implements ObservationReporter {
      * @param config The resource change listener info
      * @return The filtered list.
      */
-    private List<ResourceChange> filterChanges(final Iterable<ResourceChange> changes, final ResourceChangeListenerInfo config) {
+    private List<ResourceChange> filterChanges(
+            final Iterable<ResourceChange> changes, final ResourceChangeListenerInfo config) {
         final ResourceChangeListImpl filtered = new ResourceChangeListImpl(this.searchPath);
         for (final ResourceChange c : changes) {
             if (matches(c, config)) {
@@ -283,10 +287,10 @@ public class BasicObservationReporter implements ObservationReporter {
         if (!config.includeExternal() && change.isExternal()) {
             return false;
         }
-        if (config.getPaths().matches(change.getPath()) == null ) {
+        if (config.getPaths().matches(change.getPath()) == null) {
             return false;
         }
-        if ( config.getExcludedPaths().matches(change.getPath()) != null ) {
+        if (config.getExcludedPaths().matches(change.getPath()) != null) {
             return false;
         }
         return true;
@@ -299,7 +303,8 @@ public class BasicObservationReporter implements ObservationReporter {
      * @return {@code true} whether it matches
      */
     private boolean matches(final ResourceChange change, final ResourceChangeListenerInfo config) {
-        if (!config.getResourceChangeTypes().contains(change.getType()) && !config.getProviderChangeTypes().contains(change.getType())) {
+        if (!config.getResourceChangeTypes().contains(change.getType())
+                && !config.getProviderChangeTypes().contains(change.getType())) {
             return false;
         }
         if (!config.isExternal() && change.isExternal()) {

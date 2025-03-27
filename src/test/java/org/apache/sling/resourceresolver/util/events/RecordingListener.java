@@ -18,12 +18,6 @@
  */
 package org.apache.sling.resourceresolver.util.events;
 
-import org.apache.sling.resourceresolver.util.events.ServiceEventUtil.ServiceEventDTO;
-import org.hamcrest.Matcher;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceEvent;
-import org.osgi.framework.ServiceRegistration;
-
 import java.util.Collection;
 import java.util.Hashtable;
 import java.util.Map;
@@ -31,6 +25,12 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+
+import org.apache.sling.resourceresolver.util.events.ServiceEventUtil.ServiceEventDTO;
+import org.hamcrest.Matcher;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceRegistration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -57,8 +57,8 @@ public class RecordingListener extends AbstractAwaitingListener {
     private RecordingListener(BundleContext ctx, Predicate<ServiceEvent> recordingFilter) {
         super(ctx, 1);
         this.recordingFilter = recordingFilter;
-        this.signalRegistration = ctx.registerService(RecordingListener.class, this,
-                new Hashtable<>(Map.of("::class::", RecordingListener.class)));
+        this.signalRegistration = ctx.registerService(
+                RecordingListener.class, this, new Hashtable<>(Map.of("::class::", RecordingListener.class)));
     }
 
     @Override
@@ -79,11 +79,14 @@ public class RecordingListener extends AbstractAwaitingListener {
         return Objects.equals(serviceEvent.getServiceReference().getProperty("::class::"), RecordingListener.class);
     }
 
-    public void assertRecorded(Matcher<? super Collection<? extends ServiceEventDTO>> serviceEventDTOMatcher) throws InterruptedException {
+    public void assertRecorded(Matcher<? super Collection<? extends ServiceEventDTO>> serviceEventDTOMatcher)
+            throws InterruptedException {
         assertRecordedWithin(5, serviceEventDTOMatcher);
     }
 
-    public void assertRecordedWithin(int maxWaitSec, Matcher<? super Collection<? extends ServiceEventDTO>> serviceEventDTOMatcher) throws InterruptedException {
+    public void assertRecordedWithin(
+            int maxWaitSec, Matcher<? super Collection<? extends ServiceEventDTO>> serviceEventDTOMatcher)
+            throws InterruptedException {
         if (signalRegistration != null) {
             final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(maxWaitSec);
             while (!serviceEventDTOMatcher.matches(serviceEvents) && System.nanoTime() < deadline) {
@@ -98,7 +101,10 @@ public class RecordingListener extends AbstractAwaitingListener {
             stopListening();
         }
 
-        assertThat("Expected ServiceEvents were not recorded within " + maxWaitSec + " seconds. Make sure to " +
-                        "re-try with a longer wait time.", serviceEvents, serviceEventDTOMatcher);
+        assertThat(
+                "Expected ServiceEvents were not recorded within " + maxWaitSec + " seconds. Make sure to "
+                        + "re-try with a longer wait time.",
+                serviceEvents,
+                serviceEventDTOMatcher);
     }
 }

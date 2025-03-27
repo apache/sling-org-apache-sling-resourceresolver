@@ -24,9 +24,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.NotNull;
-
 import org.apache.sling.api.adapter.Adaptable;
 import org.apache.sling.api.resource.AttributableResourceProvider;
 import org.apache.sling.api.resource.DynamicResourceProvider;
@@ -42,6 +39,8 @@ import org.apache.sling.spi.resource.provider.QueryLanguageProvider;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("deprecation")
 public class LegacyResourceProviderAdapter extends ResourceProvider<Object> implements Closeable {
@@ -52,19 +51,21 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
 
     private final boolean ownsRoot;
 
-    public LegacyResourceProviderAdapter(org.apache.sling.api.resource.ResourceProvider rp, String[] languages, boolean ownsRoot) {
+    public LegacyResourceProviderAdapter(
+            org.apache.sling.api.resource.ResourceProvider rp, String[] languages, boolean ownsRoot) {
         this.rp = rp;
         this.languages = languages;
         this.ownsRoot = ownsRoot;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
-    public Resource getResource(ResolveContext<Object> ctx, String path, ResourceContext resourceContext, Resource parent) {
+    public Resource getResource(
+            ResolveContext<Object> ctx, String path, ResourceContext resourceContext, Resource parent) {
         Resource resourceCandidate;
         if (rp instanceof ParametrizableResourceProvider) {
-            resourceCandidate = ((ParametrizableResourceProvider) rp).getResource(ctx.getResourceResolver(), path,
-                    resourceContext.getResolveParameters());
+            resourceCandidate = ((ParametrizableResourceProvider) rp)
+                    .getResource(ctx.getResourceResolver(), path, resourceContext.getResolveParameters());
         } else {
             resourceCandidate = rp.getResource(ctx.getResourceResolver(), path);
         }
@@ -93,13 +94,13 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
                 && resource.getResourceMetadata().containsKey(ResourceMetadata.INTERNAL_CONTINUE_RESOLVING);
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public Iterator<Resource> listChildren(ResolveContext<Object> ctx, Resource parent) {
         Iterator<Resource> children = rp.listChildren(parent);
         if (children == null && !ownsRoot && ctx.getParentResourceProvider() != null) {
-            children = ctx.getParentResourceProvider().listChildren((ResolveContext) ctx.getParentResolveContext(),
-                    parent);
+            children = ctx.getParentResourceProvider()
+                    .listChildren((ResolveContext) ctx.getParentResolveContext(), parent);
         }
         return children;
     }
@@ -159,17 +160,18 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
         logout(null);
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
-    public Resource create(final @NotNull ResolveContext<Object> ctx, final String path,
-            final Map<String, Object> properties) throws PersistenceException {
+    public Resource create(
+            final @NotNull ResolveContext<Object> ctx, final String path, final Map<String, Object> properties)
+            throws PersistenceException {
         Resource createdResource = null;
         if (rp instanceof ModifyingResourceProvider) {
             createdResource = ((ModifyingResourceProvider) rp).create(ctx.getResourceResolver(), path, properties);
         }
         if (createdResource == null && !ownsRoot && ctx.getParentResourceProvider() != null) {
-            createdResource = ctx.getParentResourceProvider().create((ResolveContext) ctx.getParentResolveContext(),
-                    path, properties);
+            createdResource = ctx.getParentResourceProvider()
+                    .create((ResolveContext) ctx.getParentResolveContext(), path, properties);
         }
         return createdResource;
     }
@@ -213,10 +215,11 @@ public class LegacyResourceProviderAdapter extends ResourceProvider<Object> impl
 
     @SuppressWarnings("unchecked")
     @Override
-    public <AdapterType> AdapterType adaptTo(final @NotNull ResolveContext<Object> ctx, final @NotNull Class<AdapterType> type) {
-        if ( rp instanceof Adaptable ) {
-            final Object value = ((Adaptable)rp).adaptTo(type);
-            if ( value != null ) {
+    public <AdapterType> AdapterType adaptTo(
+            final @NotNull ResolveContext<Object> ctx, final @NotNull Class<AdapterType> type) {
+        if (rp instanceof Adaptable) {
+            final Object value = ((Adaptable) rp).adaptTo(type);
+            if (value != null) {
                 return (AdapterType) value;
             }
         }

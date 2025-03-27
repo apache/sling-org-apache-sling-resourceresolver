@@ -18,13 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.providers.stateful;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -37,6 +30,13 @@ import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class AuthenticatedResourceProviderTest {
 
@@ -71,7 +71,7 @@ public class AuthenticatedResourceProviderTest {
         final ResourceAccessSecurityTracker securityTracker = new ResourceAccessSecurityTracker() {
             @Override
             public ResourceAccessSecurity getApplicationResourceAccessSecurity() {
-                if ( useRAS) {
+                if (useRAS) {
                     return security;
                 }
                 return null;
@@ -79,10 +79,10 @@ public class AuthenticatedResourceProviderTest {
         };
 
         this.src = new AuthenticatedResourceProvider(handler, false, this.resolveContext, securityTracker);
-
     }
 
-    @Test public void testBasics() throws Exception {
+    @Test
+    public void testBasics() throws Exception {
         assertEquals(this.resolveContext, this.src.getResolveContext());
 
         this.src.refresh();
@@ -97,7 +97,8 @@ public class AuthenticatedResourceProviderTest {
         verify(this.resourceProvider).commit(this.resolveContext);
     }
 
-    @Test public void testGetParent() {
+    @Test
+    public void testGetParent() {
         final Resource child = mock(Resource.class);
         when(child.getPath()).thenReturn("/parent/child");
         final Resource parent = mock(Resource.class);

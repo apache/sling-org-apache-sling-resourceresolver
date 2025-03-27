@@ -48,15 +48,16 @@ import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(service = ResourceChangeListener.class,
-configurationPolicy = ConfigurationPolicy.IGNORE,
-property = {
-        Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
-        ResourceChangeListener.PATHS + "=/",
-        ResourceChangeListener.CHANGES + "=ADDED",
-        ResourceChangeListener.CHANGES + "=CHANGED",
-        ResourceChangeListener.CHANGES + "=REMOVED"
-})
+@Component(
+        service = ResourceChangeListener.class,
+        configurationPolicy = ConfigurationPolicy.IGNORE,
+        property = {
+            Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
+            ResourceChangeListener.PATHS + "=/",
+            ResourceChangeListener.CHANGES + "=ADDED",
+            ResourceChangeListener.CHANGES + "=CHANGED",
+            ResourceChangeListener.CHANGES + "=REMOVED"
+        })
 public class OsgiObservationBridge implements ResourceChangeListener, ExternalResourceChangeListener {
 
     private final Logger logger = LoggerFactory.getLogger(OsgiObservationBridge.class);
@@ -74,17 +75,20 @@ public class OsgiObservationBridge implements ResourceChangeListener, ExternalRe
     private EventSendingJob job;
 
     protected void activate() throws LoginException {
-        resolver = resolverFactory.getServiceResourceResolver(Collections.<String, Object>singletonMap(ResourceResolverFactory.SUBSERVICE, "observation"));
+        resolver = resolverFactory.getServiceResourceResolver(
+                Collections.<String, Object>singletonMap(ResourceResolverFactory.SUBSERVICE, "observation"));
         changesQueue = new LinkedBlockingQueue<ResourceChange>();
         job = new EventSendingJob(changesQueue);
         Executors.newSingleThreadExecutor().submit(job);
     }
 
-    @Reference(name = "handlers",
-            cardinality=ReferenceCardinality.AT_LEAST_ONE,
-            policy=ReferencePolicy.DYNAMIC,
-            service=EventHandler.class,
-            target="(|(event.topics=org/apache/sling/api/resource/Resource/*)(event.topics=org/apache/sling/api/resource/ResourceProvider/*))")
+    @Reference(
+            name = "handlers",
+            cardinality = ReferenceCardinality.AT_LEAST_ONE,
+            policy = ReferencePolicy.DYNAMIC,
+            service = EventHandler.class,
+            target =
+                    "(|(event.topics=org/apache/sling/api/resource/Resource/*)(event.topics=org/apache/sling/api/resource/ResourceProvider/*))")
     private void bindEventHandler(final EventHandler handler) {
         logger.warn("Found OSGi Event Handler for deprecated resource bridge: {}", handler);
     }
@@ -110,34 +114,43 @@ public class OsgiObservationBridge implements ResourceChangeListener, ExternalRe
         Dictionary<String, Object> props = new Hashtable<String, Object>();
         String topic;
         switch (change.getType()) {
-        case ADDED:
-            topic = SlingConstants.TOPIC_RESOURCE_ADDED;
-            break;
+            case ADDED:
+                topic = SlingConstants.TOPIC_RESOURCE_ADDED;
+                break;
 
-        case CHANGED:
-            topic = SlingConstants.TOPIC_RESOURCE_CHANGED;
-            break;
+            case CHANGED:
+                topic = SlingConstants.TOPIC_RESOURCE_CHANGED;
+                break;
 
-        case REMOVED:
-            topic = SlingConstants.TOPIC_RESOURCE_REMOVED;
-            break;
+            case REMOVED:
+                topic = SlingConstants.TOPIC_RESOURCE_REMOVED;
+                break;
 
-        default:
-            return;
+            default:
+                return;
         }
 
         props.put(SlingConstants.PROPERTY_PATH, change.getPath());
         if (change.getUserId() != null) {
             props.put(SlingConstants.PROPERTY_USERID, change.getUserId());
         }
-        if (change.getAddedPropertyNames() != null ) {
-            props.put(SlingConstants.PROPERTY_ADDED_ATTRIBUTES, change.getAddedPropertyNames().toArray(new String[change.getAddedPropertyNames().size()]));
+        if (change.getAddedPropertyNames() != null) {
+            props.put(
+                    SlingConstants.PROPERTY_ADDED_ATTRIBUTES,
+                    change.getAddedPropertyNames()
+                            .toArray(new String[change.getAddedPropertyNames().size()]));
         }
         if (change.getChangedPropertyNames() != null) {
-            props.put(SlingConstants.PROPERTY_CHANGED_ATTRIBUTES, change.getChangedPropertyNames().toArray(new String[change.getChangedPropertyNames().size()]));
+            props.put(
+                    SlingConstants.PROPERTY_CHANGED_ATTRIBUTES,
+                    change.getChangedPropertyNames()
+                            .toArray(new String[change.getChangedPropertyNames().size()]));
         }
-        if ( change.getRemovedPropertyNames() != null ) {
-            props.put(SlingConstants.PROPERTY_REMOVED_ATTRIBUTES, change.getRemovedPropertyNames().toArray(new String[change.getRemovedPropertyNames().size()]));
+        if (change.getRemovedPropertyNames() != null) {
+            props.put(
+                    SlingConstants.PROPERTY_REMOVED_ATTRIBUTES,
+                    change.getRemovedPropertyNames()
+                            .toArray(new String[change.getRemovedPropertyNames().size()]));
         }
         if (change.getType() != ChangeType.REMOVED) {
             Resource resource = resolver.getResource(change.getPath());
@@ -196,5 +209,4 @@ public class OsgiObservationBridge implements ResourceChangeListener, ExternalRe
             stop = true;
         }
     }
-
 }

@@ -104,9 +104,12 @@ public class ResourceResolverFactoryActivator {
 
     @Reference
     ResourceAccessSecurityTracker resourceAccessSecurityTracker;
-    
+
     @SuppressWarnings("java:S3077")
-    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY, policy = ReferencePolicy.DYNAMIC)
+    @Reference(
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policyOption = ReferencePolicyOption.GREEDY,
+            policy = ReferencePolicy.DYNAMIC)
     private volatile ResourceResolverMetrics metrics;
 
     volatile ResourceProviderTracker resourceProviderTracker;
@@ -127,6 +130,7 @@ public class ResourceResolverFactoryActivator {
     private final FactoryRegistrationHandler factoryRegistrationHandler = new FactoryRegistrationHandler();
 
     private final VanityPathConfigurer vanityPathConfigurer = new VanityPathConfigurer();
+
     {
         vanityPathConfigurer.setConfiguration(DEFAULT_CONFIG, null);
     }
@@ -149,7 +153,7 @@ public class ResourceResolverFactoryActivator {
     public StringInterpolationProvider getStringInterpolationProvider() {
         return stringInterpolationProvider;
     }
-    
+
     public Optional<ResourceResolverMetrics> getResourceResolverMetrics() {
         return Optional.ofNullable(this.metrics);
     }
@@ -174,7 +178,6 @@ public class ResourceResolverFactoryActivator {
 
     public boolean isMangleNamespacePrefixes() {
         return config.resource_resolver_manglenamespaces();
-
     }
 
     public String getMapRoot() {
@@ -182,15 +185,14 @@ public class ResourceResolverFactoryActivator {
     }
 
     public boolean isMapConfiguration(String path) {
-        return path.equals(this.getMapRoot())
-               || path.startsWith(this.mapRootPrefix);
+        return path.equals(this.getMapRoot()) || path.startsWith(this.mapRootPrefix);
     }
 
     public boolean isOptimizeAliasResolutionEnabled() {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
-    public  Set<String> getAllowedAliasLocations(){
+    public Set<String> getAllowedAliasLocations() {
         return this.allowedAliasLocations;
     }
 
@@ -216,22 +218,27 @@ public class ResourceResolverFactoryActivator {
      * Activates this component (called by SCR before)
      */
     @Activate
-    protected void activate(final BundleContext bundleContext,
-        final ResourceResolverFactoryConfig config,
-        final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
+    protected void activate(
+            final BundleContext bundleContext,
+            final ResourceResolverFactoryConfig config,
+            final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
         this.vanityPathConfigurer.setConfiguration(config, deprecatedVanityConfig);
         this.bundleContext = bundleContext;
         this.config = config;
 
         final BidiMap<String, String> virtuals = new TreeBidiMap<>();
-        for (int i = 0; config.resource_resolver_virtual() != null && i < config.resource_resolver_virtual().length; i++) {
+        for (int i = 0;
+                config.resource_resolver_virtual() != null && i < config.resource_resolver_virtual().length;
+                i++) {
             final String[] parts = Mapping.split(config.resource_resolver_virtual()[i]);
             virtuals.put(parts[0], parts[2]);
         }
         virtualURLMap = virtuals;
 
         final List<Mapping> maps = new ArrayList<>();
-        for (int i = 0; config.resource_resolver_mapping() != null && i < config.resource_resolver_mapping().length; i++) {
+        for (int i = 0;
+                config.resource_resolver_mapping() != null && i < config.resource_resolver_mapping().length;
+                i++) {
             maps.add(new Mapping(config.resource_resolver_mapping()[i]));
         }
         final Mapping[] tmp = maps.toArray(new Mapping[maps.size()]);
@@ -249,7 +256,7 @@ public class ResourceResolverFactoryActivator {
         // from configuration if available
         final List<String> searchPathList = new ArrayList<>();
         if (config.resource_resolver_searchpath() != null && config.resource_resolver_searchpath().length > 0) {
-            for(String path : config.resource_resolver_searchpath()) {
+            for (String path : config.resource_resolver_searchpath()) {
                 // ensure leading slash
                 if (!path.startsWith("/")) {
                     path = "/".concat(path);
@@ -272,32 +279,35 @@ public class ResourceResolverFactoryActivator {
 
         final String[] paths = config.resource_resolver_map_observation();
         this.observationPaths = new Path[paths.length];
-        for(int i=0;i<paths.length;i++) {
+        for (int i = 0; i < paths.length; i++) {
             this.observationPaths[i] = new Path(paths[i]);
         }
 
         // optimize alias path allow list
         String[] aliasLocationsPrefix = config.resource_resolver_allowed_alias_locations();
-        if ( aliasLocationsPrefix != null ) {
+        if (aliasLocationsPrefix != null) {
             final Set<String> prefixSet = new TreeSet<>();
-            for(final String prefix : aliasLocationsPrefix) {
+            for (final String prefix : aliasLocationsPrefix) {
                 String value = prefix.trim();
                 if (!value.isEmpty()) {
                     if (value.startsWith("/")) { // absolute path should be given
                         // path must not end with "/" to be valid absolute path
                         prefixSet.add(StringUtils.removeEnd(value, "/"));
-                    }else{
-                        logger.warn("Path [{}] is ignored. As only absolute paths are allowed for alias optimization", value);
+                    } else {
+                        logger.warn(
+                                "Path [{}] is ignored. As only absolute paths are allowed for alias optimization",
+                                value);
                     }
                 }
             }
-            if ( !prefixSet.isEmpty()) {
+            if (!prefixSet.isEmpty()) {
                 this.allowedAliasLocations = Collections.unmodifiableSet(prefixSet);
             }
         }
         if (!config.resource_resolver_optimize_alias_resolution()) {
-            logger.warn("The non-optimized alias resolution is used, which has been found to have problems (see SLING-12025). " +
-                    "Please migrate to the optimized alias resolution, as the non-optimized version will be removed");
+            logger.warn(
+                    "The non-optimized alias resolution is used, which has been found to have problems (see SLING-12025). "
+                            + "Please migrate to the optimized alias resolution, as the non-optimized version will be removed");
         }
 
         // for testing: if we run unit test, both trackers are set from the outside
@@ -313,28 +323,25 @@ public class ResourceResolverFactoryActivator {
         Set<String> requiredResourceProviderNames = getStringSet(config.resource_resolver_required_providernames());
 
         final FactoryPreconditions factoryPreconditions = new FactoryPreconditions(
-                resourceProviderTracker,
-                requiredResourceProviderNames,
-                requiredResourceProvidersLegacy);
+                resourceProviderTracker, requiredResourceProviderNames, requiredResourceProvidersLegacy);
         factoryRegistrationHandler.configure(this, factoryPreconditions);
 
         if (!hasPreRegisteredResourceProviderTracker) {
-            this.resourceProviderTracker.activate(this.bundleContext, this.eventAdmin,
-                    new ChangeListener() {
+            this.resourceProviderTracker.activate(this.bundleContext, this.eventAdmin, new ChangeListener() {
 
-                        @Override
-                        public void providerAdded() {
-                            factoryRegistrationHandler.maybeRegisterFactory();
-                        }
+                @Override
+                public void providerAdded() {
+                    factoryRegistrationHandler.maybeRegisterFactory();
+                }
 
-                        @Override
-                        public void providerRemoved(final boolean stateful, final boolean isUsed) {
-                            if ( isUsed && (stateful || config.resource_resolver_providerhandling_paranoid()) ) {
-                                factoryRegistrationHandler.unregisterFactory();
-                            }
-                            factoryRegistrationHandler.maybeRegisterFactory();
-                        }
-                    });
+                @Override
+                public void providerRemoved(final boolean stateful, final boolean isUsed) {
+                    if (isUsed && (stateful || config.resource_resolver_providerhandling_paranoid())) {
+                        factoryRegistrationHandler.unregisterFactory();
+                    }
+                    factoryRegistrationHandler.maybeRegisterFactory();
+                }
+            });
         }
     }
 
@@ -342,9 +349,10 @@ public class ResourceResolverFactoryActivator {
      * Modifies this component (called by SCR to update this component)
      */
     @Modified
-    protected void modified(final BundleContext bundleContext,
-        final ResourceResolverFactoryConfig config,
-        final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
+    protected void modified(
+            final BundleContext bundleContext,
+            final ResourceResolverFactoryConfig config,
+            final VanityPathConfigurer.DeprecatedVanityConfig deprecatedVanityConfig) {
         this.deactivateInternal();
         this.activate(bundleContext, config, deprecatedVanityConfig);
     }
@@ -379,18 +387,22 @@ public class ResourceResolverFactoryActivator {
     }
 
     public ServiceUserMapper getServiceUserMapper() {
-    	return this.serviceUserMapper;
+        return this.serviceUserMapper;
     }
 
     public BundleContext getBundleContext() {
-    	return this.bundleContext;
+        return this.bundleContext;
     }
 
     /**
      * Bind a resource decorator.
      */
-    @Reference(service = ResourceDecorator.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    protected void bindResourceDecorator(final ResourceDecorator decorator, final ServiceReference<ResourceDecorator> ref) {
+    @Reference(
+            service = ResourceDecorator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC)
+    protected void bindResourceDecorator(
+            final ResourceDecorator decorator, final ServiceReference<ResourceDecorator> ref) {
         this.resourceDecoratorTracker.bindResourceDecorator(decorator, ref);
     }
 
@@ -413,45 +425,45 @@ public class ResourceResolverFactoryActivator {
      * Utility method to create a set out of a string array
      */
     private Set<String> getStringSet(final String[] values) {
-    	if ( values == null || values.length == 0 ) {
-    		return null;
-    	}
-    	final Set<String> set = new HashSet<>();
-    	for(final String val : values) {
-    		if ( val != null && !val.trim().isEmpty() ) {
-    			set.add(val.trim());
-    		}
-    	}
-    	return set.isEmpty() ? null : set;
+        if (values == null || values.length == 0) {
+            return null;
+        }
+        final Set<String> set = new HashSet<>();
+        for (final String val : values) {
+            if (val != null && !val.trim().isEmpty()) {
+                set.add(val.trim());
+            }
+        }
+        return set.isEmpty() ? null : set;
     }
 
     public static ResourceResolverFactoryConfig DEFAULT_CONFIG;
 
     static {
-       final InvocationHandler handler = new InvocationHandler() {
+        final InvocationHandler handler = new InvocationHandler() {
 
             @Override
-            public Object invoke(final Object obj, final Method calledMethod, final Object[] args)
-            throws Throwable {
-                if ( calledMethod.getDeclaringClass().isAssignableFrom(ResourceResolverFactoryConfig.class) ) {
-                   return calledMethod.getDefaultValue();
+            public Object invoke(final Object obj, final Method calledMethod, final Object[] args) throws Throwable {
+                if (calledMethod.getDeclaringClass().isAssignableFrom(ResourceResolverFactoryConfig.class)) {
+                    return calledMethod.getDefaultValue();
                 }
-                if ( calledMethod.getDeclaringClass() == Object.class ) {
-                    if ( calledMethod.getName().equals("toString") && (args == null || args.length == 0) ) {
+                if (calledMethod.getDeclaringClass() == Object.class) {
+                    if (calledMethod.getName().equals("toString") && (args == null || args.length == 0)) {
                         return "Generated @" + ResourceResolverFactoryConfig.class.getName() + " instance";
                     }
-                    if ( calledMethod.getName().equals("hashCode") && (args == null || args.length == 0) ) {
+                    if (calledMethod.getName().equals("hashCode") && (args == null || args.length == 0)) {
                         return this.hashCode();
                     }
-                    if ( calledMethod.getName().equals("equals") && args != null && args.length == 1 ) {
+                    if (calledMethod.getName().equals("equals") && args != null && args.length == 1) {
                         return Boolean.FALSE;
                     }
                 }
                 throw new InternalError("unexpected method dispatched: " + calledMethod);
             }
         };
-        DEFAULT_CONFIG = (ResourceResolverFactoryConfig) Proxy.newProxyInstance(ResourceResolverFactoryConfig.class.getClassLoader(),
-                new Class[] { ResourceResolverFactoryConfig.class },
+        DEFAULT_CONFIG = (ResourceResolverFactoryConfig) Proxy.newProxyInstance(
+                ResourceResolverFactoryConfig.class.getClassLoader(),
+                new Class[] {ResourceResolverFactoryConfig.class},
                 handler);
     }
 }

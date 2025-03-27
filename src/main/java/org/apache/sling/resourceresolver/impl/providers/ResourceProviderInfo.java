@@ -63,46 +63,58 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
     public ResourceProviderInfo(final ServiceReference<ResourceProvider> ref) {
         final Converter c = Converters.standardConverter();
         this.ref = ref;
-        this.path = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ROOT)).defaultValue("").to(String.class);
+        this.path = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ROOT))
+                .defaultValue("")
+                .to(String.class);
         this.name = c.convert(ref.getProperty(ResourceProvider.PROPERTY_NAME)).to(String.class);
-        this.useResourceAccessSecurity = c.convert(ref.getProperty(ResourceProvider.PROPERTY_USE_RESOURCE_ACCESS_SECURITY)).to(boolean.class);
-        final String authType = c.convert(ref.getProperty(ResourceProvider.PROPERTY_AUTHENTICATE)).defaultValue(AuthType.no.name()).to(String.class);
+        this.useResourceAccessSecurity = c.convert(
+                        ref.getProperty(ResourceProvider.PROPERTY_USE_RESOURCE_ACCESS_SECURITY))
+                .to(boolean.class);
+        final String authType = c.convert(ref.getProperty(ResourceProvider.PROPERTY_AUTHENTICATE))
+                .defaultValue(AuthType.no.name())
+                .to(String.class);
         AuthType aType = null;
         try {
             aType = AuthType.valueOf(authType);
-        } catch ( final IllegalArgumentException iae) {
+        } catch (final IllegalArgumentException iae) {
             logger.error("Illegal auth type {} for resource provider {} ({})", authType, name, ref);
         }
         this.authType = aType;
-        this.modifiable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODIFIABLE)).to(boolean.class);
-        this.adaptable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE)).to(boolean.class);
-        this.refreshable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE)).to(boolean.class);
-        this.attributable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE)).to(boolean.class);
+        this.modifiable =
+                c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODIFIABLE)).to(boolean.class);
+        this.adaptable =
+                c.convert(ref.getProperty(ResourceProvider.PROPERTY_ADAPTABLE)).to(boolean.class);
+        this.refreshable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_REFRESHABLE))
+                .to(boolean.class);
+        this.attributable = c.convert(ref.getProperty(ResourceProvider.PROPERTY_ATTRIBUTABLE))
+                .to(boolean.class);
         final String modeValue = c.convert(ref.getProperty(ResourceProvider.PROPERTY_MODE))
-            .defaultValue(ResourceProvider.MODE_OVERLAY).to(String.class).toUpperCase();
+                .defaultValue(ResourceProvider.MODE_OVERLAY)
+                .to(String.class)
+                .toUpperCase();
         Mode mode = null;
         try {
             mode = Mode.valueOf(modeValue);
-        } catch ( final IllegalArgumentException iae) {
+        } catch (final IllegalArgumentException iae) {
             logger.error("Illegal mode {} for resource provider {} ({})", modeValue, name, ref);
         }
         this.mode = mode;
-        if ( !path.startsWith("/") ) {
+        if (!path.startsWith("/")) {
             logger.error("Path {} does not start with / for resource provider {} ({})", path, name, ref);
         }
     }
 
     public boolean isValid() {
         // TODO - do real path check
-        if ( !path.startsWith("/") ) {
+        if (!path.startsWith("/")) {
             logger.debug("ResourceProvider path does not start with /, invalid: {}", path);
             return false;
         }
-        if ( this.authType == null ) {
+        if (this.authType == null) {
             logger.debug("ResourceProvider has null authType, invalid");
             return false;
         }
-        if ( this.mode == null ) {
+        if (this.mode == null) {
             logger.debug("ResourceProvider has null mode, invalid");
             return false;
         }
@@ -125,7 +137,7 @@ public class ResourceProviderInfo implements Comparable<ResourceProviderInfo> {
     @Override
     public int compareTo(final ResourceProviderInfo o) {
         int result = path.compareTo(o.path);
-        if ( result == 0 ) {
+        if (result == 0) {
             result = o.ref.compareTo(ref);
         }
         return result;

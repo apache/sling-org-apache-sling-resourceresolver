@@ -18,62 +18,69 @@
  */
 package org.apache.sling.resourceresolver.impl.helper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 public class ResourcePathIteratorTest {
 
-    @Test public void testNull() {
+    @Test
+    public void testNull() {
         ResourcePathIterator rpi = new ResourcePathIterator(null);
         assertFinished(rpi);
     }
 
-    @Test public void testEmpty() {
+    @Test
+    public void testEmpty() {
         ResourcePathIterator rpi = new ResourcePathIterator("");
         assertFinished(rpi);
     }
 
-    @Test public void testRoot() {
+    @Test
+    public void testRoot() {
         ResourcePathIterator rpi = new ResourcePathIterator("/");
         assertNext("/", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testSlashed() {
+    @Test
+    public void testSlashed() {
         ResourcePathIterator rpi = new ResourcePathIterator("/root/child");
         assertNext("/root/child", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testSlashedTrailingSlash1() {
+    @Test
+    public void testSlashedTrailingSlash1() {
         ResourcePathIterator rpi = new ResourcePathIterator("/root/child/");
         assertNext("/root/child", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testSlashedTrailingSlash2() {
+    @Test
+    public void testSlashedTrailingSlash2() {
         ResourcePathIterator rpi = new ResourcePathIterator("/root/child//");
         assertNext("/root/child", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testDotted() {
+    @Test
+    public void testDotted() {
         ResourcePathIterator rpi = new ResourcePathIterator("/root.child");
         assertNext("/root.child", rpi);
         assertNext("/root", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testMixed() {
-        ResourcePathIterator rpi = new ResourcePathIterator(
-            "/root/child.print.a4.html/with/suffix");
+    @Test
+    public void testMixed() {
+        ResourcePathIterator rpi = new ResourcePathIterator("/root/child.print.a4.html/with/suffix");
         assertNext("/root/child.print.a4.html/with/suffix", rpi);
         assertNext("/root/child.print.a4", rpi);
         assertNext("/root/child.print", rpi);
@@ -81,54 +88,56 @@ public class ResourcePathIteratorTest {
         assertFinished(rpi);
     }
 
-    @Test public void testNoSeparators() {
-        final Iterator<String> rpi = new ResourcePathIterator(
-            "MickeyMouseWasHere");
+    @Test
+    public void testNoSeparators() {
+        final Iterator<String> rpi = new ResourcePathIterator("MickeyMouseWasHere");
         assertNext("MickeyMouseWasHere", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testGetA() {
-        final Iterator<String> rpi = new ResourcePathIterator(
-            "/some/stuff/more.a4.html");
+    @Test
+    public void testGetA() {
+        final Iterator<String> rpi = new ResourcePathIterator("/some/stuff/more.a4.html");
         assertNext("/some/stuff/more.a4.html", rpi);
         assertNext("/some/stuff/more.a4", rpi);
         assertNext("/some/stuff/more", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testGetB() {
-        final Iterator<String> rpi = new ResourcePathIterator(
-            "/some/stuff/more.html");
+    @Test
+    public void testGetB() {
+        final Iterator<String> rpi = new ResourcePathIterator("/some/stuff/more.html");
         assertNext("/some/stuff/more.html", rpi);
         assertNext("/some/stuff/more", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testHeadB() {
-        final Iterator<String> rpi = new ResourcePathIterator(
-            "/some/stuff/more.html");
+    @Test
+    public void testHeadB() {
+        final Iterator<String> rpi = new ResourcePathIterator("/some/stuff/more.html");
         assertNext("/some/stuff/more.html", rpi);
         assertNext("/some/stuff/more", rpi);
         assertFinished(rpi);
     }
 
-    @Test public void testGetC() {
+    @Test
+    public void testGetC() {
         final Iterator<String> it = new ResourcePathIterator("/some/stuff/more");
         assertNext("/some/stuff/more", it);
         assertFinished(it);
     }
 
-    @Test public void testGetD() {
-        final Iterator<String> it = new ResourcePathIterator(
-            "/some/stuff.print/more.html");
+    @Test
+    public void testGetD() {
+        final Iterator<String> it = new ResourcePathIterator("/some/stuff.print/more.html");
         assertNext("/some/stuff.print/more.html", it);
         assertNext("/some/stuff.print/more", it);
         assertNext("/some/stuff", it);
         assertFinished(it);
     }
 
-    @Test public void testRelativePathGet() {
+    @Test
+    public void testRelativePathGet() {
         final Iterator<String> it = new ResourcePathIterator("some/stuff.print");
         assertNext("some/stuff.print", it);
         assertNext("some/stuff", it);
@@ -150,6 +159,5 @@ public class ResourcePathIteratorTest {
         } catch (NoSuchElementException nsee) {
             // expected
         }
-
     }
 }

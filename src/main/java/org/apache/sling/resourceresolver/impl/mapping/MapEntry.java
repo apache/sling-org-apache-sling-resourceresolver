@@ -44,20 +44,20 @@ public class MapEntry implements Comparable<MapEntry> {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private static final Pattern[] URL_WITH_PORT_MATCH = {
-        Pattern.compile("http/([^/]+)(\\.[^\\d/]+)(/.*)?$"),
-        Pattern.compile("https/([^/]+)(\\.[^\\d/]+)(/.*)?$") };
+        Pattern.compile("http/([^/]+)(\\.[^\\d/]+)(/.*)?$"), Pattern.compile("https/([^/]+)(\\.[^\\d/]+)(/.*)?$")
+    };
 
-    private static final String[] URL_WITH_PORT_REPLACEMENT = {
-        "http/$1$2.80$3", "https/$1$2.443$3" };
+    private static final String[] URL_WITH_PORT_REPLACEMENT = {"http/$1$2.80$3", "https/$1$2.443$3"};
 
     private static final Pattern[] PATH_TO_URL_MATCH = {
         Pattern.compile("http/([^/]+)\\.80(/.*)?$"),
         Pattern.compile("https/([^/]+)\\.443(/.*)?$"),
         Pattern.compile("([^/]+)/([^/]+)\\.(\\d+)(/.*)?$"),
-        Pattern.compile("([^/]+)/([^/]+)(/.*)?$") };
+        Pattern.compile("([^/]+)/([^/]+)(/.*)?$")
+    };
 
-    private static final String[] PATH_TO_URL_REPLACEMENT = { "http://$1$2",
-        "https://$1$2", "$1://$2:$3$4", "$1://$2$3" };
+    private static final String[] PATH_TO_URL_REPLACEMENT = {"http://$1$2", "https://$1$2", "$1://$2:$3$4", "$1://$2$3"
+    };
 
     private final Pattern urlPattern;
 
@@ -90,13 +90,11 @@ public class MapEntry implements Comparable<MapEntry> {
      *            The (absolute) path
      * @return The request path string {scheme}://{host}:{port}{path}.
      */
-    public static String getURI(final String scheme, final String host, final int port,
-                    final String path) {
+    public static String getURI(final String scheme, final String host, final int port, final String path) {
 
         final StringBuilder sb = new StringBuilder();
         sb.append(scheme).append("://").append(host);
-        if (port > 0 && !(port == 80 && "http".equals(scheme))
-                        && !(port == 443 && "https".equals(scheme))) {
+        if (port > 0 && !(port == 80 && "http".equals(scheme)) && !(port == 443 && "https".equals(scheme))) {
             sb.append(':').append(port);
         }
         sb.append(path);
@@ -108,10 +106,9 @@ public class MapEntry implements Comparable<MapEntry> {
         for (int i = 0; i < URL_WITH_PORT_MATCH.length; i++) {
             final Matcher m = URL_WITH_PORT_MATCH[i].matcher(uriPath);
             if (m.find()) {
-            	if (!isRegExp(m.replaceAll("$1$2")))
-            	{
+                if (!isRegExp(m.replaceAll("$1$2"))) {
                     return m.replaceAll(URL_WITH_PORT_REPLACEMENT[i]);
-            	}
+                }
             }
         }
 
@@ -137,25 +134,21 @@ public class MapEntry implements Comparable<MapEntry> {
         return null;
     }
 
-    public static MapEntry createResolveEntry(String url, final Resource resource,
-                    final boolean trailingSlash) {
+    public static MapEntry createResolveEntry(String url, final Resource resource, final boolean trailingSlash) {
         final ValueMap props = resource.adaptTo(ValueMap.class);
         if (props != null) {
 
             // ensure the url contains a port number (if possible)
             url = fixUriPath(url);
 
-            final String redirect = props.get(
-                            MapEntries.PROP_REDIRECT_EXTERNAL, String.class);
+            final String redirect = props.get(MapEntries.PROP_REDIRECT_EXTERNAL, String.class);
             if (redirect != null) {
-                final int status = props
-                                .get(MapEntries.PROP_REDIRECT_EXTERNAL_STATUS,
-                                                302);
+                final int status = props.get(MapEntries.PROP_REDIRECT_EXTERNAL_STATUS, 302);
                 return new MapEntry(url, status, trailingSlash, 0, redirect);
             }
 
-            final String[] internalRedirectProps = props.get(ResourceResolverImpl.PROP_REDIRECT_INTERNAL,
-                String[].class);
+            final String[] internalRedirectProps =
+                    props.get(ResourceResolverImpl.PROP_REDIRECT_INTERNAL, String[].class);
             final String[] internalRedirect = filterRegExp(internalRedirectProps);
             if (internalRedirect != null) {
                 return new MapEntry(url, -1, trailingSlash, 0, internalRedirect);
@@ -165,27 +158,27 @@ public class MapEntry implements Comparable<MapEntry> {
         return null;
     }
 
-    public static List<MapEntry> createMapEntry(String url, final Resource resource,
-                    final boolean trailingSlash) {
+    public static List<MapEntry> createMapEntry(String url, final Resource resource, final boolean trailingSlash) {
         final ValueMap props = resource.adaptTo(ValueMap.class);
         if (props != null) {
-            final String redirect = props.get(
-                            MapEntries.PROP_REDIRECT_EXTERNAL, String.class);
+            final String redirect = props.get(MapEntries.PROP_REDIRECT_EXTERNAL, String.class);
             if (redirect != null) {
                 // ignoring external redirects for mapping
-                LoggerFactory
-                .getLogger(MapEntry.class)
-                .info("createMapEntry: Configuration has external redirect to {}; not creating mapping for configuration in {}",
-                                redirect, resource.getPath());
+                LoggerFactory.getLogger(MapEntry.class)
+                        .info(
+                                "createMapEntry: Configuration has external redirect to {}; not creating mapping for configuration in {}",
+                                redirect,
+                                resource.getPath());
                 return null;
             }
 
             // ignore potential regular expression url
             if (isRegExp(url)) {
-                LoggerFactory
-                .getLogger(MapEntry.class)
-                .info("createMapEntry: URL {} contains a regular expression; not creating mapping for configuration in {}",
-                                url, resource.getPath());
+                LoggerFactory.getLogger(MapEntry.class)
+                        .info(
+                                "createMapEntry: URL {} contains a regular expression; not creating mapping for configuration in {}",
+                                url,
+                                resource.getPath());
 
                 return null;
             }
@@ -202,9 +195,7 @@ public class MapEntry implements Comparable<MapEntry> {
                 url = url.substring(MapEntries.ANY_SCHEME_HOST.length());
             }
 
-            final String[] internalRedirect = props
-                            .get(ResourceResolverImpl.PROP_REDIRECT_INTERNAL,
-                                            String[].class);
+            final String[] internalRedirect = props.get(ResourceResolverImpl.PROP_REDIRECT_INTERNAL, String[].class);
             if (internalRedirect != null) {
 
                 // check whether the url is considered external or internal
@@ -215,22 +206,20 @@ public class MapEntry implements Comparable<MapEntry> {
                     status = 302;
                 }
 
-                final List<MapEntry> prepEntries = new ArrayList<MapEntry>(
-                                internalRedirect.length);
+                final List<MapEntry> prepEntries = new ArrayList<MapEntry>(internalRedirect.length);
                 for (final String redir : internalRedirect) {
                     if (!redir.contains("$")) {
-                    	MapEntry mapEntry = null;
-                    	try{
-                    		mapEntry = new MapEntry(redir.concat(endHook), status, trailingSlash, 0, url);
-                    	}catch (IllegalArgumentException iae){
-                    		//ignore this entry
-                            LoggerFactory
-                            .getLogger(MapEntry.class)
-                    		.debug("Ignoring mapping due to exception: " + iae.getMessage(), iae);
-                    	}
-                    	if (mapEntry!=null){
-                    		prepEntries.add(mapEntry);
-                    	}
+                        MapEntry mapEntry = null;
+                        try {
+                            mapEntry = new MapEntry(redir.concat(endHook), status, trailingSlash, 0, url);
+                        } catch (IllegalArgumentException iae) {
+                            // ignore this entry
+                            LoggerFactory.getLogger(MapEntry.class)
+                                    .debug("Ignoring mapping due to exception: " + iae.getMessage(), iae);
+                        }
+                        if (mapEntry != null) {
+                            prepEntries.add(mapEntry);
+                        }
                     }
                 }
 
@@ -243,8 +232,8 @@ public class MapEntry implements Comparable<MapEntry> {
         return null;
     }
 
-    public MapEntry(String url, final int status, final boolean trailingSlash,
-                    final long order, final String... redirect) {
+    public MapEntry(
+            String url, final int status, final boolean trailingSlash, final long order, final String... redirect) {
 
         // ensure trailing slashes on redirects if the url
         // ends with a trailing slash
@@ -261,9 +250,9 @@ public class MapEntry implements Comparable<MapEntry> {
         }
 
         try {
-        	this.urlPattern = Pattern.compile(url);
-        } catch (Exception e){
-        	throw new IllegalArgumentException("Bad url pattern: " + url,e);
+            this.urlPattern = Pattern.compile(url);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Bad url pattern: " + url, e);
         }
 
         this.redirect = redirect;
@@ -273,7 +262,7 @@ public class MapEntry implements Comparable<MapEntry> {
 
     /**
      * Replaces the specified value according to the rules of this entry
-     * 
+     *
      * @param value the value to replace
      * @return a replaced value of <code>null</code> if the value does not match
      */
@@ -283,26 +272,26 @@ public class MapEntry implements Comparable<MapEntry> {
             final String[] redirects = getRedirect();
             final List<String> results = new ArrayList<>(redirects.length);
             for (int i = 0; i < redirects.length; i++) {
-            	try {
-            		String redirect = redirects[i];
-            		// SLING-7881 - if the value is a selector on the root resource then the
-            		// result will need to remove the trailing slash from the path
-            		if (redirect.length() > 1 && redirect.endsWith("/")) {
-            			if (value.length() > m.end()) {
-            				if ('.' == value.charAt(m.end())) {
-            					//the suffix starts with a dot and the redirect prefix ends with
-            					// a slash so we need to remove the trailing slash from the prefix
-            					// value to make a valid path when they are combined.
-            					// 
-            					// for example: http/localhost.8080/.2.json should become /content.2.json
-            					//   instead of /content/.2.json
-            					redirect = redirect.substring(0, redirect.length() - 1);
-            				}
-            			}
-            		}
-            		results.add(m.replaceFirst(redirect));
-            	} catch (final StringIndexOutOfBoundsException | IllegalArgumentException ex){
-            		log.debug("Exception while replacing, ignoring entry {} ", redirects[i], ex);
+                try {
+                    String redirect = redirects[i];
+                    // SLING-7881 - if the value is a selector on the root resource then the
+                    // result will need to remove the trailing slash from the path
+                    if (redirect.length() > 1 && redirect.endsWith("/")) {
+                        if (value.length() > m.end()) {
+                            if ('.' == value.charAt(m.end())) {
+                                // the suffix starts with a dot and the redirect prefix ends with
+                                // a slash so we need to remove the trailing slash from the prefix
+                                // value to make a valid path when they are combined.
+                                //
+                                // for example: http/localhost.8080/.2.json should become /content.2.json
+                                //   instead of /content/.2.json
+                                redirect = redirect.substring(0, redirect.length() - 1);
+                            }
+                        }
+                    }
+                    results.add(m.replaceFirst(redirect));
+                } catch (final StringIndexOutOfBoundsException | IllegalArgumentException ex) {
+                    log.debug("Exception while replacing, ignoring entry {} ", redirects[i], ex);
                 }
             }
             return !results.isEmpty() ? results.toArray(new String[0]) : null;

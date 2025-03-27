@@ -18,10 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.providers;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,9 +25,14 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.junit.Test;
 import org.osgi.framework.ServiceReference;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class ResourceProviderStorageTest {
 
-    @Test public void testAdaptableOrdering() throws Exception {
+    @Test
+    public void testAdaptableOrdering() throws Exception {
         final ServiceReference r1 = mock(ServiceReference.class);
         when(r1.getProperty(ResourceProvider.PROPERTY_ADAPTABLE)).thenReturn(Boolean.TRUE);
         final ServiceReference r2 = mock(ServiceReference.class);

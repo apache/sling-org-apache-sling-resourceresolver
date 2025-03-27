@@ -20,9 +20,8 @@ package org.apache.sling.resourceresolver.impl.providers;
 
 /**
  * Interface which allows access to a ResourceProviderStorage object.
- */ 
+ */
 public interface ResourceProviderStorageProvider {
 
     ResourceProviderStorage getResourceProviderStorage();
-
 }

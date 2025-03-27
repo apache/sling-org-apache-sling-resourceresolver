@@ -62,8 +62,10 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
      * @see org.apache.sling.api.resource.ResourceResolverFactory#getServiceResourceResolver(java.util.Map)
      */
     @Override
-    public ResourceResolver getServiceResourceResolver(final Map<String, Object> passedAuthenticationInfo) throws LoginException {
-        final Map<String, Object> authenticationInfo = CommonResourceResolverFactoryImpl.sanitizeAuthenticationInfo(passedAuthenticationInfo, PASSWORD);
+    public ResourceResolver getServiceResourceResolver(final Map<String, Object> passedAuthenticationInfo)
+            throws LoginException {
+        final Map<String, Object> authenticationInfo =
+                CommonResourceResolverFactoryImpl.sanitizeAuthenticationInfo(passedAuthenticationInfo, PASSWORD);
         final Object info = authenticationInfo.get(SUBSERVICE);
         final String subServiceName = (info instanceof String) ? (String) info : null;
 
@@ -72,12 +74,13 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
         // this should yield guest access or no access at all. For now
         // no access is granted if there is no service user defined for
         // the bundle.
-        final Iterable<String> principalNames = this.serviceUserMapper.getServicePrincipalNames(this.usingBundle, subServiceName);
+        final Iterable<String> principalNames =
+                this.serviceUserMapper.getServicePrincipalNames(this.usingBundle, subServiceName);
         if (principalNames == null) {
             final String userName = this.serviceUserMapper.getServiceUserID(this.usingBundle, subServiceName);
             if (userName == null) {
-                throw new LoginException("Cannot derive user name for bundle "
-                        + this.usingBundle + " and sub service " + subServiceName);
+                throw new LoginException("Cannot derive user name for bundle " + this.usingBundle + " and sub service "
+                        + subServiceName);
             } else {
                 // ensure proper user name
                 authenticationInfo.put(ResourceResolverFactory.USER, userName);
@@ -93,8 +96,7 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
      * @see org.apache.sling.api.resource.ResourceResolverFactory#getResourceResolver(java.util.Map)
      */
     @Override
-    public ResourceResolver getResourceResolver(
-            final Map<String, Object> authenticationInfo) throws LoginException {
+    public ResourceResolver getResourceResolver(final Map<String, Object> authenticationInfo) throws LoginException {
         return commonFactory.getResourceResolver(authenticationInfo);
     }
 
@@ -102,8 +104,8 @@ public class ResourceResolverFactoryImpl implements ResourceResolverFactory {
      * @see org.apache.sling.api.resource.ResourceResolverFactory#getAdministrativeResourceResolver(java.util.Map)
      */
     @Override
-    public ResourceResolver getAdministrativeResourceResolver(
-            Map<String, Object> authenticationInfo) throws LoginException {
+    public ResourceResolver getAdministrativeResourceResolver(Map<String, Object> authenticationInfo)
+            throws LoginException {
         // usingBundle is required as bundles must now be allow listed to use this method
         if (usingBundle == null) {
             throw new LoginException("usingBundle is null");

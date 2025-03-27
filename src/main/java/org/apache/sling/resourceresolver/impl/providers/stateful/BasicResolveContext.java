@@ -18,9 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.providers.stateful;
 
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.NotNull;
-
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -29,6 +26,8 @@ import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
 import org.apache.sling.resourceresolver.impl.providers.tree.Node;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Resolve context implementation for a resource provider.
@@ -47,7 +46,8 @@ public class BasicResolveContext<T> implements ResolveContext<T> {
 
     private final String parentPath;
 
-    public BasicResolveContext(@NotNull final ResourceResolver resolver,
+    public BasicResolveContext(
+            @NotNull final ResourceResolver resolver,
             @NotNull final ProviderManager resolveContextManager,
             @NotNull final ResourceResolverControl control,
             @Nullable final T providerState,
@@ -84,21 +84,23 @@ public class BasicResolveContext<T> implements ResolveContext<T> {
     private Object[] getParentProviderAndContext() {
         ResourceProvider<?> parentProvider = null;
         ResolveContext<?> parentResolveContext = null;
-        if ( this.parentPath != null ) {
+        if (this.parentPath != null) {
             String path = this.parentPath;
-            while ( path != null && parentProvider == null ) {
-                final Node<ResourceProviderHandler> node = this.control.getResourceProviderStorage().getTree().getBestMatchingNode(path);
-                if ( node != null ) {
+            while (path != null && parentProvider == null) {
+                final Node<ResourceProviderHandler> node =
+                        this.control.getResourceProviderStorage().getTree().getBestMatchingNode(path);
+                if (node != null) {
                     final ResourceProviderHandler handler = node.getValue();
                     try {
-                       parentResolveContext = this.resolveContextManager.getOrCreateResolveContext(handler, this.control);
-                       if ( parentResolveContext != null ) {
-                           parentProvider = handler.getResourceProvider();
+                        parentResolveContext =
+                                this.resolveContextManager.getOrCreateResolveContext(handler, this.control);
+                        if (parentResolveContext != null) {
+                            parentProvider = handler.getResourceProvider();
                         }
-                    } catch ( final LoginException se) {
+                    } catch (final LoginException se) {
                         // skip this, try next
                     }
-                    if ( parentProvider == null ) {
+                    if (parentProvider == null) {
                         parentResolveContext = null;
                         path = ResourceUtil.getParent(path);
                     }

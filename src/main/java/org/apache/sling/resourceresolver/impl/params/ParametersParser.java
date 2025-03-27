@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.sling.resourceresolver.impl.params;
 
 import java.util.LinkedHashMap;
@@ -25,7 +24,12 @@ import java.util.Map;
 class ParametersParser {
 
     private enum ParamsState {
-        INIT, NAME, EQUALS, VALUE, QUOTED_VALUE, QUOTE_END
+        INIT,
+        NAME,
+        EQUALS,
+        VALUE,
+        QUOTED_VALUE,
+        QUOTE_END
     }
 
     private StringBuilder name;
@@ -39,7 +43,7 @@ class ParametersParser {
     /**
      * Parses parameters string, eg.: {@code ;x=123;a='1.0'}. The result of the method is available in
      * {@link #parameters} and {@link #invalid}.
-     * 
+     *
      * @param chars Array containing path with parameters.
      * @param from Index of the first character of the parameters substring (it must be a semicolon).
      * @param dotAllowed If true, the dot in parameter value won't stop parsing.

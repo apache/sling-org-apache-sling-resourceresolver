@@ -18,9 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.CoreMatchers.is;
-
 import org.apache.sling.commons.metrics.Gauge;
 import org.apache.sling.commons.metrics.MetricsService;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -28,6 +25,9 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ResourceResolverMetricsTest {
 

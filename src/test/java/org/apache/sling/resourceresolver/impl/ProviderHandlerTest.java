@@ -18,11 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 
 import org.apache.sling.api.resource.LoginException;
@@ -42,12 +37,17 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.nullable;
 
 public class ProviderHandlerTest {
 
     @SuppressWarnings("unchecked")
-    @Test public void testServletRegistrationAndSyntheticResources() throws LoginException {
+    @Test
+    public void testServletRegistrationAndSyntheticResources() throws LoginException {
         final String servletpath = "/libs/a/b/GET.servlet";
         final Resource servletResource = Mockito.mock(Resource.class);
         Mockito.when(servletResource.getResourceMetadata()).then(new Answer<ResourceMetadata>() {
@@ -58,17 +58,23 @@ public class ProviderHandlerTest {
         });
 
         final ResourceProvider<?> leaveProvider = Mockito.mock(ResourceProvider.class);
-        Mockito.when(leaveProvider.getResource(nullable(ResolveContext.class), Mockito.eq(servletpath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(servletResource);
+        Mockito.when(leaveProvider.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.eq(servletpath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(servletResource);
         final ResourceProviderHandler h = createRPHandler(leaveProvider, "my-pid", 0, servletpath);
         ResourceResolverFactoryActivator activator = new ResourceResolverFactoryActivator();
         activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
-        ResourceResolver resolver = new ResourceResolverImpl(new CommonResourceResolverFactoryImpl(activator), false, null, new ResourceProviderStorageProvider() {
-                
-                @Override
-                public ResourceProviderStorage getResourceProviderStorage() {
-                    return new ResourceProviderStorage(Arrays.asList(h));
-                }
-            });
+        ResourceResolver resolver = new ResourceResolverImpl(
+                new CommonResourceResolverFactoryImpl(activator), false, null, new ResourceProviderStorageProvider() {
+
+                    @Override
+                    public ResourceProviderStorage getResourceProviderStorage() {
+                        return new ResourceProviderStorage(Arrays.asList(h));
+                    }
+                });
 
         final Resource parent = resolver.getResource(ResourceUtil.getParent(servletpath));
         assertNotNull("Parent must be available", parent);

@@ -1,20 +1,32 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to You under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.resourceresolver.util;
+
+import javax.servlet.http.HttpServletRequest;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 import junit.framework.TestCase;
 import org.apache.sling.api.resource.NonExistingResource;
@@ -36,24 +48,14 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 
-import javax.servlet.http.HttpServletRequest;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
-
-import static org.mockito.ArgumentMatchers.nullable;
 
 public class MockTestUtil {
 
@@ -71,7 +73,7 @@ public class MockTestUtil {
     public static void checkNonExistingResource(Resource redirect, String path) {
         assertThat("Not a Non Existing Resource", redirect, instanceOf(NonExistingResource.class));
         NonExistingResource nonExistingResource = (NonExistingResource) redirect;
-        if(path != null) {
+        if (path != null) {
             assertEquals("Wrong Path for Non Existing Resource", path, nonExistingResource.getPath());
         }
     }
@@ -98,7 +100,7 @@ public class MockTestUtil {
      */
     public static HttpServletRequest createRequestFromUrl(String url) {
         int index = url.indexOf("://");
-        if(index > 0) {
+        if (index > 0) {
             String method = url.substring(0, index);
             int port = 80;
             int index2 = url.indexOf(":", index + 3);
@@ -108,7 +110,7 @@ public class MockTestUtil {
                 port = new Integer(url.substring(index2 + 1, index3));
                 host = url.substring(index + 3, index2);
             } else {
-                if(index3 > 0) {
+                if (index3 > 0) {
                     host = url.substring(index + 3, index3);
                 } else {
                     host = url.substring(index + 3);
@@ -134,11 +136,19 @@ public class MockTestUtil {
      * @return Mock Resource able to handle addition of children later on
      */
     @SuppressWarnings("unchecked")
-    public static Resource buildResource(String fullPath, Resource parent, ResourceResolver resourceResolver, ResourceProvider<?> provider, String... properties) {
+    public static Resource buildResource(
+            String fullPath,
+            Resource parent,
+            ResourceResolver resourceResolver,
+            ResourceProvider<?> provider,
+            String... properties) {
         if (properties != null && properties.length % 2 != 0) {
-            throw new IllegalArgumentException("List of Resource Properties must be an even number: " + asList(properties));
+            throw new IllegalArgumentException(
+                    "List of Resource Properties must be an even number: " + asList(properties));
         }
-        Resource resource = mock(Resource.class, withSettings().name(getResourceName(fullPath)).extraInterfaces(ResourceChildrenAccessor.class));
+        Resource resource = mock(
+                Resource.class,
+                withSettings().name(getResourceName(fullPath)).extraInterfaces(ResourceChildrenAccessor.class));
         when(resource.getName()).thenReturn(getResourceName(fullPath));
         when(resource.getPath()).thenReturn(fullPath);
         ResourceMetadata resourceMetadata = new ResourceMetadata();
@@ -163,13 +173,19 @@ public class MockTestUtil {
 
         // register the resource with the provider
         if (provider != null) {
-            when(provider.listChildren(nullable(ResolveContext.class), Mockito.eq(resource))).thenAnswer(new Answer<Iterator<Resource>>() {
-                @Override
-                public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
-                    return childrenList.iterator();
-                }
-            });
-            when(provider.getResource(nullable(ResolveContext.class), Mockito.eq(fullPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(resource);
+            when(provider.listChildren(nullable(ResolveContext.class), Mockito.eq(resource)))
+                    .thenAnswer(new Answer<Iterator<Resource>>() {
+                        @Override
+                        public Iterator<Resource> answer(InvocationOnMock invocation) throws Throwable {
+                            return childrenList.iterator();
+                        }
+                    });
+            when(provider.getResource(
+                            nullable(ResolveContext.class),
+                            Mockito.eq(fullPath),
+                            nullable(ResourceContext.class),
+                            nullable(Resource.class)))
+                    .thenReturn(resource);
         }
         if (properties != null) {
             ValueMap vm = new SimpleValueMapImpl();
@@ -211,7 +227,8 @@ public class MockTestUtil {
      *
      * @throws UnsupportedOperationException If the call failed because it method is not found, has no access or invocation failed
      */
-    public static <T> T callInaccessibleMethod(String methodName, Class<T> returnType, Object target, Class paramsType, Object param) {
+    public static <T> T callInaccessibleMethod(
+            String methodName, Class<T> returnType, Object target, Class paramsType, Object param) {
         return callInaccessibleMethod(methodName, returnType, target, new Class[] {paramsType}, new Object[] {param});
     }
 
@@ -230,14 +247,18 @@ public class MockTestUtil {
      * @throws IllegalArgumentException If the parameter types and values do not match
      * @throws UnsupportedOperationException If the call failed because it method is not found, has no access or invocation failed
      */
-    public static <T> T callInaccessibleMethod(String methodName, Class<T> returnType, Object target, Class[] parameterTypes, Object[] parameters) {
-        if(parameterTypes != null && parameters != null) {
-            if(parameters.length != parameterTypes.length) { throw new IllegalArgumentException("Number of Parameter Types and Values were not the same"); }
+    public static <T> T callInaccessibleMethod(
+            String methodName, Class<T> returnType, Object target, Class[] parameterTypes, Object[] parameters) {
+        if (parameterTypes != null && parameters != null) {
+            if (parameters.length != parameterTypes.length) {
+                throw new IllegalArgumentException("Number of Parameter Types and Values were not the same");
+            }
         } else {
             throw new IllegalArgumentException("Parameter Type and Value Array cannot be null");
         }
         try {
-            return getInaccessibleMethod(methodName, returnType, target, parameterTypes).call(parameters);
+            return getInaccessibleMethod(methodName, returnType, target, parameterTypes)
+                    .call(parameters);
         } catch (IllegalAccessException e) {
             throw new UnsupportedOperationException("Failed to access method: " + methodName, e);
         } catch (InvocationTargetException e) {
@@ -245,7 +266,8 @@ public class MockTestUtil {
         }
     }
 
-    public static <T> MethodWrapper<T> getInaccessibleMethod(String methodName, Class<T> returnType, Object target, Class...parameterTypes) {
+    public static <T> MethodWrapper<T> getInaccessibleMethod(
+            String methodName, Class<T> returnType, Object target, Class... parameterTypes) {
         return new MethodWrapper(methodName, returnType, target, parameterTypes);
     }
 
@@ -258,18 +280,20 @@ public class MockTestUtil {
                 this.method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
                 this.method.setAccessible(true);
                 this.target = target;
-                if(returnType == null && !this.method.getReturnType().equals(Void.TYPE)) {
-                    throw new IllegalArgumentException("Return Type is null but method does not return Void but: " + this.method.getReturnType());
+                if (returnType == null && !this.method.getReturnType().equals(Void.TYPE)) {
+                    throw new IllegalArgumentException(
+                            "Return Type is null but method does not return Void but: " + this.method.getReturnType());
                 }
-                if(returnType != null && !returnType.isAssignableFrom(this.method.getReturnType())) {
-                    throw new IllegalArgumentException("Return Type is not assignable to: " + returnType + ", it returns this: " + this.method.getReturnType());
+                if (returnType != null && !returnType.isAssignableFrom(this.method.getReturnType())) {
+                    throw new IllegalArgumentException("Return Type is not assignable to: " + returnType
+                            + ", it returns this: " + this.method.getReturnType());
                 }
             } catch (NoSuchMethodException e) {
                 throw new UnsupportedOperationException("Failed to find method: " + methodName, e);
             }
         }
 
-        public T call(Object...parameters) throws InvocationTargetException, IllegalAccessException {
+        public T call(Object... parameters) throws InvocationTargetException, IllegalAccessException {
             return (T) method.invoke(target, parameters);
         }
     }
@@ -283,7 +307,8 @@ public class MockTestUtil {
      *
      * @throws UnsupportedOperationException If the call failed because it field is not found or has no access
      */
-    public static void setInaccessibleField(String fieldName, Object target, Object fieldValue) throws NoSuchMethodException {
+    public static void setInaccessibleField(String fieldName, Object target, Object fieldValue)
+            throws NoSuchMethodException {
         try {
             getInaccessibleFieldWrapper(fieldName, target, Object.class).set(fieldValue);
         } catch (IllegalAccessException e) {
@@ -314,14 +339,17 @@ public class MockTestUtil {
     }
 
     public static void setupStringInterpolationProvider(
-        StringInterpolationProvider provider, StringInterpolationProviderConfiguration configuration, final String[] placeholderValues
-    ) {
+            StringInterpolationProvider provider,
+            StringInterpolationProviderConfiguration configuration,
+            final String[] placeholderValues) {
         when(configuration.placeHolderKeyValuePairs()).thenReturn(placeholderValues);
         BundleContext context = mock(BundleContext.class);
-        callInaccessibleMethod("activate", Void.TYPE, provider,
-            new Class[] {BundleContext.class, StringInterpolationProviderConfiguration.class},
-            new Object[] {context, configuration}
-        );
+        callInaccessibleMethod(
+                "activate",
+                Void.TYPE,
+                provider,
+                new Class[] {BundleContext.class, StringInterpolationProviderConfiguration.class},
+                new Object[] {context, configuration});
     }
 
     public static class FieldWrapper<T> {
@@ -360,12 +388,12 @@ public class MockTestUtil {
 
         public ExpectedEtcMapping() {}
 
-        public ExpectedEtcMapping(String...expectedMapping) {
-            if(expectedMapping.length % 2 != 0) {
+        public ExpectedEtcMapping(String... expectedMapping) {
+            if (expectedMapping.length % 2 != 0) {
                 throw new IllegalArgumentException("Expect an even number of strings with pattern / redirect");
             }
             int size = expectedMapping.length / 2;
-            for(int i = 0; i < size; i++ ) {
+            for (int i = 0; i < size; i++) {
                 expectedEtcMapEntries.add(new ExpectedEtcMapEntry(expectedMapping[2 * i], expectedMapping[2 * i + 1]));
             }
         }
@@ -374,6 +402,7 @@ public class MockTestUtil {
             addEtcMapEntry(pattern, false, redirect);
             return this;
         }
+
         public ExpectedEtcMapping addEtcMapEntry(String pattern, boolean internal, String redirect) {
             expectedEtcMapEntries.add(new ExpectedEtcMapEntry(pattern, internal, redirect));
             return this;
@@ -383,21 +412,21 @@ public class MockTestUtil {
             assertEquals("Wrong Number of Mappings for: " + title, expectedEtcMapEntries.size(), mapEntries.size());
             ArrayList<MapEntry> actual = new ArrayList<>(mapEntries);
             ArrayList<ExpectedEtcMapEntry> expected = new ArrayList<>(expectedEtcMapEntries);
-            for(MapEntry actualMapEntry: actual) {
+            for (MapEntry actualMapEntry : actual) {
                 ExpectedEtcMapEntry expectedFound = null;
-                for(ExpectedEtcMapEntry expectedEtcMapEntry: expected) {
-                    if(expectedEtcMapEntry.pattern.equals(actualMapEntry.getPattern())) {
+                for (ExpectedEtcMapEntry expectedEtcMapEntry : expected) {
+                    if (expectedEtcMapEntry.pattern.equals(actualMapEntry.getPattern())) {
                         expectedFound = expectedEtcMapEntry;
                         break;
                     }
                 }
-                if(expectedFound == null) {
+                if (expectedFound == null) {
                     TestCase.fail("This pattern (" + actualMapEntry.getPattern() + ") is not expected for: " + title);
                 }
                 expectedFound.assertEtcMap(title, actualMapEntry);
                 expected.remove(expectedFound);
             }
-            for(ExpectedEtcMapEntry expectedEtcMapEntry: expected) {
+            for (ExpectedEtcMapEntry expectedEtcMapEntry : expected) {
                 TestCase.fail("Expected Map Entry (" + expectedEtcMapEntry.pattern + ") not provided for: " + title);
             }
         }

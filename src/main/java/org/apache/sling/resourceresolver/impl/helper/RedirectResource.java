@@ -30,7 +30,7 @@ import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 
-@Adaptable(adaptableClass = Resource.class, adapters = @Adapter(value = { Map.class, ValueMap.class }))
+@Adaptable(adaptableClass = Resource.class, adapters = @Adapter(value = {Map.class, ValueMap.class}))
 public final class RedirectResource extends SyntheticResource {
 
     static final String RT_SLING_REDIRECT = "sling:redirect";
@@ -41,8 +41,7 @@ public final class RedirectResource extends SyntheticResource {
 
     private final Map<String, Object> values;
 
-    public RedirectResource(final ResourceResolver resolver, final String path,
-            final String target, final int status) {
+    public RedirectResource(final ResourceResolver resolver, final String path, final String target, final int status) {
         super(resolver, path, RT_SLING_REDIRECT);
 
         final Map<String, Object> props = new HashMap<String, Object>();

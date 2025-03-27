@@ -66,12 +66,12 @@ public interface MapEntriesHandler {
             return Collections.emptyMap();
         }
 
-		@Override
-		public boolean isOptimizeAliasResolutionEnabled() {
-			return false;
+        @Override
+        public boolean isOptimizeAliasResolutionEnabled() {
+            return false;
         }
 
-		@Override
+        @Override
         public void logDisableAliasOptimization() {
             // nothing to do
         }
@@ -97,7 +97,8 @@ public interface MapEntriesHandler {
      * @param parentPath the parent path
      * @return a map of all child alias entries, possibly empty
      */
-    @NotNull Map<String, Collection<String>> getAliasMap(@NotNull String parentPath);
+    @NotNull
+    Map<String, Collection<String>> getAliasMap(@NotNull String parentPath);
 
     /**
      * Creates an iterator over the possibly applicable mapping entries for resolving a resource
@@ -110,7 +111,8 @@ public interface MapEntriesHandler {
      * @param requestPath  the requestPath
      * @return the map entry iterator
      */
-    @NotNull Iterator<MapEntry> getResolveMapsIterator(@NotNull String requestPath);
+    @NotNull
+    Iterator<MapEntry> getResolveMapsIterator(@NotNull String requestPath);
 
     /**
      * Return a flat listing of map entries used for mapping resources to URLs
@@ -119,7 +121,8 @@ public interface MapEntriesHandler {
      *
      * @return an unmodifiable collection of map entries
      */
-    @NotNull Collection<MapEntry> getMapMaps();
+    @NotNull
+    Collection<MapEntry> getMapMaps();
 
     /**
      * Creates a flat listing of all the map entries used for resolving URLs to resources
@@ -131,7 +134,8 @@ public interface MapEntriesHandler {
      *
      * @return an unmodifiable, sorted, list of resolution map entries
      */
-    @NotNull List<MapEntry> getResolveMaps();
+    @NotNull
+    List<MapEntry> getResolveMaps();
 
     /**
      * Returns vanity paths mappings
@@ -140,5 +144,6 @@ public interface MapEntriesHandler {
      *
      * @return an unmodifiable list of vanity path mappings
      */
-    @NotNull Map<String, List<String>> getVanityPathMappings();
+    @NotNull
+    Map<String, List<String>> getVanityPathMappings();
 }

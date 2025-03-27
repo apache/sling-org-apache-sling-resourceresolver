@@ -16,18 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.sling.resourceresolver.impl.params;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.sling.resourceresolver.impl.params.PathParser;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class PathParserTest {
 
@@ -107,7 +105,6 @@ public class PathParserTest {
         parser.parse("/content/test.html;key1=xyz/suffix");
         assertEquals("/content/test.html/suffix", parser.getPath());
         assertEquals(map("key1", "xyz"), parser.getParameters());
-
     }
 
     @Test

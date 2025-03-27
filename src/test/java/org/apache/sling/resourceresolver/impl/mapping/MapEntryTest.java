@@ -18,137 +18,110 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.lang.reflect.Method;
+
+import junit.framework.TestCase;
+import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.lang.reflect.Method;
-
-import junit.framework.TestCase;
-
-import org.junit.Test;
-
 public class MapEntryTest {
 
-    @Test public void test_to_url_http_80() {
+    @Test
+    public void test_to_url_http_80() {
         assertEqualUri("http://sling.apache.org", "http/sling.apache.org.80");
         assertEqualUri("http://sling.apache.org/", "http/sling.apache.org.80/");
-        assertEqualUri("http://sling.apache.org/site/index.html",
-            "http/sling.apache.org.80/site/index.html");
+        assertEqualUri("http://sling.apache.org/site/index.html", "http/sling.apache.org.80/site/index.html");
     }
 
-    @Test public void test_to_url_https_443() {
+    @Test
+    public void test_to_url_https_443() {
         assertEqualUri("https://sling.apache.org", "https/sling.apache.org.443");
-        assertEqualUri("https://sling.apache.org/",
-            "https/sling.apache.org.443/");
-        assertEqualUri("https://sling.apache.org/site/index.html",
-            "https/sling.apache.org.443/site/index.html");
+        assertEqualUri("https://sling.apache.org/", "https/sling.apache.org.443/");
+        assertEqualUri("https://sling.apache.org/site/index.html", "https/sling.apache.org.443/site/index.html");
     }
 
-    @Test public void test_to_url_any_999() {
+    @Test
+    public void test_to_url_any_999() {
         // http with arbitrary port
-        assertEqualUri("http://sling.apache.org:123",
-            "http/sling.apache.org.123");
-        assertEqualUri("http://sling.apache.org:456/",
-            "http/sling.apache.org.456/");
-        assertEqualUri("http://sling.apache.org:456/site/index.html",
-            "http/sling.apache.org.456/site/index.html");
+        assertEqualUri("http://sling.apache.org:123", "http/sling.apache.org.123");
+        assertEqualUri("http://sling.apache.org:456/", "http/sling.apache.org.456/");
+        assertEqualUri("http://sling.apache.org:456/site/index.html", "http/sling.apache.org.456/site/index.html");
 
         // https with arbitrary port
-        assertEqualUri("https://sling.apache.org:987",
-            "https/sling.apache.org.987");
-        assertEqualUri("https://sling.apache.org:654/",
-            "https/sling.apache.org.654/");
-        assertEqualUri("https://sling.apache.org:321/site/index.html",
-            "https/sling.apache.org.321/site/index.html");
+        assertEqualUri("https://sling.apache.org:987", "https/sling.apache.org.987");
+        assertEqualUri("https://sling.apache.org:654/", "https/sling.apache.org.654/");
+        assertEqualUri("https://sling.apache.org:321/site/index.html", "https/sling.apache.org.321/site/index.html");
 
         // any scheme with arbitrary port
-        assertEqualUri("gurk://sling.apache.org:987",
-            "gurk/sling.apache.org.987");
-        assertEqualUri("gurk://sling.apache.org:654/",
-            "gurk/sling.apache.org.654/");
-        assertEqualUri("gurk://sling.apache.org:321/site/index.html",
-            "gurk/sling.apache.org.321/site/index.html");
+        assertEqualUri("gurk://sling.apache.org:987", "gurk/sling.apache.org.987");
+        assertEqualUri("gurk://sling.apache.org:654/", "gurk/sling.apache.org.654/");
+        assertEqualUri("gurk://sling.apache.org:321/site/index.html", "gurk/sling.apache.org.321/site/index.html");
     }
 
-    @Test public void test_to_url_any() {
+    @Test
+    public void test_to_url_any() {
         // http without port
         assertEqualUri("http://sling.apache.org", "http/sling.apache.org");
         assertEqualUri("http://sling.apache.org/", "http/sling.apache.org/");
-        assertEqualUri("http://sling.apache.org/site/index.html",
-            "http/sling.apache.org/site/index.html");
+        assertEqualUri("http://sling.apache.org/site/index.html", "http/sling.apache.org/site/index.html");
 
         // https without port
         assertEqualUri("https://sling.apache.org", "https/sling.apache.org");
         assertEqualUri("https://sling.apache.org/", "https/sling.apache.org/");
-        assertEqualUri("https://sling.apache.org/site/index.html",
-            "https/sling.apache.org/site/index.html");
+        assertEqualUri("https://sling.apache.org/site/index.html", "https/sling.apache.org/site/index.html");
 
         // any scheme without port
         assertEqualUri("gurk://sling.apache.org", "gurk/sling.apache.org");
         assertEqualUri("gurk://sling.apache.org/", "gurk/sling.apache.org/");
-        assertEqualUri("gurk://sling.apache.org/site/index.html",
-            "gurk/sling.apache.org/site/index.html");
+        assertEqualUri("gurk://sling.apache.org/site/index.html", "gurk/sling.apache.org/site/index.html");
     }
 
-    @Test public void test_fixUriPath() {
+    @Test
+    public void test_fixUriPath() {
         // http without port
         assertEqualUriPath("http/sling.apache.org.80", "http/sling.apache.org");
-        assertEqualUriPath("http/sling.apache.org.80/",
-            "http/sling.apache.org/");
-        assertEqualUriPath("http/sling.apache.org.80/site/index.html",
-            "http/sling.apache.org/site/index.html");
+        assertEqualUriPath("http/sling.apache.org.80/", "http/sling.apache.org/");
+        assertEqualUriPath("http/sling.apache.org.80/site/index.html", "http/sling.apache.org/site/index.html");
 
         // http with port
-        assertEqualUriPath("http/sling.apache.org.80",
-            "http/sling.apache.org.80");
-        assertEqualUriPath("http/sling.apache.org.80/",
-            "http/sling.apache.org.80/");
-        assertEqualUriPath("http/sling.apache.org.80/site/index.html",
-            "http/sling.apache.org.80/site/index.html");
+        assertEqualUriPath("http/sling.apache.org.80", "http/sling.apache.org.80");
+        assertEqualUriPath("http/sling.apache.org.80/", "http/sling.apache.org.80/");
+        assertEqualUriPath("http/sling.apache.org.80/site/index.html", "http/sling.apache.org.80/site/index.html");
 
         // https without port
-        assertEqualUriPath("https/sling.apache.org.443",
-            "https/sling.apache.org");
-        assertEqualUriPath("https/sling.apache.org.443/",
-            "https/sling.apache.org/");
-        assertEqualUriPath("https/sling.apache.org.443/site/index.html",
-            "https/sling.apache.org/site/index.html");
+        assertEqualUriPath("https/sling.apache.org.443", "https/sling.apache.org");
+        assertEqualUriPath("https/sling.apache.org.443/", "https/sling.apache.org/");
+        assertEqualUriPath("https/sling.apache.org.443/site/index.html", "https/sling.apache.org/site/index.html");
 
         // https with port
-        assertEqualUriPath("https/sling.apache.org.443",
-            "https/sling.apache.org.443");
-        assertEqualUriPath("https/sling.apache.org.443/",
-            "https/sling.apache.org.443/");
-        assertEqualUriPath("https/sling.apache.org.443/site/index.html",
-            "https/sling.apache.org.443/site/index.html");
+        assertEqualUriPath("https/sling.apache.org.443", "https/sling.apache.org.443");
+        assertEqualUriPath("https/sling.apache.org.443/", "https/sling.apache.org.443/");
+        assertEqualUriPath("https/sling.apache.org.443/site/index.html", "https/sling.apache.org.443/site/index.html");
 
         // anything without port
         assertEqualUriPath("gurk/sling.apache.org", "gurk/sling.apache.org");
         assertEqualUriPath("gurk/sling.apache.org/", "gurk/sling.apache.org/");
-        assertEqualUriPath("gurk/sling.apache.org/site/index.html",
-            "gurk/sling.apache.org/site/index.html");
+        assertEqualUriPath("gurk/sling.apache.org/site/index.html", "gurk/sling.apache.org/site/index.html");
 
         // http with port
-        assertEqualUriPath("gurk/sling.apache.org.123",
-            "gurk/sling.apache.org.123");
-        assertEqualUriPath("gurk/sling.apache.org.456/",
-            "gurk/sling.apache.org.456/");
-        assertEqualUriPath("gurk/sling.apache.org.789/site/index.html",
-            "gurk/sling.apache.org.789/site/index.html");
-        
+        assertEqualUriPath("gurk/sling.apache.org.123", "gurk/sling.apache.org.123");
+        assertEqualUriPath("gurk/sling.apache.org.456/", "gurk/sling.apache.org.456/");
+        assertEqualUriPath("gurk/sling.apache.org.789/site/index.html", "gurk/sling.apache.org.789/site/index.html");
+
         // SLING-6996: test that regex pattern are accepted
         assertEqualUriPath("http/localhost.\\d*", "http/localhost.\\d*");
-        assertEqualUriPath("http/localhost.\\d*/site/index.html", 
-        		"http/localhost.\\d*/site/index.html");
+        assertEqualUriPath("http/localhost.\\d*/site/index.html", "http/localhost.\\d*/site/index.html");
         assertEqualUriPath("http/(.*)", "http/(.*)");
-        assertEqualUriPath("http/(.*)/site/index.html", 
-        		"http/(.*)/site/index.html");
+        assertEqualUriPath("http/(.*)/site/index.html", "http/(.*)/site/index.html");
     }
 
-    @Test public void test_isRegExp() {
+    @Test
+    public void test_isRegExp() {
         TestCase.assertFalse(isRegExp("http/www.example.com.8080/bla"));
         TestCase.assertTrue(isRegExp("http/.+\\.www.example.com.8080/bla"));
         TestCase.assertTrue(isRegExp("http/(.+)\\.www.example.com.8080/bla"));
@@ -156,7 +129,8 @@ public class MapEntryTest {
         TestCase.assertTrue(isRegExp("http/[^.]+.www.example.com.8080/bla"));
     }
 
-    @Test public void test_filterRegExp() {
+    @Test
+    public void test_filterRegExp() {
         TestCase.assertNull(filterRegExp((String[]) null));
         TestCase.assertNull(filterRegExp(new String[0]));
 
@@ -186,7 +160,8 @@ public class MapEntryTest {
         TestCase.assertEquals(aString, res[0]);
     }
 
-    @Test public void test_compareTo() {
+    @Test
+    public void test_compareTo() {
         final MapEntry a = new MapEntry("/foo", 200, false, 5, new String[0]);
         final MapEntry b = new MapEntry("/bar", 200, false, 5, new String[0]);
 
@@ -199,61 +174,64 @@ public class MapEntryTest {
     /**
      * SLING-7881 - Test that an address for for root and no selectors resolves
      */
-    @Test public void test_replace_for_root() {
-    	//no trailing slash, so no match to the pattern.
-    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
-    	String[] redirects = mapEntry.replace("http/localhost.8080");
-    	assertNull(redirects);
+    @Test
+    public void test_replace_for_root() {
+        // no trailing slash, so no match to the pattern.
+        MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+        String[] redirects = mapEntry.replace("http/localhost.8080");
+        assertNull(redirects);
     }
 
     /**
      * SLING-7881 - Test that an address for a selector on the root resolves to valid replacement
      * candidate paths.
      */
-    @Test public void test_replace_for_root_selector() {
-    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
-    	String[] redirects = mapEntry.replace("http/localhost.8080/.2.json");
-    	assertEquals(2, redirects.length);
-    	assertEquals("/.2.json", redirects[0]);
-    	assertEquals("/content.2.json", redirects[1]);
+    @Test
+    public void test_replace_for_root_selector() {
+        MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+        String[] redirects = mapEntry.replace("http/localhost.8080/.2.json");
+        assertEquals(2, redirects.length);
+        assertEquals("/.2.json", redirects[0]);
+        assertEquals("/content.2.json", redirects[1]);
 
-    	// or no selectors and just the extension
-    	redirects = mapEntry.replace("http/localhost.8080/.json");
-    	assertEquals(2, redirects.length);
-    	assertEquals("/.json", redirects[0]);
-    	assertEquals("/content.json", redirects[1]);
-    }
-    
-    /**
-     * SLING-7881 - Test that an address for something other than root with no selectors resolves to 
-     * valid replacement candidate paths.
-     */
-    @Test public void test_replace_for_nonroot() {
-    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
-    	String[] redirects = mapEntry.replace("http/localhost.8080/foo");
-    	assertEquals(2, redirects.length);
-    	assertEquals("/foo", redirects[0]);
-    	assertEquals("/content/foo", redirects[1]);
+        // or no selectors and just the extension
+        redirects = mapEntry.replace("http/localhost.8080/.json");
+        assertEquals(2, redirects.length);
+        assertEquals("/.json", redirects[0]);
+        assertEquals("/content.json", redirects[1]);
     }
 
     /**
-     * SLING-7881 - Test that an address for a selector on something other than root resolves to 
+     * SLING-7881 - Test that an address for something other than root with no selectors resolves to
      * valid replacement candidate paths.
      */
-    @Test public void test_replace_for_nonroot_selector() {
-    	MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
-    	String[] redirects = mapEntry.replace("http/localhost.8080/foo.2.json");
-    	assertEquals(2, redirects.length);
-    	assertEquals("/foo.2.json", redirects[0]);
-    	assertEquals("/content/foo.2.json", redirects[1]);
-
-    	// or no selectors and just the extension
-    	redirects = mapEntry.replace("http/localhost.8080/foo.json");
-    	assertEquals(2, redirects.length);
-    	assertEquals("/foo.json", redirects[0]);
-    	assertEquals("/content/foo.json", redirects[1]);
+    @Test
+    public void test_replace_for_nonroot() {
+        MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+        String[] redirects = mapEntry.replace("http/localhost.8080/foo");
+        assertEquals(2, redirects.length);
+        assertEquals("/foo", redirects[0]);
+        assertEquals("/content/foo", redirects[1]);
     }
 
+    /**
+     * SLING-7881 - Test that an address for a selector on something other than root resolves to
+     * valid replacement candidate paths.
+     */
+    @Test
+    public void test_replace_for_nonroot_selector() {
+        MapEntry mapEntry = new MapEntry("^[^/]+/[^/]+/", 200, false, 5, "/", "/content/");
+        String[] redirects = mapEntry.replace("http/localhost.8080/foo.2.json");
+        assertEquals(2, redirects.length);
+        assertEquals("/foo.2.json", redirects[0]);
+        assertEquals("/content/foo.2.json", redirects[1]);
+
+        // or no selectors and just the extension
+        redirects = mapEntry.replace("http/localhost.8080/foo.json");
+        assertEquals(2, redirects.length);
+        assertEquals("/foo.json", redirects[0]);
+        assertEquals("/content/foo.json", redirects[1]);
+    }
 
     private void assertEqualUri(String expected, String uriPath) {
         String uri = MapEntry.toURI(uriPath);
@@ -282,9 +260,7 @@ public class MapEntryTest {
         try {
             Method m = MapEntry.class.getDeclaredMethod("filterRegExp", String[].class);
             m.setAccessible(true);
-            return (String[]) m.invoke(null, new Object[] {
-                strings
-            });
+            return (String[]) m.invoke(null, new Object[] {strings});
         } catch (Exception e) {
             fail(e.toString());
             return null; // quiesc compiler

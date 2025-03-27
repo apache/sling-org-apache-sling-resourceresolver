@@ -18,10 +18,10 @@
  */
 package org.apache.sling.resourceresolver.impl.providers.tree;
 
-import static org.apache.commons.lang3.StringUtils.split;
-
 import java.util.Iterator;
 import java.util.List;
+
+import static org.apache.commons.lang3.StringUtils.split;
 
 public class PathTree<T extends Pathable> {
 

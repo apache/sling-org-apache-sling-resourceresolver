@@ -18,6 +18,9 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -27,14 +30,9 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Designate(ocd = StringInterpolationProviderConfiguration.class)
 @Component
-public class StringInterpolationProviderImpl
-    implements StringInterpolationProvider
-{
+public class StringInterpolationProviderImpl implements StringInterpolationProvider {
     private static final String TYPE_ENV = "env";
 
     private static final String TYPE_PROP = "prop";
@@ -61,9 +59,9 @@ public class StringInterpolationProviderImpl
 
         String[] valueMap = config.placeHolderKeyValuePairs();
         Map<String, String> newMap = new HashMap<>();
-        for(String line: valueMap) {
+        for (String line : valueMap) {
             // Ignore no lines, empty lines and comments
-            if(line != null && !line.isEmpty() && line.charAt(0) != '#') {
+            if (line != null && !line.isEmpty() && line.charAt(0) != '#') {
                 int index = line.indexOf('=');
                 if (index <= 0) {
                     logger.warn("Placeholder Entry does not contain a key: '{}' -> ignored", line);
@@ -112,7 +110,7 @@ public class StringInterpolationProviderImpl
                 v = getVariableFromEnvironment(name);
             } else if (TYPE_PROP.equals(type)) {
                 v = getVariableFromProperty(name);
-            } else if(TYPE_CONFIG.equals(type)){
+            } else if (TYPE_CONFIG.equals(type)) {
                 v = getVariableFromBundleConfiguration(name);
             }
             if (v == null) {
@@ -129,7 +127,11 @@ public class StringInterpolationProviderImpl
         return System.getenv(name);
     }
 
-    String getVariableFromProperty(final String name) { return context == null ? null : context.getProperty(name); }
+    String getVariableFromProperty(final String name) {
+        return context == null ? null : context.getProperty(name);
+    }
 
-    String getVariableFromBundleConfiguration(final String name) { return placeholderEntries.get(name); }
+    String getVariableFromBundleConfiguration(final String name) {
+        return placeholderEntries.get(name);
+    }
 }

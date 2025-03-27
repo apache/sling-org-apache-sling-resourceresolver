@@ -48,7 +48,8 @@ public class FactoryPreconditions {
         public String name;
         public String pid;
         public Filter filter;
-    };
+    }
+    ;
 
     private final ResourceProviderTracker tracker;
 
@@ -67,34 +68,40 @@ public class FactoryPreconditions {
             Set<String> requiredResourceProviderNames, Set<String> requiredResourceProvidersLegacy) {
 
         boolean hasLegacyRequiredProvider = false;
-        if ( requiredResourceProvidersLegacy != null ) {
-            hasLegacyRequiredProvider = requiredResourceProvidersLegacy.remove(ResourceResolverFactoryConfig.LEGACY_REQUIRED_PROVIDER_PID);
-            if ( !requiredResourceProvidersLegacy.isEmpty() ) {
-                LOG.error("ResourceResolverFactory is using deprecated required providers configuration " +
-                        "(resource.resolver.required.providers). Please change to use the property " +
-                        "resource.resolver.required.providernames for values: {}", requiredResourceProvidersLegacy);
+        if (requiredResourceProvidersLegacy != null) {
+            hasLegacyRequiredProvider =
+                    requiredResourceProvidersLegacy.remove(ResourceResolverFactoryConfig.LEGACY_REQUIRED_PROVIDER_PID);
+            if (!requiredResourceProvidersLegacy.isEmpty()) {
+                LOG.error(
+                        "ResourceResolverFactory is using deprecated required providers configuration "
+                                + "(resource.resolver.required.providers). Please change to use the property "
+                                + "resource.resolver.required.providernames for values: {}",
+                        requiredResourceProvidersLegacy);
             } else {
                 requiredResourceProvidersLegacy = null;
             }
         }
 
-        if ( hasLegacyRequiredProvider ) {
+        if (hasLegacyRequiredProvider) {
             if (requiredResourceProviderNames == null) {
                 requiredResourceProviderNames = new HashSet<>();
             }
 
             // add default if not already present
-            final boolean hasRequiredProvider = !requiredResourceProviderNames.add(ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME);
-            if ( hasRequiredProvider ) {
-                LOG.warn("ResourceResolverFactory is using deprecated required providers configuration " +
-                        "(resource.resolver.required.providers) with value '{}'. Please remove this configuration " +
-                        "property. '{}' is already contained in the property resource.resolver.required.providernames.",
+            final boolean hasRequiredProvider =
+                    !requiredResourceProviderNames.add(ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME);
+            if (hasRequiredProvider) {
+                LOG.warn(
+                        "ResourceResolverFactory is using deprecated required providers configuration "
+                                + "(resource.resolver.required.providers) with value '{}'. Please remove this configuration "
+                                + "property. '{}' is already contained in the property resource.resolver.required.providernames.",
                         ResourceResolverFactoryConfig.LEGACY_REQUIRED_PROVIDER_PID,
                         ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME);
             } else {
-                LOG.warn("ResourceResolverFactory is using deprecated required providers configuration " +
-                        "(resource.resolver.required.providers) with value '{}'. Please remove this configuration " +
-                        "property and add '{}' to the property resource.resolver.required.providernames.",
+                LOG.warn(
+                        "ResourceResolverFactory is using deprecated required providers configuration "
+                                + "(resource.resolver.required.providers) with value '{}'. Please remove this configuration "
+                                + "property and add '{}' to the property resource.resolver.required.providernames.",
                         ResourceResolverFactoryConfig.LEGACY_REQUIRED_PROVIDER_PID,
                         ResourceResolverFactoryConfig.REQUIRED_PROVIDER_NAME);
             }
@@ -135,14 +142,16 @@ public class FactoryPreconditions {
         boolean canRegister = true;
         for (final RequiredProvider rp : requiredProviders) {
             canRegister = false;
-            for (final ResourceProviderHandler h : tracker.getResourceProviderStorage().getAllHandlers()) {
+            for (final ResourceProviderHandler h :
+                    tracker.getResourceProviderStorage().getAllHandlers()) {
                 final ResourceProviderInfo info = h.getInfo();
                 if (info == null) {
                     // provider has been deactivated in the meantime
                     // ignore and continue
                     continue;
                 }
-                @SuppressWarnings("rawtypes") final ServiceReference ref = info.getServiceReference();
+                @SuppressWarnings("rawtypes")
+                final ServiceReference ref = info.getServiceReference();
                 final Object servicePid = ref.getProperty(Constants.SERVICE_PID);
                 if (rp.name != null && rp.name.equals(info.getName())) {
                     canRegister = true;
@@ -153,7 +162,8 @@ public class FactoryPreconditions {
                 } else if (rp.pid != null && rp.pid.equals(servicePid)) {
                     canRegister = true;
                     break;
-                } else if (rp.pid != null && rp.pid.equals(ref.getProperty(LegacyResourceProviderWhiteboard.ORIGINAL_SERVICE_PID))) {
+                } else if (rp.pid != null
+                        && rp.pid.equals(ref.getProperty(LegacyResourceProviderWhiteboard.ORIGINAL_SERVICE_PID))) {
                     canRegister = true;
                     break;
                 }

@@ -45,7 +45,8 @@ public class ResourceChangeListenerWhiteboard implements ResourceProviderTracker
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final Map<ServiceReference<ResourceChangeListener>, ResourceChangeListenerInfo> listeners = new ConcurrentHashMap<>();
+    private final Map<ServiceReference<ResourceChangeListener>, ResourceChangeListenerInfo> listeners =
+            new ConcurrentHashMap<>();
 
     private volatile ResourceProviderTracker resourceProviderTracker;
 
@@ -53,51 +54,58 @@ public class ResourceChangeListenerWhiteboard implements ResourceProviderTracker
 
     private volatile List<String> searchPath;
 
-    public void activate(final BundleContext bundleContext,
+    public void activate(
+            final BundleContext bundleContext,
             final ResourceProviderTracker resourceProviderTracker,
             final List<String> searchPath) {
         this.searchPath = searchPath;
         this.resourceProviderTracker = resourceProviderTracker;
         this.resourceProviderTracker.setObservationReporterGenerator(this);
-        this.tracker = new ServiceTracker<>(bundleContext,
+        this.tracker = new ServiceTracker<>(
+                bundleContext,
                 ResourceChangeListener.class,
                 new ServiceTrackerCustomizer<ResourceChangeListener, ServiceReference<ResourceChangeListener>>() {
 
-            @Override
-            public void removedService(final ServiceReference<ResourceChangeListener> reference, final ServiceReference<ResourceChangeListener> service) {
-                final ResourceChangeListenerInfo info = listeners.remove(reference);
-                if ( info != null ) {
-                    updateProviderTracker();
-                }
-            }
-
-            @Override
-            public void modifiedService(final ServiceReference<ResourceChangeListener> reference, final ServiceReference<ResourceChangeListener> service) {
-                removedService(reference, service);
-                addingService(reference);
-            }
-
-            @Override
-            public ServiceReference<ResourceChangeListener> addingService(final ServiceReference<ResourceChangeListener> reference) {
-                final ResourceChangeListenerInfo info = new ResourceChangeListenerInfo(reference, searchPath);
-                if ( info.isValid() ) {
-                    final ResourceChangeListener listener = bundleContext.getService(reference);
-                    if ( listener != null ) {
-                        info.setListener(listener);
-                        listeners.put(reference, info);
-                        updateProviderTracker();
+                    @Override
+                    public void removedService(
+                            final ServiceReference<ResourceChangeListener> reference,
+                            final ServiceReference<ResourceChangeListener> service) {
+                        final ResourceChangeListenerInfo info = listeners.remove(reference);
+                        if (info != null) {
+                            updateProviderTracker();
+                        }
                     }
-                } else {
-                    logger.warn("Ignoring invalid resource change listener {}", reference);
-                }
-                return reference;
-            }
-        });
+
+                    @Override
+                    public void modifiedService(
+                            final ServiceReference<ResourceChangeListener> reference,
+                            final ServiceReference<ResourceChangeListener> service) {
+                        removedService(reference, service);
+                        addingService(reference);
+                    }
+
+                    @Override
+                    public ServiceReference<ResourceChangeListener> addingService(
+                            final ServiceReference<ResourceChangeListener> reference) {
+                        final ResourceChangeListenerInfo info = new ResourceChangeListenerInfo(reference, searchPath);
+                        if (info.isValid()) {
+                            final ResourceChangeListener listener = bundleContext.getService(reference);
+                            if (listener != null) {
+                                info.setListener(listener);
+                                listeners.put(reference, info);
+                                updateProviderTracker();
+                            }
+                        } else {
+                            logger.warn("Ignoring invalid resource change listener {}", reference);
+                        }
+                        return reference;
+                    }
+                });
         this.tracker.open();
     }
 
     public void deactivate() {
-        if ( this.tracker != null ) {
+        if (this.tracker != null) {
             this.tracker.close();
             this.tracker = null;
         }

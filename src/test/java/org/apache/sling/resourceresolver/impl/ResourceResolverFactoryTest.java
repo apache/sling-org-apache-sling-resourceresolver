@@ -18,14 +18,14 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.TreeSet;
+
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.TreeSet;
 
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
 import static org.junit.Assert.*;
@@ -36,13 +36,15 @@ public class ResourceResolverFactoryTest {
 
     private ResourceResolverFactoryActivator activator;
 
-    @Before public void setup() {
+    @Before
+    public void setup() {
         activator = new ResourceResolverFactoryActivator();
         activator.resourceProviderTracker = new ResourceProviderTracker();
         commonFactory = new CommonResourceResolverFactoryImpl(activator);
     }
 
-    @Test public void testSingleThreadLocal() throws Exception {
+    @Test
+    public void testSingleThreadLocal() throws Exception {
         assertNull(this.commonFactory.getThreadResourceResolver());
         // create first resolver
         final ResourceResolver rr1 = this.commonFactory.getResourceResolver(null);
@@ -53,7 +55,8 @@ public class ResourceResolverFactoryTest {
         assertNull(this.commonFactory.getThreadResourceResolver());
     }
 
-    @Test public void testNestedThreadLocal() throws Exception {
+    @Test
+    public void testNestedThreadLocal() throws Exception {
         assertNull(this.commonFactory.getThreadResourceResolver());
         // create first resolver
         final ResourceResolver rr1 = this.commonFactory.getResourceResolver(null);
@@ -72,7 +75,8 @@ public class ResourceResolverFactoryTest {
         assertNull(this.commonFactory.getThreadResourceResolver());
     }
 
-    @Test public void testNestedUnorderedCloseThreadLocal() throws Exception {
+    @Test
+    public void testNestedUnorderedCloseThreadLocal() throws Exception {
         assertNull(this.commonFactory.getThreadResourceResolver());
         // create three resolver
         final ResourceResolver rr1 = this.commonFactory.getResourceResolver(null);
@@ -91,7 +95,8 @@ public class ResourceResolverFactoryTest {
         assertNull(this.commonFactory.getThreadResourceResolver());
     }
 
-    @Test public void testThreadLocalWithAdmin() throws Exception {
+    @Test
+    public void testThreadLocalWithAdmin() throws Exception {
         assertNull(this.commonFactory.getThreadResourceResolver());
         final ResourceResolver rr1 = this.commonFactory.getResourceResolver(null);
         final ResourceResolver admin = this.commonFactory.getAdministrativeResourceResolver(null);
@@ -105,11 +110,14 @@ public class ResourceResolverFactoryTest {
         assertNull(this.commonFactory.getThreadResourceResolver());
     }
 
-
-    @Test public void testGetAllowedAliasPaths() throws NoSuchMethodException {
+    @Test
+    public void testGetAllowedAliasPaths() throws NoSuchMethodException {
         assertTrue(this.commonFactory.getAllowedAliasLocations().isEmpty());
         String[] allowPaths = {"/parent", "/parent0"};
-        setInaccessibleField("allowedAliasLocations", activator, Collections.unmodifiableSet(new TreeSet<>(Arrays.asList(allowPaths))));
+        setInaccessibleField(
+                "allowedAliasLocations",
+                activator,
+                Collections.unmodifiableSet(new TreeSet<>(Arrays.asList(allowPaths))));
         assertTrue(!this.commonFactory.getAllowedAliasLocations().isEmpty());
     }
 }
