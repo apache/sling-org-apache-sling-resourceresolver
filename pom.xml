@@ -43,6 +43,7 @@
 
     <properties>
         <site.jira.version.id>12314286</site.jira.version.id>
+        <sling.java.version>11</sling.java.version>
         <site.javadoc.exclude>**.internal.**</site.javadoc.exclude>
         <project.build.outputTimestamp>1742815428</project.build.outputTimestamp>
     </properties>
