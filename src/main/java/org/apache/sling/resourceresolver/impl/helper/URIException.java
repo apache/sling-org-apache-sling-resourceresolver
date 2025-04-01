@@ -36,8 +36,7 @@ public class URIException extends SlingException {
     /**
      * Default constructor.
      */
-    public URIException() {
-    }
+    public URIException() {}
 
     /**
      * The constructor with a reason code argument.
@@ -120,5 +119,4 @@ public class URIException extends SlingException {
     public int getReasonCode() {
         return reasonCode;
     }
-
 }

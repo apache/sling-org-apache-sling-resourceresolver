@@ -1,20 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to You under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.resourceresolver.impl.mapping;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
@@ -33,19 +48,6 @@ import org.mockito.stubbing.Answer;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
@@ -88,7 +90,6 @@ public abstract class AbstractMappingMapEntriesTest {
     StringInterpolationProviderImpl stringInterpolationProvider = new StringInterpolationProviderImpl();
     MapEntries mapEntries;
 
-
     Resource map;
     Resource http;
 
@@ -117,12 +118,14 @@ public abstract class AbstractMappingMapEntriesTest {
         http = setupEtcMapResource("http", map);
 
         stringInterpolationProviderConfiguration = createStringInterpolationProviderConfiguration();
-        setupStringInterpolationProvider(stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {});
-        mapEntries = new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+        setupStringInterpolationProvider(
+                stringInterpolationProvider, stringInterpolationProviderConfiguration, new String[] {});
+        mapEntries = new MapEntries(
+                resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         final Field aliasMapField = MapEntries.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
-        this.aliasMap = ( Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
+        this.aliasMap = (Map<String, Map<String, String>>) aliasMapField.get(mapEntries);
     }
 
     List<MapConfigurationProvider.VanityPathConfig> getVanityPathConfigs() {
@@ -130,15 +133,14 @@ public abstract class AbstractMappingMapEntriesTest {
     }
 
     @After
-    public void tearDown() throws Exception {
-    }
+    public void tearDown() throws Exception {}
 
     // -------------------------- private methods ----------
 
     ValueMap buildValueMap(Object... string) {
         final Map<String, Object> data = new HashMap<>();
         for (int i = 0; i < string.length; i = i + 2) {
-            data.put((String) string[i], string[i+1]);
+            data.put((String) string[i], string[i + 1]);
         }
         return new ValueMapDecorator(data);
     }
@@ -151,13 +153,15 @@ public abstract class AbstractMappingMapEntriesTest {
         return rsrc;
     }
 
-    Resource setupEtcMapResource(String parentPath, String name, String...valueMapPairs) {
+    Resource setupEtcMapResource(String parentPath, String name, String... valueMapPairs) {
         return setupEtcMapResource0(parentPath, name, null, valueMapPairs);
     }
-    Resource setupEtcMapResource(String name, Resource parent, String...valueMapPairs) {
+
+    Resource setupEtcMapResource(String name, Resource parent, String... valueMapPairs) {
         return setupEtcMapResource0(null, name, parent, valueMapPairs);
     }
-    private Resource setupEtcMapResource0(String parentPath, String name, Resource parent, String...valueMapPairs) {
+
+    private Resource setupEtcMapResource0(String parentPath, String name, Resource parent, String... valueMapPairs) {
         Resource resource = mock(Resource.class, withSettings().name(name).extraInterfaces(ResourceDecorator.class));
         String path = (parent == null ? parentPath : parent.getPath()) + "/" + name;
         when(resource.getPath()).thenReturn(path);
@@ -166,7 +170,7 @@ public abstract class AbstractMappingMapEntriesTest {
         when(resource.getValueMap()).thenReturn(valueMap);
         when(resource.adaptTo(ValueMap.class)).thenReturn(valueMap);
         when(resourceResolver.getResource(resource.getPath())).thenReturn(resource);
-        if(parent != null) {
+        if (parent != null) {
             List<Resource> childList = ((ResourceDecorator) parent).getChildrenList();
             childList.add(resource);
         }
@@ -204,7 +208,7 @@ public abstract class AbstractMappingMapEntriesTest {
         if (!sessionLock.tryAcquire()) {
             fail("concurrent session access detected");
         }
-        try{
+        try {
             Thread.sleep(1);
         } finally {
             sessionLock.release();
@@ -228,5 +232,4 @@ public abstract class AbstractMappingMapEntriesTest {
             this.future = future;
         }
     }
-
 }

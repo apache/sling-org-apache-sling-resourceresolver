@@ -47,9 +47,7 @@ import org.osgi.service.component.annotations.Reference;
  *
  *  org.apache.sling.resourceresolver.unclosedResourceResolvers -- the total number of unclosed resource resolvers
  */
-
-
-@Component(service=ResourceResolverMetrics.class)
+@Component(service = ResourceResolverMetrics.class)
 public class ResourceResolverMetrics {
 
     protected static final String METRICS_PREFIX = "org.apache.sling.resourceresolver";
@@ -99,16 +97,39 @@ public class ResourceResolverMetrics {
 
     @Activate
     protected void activate(BundleContext bundleContext) {
-        numberOfVanityPathsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPaths", () -> numberOfVanityPathsSupplier);
-        numberOfResourcesWithVanityPathsOnStartupGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfResourcesWithVanityPathsOnStartup", () -> numberOfResourcesWithVanityPathsOnStartupSupplier);
-        numberOfVanityPathLookupsGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathLookups", () -> numberOfVanityPathLookupsSupplier);
-        numberOfVanityPathBloomNegativesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomNegatives", () -> numberOfVanityPathBloomNegativesSupplier);
-        numberOfVanityPathBloomFalsePositivesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfVanityPathBloomFalsePositives", () -> numberOfVanityPathBloomFalsePositivesSupplier);
-        numberOfResourcesWithAliasedChildrenGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfResourcesWithAliasedChildren", () -> numberOfResourcesWithAliasedChildrenSupplier);
-        numberOfResourcesWithAliasesOnStartupGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfResourcesWithAliasesOnStartup", () -> numberOfResourcesWithAliasesOnStartupSupplier);
-        numberOfDetectedInvalidAliasesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfDetectedInvalidAliases", () -> numberOfDetectedInvalidAliasesSupplier);
-        numberOfDetectedConflictingAliasesGauge = registerGauge(bundleContext, METRICS_PREFIX + ".numberOfDetectedConflictingAliases", () -> numberOfDetectedConflictingAliasesSupplier);
-        unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX  + ".unclosedResourceResolvers");
+        numberOfVanityPathsGauge = registerGauge(
+                bundleContext, METRICS_PREFIX + ".numberOfVanityPaths", () -> numberOfVanityPathsSupplier);
+        numberOfResourcesWithVanityPathsOnStartupGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfResourcesWithVanityPathsOnStartup",
+                () -> numberOfResourcesWithVanityPathsOnStartupSupplier);
+        numberOfVanityPathLookupsGauge = registerGauge(
+                bundleContext, METRICS_PREFIX + ".numberOfVanityPathLookups", () -> numberOfVanityPathLookupsSupplier);
+        numberOfVanityPathBloomNegativesGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfVanityPathBloomNegatives",
+                () -> numberOfVanityPathBloomNegativesSupplier);
+        numberOfVanityPathBloomFalsePositivesGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfVanityPathBloomFalsePositives",
+                () -> numberOfVanityPathBloomFalsePositivesSupplier);
+        numberOfResourcesWithAliasedChildrenGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfResourcesWithAliasedChildren",
+                () -> numberOfResourcesWithAliasedChildrenSupplier);
+        numberOfResourcesWithAliasesOnStartupGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfResourcesWithAliasesOnStartup",
+                () -> numberOfResourcesWithAliasesOnStartupSupplier);
+        numberOfDetectedInvalidAliasesGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfDetectedInvalidAliases",
+                () -> numberOfDetectedInvalidAliasesSupplier);
+        numberOfDetectedConflictingAliasesGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfDetectedConflictingAliases",
+                () -> numberOfDetectedConflictingAliasesSupplier);
+        unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX + ".unclosedResourceResolvers");
     }
 
     @Deactivate
@@ -213,7 +234,8 @@ public class ResourceResolverMetrics {
      * @return the ServiceRegistration for this metric (must be unregistered!)
      */
     @SuppressWarnings("unchecked")
-    private ServiceRegistration<Gauge<Long>> registerGauge(BundleContext context, String name, Supplier<Supplier<Long>> supplier) {
+    private ServiceRegistration<Gauge<Long>> registerGauge(
+            BundleContext context, String name, Supplier<Supplier<Long>> supplier) {
 
         ResourceResolverGauge gauge = new ResourceResolverGauge(supplier);
         @SuppressWarnings("all")

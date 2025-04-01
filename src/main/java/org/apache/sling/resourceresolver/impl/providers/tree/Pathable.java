@@ -21,5 +21,4 @@ package org.apache.sling.resourceresolver.impl.providers.tree;
 public interface Pathable {
 
     String getPath();
-
 }

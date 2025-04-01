@@ -18,15 +18,15 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Utility class for running paged queries.
@@ -61,7 +61,8 @@ public class PagedQueryIterator implements Iterator<Resource> {
      * @param query query string in SQL2 syntax
      * @param pageSize page size (start a new query after page size is exceeded)
      */
-    public PagedQueryIterator(String subject, String propertyName, ResourceResolver resolver, String query, int pageSize) {
+    public PagedQueryIterator(
+            String subject, String propertyName, ResourceResolver resolver, String query, int pageSize) {
         this.subject = subject;
         this.propertyName = propertyName;
         this.resolver = resolver;
@@ -89,13 +90,15 @@ public class PagedQueryIterator implements Iterator<Resource> {
         if (values.length > 0) {
             String value = values[0];
             if (value.compareTo(lastKey) < 0) {
-                String message = String.format("unexpected query result in page %d, property name '%s', got '%s', despite querying for > '%s'",
+                String message = String.format(
+                        "unexpected query result in page %d, property name '%s', got '%s', despite querying for > '%s'",
                         (page - 1), propertyName, value, lastKey);
                 log.error(message);
                 throw new QueryImplementationException(message);
             }
             if (lastValue != null && value.compareTo(lastValue) < 0) {
-                String message = String.format("unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
+                String message = String.format(
+                        "unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
                         (page - 1), propertyName, value, lastValue);
                 log.error(message);
                 throw new QueryImplementationException(message);
@@ -152,8 +155,13 @@ public class PagedQueryIterator implements Iterator<Resource> {
 
     private void updatePageStats() {
         largestPage = Math.max(largestPage, count - 1);
-        log.debug("read {} query (page {}); {} entries, last key was: {}, largest page so far: {}", subject, page - 1,
-                count, lastKey, largestPage);
+        log.debug(
+                "read {} query (page {}); {} entries, last key was: {}, largest page so far: {}",
+                subject,
+                page - 1,
+                count,
+                lastKey,
+                largestPage);
     }
 
     public @NotNull String getStatistics() {

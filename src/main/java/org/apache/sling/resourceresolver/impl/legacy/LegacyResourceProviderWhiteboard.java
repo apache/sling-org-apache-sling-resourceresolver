@@ -18,22 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.legacy;
 
-import static org.apache.sling.api.resource.QueriableResourceProvider.LANGUAGES;
-import static org.apache.sling.api.resource.ResourceProvider.OWNS_ROOTS;
-import static org.apache.sling.api.resource.ResourceProvider.ROOTS;
-import static org.apache.sling.api.resource.ResourceProvider.USE_RESOURCE_ACCESS_SECURITY;
-import static org.apache.sling.api.resource.ResourceProviderFactory.PROPERTY_REQUIRED;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_ADAPTABLE;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_ATTRIBUTABLE;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_AUTHENTICATE;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_MODIFIABLE;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_NAME;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_REFRESHABLE;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_ROOT;
-import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_USE_RESOURCE_ACCESS_SECURITY;
-import static org.osgi.framework.Constants.SERVICE_PID;
-import static org.osgi.framework.Constants.SERVICE_RANKING;
-
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -59,6 +43,22 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.util.converter.Converters;
 
+import static org.apache.sling.api.resource.QueriableResourceProvider.LANGUAGES;
+import static org.apache.sling.api.resource.ResourceProvider.OWNS_ROOTS;
+import static org.apache.sling.api.resource.ResourceProvider.ROOTS;
+import static org.apache.sling.api.resource.ResourceProvider.USE_RESOURCE_ACCESS_SECURITY;
+import static org.apache.sling.api.resource.ResourceProviderFactory.PROPERTY_REQUIRED;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_ADAPTABLE;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_ATTRIBUTABLE;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_AUTHENTICATE;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_MODIFIABLE;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_NAME;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_REFRESHABLE;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_ROOT;
+import static org.apache.sling.spi.resource.provider.ResourceProvider.PROPERTY_USE_RESOURCE_ACCESS_SECURITY;
+import static org.osgi.framework.Constants.SERVICE_PID;
+import static org.osgi.framework.Constants.SERVICE_RANKING;
+
 @SuppressWarnings("deprecation")
 @Component
 public class LegacyResourceProviderWhiteboard {
@@ -67,17 +67,24 @@ public class LegacyResourceProviderWhiteboard {
 
     private Map<Object, List<ServiceRegistration>> registrations = new HashMap<>();
 
-    @Reference(service = ResourceProvider.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    @Reference(
+            service = ResourceProvider.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC)
     protected void bindResourceProvider(final ServiceReference<ResourceProvider> ref) {
         final BundleContext bundleContext = ref.getBundle().getBundleContext();
         final ResourceProvider provider = bundleContext.getService(ref);
-        if ( provider != null ) {
+        if (provider != null) {
             final String[] propertyNames = ref.getPropertyKeys();
-            final boolean ownsRoot = Converters.standardConverter().convert(ref.getProperty(OWNS_ROOTS)).to(boolean.class);
+            final boolean ownsRoot = Converters.standardConverter()
+                    .convert(ref.getProperty(OWNS_ROOTS))
+                    .to(boolean.class);
 
             final List<ServiceRegistration> newServices = new ArrayList<>();
-            for (final String path : Converters.standardConverter().convert(ref.getProperty(ROOTS)).to(String[].class)) {
-                if ( path != null && !path.isEmpty() ) {
+            for (final String path : Converters.standardConverter()
+                    .convert(ref.getProperty(ROOTS))
+                    .to(String[].class)) {
+                if (path != null && !path.isEmpty()) {
                     final Dictionary<String, Object> newProps = new Hashtable<>();
                     newProps.put(PROPERTY_AUTHENTICATE, AuthType.no.toString());
                     newProps.put(PROPERTY_MODIFIABLE, provider instanceof ModifyingResourceProvider);
@@ -90,16 +97,20 @@ public class LegacyResourceProviderWhiteboard {
                         newProps.put(ORIGINAL_SERVICE_PID, ref.getProperty(SERVICE_PID));
                     }
                     if (ArrayUtils.contains(propertyNames, USE_RESOURCE_ACCESS_SECURITY)) {
-                        newProps.put(PROPERTY_USE_RESOURCE_ACCESS_SECURITY, ref.getProperty(USE_RESOURCE_ACCESS_SECURITY));
+                        newProps.put(
+                                PROPERTY_USE_RESOURCE_ACCESS_SECURITY, ref.getProperty(USE_RESOURCE_ACCESS_SECURITY));
                     }
                     if (ArrayUtils.contains(propertyNames, SERVICE_RANKING)) {
                         newProps.put(SERVICE_RANKING, ref.getProperty(SERVICE_RANKING));
                     }
 
-                    String[] languages = Converters.standardConverter().convert(ref.getProperty(LANGUAGES)).to(String[].class);
+                    String[] languages = Converters.standardConverter()
+                            .convert(ref.getProperty(LANGUAGES))
+                            .to(String[].class);
                     ServiceRegistration reg = bundleContext.registerService(
                             org.apache.sling.spi.resource.provider.ResourceProvider.class.getName(),
-                            new LegacyResourceProviderAdapter(provider, languages, ownsRoot), newProps);
+                            new LegacyResourceProviderAdapter(provider, languages, ownsRoot),
+                            newProps);
                     newServices.add(reg);
                 }
             }
@@ -113,19 +124,28 @@ public class LegacyResourceProviderWhiteboard {
         }
     }
 
-    @Reference(service = ResourceProviderFactory.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    @Reference(
+            service = ResourceProviderFactory.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC)
     protected void bindResourceProviderFactory(final ServiceReference<ResourceProviderFactory> ref) {
         final BundleContext bundleContext = ref.getBundle().getBundleContext();
         final ResourceProviderFactory factory = bundleContext.getService(ref);
-        if ( factory != null ) {
+        if (factory != null) {
             final String[] propertyNames = ref.getPropertyKeys();
-            final boolean ownsRoot = Converters.standardConverter().convert(ref.getProperty(OWNS_ROOTS)).to(boolean.class);
+            final boolean ownsRoot = Converters.standardConverter()
+                    .convert(ref.getProperty(OWNS_ROOTS))
+                    .to(boolean.class);
 
             final List<ServiceRegistration> newServices = new ArrayList<>();
-            for (final String path : Converters.standardConverter().convert(ref.getProperty(ROOTS)).to(String[].class)) {
-                if ( path != null && !path.isEmpty() ) {
+            for (final String path : Converters.standardConverter()
+                    .convert(ref.getProperty(ROOTS))
+                    .to(String[].class)) {
+                if (path != null && !path.isEmpty()) {
                     final Dictionary<String, Object> newProps = new Hashtable<>();
-                    if (Converters.standardConverter().convert(ref.getProperty(PROPERTY_REQUIRED)).to(boolean.class)) {
+                    if (Converters.standardConverter()
+                            .convert(ref.getProperty(PROPERTY_REQUIRED))
+                            .to(boolean.class)) {
                         newProps.put(PROPERTY_AUTHENTICATE, AuthType.required.toString());
                     } else {
                         newProps.put(PROPERTY_AUTHENTICATE, AuthType.lazy.toString());
@@ -140,15 +160,19 @@ public class LegacyResourceProviderWhiteboard {
                         newProps.put(ORIGINAL_SERVICE_PID, ref.getProperty(SERVICE_PID));
                     }
                     if (ArrayUtils.contains(propertyNames, USE_RESOURCE_ACCESS_SECURITY)) {
-                        newProps.put(PROPERTY_USE_RESOURCE_ACCESS_SECURITY, ref.getProperty(USE_RESOURCE_ACCESS_SECURITY));
+                        newProps.put(
+                                PROPERTY_USE_RESOURCE_ACCESS_SECURITY, ref.getProperty(USE_RESOURCE_ACCESS_SECURITY));
                     }
                     if (ArrayUtils.contains(propertyNames, SERVICE_RANKING)) {
                         newProps.put(SERVICE_RANKING, ref.getProperty(SERVICE_RANKING));
                     }
-                    String[] languages = Converters.standardConverter().convert(ref.getProperty(LANGUAGES)).to(String[].class);
+                    String[] languages = Converters.standardConverter()
+                            .convert(ref.getProperty(LANGUAGES))
+                            .to(String[].class);
                     ServiceRegistration reg = bundleContext.registerService(
                             org.apache.sling.spi.resource.provider.ResourceProvider.class.getName(),
-                            new LegacyResourceProviderFactoryAdapter(factory, languages, ownsRoot), newProps);
+                            new LegacyResourceProviderFactoryAdapter(factory, languages, ownsRoot),
+                            newProps);
                     newServices.add(reg);
                 }
             }
@@ -156,8 +180,8 @@ public class LegacyResourceProviderWhiteboard {
         }
     }
 
-    protected void unbindResourceProviderFactory(final ResourceProviderFactory factory,
-            final Map<String, Object> props) {
+    protected void unbindResourceProviderFactory(
+            final ResourceProviderFactory factory, final Map<String, Object> props) {
         for (ServiceRegistration r : registrations.remove(factory)) {
             r.unregister();
         }

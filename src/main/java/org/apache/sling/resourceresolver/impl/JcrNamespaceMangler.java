@@ -18,12 +18,12 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import javax.jcr.NamespaceException;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.sling.api.resource.ResourceResolver;
 import org.slf4j.Logger;
@@ -42,11 +42,10 @@ public class JcrNamespaceMangler {
 
     private static final Pattern MANLE_NAMESPACE_OUT_PATTERN = Pattern.compile("/([^:/]+):");
 
-
     public String mangleNamespaces(ResourceResolver resolver, Logger logger, String absPath) {
         if (absPath.contains(MANGLE_NAMESPACE_OUT_SUFFIX)) {
             final Session session = resolver.adaptTo(Session.class);
-            if ( session != null ) {
+            if (session != null) {
                 final Matcher m = MANLE_NAMESPACE_OUT_PATTERN.matcher(absPath);
 
                 final StringBuffer buf = new StringBuffer();
@@ -60,7 +59,6 @@ public class JcrNamespaceMangler {
                         final String replacement = MANGLE_NAMESPACE_IN_PREFIX + namespace + MANGLE_NAMESPACE_IN_SUFFIX;
                         m.appendReplacement(buf, replacement);
 
-
                     } catch (final NamespaceException ne) {
 
                         // not a valid prefix
@@ -69,7 +67,6 @@ public class JcrNamespaceMangler {
                     } catch (final RepositoryException re) {
 
                         logger.warn("mangleNamespaces: Problem checking namespace '{}'", namespace, re);
-
                     }
                 }
 
@@ -85,7 +82,7 @@ public class JcrNamespaceMangler {
     public String unmangleNamespaces(ResourceResolver resolver, Logger logger, String absPath) {
         if (absPath.contains(MANGLE_NAMESPACE_IN_PREFIX)) {
             final Session session = resolver.adaptTo(Session.class);
-            if ( session != null ) {
+            if (session != null) {
                 final Matcher m = MANGLE_NAMESPACE_IN_PATTERN.matcher(absPath);
                 final StringBuffer buf = new StringBuffer();
                 while (m.find()) {
@@ -95,9 +92,9 @@ public class JcrNamespaceMangler {
                         // throws if "namespace" is not a registered
                         // namespace prefix
                         session.getNamespaceURI(namespace);
-                        final String replacement = MANGLE_NAMESPACE_OUT_PREFIX + namespace + MANGLE_NAMESPACE_OUT_SUFFIX;
+                        final String replacement =
+                                MANGLE_NAMESPACE_OUT_PREFIX + namespace + MANGLE_NAMESPACE_OUT_SUFFIX;
                         m.appendReplacement(buf, replacement);
-
 
                     } catch (final NamespaceException ne) {
 
@@ -107,7 +104,6 @@ public class JcrNamespaceMangler {
                     } catch (final RepositoryException re) {
 
                         logger.warn("unmangleNamespaces: Problem checking namespace '{}'", namespace, re);
-
                     }
                 }
                 m.appendTail(buf);

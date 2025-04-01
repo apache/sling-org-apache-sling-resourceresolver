@@ -18,11 +18,12 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
+import java.util.List;
+
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
 
-import java.util.List;
+import static org.junit.Assert.assertEquals;
 
 public class VanityPathConfigurerTest {
     private VanityPathConfigurer vanityPathConfigurer;
@@ -37,8 +38,8 @@ public class VanityPathConfigurerTest {
         String[] pathPrefixes = {"/some/path/"};
         String[] pathPrefixesFallback = {"/some/fallback/path/"};
 
-        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
-            "original", "fallback");
+        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(
+                pathPrefixes, pathPrefixesFallback, "original", "fallback");
         verifyResults(result, pathPrefixes);
     }
 
@@ -47,8 +48,8 @@ public class VanityPathConfigurerTest {
         String[] pathPrefixes = {"/some/path/"};
         String[] pathPrefixesFallback = null;
 
-        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
-            "original", "fallback");
+        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(
+                pathPrefixes, pathPrefixesFallback, "original", "fallback");
         verifyResults(result, pathPrefixes);
     }
 
@@ -57,16 +58,15 @@ public class VanityPathConfigurerTest {
         String[] pathPrefixes = null;
         String[] pathPrefixesFallback = {"/some/fallback/path/"};
 
-        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(pathPrefixes, pathPrefixesFallback,
-            "original", "fallback");
+        final List<String> result = vanityPathConfigurer.configureVanityPathPrefixes(
+                pathPrefixes, pathPrefixesFallback, "original", "fallback");
         verifyResults(result, pathPrefixesFallback);
     }
 
     private void verifyResults(List<String> actualResult, String[] expectedResults) {
         assertEquals(expectedResults.length, actualResult.size());
-        for(int i=0; i<expectedResults.length; i++) {
+        for (int i = 0; i < expectedResults.length; i++) {
             assertEquals(expectedResults[i], actualResult.get(i));
         }
     }
-
 }

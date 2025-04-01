@@ -23,9 +23,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.NotNull;
-
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -39,6 +36,8 @@ import org.apache.sling.spi.resource.provider.QueryLanguageProvider;
 import org.apache.sling.spi.resource.provider.ResolveContext;
 import org.apache.sling.spi.resource.provider.ResourceContext;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +68,8 @@ public class AuthenticatedResourceProvider {
      * @param resolveContext resolveContext
      * @param tracker tracker
      */
-    public AuthenticatedResourceProvider(@NotNull final ResourceProviderHandler providerHandler,
+    public AuthenticatedResourceProvider(
+            @NotNull final ResourceProviderHandler providerHandler,
             final boolean useRAS,
             @NotNull final ResolveContext<Object> resolveContext,
             @NotNull final ResourceAccessSecurityTracker tracker) {
@@ -99,7 +99,7 @@ public class AuthenticatedResourceProvider {
      */
     public void refresh() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             rp.refresh(this.resolveContext);
         }
     }
@@ -111,7 +111,7 @@ public class AuthenticatedResourceProvider {
      */
     public boolean isLive() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return rp.isLive(this.resolveContext);
         }
         return false;
@@ -125,7 +125,7 @@ public class AuthenticatedResourceProvider {
      */
     public Resource getParent(final Resource child) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return wrapResource(rp.getParent(this.resolveContext, child));
         }
         return null;
@@ -140,11 +140,11 @@ public class AuthenticatedResourceProvider {
      */
     public Resource getResource(final String path, final Resource parent, final Map<String, String> parameters) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp == null ) {
+        if (rp == null) {
             return null;
         }
         final ResourceContext resourceContext;
-        if ( parameters != null ) {
+        if (parameters != null) {
             resourceContext = new ResourceContext() {
 
                 @Override
@@ -165,7 +165,7 @@ public class AuthenticatedResourceProvider {
      */
     public Iterator<Resource> listChildren(final Resource parent) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return wrapIterator(rp.listChildren(this.resolveContext, parent));
         }
         return null;
@@ -177,7 +177,7 @@ public class AuthenticatedResourceProvider {
      */
     public void getAttributeNames(final Set<String> attributeNames) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             Collection<String> rpAttributeNames = rp.getAttributeNames(this.resolveContext);
             if (rpAttributeNames != null) {
                 attributeNames.addAll(rpAttributeNames);
@@ -192,7 +192,7 @@ public class AuthenticatedResourceProvider {
      */
     public Object getAttribute(final String name) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return rp.getAttribute(this.resolveContext, name);
         }
         return null;
@@ -206,12 +206,10 @@ public class AuthenticatedResourceProvider {
      * @return the resource
      * @throws PersistenceException in case of problems
      */
-    public Resource create(final ResourceResolver resolver,
-            final String path,
-            final Map<String, Object> properties)
-    throws PersistenceException {
+    public Resource create(final ResourceResolver resolver, final String path, final Map<String, Object> properties)
+            throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null && this.canCreate(resolver, path) ) {
+        if (rp != null && this.canCreate(resolver, path)) {
             return rp.create(this.resolveContext, path, properties);
         }
         return null;
@@ -225,8 +223,9 @@ public class AuthenticatedResourceProvider {
      * @return true if the order was changed, false if the order was correct already before
      * @throws PersistenceException in case of problems
      */
-    public boolean orderBefore(final @NotNull Resource parent, final @NotNull String name, final @Nullable String followingSiblingName) 
-        throws PersistenceException {
+    public boolean orderBefore(
+            final @NotNull Resource parent, final @NotNull String name, final @Nullable String followingSiblingName)
+            throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
         if (rp != null && this.canOrderChildren(parent)) {
             return rp.orderBefore(this.resolveContext, parent, name, followingSiblingName);
@@ -234,7 +233,7 @@ public class AuthenticatedResourceProvider {
             throw new PersistenceException("Unable to order child resources of " + parent.getPath());
         }
     }
-    
+
     /**
      * @see ResourceProvider#delete(ResolveContext, Resource)
      * @param resource resource
@@ -242,7 +241,7 @@ public class AuthenticatedResourceProvider {
      */
     public void delete(final Resource resource) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null && this.canDelete(resource) ) {
+        if (rp != null && this.canDelete(resource)) {
             rp.delete(this.resolveContext, resource);
         } else {
             throw new PersistenceException("Unable to delete resource " + resource.getPath());
@@ -254,7 +253,7 @@ public class AuthenticatedResourceProvider {
      */
     public void revert() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             rp.revert(this.resolveContext);
         }
     }
@@ -265,7 +264,7 @@ public class AuthenticatedResourceProvider {
      */
     public void commit() throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             rp.commit(this.resolveContext);
         }
     }
@@ -276,7 +275,7 @@ public class AuthenticatedResourceProvider {
      */
     public boolean hasChanges() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return rp.hasChanges(this.resolveContext);
         }
         return false;
@@ -288,7 +287,7 @@ public class AuthenticatedResourceProvider {
      */
     private QueryLanguageProvider<Object> getQueryLanguageProvider() {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return rp.getQueryLanguageProvider();
         }
         return null;
@@ -317,7 +316,8 @@ public class AuthenticatedResourceProvider {
         if (jcrQueryProvider == null) {
             return null;
         }
-        return wrapIterator(jcrQueryProvider.findResources(this.resolveContext, transformQuery(query, language), language));
+        return wrapIterator(
+                jcrQueryProvider.findResources(this.resolveContext, transformQuery(query, language), language));
     }
 
     /**
@@ -326,13 +326,14 @@ public class AuthenticatedResourceProvider {
      * @param language the language of the query
      * @return a map with the result
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public Iterator<Map<String, Object>> queryResources(final String query, final String language) {
         final QueryLanguageProvider<Object> jcrQueryProvider = getQueryLanguageProvider();
         if (jcrQueryProvider == null) {
             return null;
         }
-        return (Iterator) jcrQueryProvider.queryResources(this.resolveContext, transformQuery(query, language), language);
+        return (Iterator)
+                jcrQueryProvider.queryResources(this.resolveContext, transformQuery(query, language), language);
     }
 
     /**
@@ -343,7 +344,7 @@ public class AuthenticatedResourceProvider {
      */
     public <AdapterType> AdapterType adaptTo(final Class<AdapterType> type) {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return rp.adaptTo(this.resolveContext, type);
         }
         return null;
@@ -358,7 +359,7 @@ public class AuthenticatedResourceProvider {
      */
     public boolean copy(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return rp.copy(this.resolveContext, srcAbsPath, destAbsPath);
         }
         return false;
@@ -373,7 +374,7 @@ public class AuthenticatedResourceProvider {
      */
     public boolean move(final String srcAbsPath, final String destAbsPath) throws PersistenceException {
         final ResourceProvider<Object> rp = this.providerHandler.getResourceProvider();
-        if ( rp != null ) {
+        if (rp != null) {
             return rp.move(this.resolveContext, srcAbsPath, destAbsPath);
         }
         return false;
@@ -381,16 +382,16 @@ public class AuthenticatedResourceProvider {
 
     private boolean canCreate(final ResourceResolver resolver, final String path) {
         boolean allowed = true;
-        if ( this.useRAS ) {
+        if (this.useRAS) {
             final ResourceAccessSecurity security = tracker.getProviderResourceAccessSecurity();
-            if ( security != null ) {
+            if (security != null) {
                 allowed = security.canCreate(path, resolver);
             } else {
                 allowed = false;
             }
         }
 
-        if ( allowed ) {
+        if (allowed) {
             final ResourceAccessSecurity security = tracker.getApplicationResourceAccessSecurity();
             if (security != null) {
                 allowed = security.canCreate(path, resolver);
@@ -401,16 +402,16 @@ public class AuthenticatedResourceProvider {
 
     private boolean canOrderChildren(final Resource resource) {
         boolean allowed = true;
-        if ( this.useRAS ) {
+        if (this.useRAS) {
             final ResourceAccessSecurity security = tracker.getProviderResourceAccessSecurity();
-            if ( security != null ) {
+            if (security != null) {
                 allowed = security.canOrderChildren(resource);
             } else {
                 allowed = false;
             }
         }
 
-        if ( allowed ) {
+        if (allowed) {
             final ResourceAccessSecurity security = tracker.getApplicationResourceAccessSecurity();
             if (security != null) {
                 allowed = security.canOrderChildren(resource);
@@ -421,16 +422,16 @@ public class AuthenticatedResourceProvider {
 
     private boolean canDelete(final Resource resource) {
         boolean allowed = true;
-        if ( this.useRAS ) {
+        if (this.useRAS) {
             final ResourceAccessSecurity security = tracker.getProviderResourceAccessSecurity();
-            if ( security != null ) {
+            if (security != null) {
                 allowed = security.canDelete(resource);
             } else {
                 allowed = false;
             }
         }
 
-        if ( allowed ) {
+        if (allowed) {
             final ResourceAccessSecurity security = tracker.getApplicationResourceAccessSecurity();
             if (security != null) {
                 allowed = security.canDelete(resource);
@@ -442,12 +443,11 @@ public class AuthenticatedResourceProvider {
     /**
      * applies resource access security if configured
      */
-    private String transformQuery ( final String query, final String language ) {
+    private String transformQuery(final String query, final String language) {
         String returnValue = query;
 
         if (this.useRAS) {
-            final ResourceAccessSecurity resourceAccessSecurity = tracker
-                    .getProviderResourceAccessSecurity();
+            final ResourceAccessSecurity resourceAccessSecurity = tracker.getProviderResourceAccessSecurity();
             if (resourceAccessSecurity != null) {
                 try {
                     returnValue = resourceAccessSecurity.transformQuery(
@@ -455,13 +455,13 @@ public class AuthenticatedResourceProvider {
                 } catch (AccessSecurityException e) {
                     logger.error(
                             "AccessSecurityException occurred while trying to transform the query {} (language {}).",
-                            new Object[] { query, language }, e);
+                            new Object[] {query, language},
+                            e);
                 }
             }
         }
 
-        final ResourceAccessSecurity resourceAccessSecurity = tracker
-                .getApplicationResourceAccessSecurity();
+        final ResourceAccessSecurity resourceAccessSecurity = tracker.getApplicationResourceAccessSecurity();
         if (resourceAccessSecurity != null) {
             try {
                 returnValue = resourceAccessSecurity.transformQuery(
@@ -469,7 +469,8 @@ public class AuthenticatedResourceProvider {
             } catch (AccessSecurityException e) {
                 logger.error(
                         "AccessSecurityException occurred while trying to transform the query {} (language {}).",
-                        new Object[] { query, language }, e);
+                        new Object[] {query, language},
+                        e);
             }
         }
 
@@ -493,7 +494,7 @@ public class AuthenticatedResourceProvider {
             returnValue = rsrc;
         }
 
-        if ( returnValue != null ) {
+        if (returnValue != null) {
             final ResourceAccessSecurity resourceAccessSecurity = tracker.getApplicationResourceAccessSecurity();
             if (resourceAccessSecurity != null) {
                 returnValue = resourceAccessSecurity.getReadableResource(returnValue);

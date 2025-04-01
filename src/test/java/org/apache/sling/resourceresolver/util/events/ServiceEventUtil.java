@@ -18,10 +18,6 @@
  */
 package org.apache.sling.resourceresolver.util.events;
 
-import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
-import org.osgi.framework.ServiceEvent;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Objects;
@@ -29,6 +25,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
+import org.osgi.framework.ServiceEvent;
 
 public class ServiceEventUtil {
 
@@ -43,6 +43,7 @@ public class ServiceEventUtil {
     public static class ServiceEventDTO {
 
         private static final String[] SERVICE_EVENT_TYPES = new String[9];
+
         static {
             SERVICE_EVENT_TYPES[ServiceEvent.REGISTERED] = "REGISTERED";
             SERVICE_EVENT_TYPES[ServiceEvent.UNREGISTERING] = "UNREGISTERING";
@@ -60,7 +61,8 @@ public class ServiceEventUtil {
         }
 
         public static ServiceEventDTO create(int eventType, Class<?>... classes) {
-            final Set<String> classNames = Stream.of(classes).map(Class::getName).collect(Collectors.toCollection(TreeSet::new));
+            final Set<String> classNames =
+                    Stream.of(classes).map(Class::getName).collect(Collectors.toCollection(TreeSet::new));
             return new ServiceEventDTO(eventType, classNames);
         }
 

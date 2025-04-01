@@ -24,8 +24,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.jetbrains.annotations.NotNull;
-
 import org.apache.commons.collections4.BidiMap;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -41,6 +39,7 @@ import org.apache.sling.resourceresolver.impl.mapping.Mapping;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.serviceusermapping.ServiceUserMapper;
 import org.apache.sling.spi.resource.provider.ResourceProvider;
+import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -87,7 +86,6 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     private final Object optionalNamespaceMangler;
 
-
     /**
      * Create a new common resource resolver factory.
      */
@@ -102,7 +100,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
                     try {
                         final ResolverReference ref = (ResolverReference) resolverReferenceQueue.remove();
                         ref.close(activator.getResourceResolverMetrics());
-                    } catch ( final InterruptedException ie) {
+                    } catch (final InterruptedException ie) {
                         Thread.currentThread().interrupt();
                     }
                 }
@@ -113,10 +111,10 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
         // try create namespace mangler
         Object mangler = null;
-        if ( this.isMangleNamespacePrefixes() ) {
+        if (this.isMangleNamespacePrefixes()) {
             try {
                 mangler = new JcrNamespaceMangler();
-            } catch ( final Throwable t) {
+            } catch (final Throwable t) {
                 LOG.info("Unable to create JCR namespace mangler: {}", t.getMessage());
             }
         }
@@ -124,7 +122,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
     }
 
     // ---------- Resource Resolver Factory ------------------------------------
-    
+
     /**
      * Sanitize the authentication info passed from external code. This method will always make a defensive
      * copy of the argument, also making sure that the copy is mutable. Nulls are turned into empty (mutable) maps.
@@ -135,7 +133,8 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
      * @return A sanitized mutable map.
      */
     @NotNull
-    static Map<String, Object> sanitizeAuthenticationInfo(Map<String, Object> authenticationInfo, String... extraForbiddenKeys) {
+    static Map<String, Object> sanitizeAuthenticationInfo(
+            Map<String, Object> authenticationInfo, String... extraForbiddenKeys) {
         if (authenticationInfo == null) {
             // nothing to sanitize, just return an empty mutable map
             return new HashMap<>();
@@ -157,7 +156,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
     @NotNull
     @Override
     public ResourceResolver getAdministrativeResourceResolver(final Map<String, Object> passedAuthenticationInfo)
-    throws LoginException {
+            throws LoginException {
         checkIsLive();
 
         // make sure there is no leaking of service info props
@@ -174,22 +173,22 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
     @NotNull
     @Override
     public ResourceResolver getResourceResolver(final Map<String, Object> passedAuthenticationInfo)
-    throws LoginException {
+            throws LoginException {
         checkIsLive();
 
         // make sure there is no leaking of service bundle and info props
-        final Map<String, Object> authenticationInfo = sanitizeAuthenticationInfo(passedAuthenticationInfo, ResourceProvider.AUTH_SERVICE_BUNDLE, SUBSERVICE);
+        final Map<String, Object> authenticationInfo =
+                sanitizeAuthenticationInfo(passedAuthenticationInfo, ResourceProvider.AUTH_SERVICE_BUNDLE, SUBSERVICE);
 
         final ResourceResolver result = getResourceResolverInternal(authenticationInfo, false);
         Stack<WeakReference<ResourceResolver>> resolverStack = resolverStackHolder.get();
-        if ( resolverStack == null ) {
+        if (resolverStack == null) {
             resolverStack = new Stack<>();
             resolverStackHolder.set(resolverStack);
         }
         resolverStack.push(new WeakReference<>(result));
         return result;
     }
-
 
     /**
      * @see org.apache.sling.api.resource.ResourceResolverFactory#getThreadResourceResolver()
@@ -202,10 +201,10 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
         ResourceResolver result = null;
         final Stack<WeakReference<ResourceResolver>> resolverStack = resolverStackHolder.get();
-        if ( resolverStack != null) {
-            while ( result == null && !resolverStack.isEmpty() ) {
+        if (resolverStack != null) {
+            while (result == null && !resolverStack.isEmpty()) {
                 result = resolverStack.peek().get();
-                if ( result == null ) {
+                if (result == null) {
                     resolverStack.pop();
                 }
             }
@@ -222,8 +221,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
      * @param resolver The resource resolver
      * @param ctrl The resource resolver control
      */
-    public void register(final ResourceResolver resolver,
-            final ResourceResolverControl ctrl) {
+    public void register(final ResourceResolver resolver, final ResourceResolverControl ctrl) {
         // create new weak reference
         refs.put(ctrl.hashCode(), new ResolverReference(resolver, this.resolverReferenceQueue, ctrl, this));
     }
@@ -234,24 +232,23 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
      * @param resourceResolverImpl The resource resolver
      * @param ctrl The resource resolver control
      */
-    public void unregister(final ResourceResolver resourceResolverImpl,
-            final ResourceResolverControl ctrl) {
+    public void unregister(final ResourceResolver resourceResolverImpl, final ResourceResolverControl ctrl) {
         unregisterControl(ctrl);
 
         // on shutdown, the factory might already be closed before the resolvers close
         // therefore we have to check for null
         final ThreadLocal<Stack<WeakReference<ResourceResolver>>> tl = resolverStackHolder;
-        if ( tl != null ) {
+        if (tl != null) {
             final Stack<WeakReference<ResourceResolver>> resolverStack = tl.get();
-            if ( resolverStack != null ) {
+            if (resolverStack != null) {
                 final Iterator<WeakReference<ResourceResolver>> i = resolverStack.iterator();
-                while ( i.hasNext() ) {
+                while (i.hasNext()) {
                     final WeakReference<ResourceResolver> ref = i.next();
-                    if ( ref.get() == null || ref.get() == resourceResolverImpl ) {
+                    if (ref.get() == null || ref.get() == resourceResolverImpl) {
                         i.remove();
                     }
                 }
-                if ( resolverStack.isEmpty() ) {
+                if (resolverStack.isEmpty()) {
                     tl.remove();
                 }
             }
@@ -265,8 +262,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
      * @return A resource resolver
      * @throws LoginException if login to any of the required resource providers fails.
      */
-    ResourceResolver getResourceResolverInternal(final Map<String, Object> authenticationInfo,
-                                                        final boolean isAdmin)
+    ResourceResolver getResourceResolverInternal(final Map<String, Object> authenticationInfo, final boolean isAdmin)
             throws LoginException {
         checkIsLive();
 
@@ -294,7 +290,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
     }
 
     private void checkIsLive() throws LoginException {
-        if ( !isLive() ) {
+        if (!isLive()) {
             throw new LoginException("ResourceResolverFactory is deactivated.");
         }
     }
@@ -315,7 +311,12 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
         }
         // set up the map entries from configuration
         try {
-            mapEntries = new MapEntries(this, bundleContext, this.activator.getEventAdmin(), this.activator.getStringInterpolationProvider(), this.activator.getResourceResolverMetrics());
+            mapEntries = new MapEntries(
+                    this,
+                    bundleContext,
+                    this.activator.getEventAdmin(),
+                    this.activator.getStringInterpolationProvider(),
+                    this.activator.getResourceResolverMetrics());
         } catch (final Exception e) {
             logger.error("activate: Cannot access repository, failed setting up Mapping Support", e);
         }
@@ -335,8 +336,8 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
             plugin = null;
         }
 
-        if (mapEntries instanceof MapEntries ) {
-            ((MapEntries)mapEntries).dispose();
+        if (mapEntries instanceof MapEntries) {
+            ((MapEntries) mapEntries).dispose();
             mapEntries = MapEntries.EMPTY;
         }
         resolverStackHolder = null;
@@ -344,7 +345,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
         // copy and clear map before closing the remaining references
         final Collection<ResolverReference> references = new ArrayList<>(refs.values());
         refs.clear();
-        for(final ResolverReference ref : references) {
+        for (final ResolverReference ref : references) {
             ref.close(activator.getResourceResolverMetrics());
         }
     }
@@ -396,17 +397,17 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
         return this.activator.getVanityPathConfigurer().isVanityPathCacheInitInBackground();
     }
 
-   /**
+    /**
      * get's the ServiceTracker of the ResourceAccessSecurity service
      */
-    public ResourceAccessSecurityTracker getResourceAccessSecurityTracker () {
+    public ResourceAccessSecurityTracker getResourceAccessSecurityTracker() {
         return this.activator.getResourceAccessSecurityTracker();
     }
 
     @NotNull
     @Override
-    public ResourceResolver getServiceResourceResolver(
-            final Map<String, Object> passedAuthenticationInfo) throws LoginException {
+    public ResourceResolver getServiceResourceResolver(final Map<String, Object> passedAuthenticationInfo)
+            throws LoginException {
         checkIsLive();
 
         Map<String, Object> authenticationInfo = sanitizeAuthenticationInfo(passedAuthenticationInfo);
@@ -455,7 +456,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     @Override
     public Set<String> getAllowedAliasLocations() {
-       return this.activator.getAllowedAliasLocations();
+        return this.activator.getAllowedAliasLocations();
     }
 
     /**
@@ -474,8 +475,7 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
     }
 
     @Override
-    public Map<String, Object> getServiceUserAuthenticationInfo(final String subServiceName)
-    throws LoginException {
+    public Map<String, Object> getServiceUserAuthenticationInfo(final String subServiceName) throws LoginException {
         // get an administrative resource resolver
         // Ensure a mapped user name or principal names: If no user/principal name(s)
         // is/are defined for a bundle
@@ -483,14 +483,14 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
         // this should yield guest access or no access at all. For now
         // no access is granted if there is no service user defined for
         // the bundle.
-    	final Bundle bundle = this.activator.getBundleContext().getBundle();
+        final Bundle bundle = this.activator.getBundleContext().getBundle();
 
         ServiceUserMapper mapper = this.activator.getServiceUserMapper();
         final Iterable<String> principalNames = mapper.getServicePrincipalNames(bundle, subServiceName);
         final String userName = (principalNames == null) ? mapper.getServiceUserID(bundle, subServiceName) : null;
         if (principalNames == null && userName == null) {
-            throw new LoginException("Cannot derive user name or principal names for bundle "
-                            + bundle + " and sub service " + subServiceName);
+            throw new LoginException("Cannot derive user name or principal names for bundle " + bundle
+                    + " and sub service " + subServiceName);
         }
 
         final Map<String, Object> authenticationInfo = new HashMap<>();
@@ -516,14 +516,16 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
         private final CommonResourceResolverFactoryImpl factory;
 
-        ResolverReference(final ResourceResolver referent,
-                          final ReferenceQueue<? super ResourceResolver> q,
-                          final ResourceResolverControl ctrl,
-                          final CommonResourceResolverFactoryImpl factory) {
+        ResolverReference(
+                final ResourceResolver referent,
+                final ReferenceQueue<? super ResourceResolver> q,
+                final ResourceResolverControl ctrl,
+                final CommonResourceResolverFactoryImpl factory) {
             super(referent, q);
             this.control = ctrl;
             this.factory = factory;
-            this.openingException = factory.logUnclosedResolvers && LOG.isInfoEnabled() ? new Exception("Opening Stacktrace") : null;
+            this.openingException =
+                    factory.logUnclosedResolvers && LOG.isInfoEnabled() ? new Exception("Opening Stacktrace") : null;
         }
 
         public void close(Optional<ResourceResolverMetrics> metrics) {
@@ -534,9 +536,11 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
                     }
                     if (factory.logUnclosedResolvers) {
                         if (factory.isLive()) {
-                            LOG.warn("Closed unclosed ResourceResolver. The creation stacktrace is available on info log level.");
+                            LOG.warn(
+                                    "Closed unclosed ResourceResolver. The creation stacktrace is available on info log level.");
                         } else {
-                            LOG.warn("Forced close of ResourceResolver because the ResourceResolverFactory is shutting down.");
+                            LOG.warn(
+                                    "Forced close of ResourceResolver because the ResourceResolverFactory is shutting down.");
                         }
                         LOG.info("Unclosed ResourceResolver was created here: ", openingException);
                     }

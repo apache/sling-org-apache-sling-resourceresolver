@@ -75,10 +75,10 @@ public class ResourceProviderStorage {
             public int compare(final ResourceProviderHandler o1, final ResourceProviderHandler o2) {
                 final ResourceProviderInfo i1 = o1.getInfo();
                 final ResourceProviderInfo i2 = o2.getInfo();
-                if ( i1 == null ) {
+                if (i1 == null) {
                     return i2 == null ? 0 : -1;
                 }
-                if ( i2 == null ) {
+                if (i2 == null) {
                     return 1;
                 }
                 return i2.getServiceReference().compareTo(i1.getServiceReference());

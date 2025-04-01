@@ -30,22 +30,23 @@ import org.osgi.service.component.annotations.ReferencePolicyOption;
  * This internal helper class keeps track of the resource access security services
  * and always returns the one with the highest service ranking.
  */
-@Component(service=ResourceAccessSecurityTracker.class,
-    property = {
-            Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-    })
+@Component(
+        service = ResourceAccessSecurityTracker.class,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"})
 public class ResourceAccessSecurityTracker {
 
-    @Reference(policyOption=ReferencePolicyOption.GREEDY,
-               cardinality=ReferenceCardinality.OPTIONAL,
-               policy=ReferencePolicy.DYNAMIC,
-               target="(" + ResourceAccessSecurity.CONTEXT + "=" + ResourceAccessSecurity.APPLICATION_CONTEXT + ")")
+    @Reference(
+            policyOption = ReferencePolicyOption.GREEDY,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            target = "(" + ResourceAccessSecurity.CONTEXT + "=" + ResourceAccessSecurity.APPLICATION_CONTEXT + ")")
     volatile ResourceAccessSecurity applicationResourceAccessSecurity;
 
-    @Reference(policyOption=ReferencePolicyOption.GREEDY,
-            cardinality=ReferenceCardinality.OPTIONAL,
-            policy=ReferencePolicy.DYNAMIC,
-            target="(" + ResourceAccessSecurity.CONTEXT + "=" + ResourceAccessSecurity.PROVIDER_CONTEXT + ")")
+    @Reference(
+            policyOption = ReferencePolicyOption.GREEDY,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            target = "(" + ResourceAccessSecurity.CONTEXT + "=" + ResourceAccessSecurity.PROVIDER_CONTEXT + ")")
     volatile ResourceAccessSecurity providerResourceAccessSecurity;
 
     public ResourceAccessSecurity getApplicationResourceAccessSecurity() {

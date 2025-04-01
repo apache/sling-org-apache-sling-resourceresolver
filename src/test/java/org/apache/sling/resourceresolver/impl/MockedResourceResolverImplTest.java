@@ -1,39 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The SF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.apache.sling.resourceresolver.util.MockTestUtil.getInaccessibleField;
-import static org.apache.sling.resourceresolver.util.MockTestUtil.getResourceName;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import javax.servlet.http.HttpServletRequest;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -45,8 +33,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.LoginException;
@@ -76,7 +62,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.Invocation;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -84,7 +69,20 @@ import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 
+import static org.apache.sling.resourceresolver.util.MockTestUtil.getInaccessibleField;
+import static org.apache.sling.resourceresolver.util.MockTestUtil.getResourceName;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This tests the ResourceResolver using mocks. The Unit test is in addition to
@@ -147,7 +145,6 @@ public class MockedResourceResolverImplTest {
     @Mock
     private ResourceProvider<?> queriableResourceProviderA;
 
-
     public MockedResourceResolverImplTest() {
         MockitoAnnotations.initMocks(this);
     }
@@ -162,7 +159,8 @@ public class MockedResourceResolverImplTest {
         Mockito.when(systemBundle.getState()).thenReturn(Bundle.ACTIVE);
         Mockito.when(bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION)).thenReturn(systemBundle);
         CountDownLatch factoryRegistrationDone = new CountDownLatch(1);
-        Mockito.when(bundleContext.registerService(same(ResourceResolverFactory.class), any(ServiceFactory.class), any(Dictionary.class)))
+        Mockito.when(bundleContext.registerService(
+                        same(ResourceResolverFactory.class), any(ServiceFactory.class), any(Dictionary.class)))
                 .thenAnswer(invocation -> {
                     factoryRegistrationDone.countDown();
                     return mock(ServiceRegistration.class);
@@ -171,152 +169,165 @@ public class MockedResourceResolverImplTest {
         activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
         activator.resourceProviderTracker = resourceProviderTracker;
         activator.changeListenerWhiteboard = resourceChangeListenerWhiteboard;
-        handlers.add(createRPHandler(resourceProvider, "org.apache.sling.resourceresolver.impl.DummyTestProvider", 10L, "/"));
+        handlers.add(createRPHandler(
+                resourceProvider, "org.apache.sling.resourceresolver.impl.DummyTestProvider", 10L, "/"));
 
         // setup mapping resources at /etc/map to exercise vanity etc.
         // hmm, can't provide the resolver since its not up and ready.
         // mapping almost certainly work properly until this can be setup correctly.
         buildMappingResource("/etc/map", mappingResourceProvider, null);
 
-        handlers.add(createRPHandler(mappingResourceProvider, "org.apache.sling.resourceresolver.impl.MapProvider", 11L, "/etc"));
-        handlers.add(createRPHandler(appsResourceProvider, "org.apache.sling.resourceresolver.impl.AppsProvider", 12L, "/libs"));
-        handlers.add(createRPHandler(appsResourceProvider, "org.apache.sling.resourceresolver.impl.AppsProvider", 13L, "/apps"));
-        handlers.add(createRPHandler(queriableResourceProviderA, "org.apache.sling.resourceresolver.impl.QueriableResourceProviderA", 14L, "/searchA"));
+        handlers.add(createRPHandler(
+                mappingResourceProvider, "org.apache.sling.resourceresolver.impl.MapProvider", 11L, "/etc"));
+        handlers.add(createRPHandler(
+                appsResourceProvider, "org.apache.sling.resourceresolver.impl.AppsProvider", 12L, "/libs"));
+        handlers.add(createRPHandler(
+                appsResourceProvider, "org.apache.sling.resourceresolver.impl.AppsProvider", 13L, "/apps"));
+        handlers.add(createRPHandler(
+                queriableResourceProviderA,
+                "org.apache.sling.resourceresolver.impl.QueriableResourceProviderA",
+                14L,
+                "/searchA"));
         Mockito.when(queriableResourceProviderA.getQueryLanguageProvider()).thenReturn(queryProvider);
 
         ResourceProviderStorage storage = new ResourceProviderStorage(handlers);
         Mockito.when(resourceProviderTracker.getResourceProviderStorage()).thenReturn(storage);
 
         activator.serviceUserMapper = mock(ServiceUserMapper.class);
-        when(activator.serviceUserMapper.getServicePrincipalNames(nullable(Bundle.class), nullable(String.class))).thenReturn(Collections.singletonList("user"));
+        when(activator.serviceUserMapper.getServicePrincipalNames(nullable(Bundle.class), nullable(String.class)))
+                .thenReturn(Collections.singletonList("user"));
 
         activator.stringInterpolationProvider = mock(StringInterpolationProvider.class);
-        when(activator.stringInterpolationProvider.substitute(anyString())).thenAnswer(inv -> (String) inv.getArguments()[0]);
+        when(activator.stringInterpolationProvider.substitute(anyString()))
+                .thenAnswer(inv -> (String) inv.getArguments()[0]);
 
         // activate the components.
-        activator.activate(bundleContext, new ResourceResolverFactoryConfig() {
-            @Override
-            public Class<? extends Annotation> annotationType() {
-                return null;
-            }
+        activator.activate(
+                bundleContext,
+                new ResourceResolverFactoryConfig() {
+                    @Override
+                    public Class<? extends Annotation> annotationType() {
+                        return null;
+                    }
 
-            @Override
-            public String[] resource_resolver_virtual() {
-                return new String[] {"/:/"};
-            }
+                    @Override
+                    public String[] resource_resolver_virtual() {
+                        return new String[] {"/:/"};
+                    }
 
-            @Override
-            public String[] resource_resolver_vanitypath_allowlist() {
-                return null;
-            }
+                    @Override
+                    public String[] resource_resolver_vanitypath_allowlist() {
+                        return null;
+                    }
 
-            @Override
-            public boolean resource_resolver_vanitypath_maxEntries_startup() {
-                return true;
-            }
+                    @Override
+                    public boolean resource_resolver_vanitypath_maxEntries_startup() {
+                        return true;
+                    }
 
-            @Override
-            public int resource_resolver_vanitypath_maxEntries() {
-                return -1;
-            }
+                    @Override
+                    public int resource_resolver_vanitypath_maxEntries() {
+                        return -1;
+                    }
 
-            @Override
-            public int resource_resolver_vanitypath_bloomfilter_maxBytes() {
-                return 1024000;
-            }
+                    @Override
+                    public int resource_resolver_vanitypath_bloomfilter_maxBytes() {
+                        return 1024000;
+                    }
 
-            @Override
-            public String[] resource_resolver_vanitypath_denylist() {
-                return null;
-            }
+                    @Override
+                    public String[] resource_resolver_vanitypath_denylist() {
+                        return null;
+                    }
 
-            @Override
-            public boolean resource_resolver_vanity_precedence() {
-                return false;
-            }
+                    @Override
+                    public boolean resource_resolver_vanity_precedence() {
+                        return false;
+                    }
 
-            @Override
-            public String[] resource_resolver_searchpath() {
-                return new String[] {"/apps", "/libs"};
-            }
+                    @Override
+                    public String[] resource_resolver_searchpath() {
+                        return new String[] {"/apps", "/libs"};
+                    }
 
-            @Override
-            public String[] resource_resolver_required_providers() {
-                return  new String[] { "org.apache.sling.resourceresolver.impl.DummyTestProvider" };
-            }
+                    @Override
+                    public String[] resource_resolver_required_providers() {
+                        return new String[] {"org.apache.sling.resourceresolver.impl.DummyTestProvider"};
+                    }
 
-            @Override
-            public String[] resource_resolver_required_providernames() {
-                return null;
-            }
+                    @Override
+                    public String[] resource_resolver_required_providernames() {
+                        return null;
+                    }
 
-            @Override
-            public boolean resource_resolver_providerhandling_paranoid() {
-                return false;
-            }
+                    @Override
+                    public boolean resource_resolver_providerhandling_paranoid() {
+                        return false;
+                    }
 
-            @Override
-            public boolean resource_resolver_optimize_alias_resolution() {
-                return true;
-            }
+                    @Override
+                    public boolean resource_resolver_optimize_alias_resolution() {
+                        return true;
+                    }
 
-            @Override
-            public String[] resource_resolver_allowed_alias_locations() {
-                // deliberately put a mixture of paths with and without ending slash in here - both should be handled correct
-                return new String[]{"/apps/", "/libs", "/content/"};
-            }
+                    @Override
+                    public String[] resource_resolver_allowed_alias_locations() {
+                        // deliberately put a mixture of paths with and without ending slash in here - both should be
+                        // handled correct
+                        return new String[] {"/apps/", "/libs", "/content/"};
+                    }
 
-            @Override
-            public String[] resource_resolver_mapping() {
-                return new String[] { "/:/",
-                        "/content/:/", "/system/docroot/:/", "/content.html-/$" };
-            }
+                    @Override
+                    public String[] resource_resolver_mapping() {
+                        return new String[] {"/:/", "/content/:/", "/system/docroot/:/", "/content.html-/$"};
+                    }
 
-            @Override
-            public String[] resource_resolver_map_observation() {
-                return new String[] {"/"};
-            }
+                    @Override
+                    public String[] resource_resolver_map_observation() {
+                        return new String[] {"/"};
+                    }
 
-            @Override
-            public String resource_resolver_map_location() {
-                return MapEntries.DEFAULT_MAP_ROOT;
-            }
+                    @Override
+                    public String resource_resolver_map_location() {
+                        return MapEntries.DEFAULT_MAP_ROOT;
+                    }
 
-            @Override
-            public boolean resource_resolver_manglenamespaces() {
-                return true;
-            }
+                    @Override
+                    public boolean resource_resolver_manglenamespaces() {
+                        return true;
+                    }
 
-            @Override
-            public boolean resource_resolver_log_closing() {
-                return false;
-            }
+                    @Override
+                    public boolean resource_resolver_log_closing() {
+                        return false;
+                    }
 
-            @Override
-            public boolean resource_resolver_enable_vanitypath() {
-                return true;
-            }
+                    @Override
+                    public boolean resource_resolver_enable_vanitypath() {
+                        return true;
+                    }
 
-            @Override
-            public int resource_resolver_default_vanity_redirect_status() {
-                return 302;
-            }
+                    @Override
+                    public int resource_resolver_default_vanity_redirect_status() {
+                        return 302;
+                    }
 
-            @Override
-            public boolean resource_resolver_allowDirect() {
-                return true;
-            }
+                    @Override
+                    public boolean resource_resolver_allowDirect() {
+                        return true;
+                    }
 
-            @Override
-            public boolean resource_resolver_log_unclosed() {
-                return true;
-            }
+                    @Override
+                    public boolean resource_resolver_log_unclosed() {
+                        return true;
+                    }
 
-            @Override
-            public boolean resource_resolver_vanitypath_cache_in_background() {
-                return false;
-            }
-        }, null);
+                    @Override
+                    public boolean resource_resolver_vanitypath_cache_in_background() {
+                        return false;
+                    }
+                },
+                null);
 
         // configure using Bundle
         Mockito.when(usingBundle.getBundleContext()).thenReturn(usingBundleContext);
@@ -324,11 +335,10 @@ public class MockedResourceResolverImplTest {
 
         factoryRegistrationDone.await(5, TimeUnit.SECONDS);
 
-        ArgumentCaptor<ServiceFactory<ResourceResolverFactory>> serviceCaptor = argumentCaptorForClass(ServiceFactory.class);
-        Mockito.verify(bundleContext, Mockito.atLeastOnce()).registerService(
-                same(ResourceResolverFactory.class),
-                serviceCaptor.capture(),
-                any(Dictionary.class));
+        ArgumentCaptor<ServiceFactory<ResourceResolverFactory>> serviceCaptor =
+                argumentCaptorForClass(ServiceFactory.class);
+        Mockito.verify(bundleContext, Mockito.atLeastOnce())
+                .registerService(same(ResourceResolverFactory.class), serviceCaptor.capture(), any(Dictionary.class));
 
         // verify that a ResourceResolverFactoryImpl was created and registered.
         ServiceFactory<ResourceResolverFactory> rrfServiceFactory = serviceCaptor.getValue();
@@ -344,9 +354,11 @@ public class MockedResourceResolverImplTest {
         }
 
         // ensure mappings are set
-        assertNotEquals("Mappings unavailable",
-            MapEntries.EMPTY,
-            getInaccessibleField("commonFactory",rrf,CommonResourceResolverFactoryImpl.class).getMapEntries());
+        assertNotEquals(
+                "Mappings unavailable",
+                MapEntries.EMPTY,
+                getInaccessibleField("commonFactory", rrf, CommonResourceResolverFactoryImpl.class)
+                        .getMapEntries());
     }
 
     @SuppressWarnings("unchecked")
@@ -354,41 +366,97 @@ public class MockedResourceResolverImplTest {
         return (ArgumentCaptor<T>) ArgumentCaptor.forClass(clazz);
     }
 
-    public static ResourceProviderHandler createRPHandler(ResourceProvider<?> rp, String pid, long ranking,
-            String path) {
+    public static ResourceProviderHandler createRPHandler(
+            ResourceProvider<?> rp, String pid, long ranking, String path) {
         ServiceReference ref = mock(ServiceReference.class);
         BundleContext bc = mock(BundleContext.class);
         Mockito.when(bc.getService(Mockito.eq(ref))).thenReturn(rp);
         Mockito.when(ref.getProperty(Mockito.eq(Constants.SERVICE_ID))).thenReturn(new Random().nextLong());
         Mockito.when(ref.getProperty(Mockito.eq(Constants.SERVICE_PID))).thenReturn(pid);
         Mockito.when(ref.getProperty(Mockito.eq(Constants.SERVICE_RANKING))).thenReturn(ranking);
-        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_ROOT))).thenReturn(path);
-        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_MODIFIABLE))).thenReturn(true);
-        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_ATTRIBUTABLE))).thenReturn(true);
-        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_ADAPTABLE))).thenReturn(true);
+        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_ROOT)))
+                .thenReturn(path);
+        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_MODIFIABLE)))
+                .thenReturn(true);
+        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_ATTRIBUTABLE)))
+                .thenReturn(true);
+        Mockito.when(ref.getProperty(Mockito.eq(ResourceProvider.PROPERTY_ADAPTABLE)))
+                .thenReturn(true);
 
         ResourceProviderInfo info = new ResourceProviderInfo(ref);
-        final ResourceProviderHandler handler = new ResourceProviderHandler(info, (ResourceProvider<Object>) bc.getService(ref));
+        final ResourceProviderHandler handler =
+                new ResourceProviderHandler(info, (ResourceProvider<Object>) bc.getService(ref));
         handler.activate();
         return handler;
     }
 
     @SuppressWarnings("unchecked")
-    private Resource buildMappingResource(String path,
-            ResourceProvider<?> provider, ResourceResolver resourceResolver) {
+    private Resource buildMappingResource(
+            String path, ResourceProvider<?> provider, ResourceResolver resourceResolver) {
         List<Resource> localHostAnyList = new ArrayList<Resource>();
-        localHostAnyList.add(buildResource(path+"/http/example.com.80/cgi-bin", EMPTY_RESOURCE_LIST, resourceResolver, provider, "sling:internalRedirect", "/scripts" ));
-        localHostAnyList.add(buildResource(path+"/http/example.com.80/gateway", EMPTY_RESOURCE_LIST, resourceResolver, provider,"sling:internalRedirect", "http://gbiv.com"));
-        localHostAnyList.add(buildResource(path+"/http/example.com.80/stories", EMPTY_RESOURCE_LIST, resourceResolver, provider,"sling:internalRedirect", "/anecdotes/$1"));
+        localHostAnyList.add(buildResource(
+                path + "/http/example.com.80/cgi-bin",
+                EMPTY_RESOURCE_LIST,
+                resourceResolver,
+                provider,
+                "sling:internalRedirect",
+                "/scripts"));
+        localHostAnyList.add(buildResource(
+                path + "/http/example.com.80/gateway",
+                EMPTY_RESOURCE_LIST,
+                resourceResolver,
+                provider,
+                "sling:internalRedirect",
+                "http://gbiv.com"));
+        localHostAnyList.add(buildResource(
+                path + "/http/example.com.80/stories",
+                EMPTY_RESOURCE_LIST,
+                resourceResolver,
+                provider,
+                "sling:internalRedirect",
+                "/anecdotes/$1"));
 
         List<Resource> mappingChildren = new ArrayList<Resource>();
-        mappingChildren.add(buildResource(path+"/http/example.com.80", EMPTY_RESOURCE_LIST, resourceResolver, provider,"sling:redirect", "http://www.example.com/"));
-        mappingChildren.add(buildResource(path+"/http/www.example.com.80", EMPTY_RESOURCE_LIST, resourceResolver, provider,"sling:internalRedirect", "/example"));
-        mappingChildren.add(buildResource(path+"/http/any_example.com.80", EMPTY_RESOURCE_LIST, resourceResolver, provider,"sling:match", ".+\\.example\\.com\\.80", "sling:redirect", "http://www.example.com/"));
-        mappingChildren.add(buildResource(path+"/http/localhost_any", localHostAnyList, resourceResolver, provider,"sling:match", "localhost\\.\\d*", "sling:internalRedirect", "/content"));
+        mappingChildren.add(buildResource(
+                path + "/http/example.com.80",
+                EMPTY_RESOURCE_LIST,
+                resourceResolver,
+                provider,
+                "sling:redirect",
+                "http://www.example.com/"));
+        mappingChildren.add(buildResource(
+                path + "/http/www.example.com.80",
+                EMPTY_RESOURCE_LIST,
+                resourceResolver,
+                provider,
+                "sling:internalRedirect",
+                "/example"));
+        mappingChildren.add(buildResource(
+                path + "/http/any_example.com.80",
+                EMPTY_RESOURCE_LIST,
+                resourceResolver,
+                provider,
+                "sling:match",
+                ".+\\.example\\.com\\.80",
+                "sling:redirect",
+                "http://www.example.com/"));
+        mappingChildren.add(buildResource(
+                path + "/http/localhost_any",
+                localHostAnyList,
+                resourceResolver,
+                provider,
+                "sling:match",
+                "localhost\\.\\d*",
+                "sling:internalRedirect",
+                "/content"));
 
-        Resource etcMapResource = buildResource(path+"/http", mappingChildren);
-        Mockito.when(provider.getResource(Mockito.nullable(ResolveContext.class), Mockito.eq(path), Mockito.nullable(ResourceContext.class), Mockito.nullable(Resource.class))).thenReturn(etcMapResource);
+        Resource etcMapResource = buildResource(path + "/http", mappingChildren);
+        Mockito.when(provider.getResource(
+                        Mockito.nullable(ResolveContext.class),
+                        Mockito.eq(path),
+                        Mockito.nullable(ResourceContext.class),
+                        Mockito.nullable(Resource.class)))
+                .thenReturn(etcMapResource);
         return etcMapResource;
     }
 
@@ -404,8 +472,8 @@ public class MockedResourceResolverImplTest {
      */
     private Iterable<Resource> buildChildResources(String parent) {
         List<Resource> mappingResources = new ArrayList<Resource>();
-        for ( int i = 0; i < 5; i++ ) {
-            mappingResources.add(buildResource(parent+"/m"+i, EMPTY_RESOURCE_LIST));
+        for (int i = 0; i < 5; i++) {
+            mappingResources.add(buildResource(parent + "/m" + i, EMPTY_RESOURCE_LIST));
         }
         return mappingResources;
     }
@@ -422,7 +490,7 @@ public class MockedResourceResolverImplTest {
     /** Build a List of ValueMap */
     private List<ValueMap> buildValueMapCollection(int howMany, String pathPrefix) {
         final List<ValueMap> result = new ArrayList<ValueMap>();
-        for(int i=0;  i < howMany; i++) {
+        for (int i = 0; i < howMany; i++) {
             final Map<String, Object> m = new HashMap<String, Object>();
             m.put(PATH, pathPrefix + i);
             result.add(new ValueMapDecorator(m));
@@ -438,7 +506,12 @@ public class MockedResourceResolverImplTest {
      * @return
      */
     @SuppressWarnings("unchecked")
-    private Resource buildResource(String fullpath, Iterable<Resource> children, ResourceResolver resourceResolver, ResourceProvider<?> provider, String ... properties) {
+    private Resource buildResource(
+            String fullpath,
+            Iterable<Resource> children,
+            ResourceResolver resourceResolver,
+            ResourceProvider<?> provider,
+            String... properties) {
         Resource resource = mock(Resource.class);
         Mockito.when(resource.getName()).thenReturn(getResourceName(fullpath));
         Mockito.when(resource.getPath()).thenReturn(fullpath);
@@ -448,15 +521,21 @@ public class MockedResourceResolverImplTest {
         Mockito.when(resource.getResourceResolver()).thenReturn(resourceResolver);
 
         // register the resource with the provider
-        if ( provider != null ) {
-            Mockito.when(provider.listChildren(Mockito.nullable(ResolveContext.class), Mockito.eq(resource))).thenReturn(children.iterator());
-            Mockito.when(provider.getResource(Mockito.nullable(ResolveContext.class), Mockito.eq(fullpath), Mockito.nullable(ResourceContext.class), Mockito.nullable(Resource.class))).thenReturn(resource);
+        if (provider != null) {
+            Mockito.when(provider.listChildren(Mockito.nullable(ResolveContext.class), Mockito.eq(resource)))
+                    .thenReturn(children.iterator());
+            Mockito.when(provider.getResource(
+                            Mockito.nullable(ResolveContext.class),
+                            Mockito.eq(fullpath),
+                            Mockito.nullable(ResourceContext.class),
+                            Mockito.nullable(Resource.class)))
+                    .thenReturn(resource);
         }
-        if ( properties != null ) {
+        if (properties != null) {
             ValueMap vm = new SimpleValueMapImpl();
-            for ( int i=0; i < properties.length; i+=2) {
-                resourceMetadata.put(properties[i], properties[i+1]);
-                vm.put(properties[i], properties[i+1]);
+            for (int i = 0; i < properties.length; i += 2) {
+                resourceMetadata.put(properties[i], properties[i + 1]);
+                vm.put(properties[i], properties[i + 1]);
             }
             Mockito.when(resource.getValueMap()).thenReturn(vm);
             Mockito.when(resource.adaptTo(Mockito.eq(ValueMap.class))).thenReturn(vm);
@@ -478,7 +557,8 @@ public class MockedResourceResolverImplTest {
             Assert.assertNotNull(resourceResolver);
         }
         Map<String, Object> authenticationInfo = new HashMap<String, Object>();
-        try (ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo)) {
+        try (ResourceResolver resourceResolver =
+                resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo)) {
             Assert.assertNotNull(resourceResolver);
         }
     }
@@ -490,9 +570,9 @@ public class MockedResourceResolverImplTest {
     @Test
     public void testResolverMisc() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
-            assertThrows("Should have thrown a NPE", NullPointerException.class,
-                    () -> resourceResolver.getAttribute(null));
-            Assert.assertArrayEquals(new String[]{"/apps/","/libs/"}, resourceResolver.getSearchPath());
+            assertThrows(
+                    "Should have thrown a NPE", NullPointerException.class, () -> resourceResolver.getAttribute(null));
+            Assert.assertArrayEquals(new String[] {"/apps/", "/libs/"}, resourceResolver.getSearchPath());
         }
     }
 
@@ -507,7 +587,8 @@ public class MockedResourceResolverImplTest {
         }
 
         Map<String, Object> authenticationInfo = new HashMap<String, Object>();
-        try (ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo)) {
+        try (ResourceResolver resourceResolver =
+                resourceResolverFactory.getAdministrativeResourceResolver(authenticationInfo)) {
             Assert.assertNotNull(resourceResolver);
         }
     }
@@ -520,7 +601,8 @@ public class MockedResourceResolverImplTest {
     public void testGetResource() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
             Assert.assertNotNull(resourceResolver);
-            Resource singleResource = buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            Resource singleResource =
+                    buildResource("/single/test", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
             Resource resource = resourceResolver.getResource("/single/test");
             Assert.assertEquals(singleResource, resource);
         }
@@ -534,12 +616,12 @@ public class MockedResourceResolverImplTest {
     public void testGetResourceSLING864() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
             Assert.assertNotNull(resourceResolver);
-            Resource singleResource = buildResource("/single/test.with/extra.dots/inthepath", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
+            Resource singleResource = buildResource(
+                    "/single/test.with/extra.dots/inthepath", EMPTY_RESOURCE_LIST, resourceResolver, resourceProvider);
             Resource resource = resourceResolver.getResource("/single/test.with/extra.dots/inthepath");
             Assert.assertEquals(singleResource, resource);
         }
     }
-
 
     /**
      * Test search paths
@@ -549,8 +631,10 @@ public class MockedResourceResolverImplTest {
     public void testRelativeResource() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
             Assert.assertNotNull(resourceResolver);
-            Resource appResource = buildResource("/apps/store/inventory", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
-            Resource libResource = buildResource("/libs/store/catalog", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
+            Resource appResource =
+                    buildResource("/apps/store/inventory", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
+            Resource libResource =
+                    buildResource("/libs/store/catalog", EMPTY_RESOURCE_LIST, resourceResolver, appsResourceProvider);
             Resource testResource = resourceResolver.getResource("store/inventory");
             Assert.assertEquals(appResource, testResource);
             testResource = resourceResolver.getResource("store/catalog");
@@ -599,7 +683,6 @@ public class MockedResourceResolverImplTest {
         }
     }
 
-
     /**
      * Tests list children via the resource (NB, this doesn't really test the
      * resource resolver at all, but validates this unit test.)
@@ -609,8 +692,11 @@ public class MockedResourceResolverImplTest {
     @Test
     public void testListChildren() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
-            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
-
+            buildResource(
+                    "/single/test/withchildren",
+                    buildChildResources("/single/test/withchildren"),
+                    resourceResolver,
+                    resourceProvider);
 
             Resource resource = resourceResolver.getResource("/single/test/withchildren");
             Assert.assertNotNull(resource);
@@ -634,8 +720,11 @@ public class MockedResourceResolverImplTest {
     @Test
     public void testResourceResolverListChildren() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
-            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
-
+            buildResource(
+                    "/single/test/withchildren",
+                    buildChildResources("/single/test/withchildren"),
+                    resourceResolver,
+                    resourceProvider);
 
             Resource resource = resourceResolver.getResource("/single/test/withchildren");
             Assert.assertNotNull(resource);
@@ -659,8 +748,11 @@ public class MockedResourceResolverImplTest {
     @Test
     public void testResourceResolverGetChildren() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
-            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
-
+            buildResource(
+                    "/single/test/withchildren",
+                    buildChildResources("/single/test/withchildren"),
+                    resourceResolver,
+                    resourceProvider);
 
             Resource resource = resourceResolver.getResource("/single/test/withchildren");
             Assert.assertNotNull(resource);
@@ -682,12 +774,20 @@ public class MockedResourceResolverImplTest {
     public void testQueryResources() throws LoginException {
         final int n = 3;
         String[] languages = new String[] {FAKE_QUERY_LANGUAGE};
-        Mockito.when(queryProvider.getSupportedLanguages(Mockito.nullable(ResolveContext.class))).thenReturn(languages);
-        Mockito.when(queryProvider.queryResources(Mockito.nullable(ResolveContext.class), Mockito.nullable(String.class), Mockito.nullable(String.class)))
-        .thenReturn(buildValueMapCollection(n, "A_").iterator());
+        Mockito.when(queryProvider.getSupportedLanguages(Mockito.nullable(ResolveContext.class)))
+                .thenReturn(languages);
+        Mockito.when(queryProvider.queryResources(
+                        Mockito.nullable(ResolveContext.class),
+                        Mockito.nullable(String.class),
+                        Mockito.nullable(String.class)))
+                .thenReturn(buildValueMapCollection(n, "A_").iterator());
 
         try (ResourceResolver rr = resourceResolverFactory.getResourceResolver(null)) {
-            buildResource("/search/test/withchildren", buildChildResources("/search/test/withchildren"), rr, resourceProvider);
+            buildResource(
+                    "/search/test/withchildren",
+                    buildChildResources("/search/test/withchildren"),
+                    rr,
+                    resourceProvider);
             final Iterator<Map<String, Object>> it = rr.queryResources("/search", FAKE_QUERY_LANGUAGE);
             final Set<String> toFind = new HashSet<String>();
             for (int i = 0; i < n; i++) {
@@ -703,7 +803,8 @@ public class MockedResourceResolverImplTest {
         }
     }
 
-    @Test public void test_versions() throws LoginException {
+    @Test
+    public void test_versions() throws LoginException {
         try (ResourceResolver resourceResolver = resourceResolverFactory.getResourceResolver(null)) {
             Resource resource = resourceResolver.resolve("/content/test.html;v=1.0");
             Map<String, String> parameters = resource.getResourceMetadata().getParameterMap();
@@ -717,7 +818,11 @@ public class MockedResourceResolverImplTest {
             assertEquals("test.html", resource.getName());
             assertEquals(Collections.singletonMap("v", "1.0"), parameters);
 
-            buildResource("/single/test/withchildren", buildChildResources("/single/test/withchildren"), resourceResolver, resourceProvider);
+            buildResource(
+                    "/single/test/withchildren",
+                    buildChildResources("/single/test/withchildren"),
+                    resourceResolver,
+                    resourceProvider);
             resource = resourceResolver.getResource("/single/test/withchildren;v='1.0'");
             assertNotNull(resource);
             assertEquals("/single/test/withchildren", resource.getPath());

@@ -18,12 +18,12 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import org.junit.Test;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
+import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,14 +31,11 @@ import static org.junit.Assert.assertThrows;
 
 public class MapEntryIteratorTest {
 
-    private final MapEntryIterator empty =
-            new MapEntryIterator(null, List.of(), key -> null, true);
+    private final MapEntryIterator empty = new MapEntryIterator(null, List.of(), key -> null, true);
 
-    private final MapEntry xyz =
-            new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
+    private final MapEntry xyz = new MapEntry("/xyz", -1, false, -1, "/foo", "/bar");
 
-    private final MapEntry global =
-            new MapEntry("/foo/global/long", -1, false, -1, "bla");
+    private final MapEntry global = new MapEntry("/foo/global/long", -1, false, -1, "bla");
 
     private final Map<String, Iterator<MapEntry>> xyzMap =
             Map.of("/xyz", List.of(xyz).iterator());
@@ -46,24 +43,18 @@ public class MapEntryIteratorTest {
     @Test
     public void testExhausted() {
         assertFalse(empty.hasNext());
-        assertThrows(NoSuchElementException.class,
-                empty::next);
+        assertThrows(NoSuchElementException.class, empty::next);
     }
 
     @Test
     public void testRemove() {
         assertFalse(empty.hasNext());
-        assertThrows(UnsupportedOperationException.class,
-                empty::remove);
+        assertThrows(UnsupportedOperationException.class, empty::remove);
     }
 
     @Test
     public void testOnlyOneEntry() {
-        MapEntryIterator noVpIterator =
-                new MapEntryIterator("/xyz",
-                        List.of(xyz),
-                        key -> null,
-                        true);
+        MapEntryIterator noVpIterator = new MapEntryIterator("/xyz", List.of(xyz), key -> null, true);
 
         MapEntry first = noVpIterator.next();
         assertFalse(noVpIterator.hasNext());
@@ -76,10 +67,7 @@ public class MapEntryIteratorTest {
     @Test
     public void testOnlyOneVanityPath() {
         MapEntryIterator vpOnlyIterator =
-                new MapEntryIterator("/xyz",
-                        List.of(),
-                        key -> List.of(xyz).iterator(),
-                        true);
+                new MapEntryIterator("/xyz", List.of(), key -> List.of(xyz).iterator(), true);
 
         MapEntry first = vpOnlyIterator.next();
         assertFalse(vpOnlyIterator.hasNext());
@@ -91,17 +79,13 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testHierarchyVanityPath() {
-        MapEntry xyzAbc =
-                new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
+        MapEntry xyzAbc = new MapEntry("/xyz/def/abc", -1, false, -1, "/qux");
 
-        Map<String, Iterator<MapEntry>> xyzAbcMap =
-                Map.of("/xyz", List.of(xyz).iterator(), "/xyz/def/abc", List.of(xyzAbc).iterator());
+        Map<String, Iterator<MapEntry>> xyzAbcMap = Map.of(
+                "/xyz", List.of(xyz).iterator(), "/xyz/def/abc", List.of(xyzAbc).iterator());
 
         MapEntryIterator vpHierarchyOnlyIterator =
-                new MapEntryIterator("/xyz/def/abc",
-                        List.of(),
-                        xyzAbcMap::get,
-                        true);
+                new MapEntryIterator("/xyz/def/abc", List.of(), xyzAbcMap::get, true);
 
         MapEntry first = vpHierarchyOnlyIterator.next();
         MapEntry second = vpHierarchyOnlyIterator.next();
@@ -117,11 +101,7 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testBothIteratorVpFirst() {
-        MapEntryIterator bothIteratorVpFirst = new MapEntryIterator("/xyz",
-                List.of(global),
-                xyzMap::get,
-                true
-        );
+        MapEntryIterator bothIteratorVpFirst = new MapEntryIterator("/xyz", List.of(global), xyzMap::get, true);
 
         MapEntry first = bothIteratorVpFirst.next();
         MapEntry second = bothIteratorVpFirst.next();
@@ -137,11 +117,7 @@ public class MapEntryIteratorTest {
 
     @Test
     public void testBothIteratorVpDefault() {
-        MapEntryIterator bothIteratorVpDefault = new MapEntryIterator("/xyz",
-                List.of(global),
-                xyzMap::get,
-                false
-        );
+        MapEntryIterator bothIteratorVpDefault = new MapEntryIterator("/xyz", List.of(global), xyzMap::get, false);
 
         MapEntry first = bothIteratorVpDefault.next();
         MapEntry second = bothIteratorVpDefault.next();

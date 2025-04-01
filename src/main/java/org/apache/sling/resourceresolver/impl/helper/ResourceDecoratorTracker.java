@@ -79,8 +79,8 @@ public class ResourceDecoratorTracker {
      * @param decorator The decorator
      * @param ref The service reference
      */
-    public void bindResourceDecorator(final ResourceDecorator decorator,
-            final ServiceReference<ResourceDecorator> ref) {
+    public void bindResourceDecorator(
+            final ResourceDecorator decorator, final ServiceReference<ResourceDecorator> ref) {
         synchronized (this.resourceDecorators) {
             this.resourceDecorators.add(new ResourceDecoratorEntry(decorator, ref));
             Collections.sort(this.resourceDecorators);
@@ -115,8 +115,7 @@ public class ResourceDecoratorTracker {
         if (this.resourceDecorators.size() > 0) {
             decorators = new ResourceDecorator[this.resourceDecorators.size()];
             int index = 0;
-            final Iterator<ResourceDecoratorEntry> i = this.resourceDecorators
-                    .iterator();
+            final Iterator<ResourceDecoratorEntry> i = this.resourceDecorators.iterator();
             while (i.hasNext()) {
                 decorators[index] = i.next().decorator;
                 index++;
@@ -130,8 +129,7 @@ public class ResourceDecoratorTracker {
     /**
      * Internal class to keep track of the resource decorators.
      */
-    private static final class ResourceDecoratorEntry implements
-            Comparable<ResourceDecoratorEntry> {
+    private static final class ResourceDecoratorEntry implements Comparable<ResourceDecoratorEntry> {
 
         final Comparable<Object> comparable;
 

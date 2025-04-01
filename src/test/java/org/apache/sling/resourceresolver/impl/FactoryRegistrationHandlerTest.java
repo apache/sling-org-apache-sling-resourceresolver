@@ -52,21 +52,16 @@ class FactoryRegistrationHandlerTest {
 
     private static final int DEFAULT_TEST_ITERATIONS = 20;
 
-    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REGISTRATION = allOf(
-            hasSize(4),
-            hasItem(registration(ResourceResolverFactory.class))
-    );
+    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REGISTRATION =
+            allOf(hasSize(4), hasItem(registration(ResourceResolverFactory.class)));
 
-    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_UNREGISTRATION = allOf(
-            hasSize(4),
-            hasItem(unregistration(ResourceResolverFactory.class))
-    );
+    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_UNREGISTRATION =
+            allOf(hasSize(4), hasItem(unregistration(ResourceResolverFactory.class)));
 
     private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REREGISTRATION = allOf(
             hasSize(8),
             hasItem(unregistration(ResourceResolverFactory.class)),
-            hasItem(registration(ResourceResolverFactory.class))
-    );
+            hasItem(registration(ResourceResolverFactory.class)));
 
     OsgiContext osgi = new OsgiContext();
 
@@ -75,7 +70,9 @@ class FactoryRegistrationHandlerTest {
     @BeforeEach
     void setUp() {
         final ResourceProviderTracker resourceProviderTracker = mock(ResourceProviderTracker.class);
-        doReturn(mock(ResourceProviderStorage.class)).when(resourceProviderTracker).getResourceProviderStorage();
+        doReturn(mock(ResourceProviderStorage.class))
+                .when(resourceProviderTracker)
+                .getResourceProviderStorage();
 
         final VanityPathConfigurer vanityPathConfigurer = mock(VanityPathConfigurer.class);
         doReturn(false).when(vanityPathConfigurer).isVanityPathEnabled();
@@ -139,7 +136,6 @@ class FactoryRegistrationHandlerTest {
         }
     }
 
-
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
     void testReconfigurationLeadingToUnregsitration() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
@@ -160,6 +156,7 @@ class FactoryRegistrationHandlerTest {
             }
         }
     }
+
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
     void testReconfigurationWithNoChanges() throws InterruptedException {
         final BundleContext ctx = osgi.bundleContext();
@@ -217,7 +214,9 @@ class FactoryRegistrationHandlerTest {
             factoryRegistrationHandler.close();
             listener.assertRecorded(allOf(RRF_UNREGISTRATION));
 
-            assertThrows(IllegalStateException.class, () -> factoryRegistrationHandler.configure(activator, preconditions),
+            assertThrows(
+                    IllegalStateException.class,
+                    () -> factoryRegistrationHandler.configure(activator, preconditions),
                     "Reconfiguration is no longer possible after a FactoryRegistrationHandler is closed.");
         }
     }

@@ -18,14 +18,14 @@
  */
 package org.apache.sling.resourceresolver.impl.providers.tree;
 
+import org.hamcrest.Matchers;
+import org.junit.Before;
+import org.junit.Test;
+
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
-
-import org.hamcrest.Matchers;
-import org.junit.Before;
-import org.junit.Test;
 
 public class PathTreeTest {
 
@@ -48,19 +48,19 @@ public class PathTreeTest {
         assertPathHasBestMatch("/libs", "/libs");
         assertPathHasExactMatch("/libs");
     }
-    
+
     private void assertPathHasBestMatch(String path, String expectedNode) {
-        
+
         assertThat(tree.getBestMatchingNode(path).getValue().getPath(), equalTo(expectedNode));
     }
 
     private void assertPathHasExactMatch(String path) {
-        
+
         assertThat(tree.getNode(path).getValue().getPath(), equalTo(path));
     }
 
     private void assertPathDoesNotHaveExactMatch(String path) {
-        
+
         assertThat(tree.getNode(path), nullValue());
     }
 
@@ -73,7 +73,7 @@ public class PathTreeTest {
 
     @Test
     public void bestMatchForChildNodeDeeplyNested() {
-        
+
         assertPathHasBestMatch("/libs/sling/base/install", "/libs/sling");
         assertPathDoesNotHaveExactMatch("/libs/sling/base/install");
     }
@@ -84,16 +84,16 @@ public class PathTreeTest {
         assertPathHasBestMatch("/system", "/");
         assertPathDoesNotHaveExactMatch("/system");
     }
-    
+
     @Test
     public void bestMatchForInvalidPaths() {
-        
-        for ( String invalid : new String[] { null, "", "not/absolute/path"} ) {
+
+        for (String invalid : new String[] {null, "", "not/absolute/path"}) {
             assertThat("getBestMatchingNode(" + invalid + ")", tree.getBestMatchingNode(invalid), Matchers.nullValue());
             assertThat("getNode(" + invalid + ")", tree.getNode(invalid), Matchers.nullValue());
         }
     }
-    
+
     static class StringPath implements Pathable {
 
         private final String path;

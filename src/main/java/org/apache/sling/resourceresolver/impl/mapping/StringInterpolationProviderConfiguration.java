@@ -22,16 +22,15 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 @ObjectClassDefinition(
-    name = "Apache Sling String Interpolation Provider",
-    description = "Configures the String Interpolation Provider key/value pairs"
-)
+        name = "Apache Sling String Interpolation Provider",
+        description = "Configures the String Interpolation Provider key/value pairs")
 public @interface StringInterpolationProviderConfiguration {
 
     @AttributeDefinition(
-        name = "Placeholder Values",
-        description = "A list of key / value pairs separated by a equal (=) sign. " +
-            "The key is not permitted to contain a '=' sign as the first occurrence of '=' " +
-            "separates the key from the value. If no '=' is found the entry " +
-            "is ignored")
+            name = "Placeholder Values",
+            description = "A list of key / value pairs separated by a equal (=) sign. "
+                    + "The key is not permitted to contain a '=' sign as the first occurrence of '=' "
+                    + "separates the key from the value. If no '=' is found the entry "
+                    + "is ignored")
     String[] placeHolderKeyValuePairs() default {"phv.default.host.name=localhost"};
 }

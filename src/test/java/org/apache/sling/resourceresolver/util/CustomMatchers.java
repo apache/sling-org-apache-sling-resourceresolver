@@ -18,6 +18,12 @@
  */
 package org.apache.sling.resourceresolver.util;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -25,22 +31,16 @@ import org.hamcrest.StringDescription;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
 /**
  * Custom version of Hamcrest matchers that fix the generics to make them usable.
  */
 public class CustomMatchers {
 
-
     @SafeVarargs
     @NotNull
     public static <T> Matcher<T> allOf(Matcher<? extends T> first, Matcher<? extends T>... more) {
-        final List<Matcher<? extends T>> matchers = Stream.concat(Stream.of(first), Stream.of(more)).collect(Collectors.toList());
+        final List<Matcher<? extends T>> matchers =
+                Stream.concat(Stream.of(first), Stream.of(more)).collect(Collectors.toList());
         return new AllOfMatcher<>(matchers);
     }
 
@@ -52,10 +52,10 @@ public class CustomMatchers {
         return new HasItemMatcher<>(elementMatcher);
     }
 
-
     private static <T> Stream<? extends T> toStream(Iterable<? extends T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false);
-    };
+    }
+    ;
 
     private static class AllOfMatcher<T> extends TypeSafeDiagnosingMatcher<T> {
         private final Collection<Matcher<? extends T>> matchers;
@@ -101,10 +101,9 @@ public class CustomMatchers {
                 return true;
             }
 
-            mismatchDescription.appendText(
-                    toStream(iterable)
-                            .map(item -> describeItemMismatch(elementMatcher, item))
-                            .collect(Collectors.joining(", ", "mismatches were: [", "]")));
+            mismatchDescription.appendText(toStream(iterable)
+                    .map(item -> describeItemMismatch(elementMatcher, item))
+                    .collect(Collectors.joining(", ", "mismatches were: [", "]")));
             return false;
         }
 

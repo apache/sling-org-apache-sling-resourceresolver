@@ -56,4 +56,3 @@ public class UniqueResourceIterator extends AbstractIterator<Resource> {
         return null;
     }
 }
-

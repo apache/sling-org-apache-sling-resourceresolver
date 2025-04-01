@@ -75,7 +75,7 @@ public class ResourceChangeListImpl implements ResourceChangeList {
 
     @Override
     public boolean add(final ResourceChange e) {
-        if ( this.locked ) {
+        if (this.locked) {
             throw new UnsupportedOperationException();
         }
         return list.add(e);

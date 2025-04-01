@@ -18,25 +18,25 @@
  */
 package org.apache.sling.resourceresolver.impl.helper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import java.util.Map;
 
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.ValueMap;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 public class RedirectResourceTest {
 
-    @Test public void testRedirectResource() {
+    @Test
+    public void testRedirectResource() {
 
         final String path = "/redir/path";
         final String target = "/redir/target";
         final int status = 999;
-        final RedirectResource res = new RedirectResource(null, path, target,
-            status);
+        final RedirectResource res = new RedirectResource(null, path, target, status);
 
         assertEquals(path, res.getPath());
         assertEquals(RedirectResource.RT_SLING_REDIRECT, res.getResourceType());
@@ -50,10 +50,11 @@ public class RedirectResourceTest {
         assertNotNull("Expected ValueMap adapter", valueMap);
         assertEquals(target, valueMap.get(RedirectResource.PROP_SLING_TARGET));
         assertEquals(status, ((Integer) valueMap.get(RedirectResource.PROP_SLING_STATUS)).intValue());
-        assertEquals(status, valueMap.get(RedirectResource.PROP_SLING_STATUS, Integer.class).intValue());
+        assertEquals(
+                status,
+                valueMap.get(RedirectResource.PROP_SLING_STATUS, Integer.class).intValue());
 
         final ModifiableValueMap persistableValueMap = res.adaptTo(ModifiableValueMap.class);
-        assertNull("Unexpected ModifiableValueMap adapter",
-            persistableValueMap);
+        assertNull("Unexpected ModifiableValueMap adapter", persistableValueMap);
     }
 }

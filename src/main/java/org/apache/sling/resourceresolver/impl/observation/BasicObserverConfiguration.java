@@ -45,7 +45,8 @@ public class BasicObserverConfiguration implements ObserverConfiguration {
 
     private final List<ResourceChangeListenerInfo> listeners = new ArrayList<>();
 
-    public BasicObserverConfiguration(final PathSet paths,
+    public BasicObserverConfiguration(
+            final PathSet paths,
             final Set<ChangeType> types,
             final boolean isExternal,
             final PathSet excludePaths,
@@ -107,7 +108,7 @@ public class BasicObserverConfiguration implements ObserverConfiguration {
 
     @Override
     public boolean matches(final String path) {
-        if ( this.paths.matches(path) != null && this.excludedPaths.matches(path) == null ) {
+        if (this.paths.matches(path) != null && this.excludedPaths.matches(path) == null) {
             return true;
         }
         return false;
@@ -132,35 +133,23 @@ public class BasicObserverConfiguration implements ObserverConfiguration {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         BasicObserverConfiguration other = (BasicObserverConfiguration) obj;
         if (changeTypes == null) {
-            if (other.changeTypes != null)
-                return false;
-        } else if (!changeTypes.equals(other.changeTypes))
-            return false;
+            if (other.changeTypes != null) return false;
+        } else if (!changeTypes.equals(other.changeTypes)) return false;
         if (excludedPaths == null) {
-            if (other.excludedPaths != null)
-                return false;
-        } else if (!excludedPaths.equals(other.excludedPaths))
-            return false;
-        if (includeExternal != other.includeExternal)
-            return false;
+            if (other.excludedPaths != null) return false;
+        } else if (!excludedPaths.equals(other.excludedPaths)) return false;
+        if (includeExternal != other.includeExternal) return false;
         if (paths == null) {
-            if (other.paths != null)
-                return false;
-        } else if (!paths.equals(other.paths))
-            return false;
+            if (other.paths != null) return false;
+        } else if (!paths.equals(other.paths)) return false;
         if (propertyNamesHint == null) {
-            if (other.propertyNamesHint != null)
-                return false;
-        } else if (!propertyNamesHint.equals(other.propertyNamesHint))
-            return false;
+            if (other.propertyNamesHint != null) return false;
+        } else if (!propertyNamesHint.equals(other.propertyNamesHint)) return false;
         return true;
     }
 
@@ -168,10 +157,12 @@ public class BasicObserverConfiguration implements ObserverConfiguration {
     public String toString() {
         String excludedPathsToString = String.valueOf(excludedPaths);
         if (excludedPathsToString.length() > 100) {
-            excludedPathsToString = excludedPathsToString.substring(0, 99) + "... (" + (excludedPathsToString.length() - 99) + " chars cut)";
+            excludedPathsToString = excludedPathsToString.substring(0, 99) + "... ("
+                    + (excludedPathsToString.length() - 99) + " chars cut)";
         }
         return "BasicObserverConfiguration [includeExternal=" + includeExternal + ", paths=" + paths
-                + ", excludedPaths=" + excludedPathsToString + ", propertyNamesHint=" + propertyNamesHint + ", changeTypes="
+                + ", excludedPaths=" + excludedPathsToString + ", propertyNamesHint=" + propertyNamesHint
+                + ", changeTypes="
                 + changeTypes + ", listeners=" + listeners + "]";
     }
 }

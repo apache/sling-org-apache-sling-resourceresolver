@@ -18,13 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -42,6 +35,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     private static final String PROPNAME = "prop";
@@ -55,7 +55,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
-        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] { new Path("/") });
+        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
     }
 
@@ -68,13 +68,14 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test(expected = QuerySyntaxException.class)
     public void testMalformedQuery() {
-        when(resourceResolver.findResources(eq("malformed"), eq("JCR-SQL2"))).thenThrow(new QuerySyntaxException("x", "y", "z"));
+        when(resourceResolver.findResources(eq("malformed"), eq("JCR-SQL2")))
+                .thenThrow(new QuerySyntaxException("x", "y", "z"));
         new PagedQueryIterator("alias", PROPNAME, resourceResolver, "malformed", 2000);
     }
 
     @Test
     public void testSimple() {
-        String[] expected = new String[] { "a", "b", "c" };
+        String[] expected = new String[] {"a", "b", "c"};
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("simple"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
         PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "simple", 2000);
@@ -87,12 +88,13 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test(expected = PagedQueryIterator.QueryImplementationException.class)
     public void testSimpleWrongOrder() {
-        String[] expected = new String[] { "a", "b", "d", "c" };
+        String[] expected = new String[] {"a", "b", "d", "c"};
         Collection<Resource> expectedResources = toResourceList(expected);
-        when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2"))).thenReturn(expectedResources.iterator());
+        when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2")))
+                .thenReturn(expectedResources.iterator());
         // incorrect sort order within a query page
-        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
-                2000);
+        Iterator<Resource> it =
+                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 2000);
         while (it.hasNext()) {
             it.next();
         }
@@ -100,12 +102,12 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test(expected = PagedQueryIterator.QueryImplementationException.class)
     public void testSimpleWrongResultAfterKey() {
-        String[] expected = new String[] { "x", "x", "a", "a" };
+        String[] expected = new String[] {"x", "x", "a", "a"};
         Collection<Resource> expectedResources = toResourceList(expected);
-        when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2")).thenReturn(expectedResources.iterator());
+        when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2"))
+                .thenReturn(expectedResources.iterator());
         // incorrect return value based on previous key
-        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder",
-                1);
+        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 1);
         while (it.hasNext()) {
             it.next();
         }
@@ -113,13 +115,13 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void testPagedWithEmpty() {
-        String[] expected = new String[] { "", "a", "b", "c", "d" };
+        String[] expected = new String[] {"", "a", "b", "c", "d"};
         Collection<Resource> expectedResources = toResourceList(expected);
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         when(resourceResolver.findResources("testPagedWithEmpty ''", "JCR-SQL2"))
                 .thenReturn(expectedFilteredResources.iterator());
-        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'",
-                2000);
+        PagedQueryIterator it =
+                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedWithEmpty '%s'", 2000);
         checkResult(it, expected);
         assertEquals("", it.getWarning());
     }
@@ -129,21 +131,23 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         final int cnt = 140;
         final int pageSize = 5;
         String[] expected = new String[cnt];
-        Arrays.fill(expected,"a");
+        Arrays.fill(expected, "a");
         Collection<Resource> expectedResources = toResourceList(expected);
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         when(resourceResolver.findResources("testPagedLargePage ''", "JCR-SQL2"))
                 .thenReturn(expectedFilteredResources.iterator());
-        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'",
-                pageSize);
+        PagedQueryIterator it =
+                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testPagedLargePage '%s'", pageSize);
         checkResult(it, expected);
-        assertEquals("Largest number of alias entries with the same 'first' selector exceeds expectation of " + pageSize * 10
-                + " (value 'a' appears " + cnt + " times)", it.getWarning());
+        assertEquals(
+                "Largest number of alias entries with the same 'first' selector exceeds expectation of " + pageSize * 10
+                        + " (value 'a' appears " + cnt + " times)",
+                it.getWarning());
     }
 
     @Test
     public void testPagedResourcesOnPageBoundaryLost() {
-        String[] expected = new String[] { "a", "a", "a", "a", "a", "a", "b", "c", "d" };
+        String[] expected = new String[] {"a", "a", "a", "a", "a", "a", "b", "c", "d"};
         Collection<Resource> expectedResources = toResourceList(expected);
         Collection<Resource> expectedFilteredResources = filter("", expectedResources);
         Collection<Resource> expectedFilteredResourcesA = filter("a", expectedResources);
@@ -160,8 +164,8 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedFilteredResourcesC.iterator());
         when(resourceResolver.findResources(eq("testPagedResourcesOnPageBoundaryLost 'd'"), eq("JCR-SQL2")))
                 .thenReturn(expectedFilteredResourcesD.iterator());
-        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver,
-                "testPagedResourcesOnPageBoundaryLost '%s'", 5);
+        Iterator<Resource> it = new PagedQueryIterator(
+                "alias", PROPNAME, resourceResolver, "testPagedResourcesOnPageBoundaryLost '%s'", 5);
 
         checkResult(it, expected);
     }
@@ -170,7 +174,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Collection<Resource> result = new ArrayList<>();
         for (String key : keys) {
             ValueMap m = mock(ValueMap.class);
-            when(m.get(eq(PROPNAME), any(Object.class))).thenReturn(new String[] { key });
+            when(m.get(eq(PROPNAME), any(Object.class))).thenReturn(new String[] {key});
             Resource r = mock(Resource.class);
             when(r.getValueMap()).thenReturn(m);
             result.add(r);
@@ -187,7 +191,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         return r.getValueMap().get(propname, new String[0])[0];
     }
 
-    private static void checkResult(Iterator<Resource> it, String...expected ) {
+    private static void checkResult(Iterator<Resource> it, String... expected) {
         int pos = 0;
         for (String key : expected) {
             assertEquals("expects " + key + " at position " + pos, key, getFirstValueOf(it.next(), PROPNAME));

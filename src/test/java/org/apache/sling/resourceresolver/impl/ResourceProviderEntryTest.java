@@ -18,12 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl;
 
-import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +40,12 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.osgi.framework.Constants;
 
- import static org.mockito.ArgumentMatchers.nullable;
+import static org.apache.sling.resourceresolver.impl.MockedResourceResolverImplTest.createRPHandler;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.nullable;
 
 @SuppressWarnings("unchecked")
 public class ResourceProviderEntryTest {
@@ -57,16 +56,23 @@ public class ResourceProviderEntryTest {
 
     private ResourceResolver mockedRootResolver;
 
-    @Before public void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         this.mockedRootResolver = Mockito.mock(ResourceResolver.class);
         this.providersBasedResolver = null;
         this.providers.clear();
         final ResourceProvider<?> rootProvider = Mockito.mock(ResourceProvider.class);
-        Mockito.when(rootProvider.getResource(nullable(ResolveContext.class), nullable(String.class), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(this.mockedRootResolver));
+        Mockito.when(rootProvider.getResource(
+                        nullable(ResolveContext.class),
+                        nullable(String.class),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(this.mockedRootResolver));
         providers.add(createRPHandler(rootProvider, "rp0", 0, "/"));
     }
 
-    @Test public void testRootProvider() throws LoginException {
+    @Test
+    public void testRootProvider() throws LoginException {
         assertNull(getResource("relpath"));
         assertEqualsResolver(this.mockedRootResolver, getResource("/"));
         assertEqualsResolver(this.mockedRootResolver, getResource("/rootel"));
@@ -75,11 +81,17 @@ public class ResourceProviderEntryTest {
         assertEqualsResolver(this.mockedRootResolver, getResource("/apps/sling/microsling/html.js"));
     }
 
-    @Test public void testAdd1Provider() throws LoginException {
+    @Test
+    public void testAdd1Provider() throws LoginException {
         String firstPath = "/rootel";
         final ResourceResolver resolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> first = Mockito.mock(ResourceProvider.class);
-        Mockito.when(first.getResource(nullable(ResolveContext.class), Mockito.startsWith(firstPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(resolver));
+        Mockito.when(first.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(firstPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(resolver));
 
         providers.add(createRPHandler(first, "rp1", 1, "/rootel"));
         this.providersBasedResolver = null;
@@ -93,20 +105,36 @@ public class ResourceProviderEntryTest {
         assertEqualsResolver(this.mockedRootResolver, getResource("/apps/sling/microsling/html.js"));
     }
 
-    @Test public void testAdd3Providers() throws LoginException {
+    @Test
+    public void testAdd3Providers() throws LoginException {
         String firstPath = "/rootel";
         String secondPath = firstPath + "/child";
         String thirdPath = "/apps/sling/sample";
 
         final ResourceResolver firstResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> first = Mockito.mock(ResourceProvider.class);
-        Mockito.when(first.getResource(nullable(ResolveContext.class), Mockito.startsWith(firstPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(firstResolver));
+        Mockito.when(first.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(firstPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(firstResolver));
         final ResourceResolver secondResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> second = Mockito.mock(ResourceProvider.class);
-        Mockito.when(second.getResource(nullable(ResolveContext.class), Mockito.startsWith(secondPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(secondResolver));
+        Mockito.when(second.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(secondPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(secondResolver));
         final ResourceResolver thirdResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> third = Mockito.mock(ResourceProvider.class);
-        Mockito.when(third.getResource(nullable(ResolveContext.class), Mockito.startsWith(thirdPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(thirdResolver));
+        Mockito.when(third.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(thirdPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(thirdResolver));
 
         providers.add(createRPHandler(first, "rp1", 1, firstPath));
         providers.add(createRPHandler(second, "rp2", 2, secondPath));
@@ -122,20 +150,36 @@ public class ResourceProviderEntryTest {
         assertEqualsResolver(this.mockedRootResolver, getResource("/apps/sling/microsling/html.js"));
     }
 
-    @Test public void testAdd3ProvidersReverse() throws LoginException {
+    @Test
+    public void testAdd3ProvidersReverse() throws LoginException {
         String firstPath = "/rootel";
         String secondPath = firstPath + "/child";
         String thirdPath = "/apps/sling/sample";
 
         final ResourceResolver firstResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> first = Mockito.mock(ResourceProvider.class);
-        Mockito.when(first.getResource(nullable(ResolveContext.class), Mockito.startsWith(firstPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(firstResolver));
+        Mockito.when(first.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(firstPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(firstResolver));
         final ResourceResolver secondResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> second = Mockito.mock(ResourceProvider.class);
-        Mockito.when(second.getResource(nullable(ResolveContext.class), Mockito.startsWith(secondPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(secondResolver));
+        Mockito.when(second.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(secondPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(secondResolver));
         final ResourceResolver thirdResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> third = Mockito.mock(ResourceProvider.class);
-        Mockito.when(third.getResource(nullable(ResolveContext.class), Mockito.startsWith(thirdPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(thirdResolver));
+        Mockito.when(third.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(thirdPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(thirdResolver));
 
         providers.add(createRPHandler(first, "rp1", 1, firstPath));
         providers.add(createRPHandler(second, "rp2", 2, secondPath));
@@ -151,27 +195,43 @@ public class ResourceProviderEntryTest {
         assertEqualsResolver(this.mockedRootResolver, getResource("/apps/sling/microsling/html.js"));
     }
 
-    @Test public void testRemoveProviders() throws LoginException {
+    @Test
+    public void testRemoveProviders() throws LoginException {
         String firstPath = "/rootel";
         String thirdPath = "/apps/sling/sample";
         String secondPath = firstPath + "/child";
 
         final ResourceResolver firstResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> first = Mockito.mock(ResourceProvider.class);
-        Mockito.when(first.getResource(nullable(ResolveContext.class), Mockito.startsWith(firstPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(firstResolver));
+        Mockito.when(first.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(firstPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(firstResolver));
         final ResourceResolver secondResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> second = Mockito.mock(ResourceProvider.class);
-        Mockito.when(second.getResource(nullable(ResolveContext.class), Mockito.startsWith(secondPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(secondResolver));
+        Mockito.when(second.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(secondPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(secondResolver));
         final ResourceResolver thirdResolver = Mockito.mock(ResourceResolver.class);
         final ResourceProvider<?> third = Mockito.mock(ResourceProvider.class);
-        Mockito.when(third.getResource(nullable(ResolveContext.class), Mockito.startsWith(thirdPath), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(thirdResolver));
+        Mockito.when(third.getResource(
+                        nullable(ResolveContext.class),
+                        Mockito.startsWith(thirdPath),
+                        nullable(ResourceContext.class),
+                        nullable(Resource.class)))
+                .thenReturn(new TestResource(thirdResolver));
 
         final Map<String, Object> firstProps = new HashMap<String, Object>();
-        firstProps.put(Constants.SERVICE_ID, (long)1);
+        firstProps.put(Constants.SERVICE_ID, (long) 1);
         final Map<String, Object> secondProps = new HashMap<String, Object>();
-        secondProps.put(Constants.SERVICE_ID, (long)2);
+        secondProps.put(Constants.SERVICE_ID, (long) 2);
         final Map<String, Object> thirdProps = new HashMap<String, Object>();
-        thirdProps.put(Constants.SERVICE_ID, (long)3);
+        thirdProps.put(Constants.SERVICE_ID, (long) 3);
 
         ResourceProviderHandler firstH = createRPHandler(first, "rp1", 1, firstPath);
         providers.add(firstH);
@@ -199,18 +259,24 @@ public class ResourceProviderEntryTest {
         assertEqualsResolver(secondResolver, getResource("/rootel/child/html.js"));
     }
 
-    @Test public void testRemoveTheOnlyProvider() throws LoginException {
+    @Test
+    public void testRemoveTheOnlyProvider() throws LoginException {
         long counter = 1;
 
         providers.clear();
-        for(String path : new String[] { "/foo", "/", "/foo/bar" }) {
+        for (String path : new String[] {"/foo", "/", "/foo/bar"}) {
             final ResourceResolver resolver = Mockito.mock(ResourceResolver.class);
             final ResourceProvider<?> p = Mockito.mock(ResourceProvider.class);
-            Mockito.when(p.getResource(nullable(ResolveContext.class), Mockito.startsWith(path), nullable(ResourceContext.class), nullable(Resource.class))).thenReturn(new TestResource(resolver));
+            Mockito.when(p.getResource(
+                            nullable(ResolveContext.class),
+                            Mockito.startsWith(path),
+                            nullable(ResourceContext.class),
+                            nullable(Resource.class)))
+                    .thenReturn(new TestResource(resolver));
 
             ++counter;
 
-            ResourceProviderHandler h = createRPHandler(p, "rp"+counter, counter, path);
+            ResourceProviderHandler h = createRPHandler(p, "rp" + counter, counter, path);
             providers.add(h);
             this.providersBasedResolver = null;
             {
@@ -224,10 +290,10 @@ public class ResourceProviderEntryTest {
             {
                 final Resource r = getResource(path);
                 // If our provider is indeed gone, we should get one of the following conditions
-                if(r == null) {
-                    //fine
-                } else if(!p.equals(r.getResourceResolver())) {
-                    //fine
+                if (r == null) {
+                    // fine
+                } else if (!p.equals(r.getResourceResolver())) {
+                    // fine
                 } else {
                     fail("Expecting inactive provider after removing it for " + path);
                 }
@@ -247,7 +313,10 @@ public class ResourceProviderEntryTest {
         if (providersBasedResolver == null) {
             final ResourceResolverFactoryActivator activator = new ResourceResolverFactoryActivator();
             activator.resourceAccessSecurityTracker = new ResourceAccessSecurityTracker();
-            providersBasedResolver = new ResourceResolverImpl(new CommonResourceResolverFactoryImpl(activator), false, null,
+            providersBasedResolver = new ResourceResolverImpl(
+                    new CommonResourceResolverFactoryImpl(activator),
+                    false,
+                    null,
                     new ResourceProviderStorageProvider() {
 
                         @Override
@@ -297,9 +366,9 @@ public class ResourceProviderEntryTest {
             return null;
         }
 
-		@Override
+        @Override
         public boolean hasChildren() {
-			return false;
-		}
+            return false;
+        }
     }
 }

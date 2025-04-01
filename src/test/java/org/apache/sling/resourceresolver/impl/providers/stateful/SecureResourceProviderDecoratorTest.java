@@ -18,15 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.providers.stateful;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -44,6 +35,15 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class SecureResourceProviderDecoratorTest {
 
@@ -75,8 +75,10 @@ public class SecureResourceProviderDecoratorTest {
         rp = mock(ResourceProvider.class);
         when(rp.getQueryLanguageProvider()).thenReturn(qlp);
 
-        when(rp.create(resolveContext, "/some/path", Collections.<String, Object> emptyMap())).thenReturn(mock(Resource.class));
-        when(qlp.findResources(resolveContext, "FIND ALL", "MockQueryLanguage")).thenReturn(Arrays.asList(first, second).iterator());
+        when(rp.create(resolveContext, "/some/path", Collections.<String, Object>emptyMap()))
+                .thenReturn(mock(Resource.class));
+        when(qlp.findResources(resolveContext, "FIND ALL", "MockQueryLanguage"))
+                .thenReturn(Arrays.asList(first, second).iterator());
 
         ResourceAccessSecurityTracker securityTracker = new ResourceAccessSecurityTracker() {
             @Override
@@ -89,7 +91,6 @@ public class SecureResourceProviderDecoratorTest {
         when(handler.getResourceProvider()).thenReturn(this.rp);
 
         src = new AuthenticatedResourceProvider(handler, false, resolveContext, securityTracker);
-
     }
 
     @Test
@@ -97,7 +98,9 @@ public class SecureResourceProviderDecoratorTest {
 
         when(security.canCreate("/some/path", rr)).thenReturn(true);
 
-        assertNotNull("expected resource to be created", src.create(rr, "/some/path", Collections.<String, Object> emptyMap()));
+        assertNotNull(
+                "expected resource to be created",
+                src.create(rr, "/some/path", Collections.<String, Object>emptyMap()));
     }
 
     @Test
@@ -105,7 +108,9 @@ public class SecureResourceProviderDecoratorTest {
 
         when(security.canCreate("/some/path", rr)).thenReturn(false);
 
-        assertNull("expected resource to not be created", src.create(rr, "/some/path", Collections.<String, Object> emptyMap()));
+        assertNull(
+                "expected resource to not be created",
+                src.create(rr, "/some/path", Collections.<String, Object>emptyMap()));
     }
 
     @Test
@@ -130,7 +135,7 @@ public class SecureResourceProviderDecoratorTest {
         try {
             src.delete(toDelete);
             fail();
-        } catch ( PersistenceException pe ) {
+        } catch (PersistenceException pe) {
             // correct
         }
 
