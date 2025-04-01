@@ -41,7 +41,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
                 stringInterpolationProviderConfiguration,
                 new String[] {"siv.one=test-simple-node"});
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping =
                 new ExpectedEtcMapping("^http/test-simple-node/", "/content/simple-node/");
         expectedEtcMapping.assertEtcMap("String Interpolation for simple match", mapEntries.getResolveMaps());
@@ -62,7 +62,7 @@ public class StringInterpolationMapEntriesTest extends AbstractMappingMapEntries
                 stringInterpolationProviderConfiguration,
                 new String[] {"siv.one=test-simple-match"});
 
-        mapEntries.initializeAliases();
+        mapEntries.ah.initializeAliases();
         ExpectedEtcMapping expectedEtcMapping =
                 new ExpectedEtcMapping("^http/test-simple-match/", "/content/simple-match/");
         expectedEtcMapping.assertEtcMap("String Interpolation for simple match", mapEntries.getResolveMaps());
