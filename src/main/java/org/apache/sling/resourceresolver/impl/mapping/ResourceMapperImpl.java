@@ -68,7 +68,9 @@ public class ResourceMapperImpl implements ResourceMapper {
     @Override
     public String getMapping(String resourcePath, HttpServletRequest request) {
         Collection<String> mappings = getAllMappings(resourcePath, request);
-        if (mappings.isEmpty()) return null;
+        if (mappings.isEmpty()) {
+            throw new IllegalArgumentException("No mapping returned by getAllMappings(...)");
+        }
 
         return mappings.iterator().next();
     }
@@ -76,7 +78,9 @@ public class ResourceMapperImpl implements ResourceMapper {
     @Override
     public String getMapping(String resourcePath, javax.servlet.http.HttpServletRequest request) {
         Collection<String> mappings = getAllMappings(resourcePath, request);
-        if (mappings.isEmpty()) return null;
+        if (mappings.isEmpty()) {
+            throw new IllegalArgumentException("No mapping returned by getAllMappings(...)");
+        }
 
         return mappings.iterator().next();
     }
