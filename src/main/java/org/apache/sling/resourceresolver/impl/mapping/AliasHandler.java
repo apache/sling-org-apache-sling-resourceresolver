@@ -192,6 +192,35 @@ class AliasHandler {
         }
     }
 
+    // if path is specified we first need to find out if it is
+    // a direct child of content path but not jcr:content, or a jcr:content child of a direct child
+    // otherwise we can discard the event
+    private static @Nullable String computeResourcePath(@NotNull String contentPath, @Nullable String path) {
+        String resourcePath = null;
+
+        if (path != null && path.length() > contentPath.length()) {
+            // path -> (contentPath + subPath)
+            final String subPath = path.substring(contentPath.length() + 1);
+            final int firstSlash = subPath.indexOf('/');
+
+            if (firstSlash == -1) {
+                // no slash in subPath
+                if (!subPath.equals(JCR_CONTENT)) {
+                    resourcePath = path;
+                }
+            } else if (subPath.lastIndexOf('/') == firstSlash) {
+                // exactly one slash in subPath
+                if (!subPath.startsWith(JCR_CONTENT_PREFIX) && subPath.endsWith(JCR_CONTENT_SUFFIX)) {
+                    resourcePath = ResourceUtil.getParent(path);
+                }
+            }
+        } else {
+            resourcePath = contentPath;
+        }
+
+        return resourcePath;
+    }
+
     private void handleAliasRemoval(
             @Nullable ResourceResolver resolver,
             @NotNull String contentPath,
@@ -214,35 +243,6 @@ class AliasHandler {
                 doAddAlias(child);
             }
         }
-    }
-
-    // if path is specified we first need to find out if it is
-    // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
-    // otherwise we can discard the event
-    private static @Nullable String computeResourcePath(@NotNull String contentPath, @Nullable String path) {
-        final String resourcePath;
-        if (path != null && path.length() > contentPath.length()) {
-            final String subPath = path.substring(contentPath.length() + 1);
-            final int firstSlash = subPath.indexOf('/');
-            if (firstSlash == -1) {
-                if (subPath.equals(JCR_CONTENT)) {
-                    resourcePath = null;
-                } else {
-                    resourcePath = path;
-                }
-            } else if (subPath.lastIndexOf('/') == firstSlash) {
-                if (subPath.startsWith(JCR_CONTENT_PREFIX) || !subPath.endsWith(JCR_CONTENT_SUFFIX)) {
-                    resourcePath = null;
-                } else {
-                    resourcePath = ResourceUtil.getParent(path);
-                }
-            } else {
-                resourcePath = null;
-            }
-        } else {
-            resourcePath = contentPath;
-        }
-        return resourcePath;
     }
 
     /**
