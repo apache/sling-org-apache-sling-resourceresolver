@@ -67,7 +67,7 @@ class AliasHandler {
     private Runnable sendChangeEvent;
 
     /**
-     * The key of the map is the parent path, while the value is a map with the the resource name as key and the actual aliases as values)
+     * The key of the map is the parent path, while the value is a map with the  resource name as key and the actual aliases as values
      */
     Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
@@ -407,7 +407,7 @@ class AliasHandler {
     }
 
     /**
-     * Load alias given a an alias array, return success flag.
+     * Load alias given an alias array, return success flag.
      */
     private boolean loadAliasFromArray(
             final String[] aliasArray,
@@ -510,8 +510,6 @@ class AliasHandler {
 
     private final AtomicLong lastTimeLogged = new AtomicLong(-1);
 
-    private final long LOGGING_ERROR_PERIOD = 1000 * 60 * 5;
-
     void logDisableAliasOptimization(final Exception e) {
         if (e != null) {
             log.error(
@@ -519,10 +517,10 @@ class AliasHandler {
                     e);
         } else {
             final long now = System.currentTimeMillis();
+            long LOGGING_ERROR_PERIOD = TimeUnit.MINUTES.toMillis(5);
             if (now - lastTimeLogged.getAndSet(now) > LOGGING_ERROR_PERIOD) {
                 log.error(
-                        "A problem occured during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.",
-                        e);
+                        "A problem occurred during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.");
             }
         }
     }
