@@ -554,12 +554,11 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         // the standard map configuration
         final Resource res = resolver.getResource(this.factory.getMapRoot());
         if (res != null) {
-            gather(resolver, entries, mapEntries, res, "");
+            gather(entries, mapEntries, res, "");
         }
     }
 
     private void gather(
-            final ResourceResolver resolver,
             final List<MapEntry> entries,
             final Map<String, MapEntry> mapEntries,
             final Resource parent,
@@ -591,7 +590,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                     childParent = childParent.concat("/");
                 }
 
-                gather(resolver, entries, mapEntries, child, childParent);
+                gather(entries, mapEntries, child, childParent);
             }
 
             // add resolution entries for this node
