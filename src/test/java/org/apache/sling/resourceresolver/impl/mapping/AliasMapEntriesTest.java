@@ -116,17 +116,15 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries = new MapEntries(
                 resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
-        final Field aliasMapField = MapEntries.AliasHandler.class.getDeclaredField("aliasMapsMap");
+        final Field aliasMapField = AliasHandler.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
         this.aliasMap = (Map<String, Map<String, String>>) aliasMapField.get(mapEntries.ah);
 
-        final Field detectedInvalidAliasesField =
-                MapEntries.AliasHandler.class.getDeclaredField("detectedInvalidAliases");
+        final Field detectedInvalidAliasesField = AliasHandler.class.getDeclaredField("detectedInvalidAliases");
         detectedInvalidAliasesField.setAccessible(true);
         this.detectedInvalidAliases = (AtomicLong) detectedInvalidAliasesField.get(mapEntries.ah);
 
-        final Field detectedConflictingAliasesField =
-                MapEntries.AliasHandler.class.getDeclaredField("detectedConflictingAliases");
+        final Field detectedConflictingAliasesField = AliasHandler.class.getDeclaredField("detectedConflictingAliases");
         detectedConflictingAliasesField.setAccessible(true);
         this.detectedConflictingAliases = (AtomicLong) detectedConflictingAliasesField.get(mapEntries.ah);
     }
@@ -159,7 +157,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
             String path,
             Runnable callback)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.AliasHandler.class.getDeclaredMethod(
+        Method method = AliasHandler.class.getDeclaredMethod(
                 "removeAlias", ResourceResolver.class, String.class, String.class, Runnable.class);
         method.setAccessible(true);
         method.invoke(mapEntries.ah, resourceResolver, contentPath, path, callback);
@@ -1176,7 +1174,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_initAliasesAfterDispose() {
-        MapEntries.AliasHandler ah = mapEntries.ah;
+        AliasHandler ah = mapEntries.ah;
         mapEntries.dispose();
         boolean enabled = ah.initializeAliases();
         assertFalse("return value (isOptimizeAliasResolutionEnabled) should be false", enabled);
