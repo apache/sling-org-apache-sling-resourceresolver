@@ -98,8 +98,6 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
     private volatile EventAdmin eventAdmin;
 
-    private Optional<ResourceResolverMetrics> metrics;
-
     private volatile ServiceRegistration<ResourceChangeListener> registration;
 
     private final Map<String, List<MapEntry>> resolveMapsMap;
@@ -130,7 +128,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         this.eventAdmin = eventAdmin;
 
         this.resolveMapsMap = new ConcurrentHashMap<>(Map.of(GLOBAL_LIST_KEY, List.of()));
-        this.mapMaps = Collections.<MapEntry>emptyList();
+        this.mapMaps = Collections.emptyList();
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.ah = new AliasHandler(this.factory, this.initializing, this::doUpdateConfiguration, this::sendChangeEvent);
@@ -142,20 +140,19 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this::drainQueue);
         this.vph.initializeVanityPaths();
 
-        this.metrics = metrics;
         if (metrics.isPresent()) {
             // aliases
-            this.metrics.get().setNumberOfDetectedConflictingAliasesSupplier(ah.detectedConflictingAliases::get);
-            this.metrics.get().setNumberOfDetectedInvalidAliasesSupplier(ah.detectedInvalidAliases::get);
-            this.metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) ah.aliasMapsMap.size());
-            this.metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(ah.aliasResourcesOnStartup::get);
+            metrics.get().setNumberOfDetectedConflictingAliasesSupplier(ah.detectedConflictingAliases::get);
+            metrics.get().setNumberOfDetectedInvalidAliasesSupplier(ah.detectedInvalidAliases::get);
+            metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) ah.aliasMapsMap.size());
+            metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(ah.aliasResourcesOnStartup::get);
 
             // vanity paths
-            this.metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vph.vanityResourcesOnStartup::get);
-            this.metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vph.vanityPathBloomFalsePositives::get);
-            this.metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vph.vanityPathBloomNegatives::get);
-            this.metrics.get().setNumberOfVanityPathLookupsSupplier(vph.vanityPathLookups::get);
-            this.metrics.get().setNumberOfVanityPathsSupplier(vph.vanityCounter::get);
+            metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vph.vanityResourcesOnStartup::get);
+            metrics.get().setNumberOfVanityPathBloomFalsePositivesSupplier(vph.vanityPathBloomFalsePositives::get);
+            metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vph.vanityPathBloomNegatives::get);
+            metrics.get().setNumberOfVanityPathLookupsSupplier(vph.vanityPathLookups::get);
+            metrics.get().setNumberOfVanityPathsSupplier(vph.vanityCounter::get);
         }
     }
 
@@ -295,10 +292,10 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
          * doInit to terminate. Once the lock has been acquired, the resource
          * resolver is null-ed (thus causing the init to terminate when
          * triggered the right after and prevent the doInit method from doing
-         * any thing).
+         * anything).
          */
 
-        // wait at most 10 seconds for a notifcation during initialization
+        // wait at most 10 seconds for a notification during initialization
         boolean initLocked;
         try {
             initLocked = this.initializing.tryLock(10, TimeUnit.SECONDS);
@@ -309,7 +306,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         try {
             if (!initLocked) {
                 log.warn(
-                        "dispose: Could not acquire initialization lock within 10 seconds; ongoing intialization may fail");
+                        "dispose: Could not acquire initialization lock within 10 seconds; ongoing initialization may fail");
             }
 
             // immediately set the resolver field to null to indicate
@@ -335,7 +332,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     @Override
-    public List<MapEntry> getResolveMaps() {
+    public @NotNull List<MapEntry> getResolveMaps() {
         final List<MapEntry> entries = new ArrayList<>();
         for (final List<MapEntry> list : this.resolveMapsMap.values()) {
             entries.addAll(list);
@@ -345,7 +342,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     @Override
-    public Iterator<MapEntry> getResolveMapsIterator(final String requestPath) {
+    public @NotNull Iterator<MapEntry> getResolveMapsIterator(final String requestPath) {
         String key = null;
         final int firstIndex = requestPath.indexOf('/');
         final int secondIndex = requestPath.indexOf('/', firstIndex + 1);
@@ -361,7 +358,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     @Override
-    public Collection<MapEntry> getMapMaps() {
+    public @NotNull Collection<MapEntry> getMapMaps() {
         return mapMaps;
     }
 
@@ -370,12 +367,12 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     @Override
-    public Map<String, List<String>> getVanityPathMappings() {
+    public @NotNull Map<String, List<String>> getVanityPathMappings() {
         return vph.getVanityPathMappings();
     }
 
     @Override
-    public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
+    public @NotNull Map<String, Collection<String>> getAliasMap(final @NotNull String parentPath) {
         return ah.getAliasMap(parentPath);
     }
 
@@ -394,7 +391,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     /**
      * Checks if the path affects the map configuration. If it does
      * the configuration is updated.
-     * @param path The changed path (could be add/remove/update)
+     * @param path The changed path (could be added, removed or updated)
      * @param hasReloadedConfig If this is already true, the config will not be reloaded
      * @param resolverRefreshed Boolean flag handling resolver refresh
      * @param isDelete If this is a delete event
@@ -624,8 +621,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 if (!extPath.equals(intPath)) {
                     // this regular expression must match the whole URL !!
                     final String url = "^" + ANY_SCHEME_HOST + extPath + "$";
-                    final String redirect = intPath;
-                    MapEntry mapEntry = getMapEntry(url, -1, redirect);
+                    MapEntry mapEntry = getMapEntry(url, -1, intPath);
                     if (mapEntry != null) {
                         entries.add(mapEntry);
                     }
@@ -641,12 +637,8 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 if (mapping.mapsInbound()) {
                     final String url = mapping.getTo();
                     final String alias = mapping.getFrom();
-                    if (url.length() > 0) {
-                        List<String> aliasList = map.get(url);
-                        if (aliasList == null) {
-                            aliasList = new ArrayList<>();
-                            map.put(url, aliasList);
-                        }
+                    if (!url.isEmpty()) {
+                        List<String> aliasList = map.computeIfAbsent(url, k -> new ArrayList<>());
                         aliasList.add(alias);
                     }
                 }
@@ -687,8 +679,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 if (!extPath.equals(intPath)) {
                     // this regular expression must match the whole URL !!
                     final String path = "^" + intPath + "$";
-                    final String url = extPath;
-                    addMapEntry(entries, path, url, -1);
+                    addMapEntry(entries, path, extPath, -1);
                 }
             }
         }
@@ -717,12 +708,8 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     private MapEntry getMapEntry(final String url, final int status, final String... redirect) {
-        return getMapEntry(url, status, 0, redirect);
-    }
-
-    private MapEntry getMapEntry(final String url, final int status, long order, final String... redirect) {
         try {
-            return new MapEntry(url, status, false, order, redirect);
+            return new MapEntry(url, status, false, 0, redirect);
         } catch (IllegalArgumentException iae) {
             // ignore this entry
             log.debug("ignored entry for {} due to exception", url, iae);
