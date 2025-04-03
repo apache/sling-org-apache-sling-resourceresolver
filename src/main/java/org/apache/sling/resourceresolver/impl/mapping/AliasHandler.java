@@ -63,8 +63,8 @@ class AliasHandler {
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
-    private Runnable doUpdateConfiguration;
-    private Runnable sendChangeEvent;
+    private final Runnable doUpdateConfiguration;
+    private final Runnable sendChangeEvent;
 
     /**
      * The key of the map is the parent path, while the value is a map with the  resource name as key and the actual aliases as values
@@ -119,9 +119,7 @@ class AliasHandler {
             // optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final Map<String, Map<String, Collection<String>>> loadedMap =
-                            this.loadAliases(conflictingAliases, invalidAliases);
-                    this.aliasMapsMap = loadedMap;
+                    this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
