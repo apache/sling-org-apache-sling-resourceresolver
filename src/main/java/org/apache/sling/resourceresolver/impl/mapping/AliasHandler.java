@@ -63,8 +63,8 @@ class AliasHandler {
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
-    private Runnable doUpdateConfiguration;
-    private Runnable sendChangeEvent;
+    private final Runnable doUpdateConfiguration;
+    private final Runnable sendChangeEvent;
 
     /**
      * The key of the map is the parent path, while the value is a map with the  resource name as key and the actual aliases as values
@@ -119,9 +119,7 @@ class AliasHandler {
             // optimization made in SLING-2521
             if (isOptimizeAliasResolutionEnabled) {
                 try {
-                    final Map<String, Map<String, Collection<String>>> loadedMap =
-                            this.loadAliases(conflictingAliases, invalidAliases);
-                    this.aliasMapsMap = loadedMap;
+                    this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -170,62 +168,78 @@ class AliasHandler {
      */
     boolean removeAlias(
             ResourceResolver resolver, final String contentPath, final String path, final Runnable notifyOfChange) {
-        // if path is specified we first need to find out if it is
-        // a direct child of vanity path but not jcr:content, or a jcr:content child of a direct child
-        // otherwise we can discard the event
-        boolean handle = true;
-        final String resourcePath;
-        if (path != null && path.length() > contentPath.length()) {
-            final String subPath = path.substring(contentPath.length() + 1);
-            final int firstSlash = subPath.indexOf('/');
-            if (firstSlash == -1) {
-                if (subPath.equals(JCR_CONTENT)) {
-                    handle = false;
-                }
-                resourcePath = path;
-            } else if (subPath.lastIndexOf('/') == firstSlash) {
-                if (subPath.startsWith(JCR_CONTENT_PREFIX) || !subPath.endsWith(JCR_CONTENT_SUFFIX)) {
-                    handle = false;
-                }
-                resourcePath = ResourceUtil.getParent(path);
-            } else {
-                handle = false;
-                resourcePath = null;
-            }
-        } else {
-            resourcePath = contentPath;
-        }
-        if (!handle) {
+
+        final String resourcePath = computeResourcePath(contentPath, path);
+
+        if (resourcePath == null) {
+            // early exit
             return false;
         }
 
         this.initializing.lock();
+
         try {
             final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
                 notifyOfChange.run();
-
-                String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
-                if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath))
-                        && (aliasMapEntry.isEmpty())) {
-                    this.aliasMapsMap.remove(contentPath);
-                }
-
-                Resource containingResource = resolver != null ? resolver.getResource(resourcePath) : null;
-
-                if (containingResource != null) {
-                    if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                        doAddAlias(containingResource);
-                    }
-                    final Resource child = containingResource.getChild(JCR_CONTENT);
-                    if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                        doAddAlias(child);
-                    }
-                }
+                handleAliasRemoval(resolver, contentPath, resourcePath, aliasMapEntry);
             }
             return aliasMapEntry != null;
         } finally {
             this.initializing.unlock();
+        }
+    }
+
+    // if path is specified we first need to find out if it is
+    // a direct child of content path but not jcr:content, or a jcr:content child of a direct child
+    // otherwise we can discard the event
+    private static @Nullable String computeResourcePath(@NotNull String contentPath, @Nullable String path) {
+        String resourcePath = null;
+
+        if (path != null && path.length() > contentPath.length()) {
+            // path -> (contentPath + subPath)
+            final String subPath = path.substring(contentPath.length() + 1);
+            final int firstSlash = subPath.indexOf('/');
+
+            if (firstSlash == -1) {
+                // no slash in subPath
+                if (!subPath.equals(JCR_CONTENT)) {
+                    resourcePath = path;
+                }
+            } else if (subPath.lastIndexOf('/') == firstSlash) {
+                // exactly one slash in subPath
+                if (!subPath.startsWith(JCR_CONTENT_PREFIX) && subPath.endsWith(JCR_CONTENT_SUFFIX)) {
+                    resourcePath = ResourceUtil.getParent(path);
+                }
+            }
+        } else {
+            resourcePath = contentPath;
+        }
+
+        return resourcePath;
+    }
+
+    private void handleAliasRemoval(
+            @Nullable ResourceResolver resolver,
+            @NotNull String contentPath,
+            @NotNull String resourcePath,
+            @NotNull Map<String, Collection<String>> aliasMapEntry) {
+        String prefix = contentPath.endsWith("/") ? contentPath : contentPath + "/";
+        if (aliasMapEntry.entrySet().removeIf(e -> (prefix + e.getKey()).startsWith(resourcePath))
+                && (aliasMapEntry.isEmpty())) {
+            this.aliasMapsMap.remove(contentPath);
+        }
+
+        Resource containingResource = resolver != null ? resolver.getResource(resourcePath) : null;
+
+        if (containingResource != null) {
+            if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                doAddAlias(containingResource);
+            }
+            final Resource child = containingResource.getChild(JCR_CONTENT);
+            if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                doAddAlias(child);
+            }
         }
     }
 
