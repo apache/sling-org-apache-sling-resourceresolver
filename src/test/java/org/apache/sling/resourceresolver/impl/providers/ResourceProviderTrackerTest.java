@@ -42,6 +42,7 @@ import org.osgi.service.event.EventAdmin;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 public class ResourceProviderTrackerTest {
@@ -248,6 +249,49 @@ public class ResourceProviderTrackerTest {
 
         assertEquals(2, dto.providers.length);
         assertEquals(1, dto.failedProviders.length);
+    }
+
+    @Test
+    public void testRemoveSamePathResourceProvider() throws Exception {
+        try {
+            final ResourceProviderTracker tracker = new ResourceProviderTracker();
+            tracker.setObservationReporterGenerator(
+                    new SimpleObservationReporterGenerator(new NoDothingObservationReporter()));
+
+            final AtomicBoolean removedCalled = new AtomicBoolean(false);
+            final ChangeListener listener = new ChangeListener() {
+
+                @Override
+                public void providerAdded() {}
+
+                @Override
+                public void providerRemoved(boolean stateful, boolean used) {
+                    removedCalled.set(true);
+                }
+            };
+            tracker.activate(context.bundleContext(), eventAdmin, listener);
+
+            @SuppressWarnings("unchecked")
+            ResourceProvider<Object> rp1 = mock(ResourceProvider.class);
+            final ResourceProviderInfo info1 = fixture.registerResourceProvider(rp1, "/temp/path", AuthType.no, 101);
+
+            @SuppressWarnings("unchecked")
+            ResourceProvider<Object> rp2 = mock(ResourceProvider.class);
+            final ResourceProviderInfo info2 = fixture.registerResourceProvider(rp2, "/temp/path", AuthType.no, 100);
+
+            // check removed is not called yet
+            assertFalse(removedCalled.get());
+            // unregister the provider with lower service rank
+            fixture.unregisterResourceProvider(info2);
+
+            // removed should not be called after unregistering the provider with lower service rank
+            assertFalse(removedCalled.get());
+
+            fixture.unregisterResourceProvider(info1);
+            assertTrue(removedCalled.get());
+        } catch (NullPointerException e) {
+            fail("NullPointerException should not be thrown: " + e.getMessage());
+        }
     }
 
     static final class NoDothingObservationReporter implements ObservationReporter {
