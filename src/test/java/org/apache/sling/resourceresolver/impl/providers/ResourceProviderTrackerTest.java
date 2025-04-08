@@ -37,7 +37,6 @@ import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.service.event.EventAdmin;
 
 import static org.junit.Assert.assertEquals;
@@ -253,7 +252,7 @@ public class ResourceProviderTrackerTest {
     }
 
     @Test
-    public void testRemoveSamePathResourceProvider() throws InvalidSyntaxException {
+    public void testRemoveSamePathResourceProvider() throws Exception {
         try {
             final ResourceProviderTracker tracker = new ResourceProviderTracker();
             tracker.setObservationReporterGenerator(
