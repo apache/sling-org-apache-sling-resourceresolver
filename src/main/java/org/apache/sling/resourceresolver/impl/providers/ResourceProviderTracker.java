@@ -304,7 +304,7 @@ public class ResourceProviderTracker implements ResourceProviderStorageProvider 
 
         // update change listener (only once)
         final ChangeListener cl = this.listener;
-        if (cl != null) {
+        if (cl != null && deactivateHandler != null) {
             cl.providerRemoved(info.getAuthType() != AuthType.no, deactivateHandler.isUsed());
         }
 
