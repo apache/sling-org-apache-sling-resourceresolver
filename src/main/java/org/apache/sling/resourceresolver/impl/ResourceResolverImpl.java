@@ -357,12 +357,18 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         // content out of the virtual host mapping tree
         // the counter is to ensure we are not caught in an endless loop here
         // TODO: might do better to be able to log the loop and help the user
-        for (int i = 0; i < 100; i++) {
+
+        final int maxIterations = 100;
+        int iterationsLeft = maxIterations;
+
+        while (iterationsLeft > 0) {
+            iterationsLeft -= 1;
 
             String[] mappedPath = null;
 
             final Iterator<MapEntry> mapEntriesIterator =
                     this.factory.getMapEntries().getResolveMapsIterator(requestPath);
+
             while (mapEntriesIterator.hasNext()) {
                 final MapEntry mapEntry = mapEntriesIterator.next();
                 mappedPath = mapEntry.replace(requestPath);
@@ -373,13 +379,14 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                                 mapEntry,
                                 Arrays.toString(mappedPath));
                     }
+
                     if (mapEntry.isInternal()) {
-                        // internal redirect
+                        // internal redirect: stop looking for further MapEntries
                         logger.debug("resolve: Redirecting internally");
                         break;
                     }
 
-                    // external redirect
+                    // external redirect: we are done
                     logger.debug("resolve: Returning external redirect");
                     return this.factory
                             .getResourceDecoratorTracker()
@@ -394,25 +401,35 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                 break;
             }
 
-            // if the mapped path is not an URL, use this path to continue
+            // if the mapped path is not a URI, abort and use this path to continue
             if (!mappedPath[0].contains("://")) {
-                logger.debug("resolve: Mapped path is for resource tree");
+                logger.debug("resolve: Mapped path {} is for resource tree", mappedPath[0]);
                 realPathList = mappedPath;
                 break;
             }
 
-            // otherwise the mapped path is an URI and we have to try to
+            // otherwise the mapped path is a URI, and we have to try to
             // resolve that URI now, using the URI's path as the real path
             try {
                 final URI uri = new URI(mappedPath[0], false);
                 requestPath = getMapPath(uri.getScheme(), uri.getHost(), uri.getPort(), uri.getPath());
                 realPathList = new String[] {uri.getPath()};
 
-                logger.debug("resolve: Mapped path is an URL, using new request path {}", requestPath);
+                logger.debug("resolve: Mapped path is a URI, using new request path {}", requestPath);
             } catch (final URIException use) {
-                // TODO: log and fail
+                logger.debug("resolve: failure parsing {} as URI", mappedPath[0], use);
                 throw new ResourceNotFoundException(absPath);
             }
+        }
+
+        if (iterationsLeft == 0) {
+            // we get here if we - while following URI-shaped internal redirects -
+            // reached the maximum number of allowed iterations
+            logger.debug(
+                    "resolve: maximum number of iterations ({}) exhausted while following internal redirects, "
+                            + "continuing with last found request path: {}",
+                    maxIterations,
+                    requestPath);
         }
 
         // now we have the real path resolved from virtual host mapping
