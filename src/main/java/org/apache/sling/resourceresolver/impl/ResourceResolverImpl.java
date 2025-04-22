@@ -965,6 +965,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                 return aliasedChild;
             }
         } else {
+            // "optimized" mode is enabled in config, but was not activated
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 this.factory.getMapEntries().logDisableAliasOptimization();
             }

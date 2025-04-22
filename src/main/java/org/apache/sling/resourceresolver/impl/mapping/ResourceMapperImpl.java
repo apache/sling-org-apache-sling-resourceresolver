@@ -260,7 +260,7 @@ public class ResourceMapperImpl implements ResourceMapper {
 
                 // read alias only if we can read the resources, and it's not a jcr:content leaf
                 if (current != null && !path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
-                    aliases = readAliases(path, current);
+                    aliases = readAliases(current);
                 }
 
                 // build the path from the name segments or aliases
@@ -277,20 +277,32 @@ public class ResourceMapperImpl implements ResourceMapper {
 
     /**
      * Resolve the aliases for the given resource by directly reading the sling:alias property
-     * @param path the path of the resource
      * @param current the resource
      * @return aliases for the specified path
      */
-    private List<String> readAliases(String path, Resource current) {
-        logger.debug("map: Optimize Alias Resolution is disabled, looking up {}", path);
+    private List<String> readAliases(Resource current) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("map: Optimize Alias Resolution is disabled, looking up {}", current.getPath());
+        }
         String[] aliases =
                 ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS, String[].class);
         if (aliases == null || aliases.length == 0) {
+            Resource content = current.getChild("jcr:content");
+            if (content != null) {
+                return readAliases(content);
+            }
+        }
+
+        return arrayToList(aliases);
+    }
+
+    private static List<String> arrayToList(String[] values) {
+        if (values == null || values.length == 0) {
             return Collections.emptyList();
-        } else if (aliases.length == 1) {
-            return Collections.singletonList(aliases[0]);
+        } else if (values.length == 1) {
+            return Collections.singletonList(values[0]);
         } else {
-            return Arrays.asList(aliases);
+            return Collections.unmodifiableList(Arrays.asList(values));
         }
     }
 
