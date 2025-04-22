@@ -236,29 +236,33 @@ public class ResourceMapperImpl implements ResourceMapper {
     private void resolveAliases(Resource res, PathGenerator pathBuilder) {
         Resource current = res;
         String path = res.getPath();
-        if (this.mapEntries.isOptimizeAliasResolutionEnabled()) {
-            // this code path avoids any creation of Sling Resource objects
-            while (path != null) {
-                Collection<String> aliases = Collections.emptyList();
+        boolean isOptimizeAliasResolutionEnabled = this.mapEntries.isOptimizeAliasResolutionEnabled();
+
+        while (path != null) {
+            Collection<String> aliases = Collections.emptyList();
+
+            if (isOptimizeAliasResolutionEnabled) {
                 // read alias only if we can read the resources and it's not a jcr:content leaf
+
+                // this code path avoids any creation of Sling Resource objects
                 if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
                     aliases = readAliasesOptimized(path);
                 }
+
                 // build the path from the name segments or aliases
                 pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
                 path = ResourceUtil.getParent(path);
                 if ("/".equals(path)) {
                     path = null;
                 }
-            }
-        } else {
-            // while here there Resources are resolved
-            while (path != null) {
-                List<String> aliases = Collections.emptyList();
-                // read alias only if we can read the resources and it's not a jcr:content leaf
+            } else {
+                // while here there are Resources resolved
+
+                // read alias only if we can read the resources, and it's not a jcr:content leaf
                 if (current != null && !path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
                     aliases = readAliases(path, current);
                 }
+
                 // build the path from the name segments or aliases
                 pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
                 path = ResourceUtil.getParent(path);
@@ -275,32 +279,37 @@ public class ResourceMapperImpl implements ResourceMapper {
      * Resolve the aliases for the given resource by directly reading the sling:alias property
      * @param path the path of the resource
      * @param current the resource
-     * @return
+     * @return aliases for the specified path
      */
     private List<String> readAliases(String path, Resource current) {
-        logger.debug("map: Optimize Alias Resolution is Disabled");
+        logger.debug("map: Optimize Alias Resolution is disabled, looking up {}", path);
         String[] aliases =
                 ResourceResolverControl.getProperty(current, ResourceResolverImpl.PROP_ALIAS, String[].class);
-        if (aliases == null || aliases.length == 0) return Collections.emptyList();
-        if (aliases.length == 1) return Collections.singletonList(aliases[0]);
-        return Arrays.asList(aliases);
+        if (aliases == null || aliases.length == 0) {
+            return Collections.emptyList();
+        } else if (aliases.length == 1) {
+            return Collections.singletonList(aliases[0]);
+        } else {
+            return Arrays.asList(aliases);
+        }
     }
 
     /**
-     * Resolve teh aliases for the given resource by a lookup in the mapEntries structure, avoiding
+     * Resolve the aliases for the given resource by a lookup in the mapEntries structure, avoiding
      * any repository access
-     * @param path
-     * @return
+     * @param path path to lookup
+     * @return aliases for the specified path
      */
     private Collection<String> readAliasesOptimized(String path) {
-        logger.debug("map: Optimize Alias Resolution is Enabled");
+        logger.debug("map: Optimize Alias Resolution is enabled, looking up {}", path);
         String parentPath = ResourceUtil.getParent(path);
+
         if (parentPath == null) {
             return Collections.emptyList();
+        } else {
+            String name = ResourceUtil.getName(path);
+            return mapEntries.getAliasMap(parentPath).getOrDefault(name, Collections.emptyList());
         }
-        String name = ResourceUtil.getName(path);
-
-        return mapEntries.getAliasMap(parentPath).getOrDefault(name, Collections.emptyList());
     }
 
     private void populateMappingsFromMapEntries(
