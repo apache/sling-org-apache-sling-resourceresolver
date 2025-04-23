@@ -942,7 +942,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                             .map(Map.Entry::getKey);
             if (aliasedResourceName.isPresent()) {
                 // we know that MapEntries already has checked for valid aliases
-                final String aliasPath = parent.getPath() + '/' + aliasedResourceName.get();
+                final String aliasPath = parentPath + '/' + aliasedResourceName.get();
                 final Resource aliasedChild =
                         getAbsoluteResourceInternal(parent, ResourceUtil.normalize(aliasPath), EMPTY_PARAMETERS, true);
                 logger.debug("getChildInternal: Found Resource {} with alias {} to use", aliasedChild, childName);
