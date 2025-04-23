@@ -930,7 +930,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if (factory.getMapEntries().isOptimizeAliasResolutionEnabled()) {
             final String parentPath = parent.getPath();
             logger.debug(
-                    "getChildInternal: Optimize Alias Resolution is Enabled, looking up {} im {}",
+                    "getChildInternal: Optimize Alias Resolution is Enabled, looking up {} in {}",
                     childName,
                     parentPath);
 
