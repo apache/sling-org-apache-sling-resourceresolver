@@ -21,6 +21,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,8 @@ class AliasHandler {
 
     private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
 
+    private static final String SERVICE_USER = "mapping";
+
     private MapConfigurationProvider factory;
 
     private final ReentrantLock initializing;
@@ -67,9 +70,12 @@ class AliasHandler {
     private final Runnable sendChangeEvent;
 
     /**
-     * The key of the map is the parent path, while the value is a map with the  resource name as key and the actual aliases as values
+     * The key of the map is the parent path, while the value is a map with the
+     * resource name as key and the actual aliases as values
      */
     Map<String, Map<String, Collection<String>>> aliasMapsMap;
+
+    boolean mapIsInitialized = false;
 
     final AtomicLong aliasResourcesOnStartup;
     final AtomicLong detectedConflictingAliases;
@@ -130,13 +136,17 @@ class AliasHandler {
                     } else if (!conflictingAliases.isEmpty()) {
                         log.warn("There are {} conflicting aliases: {}", conflictingAliases.size(), conflictingAliases);
                     }
+
                     if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
                         log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
                     } else if (!invalidAliases.isEmpty()) {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
+
+                    mapIsInitialized = true;
                 } catch (final Exception e) {
 
+                    this.aliasMapsMap = new ConcurrentHashMap<>();
                     logDisableAliasOptimization(e);
 
                     // disable optimize alias resolution
@@ -286,8 +296,33 @@ class AliasHandler {
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
-        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
-        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
+        if (mapIsInitialized) {
+            Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
+            return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
+        } else {
+            return getAliasMapFromRepo(parentPath);
+        }
+    }
+
+    private @NotNull Map<String, Collection<String>> getAliasMapFromRepo(final String parentPath) {
+        try (final ResourceResolver resolver =
+                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
+
+            Resource parent = resolver.getResource(parentPath);
+            if (parent != null) {
+                Map<String, Map<String, Collection<String>>> localMap = new HashMap<>();
+                for (Resource child : parent.getChildren()) {
+                    loadAlias(child, localMap, new ArrayList<>(), new ArrayList<>());
+                }
+                Map<String, Collection<String>> aliasMapForParent = localMap.get(parentPath);
+                return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
+            } else {
+                return Collections.emptyMap();
+            }
+        } catch (LoginException ex) {
+            log.error("Could not obtain resolver", ex);
+            return Collections.emptyMap();
+        }
     }
 
     /**
@@ -300,7 +335,7 @@ class AliasHandler {
         final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
 
         try (final ResourceResolver resolver =
-                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
+                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
             final String baseQueryString = generateAliasQuery();
 
             Iterator<Resource> it;
