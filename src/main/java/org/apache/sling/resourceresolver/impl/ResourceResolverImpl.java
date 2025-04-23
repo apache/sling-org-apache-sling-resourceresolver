@@ -880,20 +880,21 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         // we do not have a child with the exact name, so we look for
         // a child, whose alias matches the childName
         if (factory.getMapEntries().isOptimizeAliasResolutionEnabled()) {
-            logger.debug("getChildInternal: Optimize Alias Resolution is Enabled");
-            // optimization made in SLING-2521
+            final String parentPath = parent.getPath();
+            logger.debug(
+                    "getChildInternal: Optimize Alias Resolution is Enabled, looking up {} in {}",
+                    childName,
+                    parentPath);
+
+            // optimized alias resolution: aliases are cached by MapEntries
             final Optional<String> aliasedResourceName =
-                    factory.getMapEntries().getAliasMap(parent.getPath()).entrySet().stream()
+                    factory.getMapEntries().getAliasMap(parentPath).entrySet().stream()
                             .filter(e -> e.getValue().contains(childName))
                             .findFirst()
                             .map(Map.Entry::getKey);
             if (aliasedResourceName.isPresent()) {
-                final String aliasPath;
-                if (aliasedResourceName.get().startsWith("/")) {
-                    aliasPath = aliasedResourceName.get();
-                } else {
-                    aliasPath = parent.getPath() + '/' + aliasedResourceName.get();
-                }
+                // we know that MapEntries already has checked for valid aliases
+                final String aliasPath = parentPath + '/' + aliasedResourceName.get();
                 final Resource aliasedChild =
                         getAbsoluteResourceInternal(parent, ResourceUtil.normalize(aliasPath), EMPTY_PARAMETERS, true);
                 logger.debug("getChildInternal: Found Resource {} with alias {} to use", aliasedChild, childName);
