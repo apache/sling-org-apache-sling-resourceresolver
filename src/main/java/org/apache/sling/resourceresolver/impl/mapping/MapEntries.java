@@ -230,27 +230,27 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     private boolean removeResource(final String path, final AtomicBoolean resolverRefreshed) {
-        boolean changed = false;
         final String actualContentPath = getActualContentPath(path);
         final String actualContentPathPrefix = actualContentPath + "/";
 
+        boolean vanityPathChanged = false;
+        boolean aliasChanged = false;
+
         for (final String target : vph.getVanityPathMappings().keySet()) {
             if (target.startsWith(actualContentPathPrefix) || target.equals(actualContentPath)) {
-                changed |= vph.removeVanityPath(target);
+                vanityPathChanged |= vph.removeVanityPath(target);
             }
         }
-        if (this.useOptimizeAliasResolution) {
-            final String pathPrefix = path + "/";
-            for (final String contentPath : ah.aliasMapsMap.keySet()) {
-                if (path.startsWith(contentPath + "/")
-                        || path.equals(contentPath)
-                        || contentPath.startsWith(pathPrefix)) {
-                    changed |= ah.removeAlias(
-                            resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
-                }
+
+        final String pathPrefix = path + "/";
+        for (final String contentPath : ah.aliasMapsMap.keySet()) {
+            if (path.startsWith(contentPath + "/") || path.equals(contentPath) || contentPath.startsWith(pathPrefix)) {
+                aliasChanged |= ah.removeAlias(
+                        resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
             }
         }
-        return changed;
+
+        return vanityPathChanged || aliasChanged;
     }
 
     /**
