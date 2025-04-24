@@ -296,38 +296,46 @@ class AliasHandler {
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
-        if (mapIsInitialized) {
-            return getAliasMapFromCache(parentPath);
-        } else {
-            return getAliasMapFromRepo(parentPath);
-        }
+        Map<String, Collection<String>> result =
+                mapIsInitialized ? getAliasMapFromCache(parentPath) : getAliasMapFromRepo(parentPath);
+        return result != null ? result : Collections.emptyMap();
     }
 
-    private @NotNull Map<String, Collection<String>> getAliasMapFromCache(final String parentPath) {
-        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
-        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
+    private @Nullable Map<String, Collection<String>> getAliasMapFromCache(final String parentPath) {
+        return aliasMapsMap.get(parentPath);
     }
 
-    private @NotNull Map<String, Collection<String>> getAliasMapFromRepo(final String parentPath) {
+    // TODO: there's an opportunity for optimization when the caller already has a Resource
+    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(final String parentPath) {
+
+        Map<String, Collection<String>> result = null;
+
         try (final ResourceResolver resolver =
                 factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
 
             Resource parent = resolver.getResource(parentPath);
-            if (parent != null) {
-                List<String> throwAwayDiags = new ArrayList<>();
-                Map<String, Map<String, Collection<String>>> localMap = new HashMap<>();
-                for (Resource child : parent.getChildren()) {
-                    loadAlias(child, localMap, throwAwayDiags, throwAwayDiags);
-                }
-                Map<String, Collection<String>> aliasMapForParent = localMap.get(parentPath);
-                return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
-            } else {
-                return Collections.emptyMap();
-            }
+            result = getAliasMapFromRepo(parent);
         } catch (LoginException ex) {
             log.error("Could not obtain resolver", ex);
-            return Collections.emptyMap();
         }
+
+        return result;
+    }
+
+    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(final Resource parent) {
+
+        Map<String, Collection<String>> result = null;
+
+        if (parent != null) {
+            Map<String, Map<String, Collection<String>>> localMap = new HashMap<>();
+            List<String> throwAwayDiagnostics = new ArrayList<>();
+            for (Resource child : parent.getChildren()) {
+                loadAlias(child, localMap, throwAwayDiagnostics, throwAwayDiagnostics);
+            }
+            result = localMap.get(parent.getPath());
+        }
+
+        return result;
     }
 
     /**
