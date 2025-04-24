@@ -297,11 +297,15 @@ class AliasHandler {
 
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
         if (mapIsInitialized) {
-            Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
-            return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
+            return getAliasMapFromCache(parentPath);
         } else {
             return getAliasMapFromRepo(parentPath);
         }
+    }
+
+    private @NotNull Map<String, Collection<String>> getAliasMapFromCache(final String parentPath) {
+        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
+        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
     }
 
     private @NotNull Map<String, Collection<String>> getAliasMapFromRepo(final String parentPath) {
@@ -310,9 +314,10 @@ class AliasHandler {
 
             Resource parent = resolver.getResource(parentPath);
             if (parent != null) {
+                List<String> throwAwayDiags = new ArrayList<>();
                 Map<String, Map<String, Collection<String>>> localMap = new HashMap<>();
                 for (Resource child : parent.getChildren()) {
-                    loadAlias(child, localMap, new ArrayList<>(), new ArrayList<>());
+                    loadAlias(child, localMap, throwAwayDiags, throwAwayDiags);
                 }
                 Map<String, Collection<String>> aliasMapForParent = localMap.get(parentPath);
                 return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
