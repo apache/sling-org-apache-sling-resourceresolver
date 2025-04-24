@@ -190,36 +190,40 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
-        final boolean isValidVanityPath = vph.isValidVanityPath(path);
-        if (this.useOptimizeAliasResolution || isValidVanityPath) {
-            this.initializing.lock();
 
-            try {
-                this.refreshResolverIfNecessary(resolverRefreshed);
-                final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
-                if (resource != null) {
-                    boolean changed = false;
-                    if (isValidVanityPath) {
-                        // we remove the old vanity path first
-                        changed |= vph.doRemoveVanity(path);
+        this.initializing.lock();
 
-                        // add back vanity path
-                        Resource contentRsrc = null;
-                        if (!resource.getName().equals(JCR_CONTENT)) {
-                            // there might be a JCR_CONTENT child resource
-                            contentRsrc = resource.getChild(JCR_CONTENT);
-                        }
-                        changed |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
+        try {
+            this.refreshResolverIfNecessary(resolverRefreshed);
+
+            final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
+
+            final boolean isValidVanityPath = vph.isValidVanityPath(path);
+
+            if (resource != null) {
+
+                boolean vanityPathChanged = false;
+                boolean aliasChanged = false;
+
+                if (isValidVanityPath) {
+                    // we remove the old vanity path first
+                    vanityPathChanged |= vph.doRemoveVanity(path);
+
+                    // add back vanity path
+                    Resource contentRsrc = null;
+                    if (!resource.getName().equals(JCR_CONTENT)) {
+                        // there might be a JCR_CONTENT child resource
+                        contentRsrc = resource.getChild(JCR_CONTENT);
                     }
-                    if (this.useOptimizeAliasResolution) {
-                        changed |= ah.doUpdateAlias(resource);
-                    }
-
-                    return changed;
+                    vanityPathChanged |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                 }
-            } finally {
-                this.initializing.unlock();
+
+                aliasChanged |= ah.doUpdateAlias(resource);
+
+                return vanityPathChanged || aliasChanged;
             }
+        } finally {
+            this.initializing.unlock();
         }
 
         return false;

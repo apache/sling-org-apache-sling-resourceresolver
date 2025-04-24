@@ -259,38 +259,41 @@ class AliasHandler {
      */
     boolean doUpdateAlias(final Resource resource) {
 
-        // resource containing the alias
-        final Resource containingResource = getResourceToBeAliased(resource);
-
-        if (containingResource != null) {
-            final String containingResourceName = containingResource.getName();
-            final String parentPath = ResourceUtil.getParent(containingResource.getPath());
-
-            final Map<String, Collection<String>> aliasMapEntry =
-                    parentPath == null ? null : aliasMapsMap.get(parentPath);
-            if (aliasMapEntry != null) {
-                aliasMapEntry.remove(containingResourceName);
-                if (aliasMapEntry.isEmpty()) {
-                    this.aliasMapsMap.remove(parentPath);
-                }
-            }
-
-            boolean changed = aliasMapEntry != null;
-
-            if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                changed |= doAddAlias(containingResource);
-            }
-            final Resource child = containingResource.getChild(JCR_CONTENT);
-            if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                changed |= doAddAlias(child);
-            }
-
-            return changed;
+        if (!mapIsInitialized) {
+            return false;
         } else {
-            log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
-        }
+            // resource containing the alias
+            final Resource containingResource = getResourceToBeAliased(resource);
 
-        return false;
+            if (containingResource != null) {
+                final String containingResourceName = containingResource.getName();
+                final String parentPath = ResourceUtil.getParent(containingResource.getPath());
+
+                final Map<String, Collection<String>> aliasMapEntry =
+                        parentPath == null ? null : aliasMapsMap.get(parentPath);
+                if (aliasMapEntry != null) {
+                    aliasMapEntry.remove(containingResourceName);
+                    if (aliasMapEntry.isEmpty()) {
+                        this.aliasMapsMap.remove(parentPath);
+                    }
+                }
+
+                boolean changed = aliasMapEntry != null;
+
+                if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                    changed |= doAddAlias(containingResource);
+                }
+                final Resource child = containingResource.getChild(JCR_CONTENT);
+                if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                    changed |= doAddAlias(child);
+                }
+
+                return changed;
+            } else {
+                log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
+                return false;
+            }
+        }
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
