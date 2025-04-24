@@ -105,10 +105,8 @@ class AliasHandler {
      * Actual initializer. Guards itself against concurrent use by using a
      * ReentrantLock. Does nothing if the resource resolver has already been
      * null-ed.
-     *
-     * @return true if the cache was initialized, enabling the "optimized" mode
      */
-    protected boolean initializeAliases() {
+    protected void initializeAliases() {
 
         this.initializing.lock();
         try {
@@ -116,7 +114,7 @@ class AliasHandler {
 
             // already disposed?
             if (this.factory == null) {
-                return false;
+                return;
             }
 
             List<String> conflictingAliases = new ArrayList<>();
@@ -152,11 +150,13 @@ class AliasHandler {
 
             doUpdateConfiguration.run();
             sendChangeEvent.run();
-
-            return this.mapIsInitialized;
         } finally {
             this.initializing.unlock();
         }
+    }
+
+    boolean usesCache() {
+        return this.mapIsInitialized;
     }
 
     boolean doAddAlias(final Resource resource) {

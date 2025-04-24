@@ -109,8 +109,6 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
-    private final boolean useOptimizeAliasResolution;
-
     AliasHandler ah;
     VanityPathHandler vph;
 
@@ -131,8 +129,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.ah = new AliasHandler(this.factory, this.initializing, this::doUpdateConfiguration, this::sendChangeEvent);
-
-        this.useOptimizeAliasResolution = ah.initializeAliases();
+        this.ah.initializeAliases();
 
         this.registration = registerResourceChangeListener(bundleContext);
 
@@ -362,8 +359,9 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         return mapMaps;
     }
 
+    @Override
     public boolean isOptimizeAliasResolutionEnabled() {
-        return this.useOptimizeAliasResolution;
+        return this.ah.usesCache();
     }
 
     @Override
