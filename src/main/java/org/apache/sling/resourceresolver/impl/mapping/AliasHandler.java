@@ -160,7 +160,11 @@ class AliasHandler {
     }
 
     boolean doAddAlias(final Resource resource) {
-        return loadAlias(resource, this.aliasMapsMap, null, null);
+        if (mapIsInitialized) {
+            return loadAlias(resource, this.aliasMapsMap, null, null);
+        } else {
+            return false;
+        }
     }
 
     /**

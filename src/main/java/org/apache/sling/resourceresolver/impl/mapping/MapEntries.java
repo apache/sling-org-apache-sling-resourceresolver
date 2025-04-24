@@ -52,7 +52,6 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.BundleContext;
@@ -179,15 +178,12 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             this.refreshResolverIfNecessary(resolverRefreshed);
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
-                boolean changed = vph.doAddVanity(resource);
-                if (this.useOptimizeAliasResolution
-                        && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                    changed |= ah.doAddAlias(resource);
-                }
-                return changed;
+                boolean vanityPathAdded = vph.doAddVanity(resource);
+                boolean aliasAdded = ah.doAddAlias(resource);
+                return vanityPathAdded || aliasAdded;
+            } else {
+                return false;
             }
-
-            return false;
         } finally {
             this.initializing.unlock();
         }
