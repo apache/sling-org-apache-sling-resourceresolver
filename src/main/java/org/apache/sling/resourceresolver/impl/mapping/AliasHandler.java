@@ -106,12 +106,14 @@ class AliasHandler {
      * ReentrantLock. Does nothing if the resource resolver has already been
      * null-ed.
      *
-     * @return true if the optimizedAliasResolution is enabled, false otherwise
+     * @return true if the cache was initialized, enabling the "optimized" mode
      */
     protected boolean initializeAliases() {
 
         this.initializing.lock();
         try {
+            this.mapIsInitialized = false;
+
             // already disposed?
             if (this.factory == null) {
                 return false;
@@ -120,12 +122,11 @@ class AliasHandler {
             List<String> conflictingAliases = new ArrayList<>();
             List<String> invalidAliases = new ArrayList<>();
 
-            boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
-
             // optimization made in SLING-2521
-            if (isOptimizeAliasResolutionEnabled) {
+            if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 try {
                     this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
+                    this.mapIsInitialized = true;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -143,24 +144,17 @@ class AliasHandler {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
 
-                    mapIsInitialized = true;
                 } catch (final Exception e) {
-
                     this.aliasMapsMap = new ConcurrentHashMap<>();
                     logDisableAliasOptimization(e);
-
-                    // disable optimize alias resolution
-                    isOptimizeAliasResolutionEnabled = false;
                 }
             }
 
             doUpdateConfiguration.run();
             sendChangeEvent.run();
 
-            return isOptimizeAliasResolutionEnabled;
-
+            return this.mapIsInitialized;
         } finally {
-
             this.initializing.unlock();
         }
     }
