@@ -201,7 +201,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void internal_test_simple_alias_support_throwing_unsupported_operation_exception_exception() {
         prepareMapEntriesForAlias(false, false, UnsupportedOperationException.class, "foo", "bar");
-        assertFalse(mapEntries.ah.initializeAliases());
+        mapEntries.ah.initializeAliases();
+        assertFalse(mapEntries.ah.usesCache());
     }
 
     @Test
@@ -1176,7 +1177,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void test_initAliasesAfterDispose() {
         AliasHandler ah = mapEntries.ah;
         mapEntries.dispose();
-        boolean enabled = ah.initializeAliases();
-        assertFalse("return value (isOptimizeAliasResolutionEnabled) should be false", enabled);
+        ah.initializeAliases();
+        boolean enabled = ah.usesCache();
+        assertFalse("alias handler should not have set up cache", enabled);
     }
 }
