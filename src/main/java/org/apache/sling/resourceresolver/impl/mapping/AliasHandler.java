@@ -70,7 +70,8 @@ class AliasHandler {
      * The key of the map is the parent path, while the value is a map with the
      * resource name as key and the actual aliases as values
      */
-    @NotNull Map<String, Map<String, Collection<String>>> aliasMapsMap;
+    @NotNull
+    Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
     boolean mapIsInitialized = false;
 
