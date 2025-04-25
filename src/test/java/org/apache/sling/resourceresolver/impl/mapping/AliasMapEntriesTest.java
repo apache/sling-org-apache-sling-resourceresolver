@@ -1178,7 +1178,6 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         AliasHandler ah = mapEntries.ah;
         mapEntries.dispose();
         ah.initializeAliases();
-        boolean enabled = ah.usesCache();
-        assertFalse("alias handler should not have set up cache", enabled);
+        assertFalse("alias handler should not have set up cache", ah.usesCache());
     }
 }
