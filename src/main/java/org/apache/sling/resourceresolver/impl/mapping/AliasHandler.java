@@ -257,6 +257,14 @@ class AliasHandler {
      * @return {@code true} if any change
      */
     boolean doUpdateAlias(final Resource resource) {
+        if (!cacheIsInitialized) {
+            return false;
+        } else {
+            return doUpdateAliasInMap(resource);
+        }
+    }
+
+    private boolean doUpdateAliasInMap(final Resource resource) {
 
         // resource containing the alias
         final Resource containingResource = getResourceToBeAliased(resource);
