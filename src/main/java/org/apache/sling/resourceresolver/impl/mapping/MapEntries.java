@@ -176,14 +176,15 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             this.refreshResolverIfNecessary(resolverRefreshed);
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
-                boolean changed = vph.doAddVanity(resource);
+                boolean vanityPathAdded = vph.doAddVanity(resource);
+                boolean aliasAdded = false;
                 if (this.ah.usesCache() && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                    changed |= ah.doAddAlias(resource);
+                    aliasAdded |= ah.doAddAlias(resource);
                 }
-                return changed;
+                return vanityPathAdded || aliasAdded;
+            } else {
+                return false;
             }
-
-            return false;
         } finally {
             this.initializing.unlock();
         }
