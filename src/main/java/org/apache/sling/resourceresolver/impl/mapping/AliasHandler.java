@@ -73,7 +73,7 @@ class AliasHandler {
     @NotNull
     Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
-    boolean mapIsInitialized = false;
+    boolean cacheIsInitialized = false;
 
     final AtomicLong aliasResourcesOnStartup;
     final AtomicLong detectedConflictingAliases;
@@ -86,7 +86,7 @@ class AliasHandler {
             Runnable sendChangeEvent) {
         this.factory = factory;
         this.initializing = initializing;
-        this.aliasMapsMap = new ConcurrentHashMap<>();
+        this.aliasMapsMap = Map.of();
         this.doUpdateConfiguration = doUpdateConfiguration;
         this.sendChangeEvent = sendChangeEvent;
 
@@ -108,7 +108,7 @@ class AliasHandler {
 
         this.initializing.lock();
         try {
-            this.mapIsInitialized = false;
+            this.cacheIsInitialized = false;
 
             // already disposed?
             if (this.factory == null) {
@@ -122,7 +122,7 @@ class AliasHandler {
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 try {
                     this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
-                    this.mapIsInitialized = true;
+                    this.cacheIsInitialized = true;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -140,7 +140,8 @@ class AliasHandler {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
                 } catch (final Exception e) {
-                    this.aliasMapsMap = new ConcurrentHashMap<>();
+                    // unmodifiable
+                    this.aliasMapsMap = Map.of();
                     logDisableAliasOptimization(e);
                 }
             }
@@ -154,7 +155,7 @@ class AliasHandler {
     }
 
     boolean usesCache() {
-        return this.mapIsInitialized;
+        return this.cacheIsInitialized;
     }
 
     boolean doAddAlias(final Resource resource) {
