@@ -67,9 +67,13 @@ class AliasHandler {
     private final Runnable sendChangeEvent;
 
     /**
-     * The key of the map is the parent path, while the value is a map with the  resource name as key and the actual aliases as values
+     * The key of the map is the parent path, while the value is a map with the
+     * resource name as key and the actual aliases as values
      */
+    @NotNull
     Map<String, Map<String, Collection<String>>> aliasMapsMap;
+
+    boolean cacheIsInitialized = false;
 
     final AtomicLong aliasResourcesOnStartup;
     final AtomicLong detectedConflictingAliases;
@@ -82,7 +86,7 @@ class AliasHandler {
             Runnable sendChangeEvent) {
         this.factory = factory;
         this.initializing = initializing;
-        this.aliasMapsMap = new ConcurrentHashMap<>();
+        this.aliasMapsMap = Map.of();
         this.doUpdateConfiguration = doUpdateConfiguration;
         this.sendChangeEvent = sendChangeEvent;
 
@@ -99,27 +103,26 @@ class AliasHandler {
      * Actual initializer. Guards itself against concurrent use by using a
      * ReentrantLock. Does nothing if the resource resolver has already been
      * null-ed.
-     *
-     * @return true if the optimizedAliasResolution is enabled, false otherwise
      */
-    protected boolean initializeAliases() {
+    protected void initializeAliases() {
 
         this.initializing.lock();
         try {
+            this.cacheIsInitialized = false;
+
             // already disposed?
             if (this.factory == null) {
-                return false;
+                return;
             }
 
             List<String> conflictingAliases = new ArrayList<>();
             List<String> invalidAliases = new ArrayList<>();
 
-            boolean isOptimizeAliasResolutionEnabled = this.factory.isOptimizeAliasResolutionEnabled();
-
             // optimization made in SLING-2521
-            if (isOptimizeAliasResolutionEnabled) {
+            if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 try {
                     this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
+                    this.cacheIsInitialized = true;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -130,29 +133,29 @@ class AliasHandler {
                     } else if (!conflictingAliases.isEmpty()) {
                         log.warn("There are {} conflicting aliases: {}", conflictingAliases.size(), conflictingAliases);
                     }
+
                     if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
                         log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
                     } else if (!invalidAliases.isEmpty()) {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
                 } catch (final Exception e) {
-
+                    // unmodifiable
+                    this.aliasMapsMap = Map.of();
                     logDisableAliasOptimization(e);
-
-                    // disable optimize alias resolution
-                    isOptimizeAliasResolutionEnabled = false;
                 }
             }
 
             doUpdateConfiguration.run();
             sendChangeEvent.run();
-
-            return isOptimizeAliasResolutionEnabled;
-
         } finally {
 
             this.initializing.unlock();
         }
+    }
+
+    boolean usesCache() {
+        return this.cacheIsInitialized;
     }
 
     boolean doAddAlias(final Resource resource) {
