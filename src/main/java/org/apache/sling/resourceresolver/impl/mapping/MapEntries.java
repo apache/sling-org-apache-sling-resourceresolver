@@ -110,8 +110,6 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
     private final StringInterpolationProvider stringInterpolationProvider;
 
-    private final boolean useOptimizeAliasResolution;
-
     AliasHandler ah;
     VanityPathHandler vph;
 
@@ -132,8 +130,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.ah = new AliasHandler(this.factory, this.initializing, this::doUpdateConfiguration, this::sendChangeEvent);
-
-        this.useOptimizeAliasResolution = ah.initializeAliases();
+        this.ah.initializeAliases();
 
         this.registration = registerResourceChangeListener(bundleContext);
 
@@ -180,8 +177,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
                 boolean changed = vph.doAddVanity(resource);
-                if (this.useOptimizeAliasResolution
-                        && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                if (this.ah.usesCache() && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                     changed |= ah.doAddAlias(resource);
                 }
                 return changed;
@@ -195,7 +191,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
         final boolean isValidVanityPath = vph.isValidVanityPath(path);
-        if (this.useOptimizeAliasResolution || isValidVanityPath) {
+        if (this.ah.usesCache() || isValidVanityPath) {
             this.initializing.lock();
 
             try {
@@ -215,7 +211,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                         }
                         changed |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                     }
-                    if (this.useOptimizeAliasResolution) {
+                    if (this.ah.usesCache()) {
                         changed |= ah.doUpdateAlias(resource);
                     }
 
@@ -239,7 +235,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 changed |= vph.removeVanityPath(target);
             }
         }
-        if (this.useOptimizeAliasResolution) {
+        if (this.ah.usesCache()) {
             final String pathPrefix = path + "/";
             for (final String contentPath : ah.aliasMapsMap.keySet()) {
                 if (path.startsWith(contentPath + "/")
@@ -363,7 +359,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     public boolean isOptimizeAliasResolutionEnabled() {
-        return this.useOptimizeAliasResolution;
+        return this.ah.usesCache();
     }
 
     @Override
