@@ -198,10 +198,12 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 this.refreshResolverIfNecessary(resolverRefreshed);
                 final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
                 if (resource != null) {
-                    boolean changed = false;
+                    boolean vanityPathChanged = false;
+                    boolean aliasChanged = false;
+
                     if (isValidVanityPath) {
                         // we remove the old vanity path first
-                        changed |= vph.doRemoveVanity(path);
+                        vanityPathChanged |= vph.doRemoveVanity(path);
 
                         // add back vanity path
                         Resource contentRsrc = null;
@@ -209,13 +211,13 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                             // there might be a JCR_CONTENT child resource
                             contentRsrc = resource.getChild(JCR_CONTENT);
                         }
-                        changed |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
+                        vanityPathChanged |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                     }
                     if (this.ah.usesCache()) {
-                        changed |= ah.doUpdateAlias(resource);
+                        aliasChanged |= ah.doUpdateAlias(resource);
                     }
 
-                    return changed;
+                    return vanityPathChanged || aliasChanged;
                 }
             } finally {
                 this.initializing.unlock();
@@ -226,13 +228,15 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     private boolean removeResource(final String path, final AtomicBoolean resolverRefreshed) {
-        boolean changed = false;
         final String actualContentPath = getActualContentPath(path);
         final String actualContentPathPrefix = actualContentPath + "/";
 
+        boolean vanityPathChanged = false;
+        boolean aliasChanged = false;
+
         for (final String target : vph.getVanityPathMappings().keySet()) {
             if (target.startsWith(actualContentPathPrefix) || target.equals(actualContentPath)) {
-                changed |= vph.removeVanityPath(target);
+                vanityPathChanged |= vph.removeVanityPath(target);
             }
         }
         if (this.ah.usesCache()) {
@@ -241,12 +245,12 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 if (path.startsWith(contentPath + "/")
                         || path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
-                    changed |= ah.removeAlias(
+                    aliasChanged |= ah.removeAlias(
                             resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
                 }
             }
         }
-        return changed;
+        return vanityPathChanged || aliasChanged;
     }
 
     /**
