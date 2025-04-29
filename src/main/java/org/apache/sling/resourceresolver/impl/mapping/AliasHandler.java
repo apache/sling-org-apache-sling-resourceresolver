@@ -73,9 +73,10 @@ class AliasHandler {
      * The key of the map is the parent path, while the value is a map with the
      * resource name as key and the actual aliases as values
      */
+    @NotNull
     Map<String, Map<String, Collection<String>>> aliasMapsMap;
 
-    boolean mapIsInitialized = false;
+    boolean cacheIsInitialized = false;
 
     final AtomicLong aliasResourcesOnStartup;
     final AtomicLong detectedConflictingAliases;
@@ -88,7 +89,7 @@ class AliasHandler {
             Runnable sendChangeEvent) {
         this.factory = factory;
         this.initializing = initializing;
-        this.aliasMapsMap = new ConcurrentHashMap<>();
+        this.aliasMapsMap = Map.of();
         this.doUpdateConfiguration = doUpdateConfiguration;
         this.sendChangeEvent = sendChangeEvent;
 
@@ -110,7 +111,7 @@ class AliasHandler {
 
         this.initializing.lock();
         try {
-            this.mapIsInitialized = false;
+            this.cacheIsInitialized = false;
 
             // already disposed?
             if (this.factory == null) {
@@ -124,7 +125,7 @@ class AliasHandler {
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 try {
                     this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
-                    this.mapIsInitialized = true;
+                    this.cacheIsInitialized = true;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -141,9 +142,9 @@ class AliasHandler {
                     } else if (!invalidAliases.isEmpty()) {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
-
                 } catch (final Exception e) {
-                    this.aliasMapsMap = new ConcurrentHashMap<>();
+                    // unmodifiable
+                    this.aliasMapsMap = Map.of();
                     logDisableAliasOptimization(e);
                 }
             }
@@ -151,16 +152,17 @@ class AliasHandler {
             doUpdateConfiguration.run();
             sendChangeEvent.run();
         } finally {
+
             this.initializing.unlock();
         }
     }
 
     boolean usesCache() {
-        return this.mapIsInitialized;
+        return this.cacheIsInitialized;
     }
 
     boolean doAddAlias(final Resource resource) {
-        if (mapIsInitialized) {
+        if (cacheIsInitialized) {
             return loadAlias(resource, this.aliasMapsMap, null, null);
         } else {
             return false;
@@ -258,7 +260,7 @@ class AliasHandler {
      * @return {@code true} if any change
      */
     boolean doUpdateAlias(final Resource resource) {
-        if (!mapIsInitialized) {
+        if (!cacheIsInitialized) {
             return false;
         } else {
             return doUpdateAliasInMap(resource);
@@ -302,7 +304,7 @@ class AliasHandler {
 
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
         Map<String, Collection<String>> result =
-                mapIsInitialized ? getAliasMapFromCache(parentPath) : getAliasMapFromRepo(parentPath);
+                cacheIsInitialized ? getAliasMapFromCache(parentPath) : getAliasMapFromRepo(parentPath);
         return result != null ? result : Collections.emptyMap();
     }
 
