@@ -175,6 +175,15 @@ class AliasHandler {
      */
     boolean removeAlias(
             ResourceResolver resolver, final String contentPath, final String path, final Runnable notifyOfChange) {
+        if (cacheIsInitialized) {
+            return removeAliasInMap(resolver, contentPath, path, notifyOfChange);
+        } else {
+            return false;
+        }
+    }
+
+    private boolean removeAliasInMap(
+            ResourceResolver resolver, final String contentPath, final String path, final Runnable notifyOfChange) {
 
         final String resourcePath = computeResourcePath(contentPath, path);
 
@@ -257,10 +266,10 @@ class AliasHandler {
      * @return {@code true} if any change
      */
     boolean doUpdateAlias(final Resource resource) {
-        if (!cacheIsInitialized) {
-            return false;
-        } else {
+        if (cacheIsInitialized) {
             return doUpdateAliasInMap(resource);
+        } else {
+            return false;
         }
     }
 

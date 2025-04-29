@@ -237,17 +237,15 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 vanityPathChanged |= vph.removeVanityPath(target);
             }
         }
-        if (this.ah.usesCache()) {
-            final String pathPrefix = path + "/";
-            for (final String contentPath : ah.aliasMapsMap.keySet()) {
-                if (path.startsWith(contentPath + "/")
-                        || path.equals(contentPath)
-                        || contentPath.startsWith(pathPrefix)) {
-                    aliasChanged |= ah.removeAlias(
-                            resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
-                }
+
+        final String pathPrefix = path + "/";
+        for (final String contentPath : ah.aliasMapsMap.keySet()) {
+            if (path.startsWith(contentPath + "/") || path.equals(contentPath) || contentPath.startsWith(pathPrefix)) {
+                aliasChanged |= ah.removeAlias(
+                        resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
             }
         }
+
         return vanityPathChanged || aliasChanged;
     }
 
