@@ -52,7 +52,6 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
-import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.BundleContext;
@@ -176,77 +175,78 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             this.refreshResolverIfNecessary(resolverRefreshed);
             final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
             if (resource != null) {
-                boolean changed = vph.doAddVanity(resource);
-                if (this.ah.usesCache() && resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
-                    changed |= ah.doAddAlias(resource);
-                }
-                return changed;
+                boolean vanityPathAdded = vph.doAddVanity(resource);
+                boolean aliasAdded = ah.doAddAlias(resource);
+                return vanityPathAdded || aliasAdded;
+            } else {
+                return false;
             }
-
-            return false;
         } finally {
             this.initializing.unlock();
         }
     }
 
     private boolean updateResource(final String path, final AtomicBoolean resolverRefreshed) {
-        final boolean isValidVanityPath = vph.isValidVanityPath(path);
-        if (this.ah.usesCache() || isValidVanityPath) {
-            this.initializing.lock();
 
-            try {
-                this.refreshResolverIfNecessary(resolverRefreshed);
-                final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
-                if (resource != null) {
-                    boolean changed = false;
-                    if (isValidVanityPath) {
-                        // we remove the old vanity path first
-                        changed |= vph.doRemoveVanity(path);
+        this.initializing.lock();
 
-                        // add back vanity path
-                        Resource contentRsrc = null;
-                        if (!resource.getName().equals(JCR_CONTENT)) {
-                            // there might be a JCR_CONTENT child resource
-                            contentRsrc = resource.getChild(JCR_CONTENT);
-                        }
-                        changed |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
+        try {
+            this.refreshResolverIfNecessary(resolverRefreshed);
+
+            final Resource resource = this.resolver != null ? resolver.getResource(path) : null;
+
+            final boolean isValidVanityPath = vph.isValidVanityPath(path);
+
+            if (resource != null) {
+
+                boolean vanityPathChanged = false;
+                boolean aliasChanged = false;
+
+                if (isValidVanityPath) {
+                    // we remove the old vanity path first
+                    vanityPathChanged |= vph.doRemoveVanity(path);
+
+                    // add back vanity path
+                    Resource contentRsrc = null;
+                    if (!resource.getName().equals(JCR_CONTENT)) {
+                        // there might be a JCR_CONTENT child resource
+                        contentRsrc = resource.getChild(JCR_CONTENT);
                     }
-                    if (this.ah.usesCache()) {
-                        changed |= ah.doUpdateAlias(resource);
-                    }
-
-                    return changed;
+                    vanityPathChanged |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                 }
-            } finally {
-                this.initializing.unlock();
+
+                aliasChanged |= ah.doUpdateAlias(resource);
+                return vanityPathChanged || aliasChanged;
             }
+        } finally {
+            this.initializing.unlock();
         }
 
         return false;
     }
 
     private boolean removeResource(final String path, final AtomicBoolean resolverRefreshed) {
-        boolean changed = false;
         final String actualContentPath = getActualContentPath(path);
         final String actualContentPathPrefix = actualContentPath + "/";
 
+        boolean vanityPathChanged = false;
+        boolean aliasChanged = false;
+
         for (final String target : vph.getVanityPathMappings().keySet()) {
             if (target.startsWith(actualContentPathPrefix) || target.equals(actualContentPath)) {
-                changed |= vph.removeVanityPath(target);
+                vanityPathChanged |= vph.removeVanityPath(target);
             }
         }
-        if (this.ah.usesCache()) {
-            final String pathPrefix = path + "/";
-            for (final String contentPath : ah.aliasMapsMap.keySet()) {
-                if (path.startsWith(contentPath + "/")
-                        || path.equals(contentPath)
-                        || contentPath.startsWith(pathPrefix)) {
-                    changed |= ah.removeAlias(
-                            resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
-                }
+
+        final String pathPrefix = path + "/";
+        for (final String contentPath : ah.aliasMapsMap.keySet()) {
+            if (path.startsWith(contentPath + "/") || path.equals(contentPath) || contentPath.startsWith(pathPrefix)) {
+                aliasChanged |= ah.removeAlias(
+                        resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
             }
         }
-        return changed;
+
+        return vanityPathChanged || aliasChanged;
     }
 
     /**
