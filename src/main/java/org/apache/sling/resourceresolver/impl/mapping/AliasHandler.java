@@ -343,7 +343,7 @@ class AliasHandler {
         return result;
     }
 
-    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(final Resource parent) {
+    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(@Nullable final Resource parent) {
 
         Map<String, Collection<String>> result = null;
 
