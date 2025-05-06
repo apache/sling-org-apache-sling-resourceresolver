@@ -69,14 +69,19 @@ class AliasHandler {
     private final Runnable doUpdateConfiguration;
     private final Runnable sendChangeEvent;
 
+    // static value for the case when cache is not (yet) not initialized
+    private static final Map<String, Map<String, Collection<String>>> UNITIALIZED_MAP = Collections.emptyMap();
+
     /**
      * The key of the map is the parent path, while the value is a map with the
-     * resource name as key and the actual aliases as values
+     * resource name as key and the actual aliases as values.
+     * <p>
+     * The only way this map changes away from {@link #UNITIALIZED_MAP} is when
+     * alias initialization finished successfully.
      */
+    // TODO: check for potential concurrency issues (SLING-12771)
     @NotNull
-    Map<String, Map<String, Collection<String>>> aliasMapsMap;
-
-    boolean cacheIsInitialized = false;
+    Map<String, Map<String, Collection<String>>> aliasMapsMap = UNITIALIZED_MAP;
 
     final AtomicLong aliasResourcesOnStartup;
     final AtomicLong detectedConflictingAliases;
@@ -89,7 +94,6 @@ class AliasHandler {
             Runnable sendChangeEvent) {
         this.factory = factory;
         this.initializing = initializing;
-        this.aliasMapsMap = Map.of();
         this.doUpdateConfiguration = doUpdateConfiguration;
         this.sendChangeEvent = sendChangeEvent;
 
@@ -110,9 +114,12 @@ class AliasHandler {
     protected void initializeAliases() {
 
         this.initializing.lock();
-        try {
-            this.cacheIsInitialized = false;
 
+        // as this can be called multiple times, we need to reset
+        // the map here
+        this.aliasMapsMap = UNITIALIZED_MAP;
+
+        try {
             // already disposed?
             if (this.factory == null) {
                 return;
@@ -125,7 +132,6 @@ class AliasHandler {
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 try {
                     this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
-                    this.cacheIsInitialized = true;
 
                     // warn if there are more than a few defunct aliases
                     if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
@@ -143,8 +149,7 @@ class AliasHandler {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
                 } catch (final Exception e) {
-                    // unmodifiable
-                    this.aliasMapsMap = Map.of();
+                    this.aliasMapsMap = UNITIALIZED_MAP;
                     logDisableAliasOptimization(e);
                 }
             }
@@ -152,17 +157,16 @@ class AliasHandler {
             doUpdateConfiguration.run();
             sendChangeEvent.run();
         } finally {
-
             this.initializing.unlock();
         }
     }
 
     boolean usesCache() {
-        return this.cacheIsInitialized;
+        return this.aliasMapsMap != UNITIALIZED_MAP;
     }
 
     boolean doAddAlias(final Resource resource) {
-        if (cacheIsInitialized) {
+        if (this.aliasMapsMap != UNITIALIZED_MAP) {
             return loadAlias(resource, this.aliasMapsMap, null, null);
         } else {
             return false;
@@ -177,6 +181,15 @@ class AliasHandler {
      * @return {@code true} if a change happened
      */
     boolean removeAlias(
+            ResourceResolver resolver, final String contentPath, final String path, final Runnable notifyOfChange) {
+        if (this.aliasMapsMap != UNITIALIZED_MAP) {
+            return removeAliasInMap(resolver, contentPath, path, notifyOfChange);
+        } else {
+            return false;
+        }
+    }
+
+    private boolean removeAliasInMap(
             ResourceResolver resolver, final String contentPath, final String path, final Runnable notifyOfChange) {
 
         final String resourcePath = computeResourcePath(contentPath, path);
@@ -260,10 +273,10 @@ class AliasHandler {
      * @return {@code true} if any change
      */
     boolean doUpdateAlias(final Resource resource) {
-        if (!cacheIsInitialized) {
-            return false;
-        } else {
+        if (this.aliasMapsMap != UNITIALIZED_MAP) {
             return doUpdateAliasInMap(resource);
+        } else {
+            return false;
         }
     }
 
@@ -303,8 +316,9 @@ class AliasHandler {
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
-        Map<String, Collection<String>> result =
-                cacheIsInitialized ? getAliasMapFromCache(parentPath) : getAliasMapFromRepo(parentPath);
+        Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
+                ? getAliasMapFromCache(parentPath)
+                : getAliasMapFromRepo(parentPath);
         return result != null ? result : Collections.emptyMap();
     }
 
