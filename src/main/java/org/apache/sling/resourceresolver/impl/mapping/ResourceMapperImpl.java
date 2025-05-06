@@ -252,17 +252,16 @@ public class ResourceMapperImpl implements ResourceMapper {
 
     /**
      * Resolve the aliases for the given resource by a lookup in MapEntries
-     * @param path
-     * @return
+     * @param path path for which to lookup aliases
+     * @return collection of aliases for that resource
      */
     private Collection<String> readAliases(String path) {
         String parentPath = ResourceUtil.getParent(path);
         if (parentPath == null) {
             return Collections.emptyList();
+        } else {
+            return mapEntries.getAliasMap(parentPath).getOrDefault(ResourceUtil.getName(path), Collections.emptyList());
         }
-        String name = ResourceUtil.getName(path);
-
-        return mapEntries.getAliasMap(parentPath).getOrDefault(name, Collections.emptyList());
     }
 
     private void populateMappingsFromMapEntries(
