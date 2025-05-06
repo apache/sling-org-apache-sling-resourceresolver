@@ -315,32 +315,33 @@ class AliasHandler {
         }
     }
 
-    public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
+    public @NotNull Map<String, Collection<String>> getAliasMap(@Nullable final String parentPath) {
         Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
                 ? getAliasMapFromCache(parentPath)
                 : getAliasMapFromRepo(parentPath);
         return result != null ? result : Collections.emptyMap();
     }
 
-    private @Nullable Map<String, Collection<String>> getAliasMapFromCache(final String parentPath) {
+    private @Nullable Map<String, Collection<String>> getAliasMapFromCache(@Nullable final String parentPath) {
         return aliasMapsMap.get(parentPath);
     }
 
     // TODO: there's an opportunity for optimization when the caller already has a Resource
-    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(final String parentPath) {
+    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(@Nullable final String parentPath) {
 
-        Map<String, Collection<String>> result = null;
+        if (parentPath == null) {
+            return null;
+        } else {
+            try (final ResourceResolver resolver =
+                    factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
 
-        try (final ResourceResolver resolver =
-                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
-
-            Resource parent = resolver.getResource(parentPath);
-            result = getAliasMapFromRepo(parent);
-        } catch (LoginException ex) {
-            log.error("Could not obtain resolver", ex);
+                Resource parent = resolver.getResource(parentPath);
+                return getAliasMapFromRepo(parent);
+            } catch (LoginException ex) {
+                log.error("Could not obtain resolver", ex);
+                return null;
+            }
         }
-
-        return result;
     }
 
     private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(@Nullable final Resource parent) {
