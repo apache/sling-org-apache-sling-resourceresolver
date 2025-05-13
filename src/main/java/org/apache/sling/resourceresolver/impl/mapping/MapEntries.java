@@ -200,7 +200,6 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             if (resource != null) {
 
                 boolean vanityPathChanged = false;
-                boolean aliasChanged = false;
 
                 if (isValidVanityPath) {
                     // we remove the old vanity path first
@@ -215,7 +214,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                     vanityPathChanged |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                 }
 
-                aliasChanged |= ah.doUpdateAlias(resource);
+                boolean aliasChanged = ah.doUpdateAlias(resource);
                 return vanityPathChanged || aliasChanged;
             }
         } finally {
