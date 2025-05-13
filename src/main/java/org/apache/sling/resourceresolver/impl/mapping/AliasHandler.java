@@ -343,7 +343,7 @@ class AliasHandler {
                 Resource parent = resolver.getResource(parentPath);
                 return getAliasMapFromRepo(parent);
             } catch (LoginException ex) {
-                log.error("Could not obtain resolver", ex);
+                log.error("Could not obtain resolver to resolve any aliases from repository", ex);
                 return null;
             }
         }
