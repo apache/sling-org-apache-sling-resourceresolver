@@ -232,7 +232,6 @@ public class ResourceMapperImpl implements ResourceMapper {
     }
 
     private void resolveAliases(Resource res, PathGenerator pathBuilder) {
-        Resource current = res;
         String path = res.getPath();
 
         while (path != null) {
