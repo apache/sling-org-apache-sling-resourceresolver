@@ -930,7 +930,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         final String parentPath = parent.getPath();
         logger.debug("getChildInternal: looking up {} in {}", childName, parentPath);
 
-        final Optional<String> aliasedResourceName = factory.getMapEntries().getAliasMap(parentPath).entrySet().stream()
+        final Optional<String> aliasedResourceName = factory.getMapEntries().getAliasMap(parent).entrySet().stream()
                 .filter(e -> e.getValue().contains(childName))
                 .findFirst()
                 .map(Map.Entry::getKey);
