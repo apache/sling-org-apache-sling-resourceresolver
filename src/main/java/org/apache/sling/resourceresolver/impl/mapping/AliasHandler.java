@@ -21,6 +21,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,8 @@ class AliasHandler {
 
     private static final String JCR_CONTENT_SUFFIX = "/" + JCR_CONTENT;
 
+    private static final String SERVICE_USER = "mapping";
+
     private MapConfigurationProvider factory;
 
     private final ReentrantLock initializing;
@@ -66,8 +69,8 @@ class AliasHandler {
     private final Runnable doUpdateConfiguration;
     private final Runnable sendChangeEvent;
 
-    // static value when for the case when cache is not (yet) not initialized
-    private static Map<String, Map<String, Collection<String>>> UNITIALIZED_MAP = Collections.emptyMap();
+    // static value for the case when cache is not (yet) not initialized
+    private static final Map<String, Map<String, Collection<String>>> UNITIALIZED_MAP = Collections.emptyMap();
 
     /**
      * The key of the map is the parent path, while the value is a map with the
@@ -76,7 +79,7 @@ class AliasHandler {
      * The only way this map changes away from {@link #UNITIALIZED_MAP} is when
      * alias initialization finished successfully.
      */
-    // TODO: check for pontential concurrency issues (SLING-12771)
+    // TODO: check for potential concurrency issues (SLING-12771)
     @NotNull
     Map<String, Map<String, Collection<String>>> aliasMapsMap = UNITIALIZED_MAP;
 
@@ -85,10 +88,10 @@ class AliasHandler {
     final AtomicLong detectedInvalidAliases;
 
     public AliasHandler(
-            MapConfigurationProvider factory,
-            ReentrantLock initializing,
-            Runnable doUpdateConfiguration,
-            Runnable sendChangeEvent) {
+            @NotNull MapConfigurationProvider factory,
+            @NotNull ReentrantLock initializing,
+            @NotNull Runnable doUpdateConfiguration,
+            @NotNull Runnable sendChangeEvent) {
         this.factory = factory;
         this.initializing = initializing;
         this.doUpdateConfiguration = doUpdateConfiguration;
@@ -145,7 +148,7 @@ class AliasHandler {
                     } else if (!invalidAliases.isEmpty()) {
                         log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
                     }
-                } catch (final Exception e) {
+                } catch (Exception e) {
                     this.aliasMapsMap = UNITIALIZED_MAP;
                     logDisableAliasOptimization(e);
                 }
@@ -162,7 +165,7 @@ class AliasHandler {
         return this.aliasMapsMap != UNITIALIZED_MAP;
     }
 
-    boolean doAddAlias(final Resource resource) {
+    boolean doAddAlias(@NotNull Resource resource) {
         if (this.aliasMapsMap != UNITIALIZED_MAP) {
             return loadAlias(resource, this.aliasMapsMap, null, null);
         } else {
@@ -178,7 +181,10 @@ class AliasHandler {
      * @return {@code true} if a change happened
      */
     boolean removeAlias(
-            ResourceResolver resolver, final String contentPath, final String path, final Runnable notifyOfChange) {
+            @Nullable ResourceResolver resolver,
+            @NotNull String contentPath,
+            @Nullable String path,
+            @NotNull Runnable notifyOfChange) {
         if (this.aliasMapsMap != UNITIALIZED_MAP) {
             return removeAliasInMap(resolver, contentPath, path, notifyOfChange);
         } else {
@@ -187,9 +193,12 @@ class AliasHandler {
     }
 
     private boolean removeAliasInMap(
-            ResourceResolver resolver, final String contentPath, final String path, final Runnable notifyOfChange) {
+            @Nullable ResourceResolver resolver,
+            @NotNull String contentPath,
+            @Nullable String path,
+            @NotNull Runnable notifyOfChange) {
 
-        final String resourcePath = computeResourcePath(contentPath, path);
+        String resourcePath = computeResourcePath(contentPath, path);
 
         if (resourcePath == null) {
             // early exit
@@ -199,7 +208,7 @@ class AliasHandler {
         this.initializing.lock();
 
         try {
-            final Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
+            Map<String, Collection<String>> aliasMapEntry = aliasMapsMap.get(contentPath);
             if (aliasMapEntry != null) {
                 notifyOfChange.run();
                 handleAliasRemoval(resolver, contentPath, resourcePath, aliasMapEntry);
@@ -218,8 +227,8 @@ class AliasHandler {
 
         if (path != null && path.length() > contentPath.length()) {
             // path -> (contentPath + subPath)
-            final String subPath = path.substring(contentPath.length() + 1);
-            final int firstSlash = subPath.indexOf('/');
+            String subPath = path.substring(contentPath.length() + 1);
+            int firstSlash = subPath.indexOf('/');
 
             if (firstSlash == -1) {
                 // no slash in subPath
@@ -256,7 +265,7 @@ class AliasHandler {
             if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                 doAddAlias(containingResource);
             }
-            final Resource child = containingResource.getChild(JCR_CONTENT);
+            Resource child = containingResource.getChild(JCR_CONTENT);
             if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                 doAddAlias(child);
             }
@@ -269,7 +278,7 @@ class AliasHandler {
      * @param resource The resource
      * @return {@code true} if any change
      */
-    boolean doUpdateAlias(final Resource resource) {
+    boolean doUpdateAlias(@NotNull Resource resource) {
         if (this.aliasMapsMap != UNITIALIZED_MAP) {
             return doUpdateAliasInMap(resource);
         } else {
@@ -277,17 +286,16 @@ class AliasHandler {
         }
     }
 
-    private boolean doUpdateAliasInMap(final Resource resource) {
+    private boolean doUpdateAliasInMap(@NotNull Resource resource) {
 
         // resource containing the alias
-        final Resource containingResource = getResourceToBeAliased(resource);
+        Resource containingResource = getResourceToBeAliased(resource);
 
         if (containingResource != null) {
-            final String containingResourceName = containingResource.getName();
-            final String parentPath = ResourceUtil.getParent(containingResource.getPath());
+            String containingResourceName = containingResource.getName();
+            String parentPath = ResourceUtil.getParent(containingResource.getPath());
 
-            final Map<String, Collection<String>> aliasMapEntry =
-                    parentPath == null ? null : aliasMapsMap.get(parentPath);
+            Map<String, Collection<String>> aliasMapEntry = parentPath == null ? null : aliasMapsMap.get(parentPath);
             if (aliasMapEntry != null) {
                 aliasMapEntry.remove(containingResourceName);
                 if (aliasMapEntry.isEmpty()) {
@@ -300,7 +308,7 @@ class AliasHandler {
             if (containingResource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                 changed |= doAddAlias(containingResource);
             }
-            final Resource child = containingResource.getChild(JCR_CONTENT);
+            Resource child = containingResource.getChild(JCR_CONTENT);
             if (child != null && child.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
                 changed |= doAddAlias(child);
             }
@@ -308,32 +316,72 @@ class AliasHandler {
             return changed;
         } else {
             log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
+            return false;
         }
-
-        return false;
     }
 
-    public @NotNull Map<String, Collection<String>> getAliasMap(final String parentPath) {
-        Map<String, Collection<String>> aliasMapForParent = aliasMapsMap.get(parentPath);
-        return aliasMapForParent != null ? aliasMapForParent : Collections.emptyMap();
+    public @NotNull Map<String, Collection<String>> getAliasMap(@Nullable String parentPath) {
+        Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
+                ? getAliasMapFromCache(parentPath)
+                : getAliasMapFromRepo(parentPath);
+        return result != null ? result : Collections.emptyMap();
+    }
+
+    private @Nullable Map<String, Collection<String>> getAliasMapFromCache(@Nullable String parentPath) {
+        return aliasMapsMap.get(parentPath);
+    }
+
+    // TODO: there's an opportunity for optimization when the caller already has a Resource
+    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(@Nullable String parentPath) {
+
+        if (parentPath == null) {
+            return null;
+        } else {
+            try (ResourceResolver resolver =
+                    factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
+
+                Resource parent = resolver.getResource(parentPath);
+                return getAliasMapFromRepo(parent);
+            } catch (LoginException ex) {
+                log.error("Could not obtain resolver to resolve any aliases from repository", ex);
+                return null;
+            }
+        }
+    }
+
+    private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(@Nullable Resource parent) {
+
+        Map<String, Collection<String>> result = null;
+
+        if (parent != null) {
+            Map<String, Map<String, Collection<String>>> localMap = new HashMap<>();
+            List<String> throwAwayDiagnostics = new ArrayList<>();
+            for (Resource child : parent.getChildren()) {
+                loadAlias(child, localMap, throwAwayDiagnostics, throwAwayDiagnostics);
+            }
+            result = localMap.get(parent.getPath());
+        }
+
+        return result;
     }
 
     /**
      * Load aliases - Search for all nodes (except under /jcr:system) below
      * configured alias locations having the sling:alias property
      */
+    @NotNull
     private Map<String, Map<String, Collection<String>>> loadAliases(
-            List<String> conflictingAliases, List<String> invalidAliases) {
+            @Nullable List<String> conflictingAliases, @Nullable List<String> invalidAliases) {
 
-        final Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
+        Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
 
-        try (final ResourceResolver resolver =
-                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
-            final String baseQueryString = generateAliasQuery();
+        try (ResourceResolver resolver =
+                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
+            String baseQueryString = generateAliasQuery();
 
             Iterator<Resource> it;
             try {
-                final String queryStringWithSort =
+                String queryStringWithSort =
                         baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
                 it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
             } catch (QuerySyntaxException ex) {
@@ -383,8 +431,9 @@ class AliasHandler {
     /*
      * generate alias query based on configured alias locations
      */
+    @NotNull
     private String generateAliasQuery() {
-        final Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
+        Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
         StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
 
@@ -414,19 +463,19 @@ class AliasHandler {
      * Load alias given a resource
      */
     private boolean loadAlias(
-            final Resource resource,
-            Map<String, Map<String, Collection<String>>> map,
-            List<String> conflictingAliases,
-            List<String> invalidAliases) {
+            @NotNull Resource resource,
+            @NotNull Map<String, Map<String, Collection<String>>> map,
+            @Nullable List<String> conflictingAliases,
+            @Nullable List<String> invalidAliases) {
 
         // resource containing the alias
-        final Resource containingResource = getResourceToBeAliased(resource);
+        Resource containingResource = getResourceToBeAliased(resource);
 
         if (containingResource == null) {
             log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
             return false;
         } else {
-            final Resource parent = containingResource.getParent();
+            Resource parent = containingResource.getParent();
 
             if (parent == null) {
                 log.warn(
@@ -435,7 +484,7 @@ class AliasHandler {
                         resource.getPath());
                 return false;
             } else {
-                final String[] aliasArray = resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class);
+                String[] aliasArray = resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class);
                 if (aliasArray == null) {
                     return false;
                 } else {
@@ -455,19 +504,19 @@ class AliasHandler {
      * Load alias given an alias array, return success flag.
      */
     private boolean loadAliasFromArray(
-            final String[] aliasArray,
-            Map<String, Map<String, Collection<String>>> map,
-            List<String> conflictingAliases,
-            List<String> invalidAliases,
-            final String resourceName,
-            final String parentPath) {
+            @Nullable String[] aliasArray,
+            @NotNull Map<String, Map<String, Collection<String>>> map,
+            @Nullable List<String> conflictingAliases,
+            @Nullable List<String> invalidAliases,
+            @NotNull String resourceName,
+            @NotNull String parentPath) {
 
         boolean hasAlias = false;
 
         log.debug("Found alias, total size {}", aliasArray.length);
 
         // the order matters here, the first alias in the array must come first
-        for (final String alias : aliasArray) {
+        for (String alias : aliasArray) {
             if (isAliasInvalid(alias)) {
                 long invalids = detectedInvalidAliases.incrementAndGet();
                 log.warn(
@@ -516,10 +565,10 @@ class AliasHandler {
      * Given a resource, check whether the name is "jcr:content", in which case return the parent resource
      *
      * @param resource resource to check
-     * @return parent of jcr:content resource (may be null), otherwise the resource itself
+     * @return parent of jcr:content resource (can be null), otherwise the resource itself
      */
     @Nullable
-    private Resource getResourceToBeAliased(Resource resource) {
+    private Resource getResourceToBeAliased(@NotNull Resource resource) {
         if (JCR_CONTENT.equals(resource.getName())) {
             return resource.getParent();
         } else {
@@ -530,24 +579,30 @@ class AliasHandler {
     /**
      * Check alias syntax
      */
-    private boolean isAliasInvalid(String alias) {
-        boolean invalid = alias.equals("..") || alias.equals(".") || alias.isEmpty();
-        if (!invalid) {
-            for (final char c : alias.toCharArray()) {
-                // invalid if / or # or a ?
-                if (c == '/' || c == '#' || c == '?') {
-                    invalid = true;
-                    break;
+    private boolean isAliasInvalid(@Nullable String alias) {
+        boolean invalid;
+        if (alias == null) {
+            invalid = true;
+        } else {
+            invalid = alias.equals("..") || alias.equals(".") || alias.isEmpty();
+            if (!invalid) {
+                for (char c : alias.toCharArray()) {
+                    // invalid if / or # or a ?
+                    if (c == '/' || c == '#' || c == '?') {
+                        invalid = true;
+                        break;
+                    }
                 }
             }
         }
         return invalid;
     }
 
-    private Iterator<Resource> queryUnpaged(String query, ResourceResolver resolver) {
+    @NotNull
+    private Iterator<Resource> queryUnpaged(@NotNull String query, @NotNull ResourceResolver resolver) {
         log.debug("start alias query: {}", query);
         long queryStart = System.nanoTime();
-        final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
+        Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
         long queryElapsed = System.nanoTime() - queryStart;
         log.debug("end alias query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
         return it;
@@ -555,7 +610,7 @@ class AliasHandler {
 
     private final AtomicLong lastTimeLogged = new AtomicLong(-1);
 
-    void logDisableAliasOptimization(final Exception e) {
+    void logDisableAliasOptimization(@Nullable Exception e) {
         if (e != null) {
             log.error(
                     "Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.",
