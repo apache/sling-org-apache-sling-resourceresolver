@@ -1174,6 +1174,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
+    public void test_doRemoveAliasNullResolver() throws Exception {
+        removeAlias(mapEntries, null, "/x", null, NOOP);
+    }
+
+    @Test
     public void test_initAliasesAfterDispose() {
         AliasHandler ah = mapEntries.ah;
         mapEntries.dispose();
