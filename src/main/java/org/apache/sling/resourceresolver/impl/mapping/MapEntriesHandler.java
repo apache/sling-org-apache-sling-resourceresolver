@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.sling.api.resource.Resource;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -58,6 +59,11 @@ public interface MapEntriesHandler {
 
         @Override
         public Map<String, Collection<String>> getAliasMap(String parentPath) {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public @NotNull Map<String, Collection<String>> getAliasMap(@NotNull Resource parent) {
             return Collections.emptyMap();
         }
 
@@ -99,6 +105,9 @@ public interface MapEntriesHandler {
      */
     @NotNull
     Map<String, Collection<String>> getAliasMap(@NotNull String parentPath);
+
+    @NotNull
+    Map<String, Collection<String>> getAliasMap(@NotNull Resource parent);
 
     /**
      * Creates an iterator over the possibly applicable mapping entries for resolving a resource
