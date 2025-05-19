@@ -233,16 +233,18 @@ public class ResourceMapperImpl implements ResourceMapper {
 
     private void resolveAliases(Resource res, PathGenerator pathBuilder) {
         String path = res.getPath();
+        Resource current = res;
 
-        while (path != null) {
+        while (path != null && current != null) {
             Collection<String> aliases = Collections.emptyList();
             // read alias only if we can read the resources and it's not a jcr:content leaf
             if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
-                aliases = readAliases(path);
+                aliases = readAliases(current);
             }
             // build the path from the name segments or aliases
             pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
             path = ResourceUtil.getParent(path);
+            current = current.getParent();
             if ("/".equals(path)) {
                 path = null;
             }
@@ -251,15 +253,17 @@ public class ResourceMapperImpl implements ResourceMapper {
 
     /**
      * Resolve the aliases for the given resource by a lookup in MapEntries
-     * @param path path for which to lookup aliases
+     * @param resource resource for which to lookup aliases
      * @return collection of aliases for that resource
      */
-    private Collection<String> readAliases(String path) {
-        String parentPath = ResourceUtil.getParent(path);
-        if (parentPath == null) {
+    private Collection<String> readAliases(Resource resource) {
+        Resource parent = resource.getParent();
+        if (parent == null) {
             return Collections.emptyList();
         } else {
-            return mapEntries.getAliasMap(parentPath).getOrDefault(ResourceUtil.getName(path), Collections.emptyList());
+            return mapEntries
+                    .getAliasMap(parent)
+                    .getOrDefault(ResourceUtil.getName(resource.getPath()), Collections.emptyList());
         }
     }
 
