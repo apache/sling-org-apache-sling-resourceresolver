@@ -327,11 +327,17 @@ class AliasHandler {
         return result != null ? result : Collections.emptyMap();
     }
 
+    public @NotNull Map<String, Collection<String>> getAliasMap(@NotNull Resource parent) {
+        Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
+                ? getAliasMapFromCache(parent.getPath())
+                : getAliasMapFromRepo(parent);
+        return result != null ? result : Collections.emptyMap();
+    }
+
     private @Nullable Map<String, Collection<String>> getAliasMapFromCache(@Nullable String parentPath) {
         return aliasMapsMap.get(parentPath);
     }
 
-    // TODO: there's an opportunity for optimization when the caller already has a Resource
     private @Nullable Map<String, Collection<String>> getAliasMapFromRepo(@Nullable String parentPath) {
 
         if (parentPath == null) {
@@ -340,8 +346,7 @@ class AliasHandler {
             try (ResourceResolver resolver =
                     factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
 
-                Resource parent = resolver.getResource(parentPath);
-                return getAliasMapFromRepo(parent);
+                return getAliasMapFromRepo(resolver.getResource(parentPath));
             } catch (LoginException ex) {
                 log.error("Could not obtain resolver to resolve any aliases from repository", ex);
                 return null;

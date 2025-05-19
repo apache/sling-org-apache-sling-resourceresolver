@@ -367,8 +367,13 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     @Override
-    public @NotNull Map<String, Collection<String>> getAliasMap(final @NotNull String parentPath) {
+    public @NotNull Map<String, Collection<String>> getAliasMap(@NotNull String parentPath) {
         return ah.getAliasMap(parentPath);
+    }
+
+    @Override
+    public @NotNull Map<String, Collection<String>> getAliasMap(@NotNull Resource parent) {
+        return ah.getAliasMap(parent);
     }
 
     /**

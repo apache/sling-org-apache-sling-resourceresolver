@@ -879,55 +879,26 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
         // we do not have a child with the exact name, so we look for
         // a child, whose alias matches the childName
-        if (factory.getMapEntries().isOptimizeAliasResolutionEnabled()) {
-            final String parentPath = parent.getPath();
-            logger.debug(
-                    "getChildInternal: Optimize Alias Resolution is Enabled, looking up {} in {}",
-                    childName,
-                    parentPath);
+        final String parentPath = parent.getPath();
+        logger.debug("getChildInternal: looking up {} in {}", childName, parentPath);
 
-            // optimized alias resolution: aliases are cached by MapEntries
-            final Optional<String> aliasedResourceName =
-                    factory.getMapEntries().getAliasMap(parentPath).entrySet().stream()
-                            .filter(e -> e.getValue().contains(childName))
-                            .findFirst()
-                            .map(Map.Entry::getKey);
-            if (aliasedResourceName.isPresent()) {
-                // we know that MapEntries already has checked for valid aliases
-                final String aliasPath = parentPath + '/' + aliasedResourceName.get();
-                final Resource aliasedChild =
-                        getAbsoluteResourceInternal(parent, ResourceUtil.normalize(aliasPath), EMPTY_PARAMETERS, true);
-                logger.debug("getChildInternal: Found Resource {} with alias {} to use", aliasedChild, childName);
-                return aliasedChild;
-            }
+        final Optional<String> aliasedResourceName = factory.getMapEntries().getAliasMap(parent).entrySet().stream()
+                .filter(e -> e.getValue().contains(childName))
+                .findFirst()
+                .map(Map.Entry::getKey);
+
+        if (aliasedResourceName.isPresent()) {
+            // we know that MapEntries already has checked for valid aliases
+            final String aliasPath = parentPath + '/' + aliasedResourceName.get();
+            final Resource aliasedChild =
+                    getAbsoluteResourceInternal(parent, ResourceUtil.normalize(aliasPath), EMPTY_PARAMETERS, true);
+            logger.debug("getChildInternal: Found Resource {} with alias {} to use", aliasedChild, childName);
+            return aliasedChild;
         } else {
-            if (this.factory.isOptimizeAliasResolutionEnabled()) {
-                this.factory.getMapEntries().logDisableAliasOptimization();
-            }
-            logger.debug("getChildInternal: Optimize Alias Resolution is Disabled");
-            final Iterator<Resource> children = listChildren(parent);
-            while (children.hasNext()) {
-                child = children.next();
-                if (!child.getPath().endsWith(JCR_CONTENT_LEAF)) {
-                    final String[] aliases = ResourceResolverControl.getProperty(child, PROP_ALIAS, String[].class);
-                    if (aliases != null) {
-                        for (final String alias : aliases) {
-                            if (childName.equals(alias)) {
-                                logger.debug(
-                                        "getChildInternal: Found Resource {} with alias {} to use", child, childName);
-                                final Resource aliasedChild = getAbsoluteResourceInternal(
-                                        parent, ResourceUtil.normalize(child.getPath()), EMPTY_PARAMETERS, true);
-                                return aliasedChild;
-                            }
-                        }
-                    }
-                }
-            }
+            // no match for the childName found
+            logger.debug("getChildInternal: Resource {} has no child {}", parent, childName);
+            return null;
         }
-
-        // no match for the childName found
-        logger.debug("getChildInternal: Resource {} has no child {}", parent, childName);
-        return null;
     }
 
     /**
