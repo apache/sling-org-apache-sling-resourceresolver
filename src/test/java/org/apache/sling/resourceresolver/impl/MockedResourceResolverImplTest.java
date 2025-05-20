@@ -514,6 +514,8 @@ public class MockedResourceResolverImplTest {
             ResourceProvider<?> provider,
             String... properties) {
 
+        // build a mocked parent resource so that getParent() can return something meaningful (it is null when we are
+        // already at root level)
         Resource parentResource = fullpath == null || "/".equals(fullpath)
                 ? null
                 : buildResource(
