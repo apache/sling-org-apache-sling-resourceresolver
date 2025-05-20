@@ -40,6 +40,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.mapping.MapEntries;
@@ -499,7 +500,7 @@ public class MockedResourceResolverImplTest {
     }
 
     /**
-     * Build a resource with path, children and resource resolver.
+     * Build a resource with parent, path, children and resource resolver.
      * @param fullpath
      * @param children
      * @param resourceResolver
@@ -512,9 +513,18 @@ public class MockedResourceResolverImplTest {
             ResourceResolver resourceResolver,
             ResourceProvider<?> provider,
             String... properties) {
+
+        // build a mocked parent resource so that getParent() can return something meaningful (it is null when we are
+        // already at root level)
+        Resource parentResource = fullpath == null || "/".equals(fullpath)
+                ? null
+                : buildResource(
+                        ResourceUtil.getParent(fullpath), Collections.emptyList(), resourceResolver, provider, null);
+
         Resource resource = mock(Resource.class);
         Mockito.when(resource.getName()).thenReturn(getResourceName(fullpath));
         Mockito.when(resource.getPath()).thenReturn(fullpath);
+        Mockito.when(resource.getParent()).thenReturn(parentResource);
         ResourceMetadata resourceMetadata = new ResourceMetadata();
         Mockito.when(resource.getResourceMetadata()).thenReturn(resourceMetadata);
         Mockito.when(resource.listChildren()).thenReturn(children.iterator());

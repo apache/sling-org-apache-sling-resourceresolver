@@ -33,7 +33,7 @@ import static org.junit.Assert.assertTrue;
 public class ResourceDecorationTest extends ResourceDecoratorTestBase {
 
     private static final String DECORATED_NAME = "decorated";
-    private static final String DECORATED_PATH = "/decoratedPath";
+    private static final String DECORATED_PATH = "/decorated";
 
     /** Wrap any resource so that its name is DECORATED_NAME */
     protected Resource wrapResourceForTest(Resource resource) {
