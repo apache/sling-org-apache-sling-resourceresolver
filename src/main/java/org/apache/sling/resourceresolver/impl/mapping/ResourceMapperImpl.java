@@ -232,21 +232,23 @@ public class ResourceMapperImpl implements ResourceMapper {
     }
 
     private void resolveAliases(Resource res, PathGenerator pathBuilder) {
-        String path = res.getPath();
         Resource current = res;
 
-        while (path != null && current != null) {
-            Collection<String> aliases = Collections.emptyList();
-            // read alias only if we can read the resources and it's not a jcr:content leaf
-            if (!current.getPath().endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
-                aliases = readAliases(current);
-            }
+        while (current != null) {
+            String name = current.getName();
+
+            // read aliases only if we can read the resources and it's not a jcr:content leaf
+            Collection<String> aliases = name.equals("jcr:content") ? Collections.emptyList() : readAliases(current);
+
             // build the path from the name segments or aliases
-            pathBuilder.insertSegment(aliases, current.getName());
-            path = ResourceUtil.getParent(path);
+            pathBuilder.insertSegment(aliases, name);
+
+            // traverse up
             current = current.getParent();
-            if ("/".equals(path)) {
-                path = null;
+
+            // reached the root? -> stop traversing up
+            if (current != null && current.getParent() == null) {
+                current = null;
             }
         }
     }
