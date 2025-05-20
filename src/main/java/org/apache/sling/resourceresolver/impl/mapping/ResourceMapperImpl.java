@@ -35,6 +35,7 @@ import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -231,17 +232,22 @@ public class ResourceMapperImpl implements ResourceMapper {
         return mappedPaths;
     }
 
-    private void resolveAliases(Resource res, PathGenerator pathBuilder) {
-        Resource current = res;
+    /*
+     * Populate a {@linkplain PathGenerator} based on the aliases of this resource, plus all ancestors
+     * @param resource the resource from which to start
+     * @param pathGenerator path generator to populate
+     */
+    private void resolveAliases(@NotNull Resource resource, @NotNull PathGenerator pathGenerator) {
+        Resource current = resource;
 
         while (current != null) {
             String name = current.getName();
 
-            // read aliases only if we can read the resources and it's not a jcr:content leaf
+            // read aliases only if it's not a jcr:content resource
             Collection<String> aliases = name.equals("jcr:content") ? Collections.emptyList() : readAliases(current);
 
             // build the path from the name segments or aliases
-            pathBuilder.insertSegment(aliases, name);
+            pathGenerator.insertSegment(aliases, name);
 
             // traverse up
             current = current.getParent();
@@ -258,7 +264,7 @@ public class ResourceMapperImpl implements ResourceMapper {
      * @param resource resource for which to lookup aliases
      * @return collection of aliases for that resource
      */
-    private Collection<String> readAliases(Resource resource) {
+    private Collection<String> readAliases(@NotNull Resource resource) {
         Resource parent = resource.getParent();
         if (parent == null) {
             return Collections.emptyList();
