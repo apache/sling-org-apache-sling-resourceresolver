@@ -27,7 +27,6 @@ import java.util.function.UnaryOperator;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.JcrNamespaceMangler;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
@@ -264,14 +263,12 @@ public class ResourceMapperImpl implements ResourceMapper {
      * @param resource resource for which to lookup aliases
      * @return collection of aliases for that resource
      */
-    private Collection<String> readAliases(@NotNull Resource resource) {
+    private @NotNull Collection<String> readAliases(@NotNull Resource resource) {
         Resource parent = resource.getParent();
         if (parent == null) {
             return Collections.emptyList();
         } else {
-            return mapEntries
-                    .getAliasMap(parent)
-                    .getOrDefault(ResourceUtil.getName(resource.getPath()), Collections.emptyList());
+            return mapEntries.getAliasMap(parent).getOrDefault(resource.getName(), Collections.emptyList());
         }
     }
 
