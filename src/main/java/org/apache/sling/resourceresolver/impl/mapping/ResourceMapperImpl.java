@@ -238,11 +238,11 @@ public class ResourceMapperImpl implements ResourceMapper {
         while (path != null && current != null) {
             Collection<String> aliases = Collections.emptyList();
             // read alias only if we can read the resources and it's not a jcr:content leaf
-            if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
+            if (!current.getPath().endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
                 aliases = readAliases(current);
             }
             // build the path from the name segments or aliases
-            pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
+            pathBuilder.insertSegment(aliases, current.getName());
             path = ResourceUtil.getParent(path);
             current = current.getParent();
             if ("/".equals(path)) {
