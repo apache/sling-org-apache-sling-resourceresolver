@@ -355,11 +355,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.ah.initializeAliases();
 
         // "/parent" has aliases both from "/parent/node" and "parent/node/jcr:content"
-        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
-        assertNotNull(aliasMap);
-        assertTrue(aliasMap.containsKey("node"));
-        assertEquals(2, aliasMap.get("node").size());
-        assertTrue("alias", aliasMap.get("node").containsAll(List.of("alias", "contentalias")));
+        Map<String, Collection<String>> parentAliasMap = mapEntries.getAliasMap("/parent");
+        assertNotNull(parentAliasMap);
+        assertTrue(parentAliasMap.containsKey("node"));
+        assertEquals(2, parentAliasMap.get("node").size());
+        assertTrue("alias", parentAliasMap.get("node").containsAll(List.of("alias", "contentalias")));
 
         // "/parent/node" has no aliases
         Map<String, Collection<String>> nodeAliasMap = mapEntries.getAliasMap("/parent/node");
