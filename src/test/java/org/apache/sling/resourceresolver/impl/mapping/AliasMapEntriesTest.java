@@ -324,6 +324,49 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, detectedConflictingAliases.get());
     }
 
+    // checks that alias lists for "x" and "x/jcr:content" are merged
+    @Test
+    public void test_alias_on_parent_and_on_content_child() {
+        Resource parent = mock(Resource.class);
+        when(parent.getPath()).thenReturn("/parent");
+        when(parent.getName()).thenReturn("parent");
+
+        final Resource node = mock(Resource.class);
+        when(node.getParent()).thenReturn(parent);
+        when(node.getPath()).thenReturn("/parent/node");
+        when(node.getName()).thenReturn("node");
+        when(node.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+
+        final Resource content = mock(Resource.class);
+        when(content.getParent()).thenReturn(node);
+        when(content.getPath()).thenReturn("/parent/node/jcr:content");
+        when(content.getName()).thenReturn("jcr:content");
+        when(content.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "contentalias"));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                        return List.of(node, content).iterator();
+                    } else {
+                        return Collections.emptyIterator();
+                    }
+                });
+
+        mapEntries.ah.initializeAliases();
+
+        // "/parent" has aliases both from "/parent/node" and "parent/node/jcr:content"
+        Map<String, Collection<String>> parentAliasMap = mapEntries.getAliasMap("/parent");
+        assertNotNull(parentAliasMap);
+        assertTrue(parentAliasMap.containsKey("node"));
+        assertEquals(2, parentAliasMap.get("node").size());
+        assertTrue("alias", parentAliasMap.get("node").containsAll(List.of("alias", "contentalias")));
+
+        // "/parent/node" has no aliases
+        Map<String, Collection<String>> nodeAliasMap = mapEntries.getAliasMap("/parent/node");
+        assertNotNull(nodeAliasMap);
+        assertEquals(0, nodeAliasMap.size());
+    }
+
     @Test
     public void test_getActualContentPath() throws Exception {
 
