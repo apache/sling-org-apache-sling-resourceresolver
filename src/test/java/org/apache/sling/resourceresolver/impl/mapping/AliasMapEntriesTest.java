@@ -173,23 +173,34 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, path, bool);
     }
 
-    private void internal_test_simple_alias_support(boolean onJcrContent) {
-        prepareMapEntriesForAlias(onJcrContent, false, "alias");
+    private void internal_test_simple_alias_support(boolean onJcrContent, boolean cached) {
+        Resource parent = prepareMapEntriesForAlias(onJcrContent, false, !cached, false, "alias");
         mapEntries.ah.initializeAliases();
-        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
-        assertNotNull(aliasMap);
-        assertTrue(aliasMap.containsKey("child"));
-        assertEquals(List.of("alias"), aliasMap.get("child"));
+
+        Map<String, Collection<String>> aliasMapString = mapEntries.getAliasMap("/parent");
+        assertNotNull(aliasMapString);
+        assertTrue(aliasMapString.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMapString.get("child"));
+
+        Map<String, Collection<String>> aliasMapResource = mapEntries.getAliasMap(parent);
+        assertNotNull(aliasMapResource);
+        assertTrue(aliasMapResource.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMapResource.get("child"));
     }
 
     @Test
     public void test_simple_alias_support() {
-        internal_test_simple_alias_support(false);
+        internal_test_simple_alias_support(false, true);
+    }
+
+    @Test
+    public void test_simple_alias_support_uncached() {
+        internal_test_simple_alias_support(false, false);
     }
 
     @Test
     public void test_simple_alias_support_on_jcr_content() {
-        internal_test_simple_alias_support(true);
+        internal_test_simple_alias_support(true, true);
     }
 
     private void internal_test_simple_multi_alias_support(boolean onJcrContent) {
@@ -263,28 +274,47 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         prepareMapEntriesForAlias(onJcrContent, withNullParent, false, false, aliases);
     }
 
-    private void prepareMapEntriesForAlias(
+    private Resource prepareMapEntriesForAlias(
             boolean onJcrContent,
             boolean withNullParent,
             boolean queryAlwaysThrows,
             boolean pagedQueryThrows,
             String... aliases) {
         Resource parent = mock(Resource.class);
+        Resource result = mock(Resource.class);
+        Resource content = mock(Resource.class);
+
+        when(parent.getChildren()).thenReturn(Set.of(result));
+        when(result.getParent()).thenReturn(null); // should be root
         when(parent.getPath()).thenReturn("/parent");
+        when(parent.getName()).thenReturn("parent");
 
-        final Resource result = mock(Resource.class);
-        final Resource content = mock(Resource.class);
-        final Resource aliasResource = onJcrContent ? content : result;
-
+        when(result.getChildren()).thenReturn(Set.of(content));
         when(result.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
         when(result.getPath()).thenReturn("/parent/child");
         when(result.getName()).thenReturn("child");
 
+        when(content.getChildren()).thenReturn(Set.of());
         when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : result);
         when(content.getPath()).thenReturn("/parent/child/jcr:content");
         when(content.getName()).thenReturn("jcr:content");
 
+        Resource aliasResource = onJcrContent ? content : result;
+
         when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, aliases));
+
+        when(resourceResolver.getResource(anyString())).thenAnswer(invocation -> {
+            String path = invocation.getArgument(0);
+            if (path.equals(parent.getPath())) {
+                return parent;
+            } else if (path.equals(result)) {
+                return result;
+            } else if (path.equals(content)) {
+                return content;
+            } else {
+                return null;
+            }
+        });
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
@@ -298,10 +328,12 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                         } else if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                             return List.of(aliasResource).iterator();
                         } else {
-                            return Collections.emptyIterator();
+                            throw new RuntimeException("unexpected query: " + query);
                         }
                     }
                 });
+
+        return parent;
     }
 
     @Test
