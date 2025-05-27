@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.path.Path;
@@ -202,9 +203,16 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void internal_test_simple_alias_support_throwing_unsupported_operation_exception_exception() {
-        prepareMapEntriesForAlias(false, false, UnsupportedOperationException.class, "foo", "bar");
+        prepareMapEntriesForAlias(false, false, true, false, "foo", "bar");
         mapEntries.ah.initializeAliases();
         assertFalse(mapEntries.ah.usesCache());
+    }
+
+    @Test
+    public void internal_test_simple_alias_support_throwing_query_syntax_exception_exception() {
+        prepareMapEntriesForAlias(false, false, false, true, "foo", "bar");
+        mapEntries.ah.initializeAliases();
+        assertTrue(mapEntries.ah.usesCache());
     }
 
     @Test
@@ -252,13 +260,14 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private void prepareMapEntriesForAlias(boolean onJcrContent, boolean withNullParent, String... aliases) {
-        prepareMapEntriesForAlias(onJcrContent, withNullParent, null, aliases);
+        prepareMapEntriesForAlias(onJcrContent, withNullParent, false, false, aliases);
     }
 
     private void prepareMapEntriesForAlias(
             boolean onJcrContent,
             boolean withNullParent,
-            Class<? extends Exception> queryThrowsWith,
+            boolean queryAlwaysThrows,
+            boolean pagedQueryThrows,
             String... aliases) {
         Resource parent = mock(Resource.class);
         when(parent.getPath()).thenReturn("/parent");
@@ -277,19 +286,22 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, aliases));
 
-        if (queryThrowsWith == null) {
-            when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
-                    .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                        String query = invocation.getArguments()[0].toString();
-                        if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    String query = invocation.getArgument(0);
+                    if (queryAlwaysThrows) {
+                        throw new UnsupportedOperationException("test case configured to always throw: " + query);
+                    } else {
+                        if (pagedQueryThrows && matchesPagedQuery(query)) {
+                            throw new QuerySyntaxException(
+                                    "test case configured to throw for paged queries", query, "JCR-SQL2");
+                        } else if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                             return List.of(aliasResource).iterator();
                         } else {
                             return Collections.emptyIterator();
                         }
-                    });
-        } else {
-            when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenThrow(queryThrowsWith);
-        }
+                    }
+                });
     }
 
     @Test
