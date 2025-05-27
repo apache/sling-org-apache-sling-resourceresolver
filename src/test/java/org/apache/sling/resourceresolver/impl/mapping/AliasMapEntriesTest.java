@@ -31,6 +31,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -278,7 +280,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         if (queryThrowsWith == null) {
             when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                     .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                        if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                        String query = invocation.getArguments()[0].toString();
+                        if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                             return List.of(aliasResource).iterator();
                         } else {
                             return Collections.emptyIterator();
@@ -308,7 +311,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                    String query = invocation.getArguments()[0].toString();
+                    if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                         return Arrays.asList(result, secondResult).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -345,7 +349,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                    String query = invocation.getArguments()[0].toString();
+                    if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                         return List.of(node, content).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -1227,5 +1232,38 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.dispose();
         ah.initializeAliases();
         assertFalse("alias handler should not have set up cache", ah.usesCache());
+    }
+
+    // utilities for testing alias queries
+
+    // used for paged query of all
+    private static final String AQ_PAGED_START = "SELECT [sling:alias] FROM [nt:base] WHERE "
+            + QueryBuildHelper.excludeSystemPath()
+            + " AND [sling:alias] IS NOT NULL AND FIRST([sling:alias]) >= '";
+    private static final String AQ_PAGED_END = "' ORDER BY FIRST([sling:alias])";
+
+    private static final Pattern AQ_PAGED_PATTERN =
+            Pattern.compile(Pattern.quote(AQ_PAGED_START) + "(?<path>\\p{Alnum}*)" + Pattern.quote(AQ_PAGED_END));
+
+    // used when paged query not available
+    private static final String AQ_SIMPLE = "SELECT [sling:alias] FROM [nt:base] WHERE "
+            + QueryBuildHelper.excludeSystemPath() + " AND [sling:alias] IS NOT NULL";
+
+    // sanity test on matcher
+    @Test
+    public void testMatcher() {
+        assertTrue(AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + AQ_PAGED_END).matches());
+        assertTrue(
+                AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + "xyz" + AQ_PAGED_END).matches());
+        assertEquals(
+                1,
+                AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + "xyz" + AQ_PAGED_END).groupCount());
+        Matcher m1 = AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + "xyz" + AQ_PAGED_END);
+        assertTrue(m1.find());
+        assertEquals("xyz", m1.group("path"));
+    }
+
+    private boolean matchesPagedQuery(String query) {
+        return AQ_PAGED_PATTERN.matcher(query).matches();
     }
 }
