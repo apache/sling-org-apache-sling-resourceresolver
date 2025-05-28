@@ -1055,7 +1055,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         }
         // name should be a name not a path
         if (name.indexOf("/") != -1) {
-            throw new IllegalArgumentException("Name should not contain a slash: " + name);
+            throw new IllegalArgumentException("Name must not contain a slash: " + name);
+        }
+        if (name.chars().allMatch(c -> c == '.')) {
+            throw new IllegalArgumentException("Name must not only consist of dots: " + name);
         }
         final String path;
         if (parent.getPath().equals("/")) {
