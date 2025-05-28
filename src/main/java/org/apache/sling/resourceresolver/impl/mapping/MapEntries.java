@@ -82,6 +82,8 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
     public static final String PROP_REDIRECT_EXTERNAL_STATUS = "sling:status";
 
+    public static final String PROP_USE_FOR_NON_MATCHING_HOSTS = "useForNonMatchingHosts";
+
     /** Key for the global list. */
     private static final String GLOBAL_LIST_KEY = "*";
 
@@ -723,7 +725,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
     private MapEntry getMapEntry(final String url, final int status, long order, final String... redirect) {
         try {
-            return new MapEntry(url, status, false, order, redirect);
+            return new MapEntry(url, status, false, order, false, redirect);
         } catch (IllegalArgumentException iae) {
             // ignore this entry
             log.debug("ignored entry for {} due to exception", url, iae);

@@ -67,6 +67,8 @@ public class MapEntry implements Comparable<MapEntry> {
 
     private long order;
 
+    private final boolean useForNonMatchingHosts;
+
     public static String appendSlash(String path) {
         if (!path.endsWith("/")) {
             path = path.concat("/");
@@ -144,14 +146,14 @@ public class MapEntry implements Comparable<MapEntry> {
             final String redirect = props.get(MapEntries.PROP_REDIRECT_EXTERNAL, String.class);
             if (redirect != null) {
                 final int status = props.get(MapEntries.PROP_REDIRECT_EXTERNAL_STATUS, 302);
-                return new MapEntry(url, status, trailingSlash, 0, redirect);
+                return new MapEntry(url, status, trailingSlash, 0, false, redirect);
             }
 
             final String[] internalRedirectProps =
                     props.get(ResourceResolverImpl.PROP_REDIRECT_INTERNAL, String[].class);
             final String[] internalRedirect = filterRegExp(internalRedirectProps);
             if (internalRedirect != null) {
-                return new MapEntry(url, -1, trailingSlash, 0, internalRedirect);
+                return new MapEntry(url, -1, trailingSlash, 0, false, internalRedirect);
             }
         }
 
@@ -172,6 +174,8 @@ public class MapEntry implements Comparable<MapEntry> {
                 return null;
             }
 
+            final boolean useForNonMatchingHosts = Boolean.TRUE.equals(props.get(MapEntries.PROP_USE_FOR_NON_MATCHING_HOSTS, Boolean.class));
+            
             // ignore potential regular expression url
             if (isRegExp(url)) {
                 LoggerFactory.getLogger(MapEntry.class)
@@ -211,7 +215,7 @@ public class MapEntry implements Comparable<MapEntry> {
                     if (!redir.contains("$")) {
                         MapEntry mapEntry = null;
                         try {
-                            mapEntry = new MapEntry(redir.concat(endHook), status, trailingSlash, 0, url);
+                            mapEntry = new MapEntry(redir.concat(endHook), status, trailingSlash, 0, useForNonMatchingHosts, url);
                         } catch (IllegalArgumentException iae) {
                             // ignore this entry
                             LoggerFactory.getLogger(MapEntry.class)
@@ -234,6 +238,11 @@ public class MapEntry implements Comparable<MapEntry> {
 
     public MapEntry(
             String url, final int status, final boolean trailingSlash, final long order, final String... redirect) {
+        this(url, status, trailingSlash, order, false, redirect);
+    }
+
+    public MapEntry(
+            String url, final int status, final boolean trailingSlash, final long order, final boolean useForNonMatchingHosts, final String... redirect) {
 
         // ensure trailing slashes on redirects if the url
         // ends with a trailing slash
@@ -258,16 +267,18 @@ public class MapEntry implements Comparable<MapEntry> {
         this.redirect = redirect;
         this.status = status;
         this.order = order;
+        this.useForNonMatchingHosts = useForNonMatchingHosts;
     }
 
     /**
-     * Replaces the specified value according to the rules of this entry
-     *
-     * @param value the value to replace
-     * @return a replaced value of <code>null</code> if the value does not match
+     * Replaces the specified url according to the rules of this entry (if it matches).
+     * This may be used for both directions: resolving (incoming) and mapping (outgoing).
+     * 
+     * @param url the url to replace
+     * @return the potential resolved/mapped url(s) or <code>null</code> if the value does not match the pattern of this entry
      */
-    public @Nullable String[] replace(final @NotNull String value) {
-        final Matcher m = urlPattern.matcher(value);
+    public @Nullable String[] replace(final @NotNull String url) {
+        final Matcher m = urlPattern.matcher(url);
         if (m.find()) {
             final String[] redirects = getRedirect();
             final List<String> results = new ArrayList<>(redirects.length);
@@ -277,8 +288,8 @@ public class MapEntry implements Comparable<MapEntry> {
                     // SLING-7881 - if the value is a selector on the root resource then the
                     // result will need to remove the trailing slash from the path
                     if (redirect.length() > 1 && redirect.endsWith("/")) {
-                        if (value.length() > m.end()) {
-                            if ('.' == value.charAt(m.end())) {
+                        if (url.length() > m.end()) {
+                            if ('.' == url.charAt(m.end())) {
                                 // the suffix starts with a dot and the redirect prefix ends with
                                 // a slash so we need to remove the trailing slash from the prefix
                                 // value to make a valid path when they are combined.
@@ -365,6 +376,10 @@ public class MapEntry implements Comparable<MapEntry> {
             buf.append(", internal");
         } else {
             buf.append(", status:").append(getStatus());
+        }
+        
+        if (useForNonMatchingHosts) {
+            buf.append(", useForNonMatchingHosts");
         }
         return buf.toString();
     }

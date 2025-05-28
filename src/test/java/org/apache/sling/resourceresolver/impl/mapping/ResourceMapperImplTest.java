@@ -123,6 +123,8 @@ public class ResourceMapperImplTest {
         resourceProvider.putResource("/content/very/deep/path/with/resources");
         resourceProvider.putResource("/content/virtual");
         resourceProvider.putResource("/content/virtual/foo"); // matches virtual.host.com.80 mapping entry
+        resourceProvider.putResource("/content/multidomain");
+        resourceProvider.putResource("/content/multidomain/foo"); // matches multiple mapping entries
         resourceProvider.putResource("/parent", PROP_ALIAS, "alias-parent"); // parent has alias
         resourceProvider.putResource("/parent/child", PROP_ALIAS, "alias-child"); // child has alias
         resourceProvider.putResource(
@@ -151,6 +153,9 @@ public class ResourceMapperImplTest {
                 "sling:match",
                 "localhost.8080/everywhere");
         resourceProvider.putResource("/etc/map/http/virtual.host.com.80", "sling:internalRedirect", "/content/virtual");
+        
+        resourceProvider.putResource("/etc/map/http/my.host.80", "sling:internalRedirect", "/content/multidomain", "useForNonMatchingHosts", true);
+        resourceProvider.putResource("/etc/map/http/my.other.host.80", "sling:internalRedirect", "/content/multidomain/foo");
 
         // we fake the fact that we are the JCR resource provider since it's the required one
         ctx.registerService(ResourceProvider.class, resourceProvider, PROPERTY_ROOT, "/", PROPERTY_NAME, "JCR");
@@ -349,6 +354,26 @@ public class ResourceMapperImplTest {
                 .verify(resolver, req);
     }
 
+    @Test
+    public void mapResourceWithMultipleDomainMappings() {
+        // first test with a matching host
+        req = mock(HttpServletRequest.class);
+        when(req.getScheme()).thenReturn("http");
+        when(req.getServerName()).thenReturn("my.other.host");
+        when(req.getServerPort()).thenReturn(-1);
+        when(req.getContextPath()).thenReturn("");
+        when(req.getPathInfo()).thenReturn(null);
+
+        ExpectedMappings.existingResource("/content/multidomain/foo")
+                .singleMapping("http://virtual.host.com/foo")
+                .singleMappingWithRequest("/foo")
+                .allMappings("http://virtual.host.com/foo", "/content/virtual/foo")
+                .allMappingsWithRequest("/foo", "/content/virtual/foo")
+                .verify(resolver, req);
+        
+        // then test with a non-matching host
+        
+    }
     /**
      * Validates that a resource with an alias on parent and on child
      *

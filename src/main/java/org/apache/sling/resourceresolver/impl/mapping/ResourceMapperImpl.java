@@ -26,7 +26,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
@@ -39,6 +38,8 @@ import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 public class ResourceMapperImpl implements ResourceMapper {
 
@@ -199,6 +200,7 @@ public class ResourceMapperImpl implements ResourceMapper {
 
         Collections.reverse(mappings);
 
+        // TODO: add sort order
         return new LinkedHashSet<>(mappings);
     }
 
@@ -303,54 +305,65 @@ public class ResourceMapperImpl implements ResourceMapper {
         return mapEntries.getAliasMap(parentPath).getOrDefault(name, Collections.emptyList());
     }
 
+    /** Populate the mappings list with the mapped paths for the given resource paths or aliases
+     * 
+     * @param mappings the list of mappings to populate
+     * @param resourcePaths the resource paths or aliases for which to populate the mappings
+     * @param requestContext the request context or {@code null} if no request context is available
+     */
     private void populateMappingsFromMapEntries(
-            List<String> mappings, List<String> mappedPathList, final RequestContext requestContext) {
-        boolean mappedPathIsUrl = false;
-        for (String mappedPath : mappedPathList) {
-            for (final MapEntry mapEntry : mapEntries.getMapMaps()) {
-                final String[] mappedPaths = mapEntry.replace(mappedPath);
-                if (mappedPaths != null) {
+            List<String> mappings, List<String> resourcePaths, final RequestContext requestContext) {
+        for (String resourcePath : resourcePaths) {
+            String mappedPath = getMappedPath(resourcePath, requestContext);
+            if (mappedPath != null) {
+                mappings.add(mappedPath);
+            }
+        }
+    }
 
-                    logger.debug("map: Match for Entry {}", mapEntry);
+    private String getMappedPath(final String resourcePath, final RequestContext requestContext) {
+        // TODO: collect fallback, but prefer host specific mappings
+        String mappedPath = null;
+        for (final MapEntry mapEntry : mapEntries.getMapMaps()) {
+            final String[] mappedPaths = mapEntry.replace(resourcePath);
+            if (mappedPaths != null) {
 
-                    mappedPathIsUrl = !mapEntry.isInternal();
+                logger.debug("map: Match for Entry {}", mapEntry);
 
-                    if (mappedPathIsUrl && requestContext.hasUri()) {
+                if (!mapEntry.isInternal() && requestContext.hasUri()) {
 
-                        mappedPath = null;
+                    mappedPath = null;
 
-                        for (final String candidate : mappedPaths) {
-                            if (candidate.startsWith(requestContext.getUri())) {
-                                mappedPath = candidate.substring(
-                                        requestContext.getUri().length() - 1);
-                                mappedPathIsUrl = false;
-                                logger.debug(
-                                        "map: Found host specific mapping {} resolving to {}", candidate, mappedPath);
-                                break;
-                            } else if (candidate.startsWith(requestContext.getSchemeWithPrefix())
-                                    && mappedPath == null) {
-                                mappedPath = candidate;
-                            }
+                    for (final String candidate : mappedPaths) {
+                        // strip off scheme and host if same as request context
+                        if (candidate.startsWith(requestContext.getUri())) {
+                            mappedPath = candidate.substring(
+                                    requestContext.getUri().length() - 1);
+                            // this should take precedence over any other mapping
+                            logger.debug(
+                                    "map: Found host specific mapping {} resolving to {}", candidate, mappedPath);
+                            break;
+                        } else if (candidate.startsWith(requestContext.getSchemeWithPrefix())
+                                && mappedPath == null) {
+                            mappedPath = candidate;
                         }
+                    }
 
-                        if (mappedPath == null) {
-                            mappedPath = mappedPaths[0];
-                        }
-
-                    } else {
-
-                        // we can only go with assumptions selecting the first entry
+                    if (mappedPath == null) {
                         mappedPath = mappedPaths[0];
                     }
 
-                    logger.debug("map: MapEntry {} matches, mapped path is {}", mapEntry, mappedPath);
+                } else {
 
-                    mappings.add(mappedPath);
-
-                    break;
+                    // we can only go with assumptions selecting the first entry
+                    mappedPath = mappedPaths[0];
                 }
+
+                logger.debug("map: MapEntry {} matches, mapped path is {}", mapEntry, mappedPath);
+                return mappedPath;
             }
         }
+        return mappedPath;
     }
 
     private class RequestContext {
