@@ -355,7 +355,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    String query = invocation.getArguments()[0].toString();
+                    String query = invocation.getArgument(0);
                     if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                         return Arrays.asList(result, secondResult).iterator();
                     } else {
@@ -393,7 +393,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    String query = invocation.getArguments()[0].toString();
+                    String query = invocation.getArgument(0);
                     if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                         return List.of(node, content).iterator();
                     } else {
