@@ -307,9 +307,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
             String path = invocation.getArgument(0);
             if (path.equals(parent.getPath())) {
                 return parent;
-            } else if (path.equals(result)) {
+            } else if (path.equals(result.getPath())) {
                 return result;
-            } else if (path.equals(content)) {
+            } else if (path.equals(content.getPath())) {
                 return content;
             } else {
                 return null;
