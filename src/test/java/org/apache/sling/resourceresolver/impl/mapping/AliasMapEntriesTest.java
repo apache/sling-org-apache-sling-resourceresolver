@@ -1281,17 +1281,16 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     // utilities for testing alias queries
 
     // used for paged query of all
-    private static final String AQ_PAGED_START = "SELECT [sling:alias] FROM [nt:base] WHERE "
-            + QueryBuildHelper.excludeSystemPath()
-            + " AND [sling:alias] IS NOT NULL AND FIRST([sling:alias]) >= '";
+    private static final String AQ_PAGED_START =
+            "SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL AND FIRST([sling:alias]) >= '";
     private static final String AQ_PAGED_END = "' ORDER BY FIRST([sling:alias])";
 
     private static final Pattern AQ_PAGED_PATTERN =
             Pattern.compile(Pattern.quote(AQ_PAGED_START) + "(?<path>\\p{Alnum}*)" + Pattern.quote(AQ_PAGED_END));
 
     // used when paged query not available
-    private static final String AQ_SIMPLE = "SELECT [sling:alias] FROM [nt:base] WHERE "
-            + QueryBuildHelper.excludeSystemPath() + " AND [sling:alias] IS NOT NULL";
+    private static final String AQ_SIMPLE =
+            "SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL";
 
     // sanity test on matcher
     @Test
