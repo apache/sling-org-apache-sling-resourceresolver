@@ -447,6 +447,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
+        assertTrue("seems no alias query was made", !queryMade.isEmpty());
         String match1 = "(isdescendantnode('/a') OR isdescendantnode('/''b'''))";
         String match2 = "(isdescendantnode('/''b''') OR isdescendantnode('/a'))";
         String actual = queryMade.iterator().next();

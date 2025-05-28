@@ -32,6 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
@@ -440,24 +441,14 @@ class AliasHandler {
     private String generateAliasQuery() {
         Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
-        StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
+        StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE ");
 
         if (allowedLocations.isEmpty()) {
-            baseQuery.append(" ").append(QueryBuildHelper.excludeSystemPath());
+            baseQuery.append(QueryBuildHelper.excludeSystemPath());
         } else {
-            Iterator<String> pathIterator = allowedLocations.iterator();
-            baseQuery.append(" (");
-            String sep = "";
-            while (pathIterator.hasNext()) {
-                String prefix = pathIterator.next();
-                baseQuery
-                        .append(sep)
-                        .append("isdescendantnode('")
-                        .append(QueryBuildHelper.escapeString(prefix))
-                        .append("')");
-                sep = " OR ";
-            }
-            baseQuery.append(")");
+            baseQuery.append(allowedLocations.stream()
+                    .map(location -> "isdescendantnode('" + QueryBuildHelper.escapeString(location) + "')")
+                    .collect(Collectors.joining(" OR ", "(", ")")));
         }
 
         baseQuery.append(" AND [sling:alias] IS NOT NULL");
