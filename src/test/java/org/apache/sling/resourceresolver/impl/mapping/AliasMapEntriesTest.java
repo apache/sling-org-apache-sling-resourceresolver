@@ -18,12 +18,14 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -427,6 +430,29 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         actualContent = (String) method.invoke(mapEntries, "/content/jcr:content");
         assertEquals("/content", actualContent);
+    }
+
+    @Test
+    public void test_allowed_locations_query() throws LoginException, IOException {
+        when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(Set.of("/a", "/'b'"));
+        Set<String> queryMade = new HashSet<>();
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    String query = invocation.getArgument(0);
+                    if (query.contains("alias")) {
+                        queryMade.add(query);
+                    }
+                    return Collections.emptyIterator();
+                });
+
+        new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+
+        String match1 = "(isdescendantnode('/a') OR isdescendantnode('/''b'''))";
+        String match2 = "(isdescendantnode('/''b''') OR isdescendantnode('/a'))";
+        String actual = queryMade.iterator().next();
+        assertTrue(
+                "query should contain '" + match1 + "' (or reversed), but was: '" + actual + "'",
+                actual.contains(match1) || actual.contains(match2));
     }
 
     // SLING-3727
