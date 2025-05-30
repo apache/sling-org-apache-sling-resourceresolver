@@ -18,12 +18,14 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +33,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.path.Path;
@@ -170,23 +176,34 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, path, bool);
     }
 
-    private void internal_test_simple_alias_support(boolean onJcrContent) {
-        prepareMapEntriesForAlias(onJcrContent, false, "alias");
+    private void internal_test_simple_alias_support(boolean onJcrContent, boolean cached) {
+        Resource parent = prepareMapEntriesForAlias(onJcrContent, false, !cached, false, "alias");
         mapEntries.ah.initializeAliases();
-        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
-        assertNotNull(aliasMap);
-        assertTrue(aliasMap.containsKey("child"));
-        assertEquals(List.of("alias"), aliasMap.get("child"));
+
+        Map<String, Collection<String>> aliasMapString = mapEntries.getAliasMap("/parent");
+        assertNotNull(aliasMapString);
+        assertTrue(aliasMapString.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMapString.get("child"));
+
+        Map<String, Collection<String>> aliasMapResource = mapEntries.getAliasMap(parent);
+        assertNotNull(aliasMapResource);
+        assertTrue(aliasMapResource.containsKey("child"));
+        assertEquals(List.of("alias"), aliasMapResource.get("child"));
     }
 
     @Test
     public void test_simple_alias_support() {
-        internal_test_simple_alias_support(false);
+        internal_test_simple_alias_support(false, true);
+    }
+
+    @Test
+    public void test_simple_alias_support_uncached() {
+        internal_test_simple_alias_support(false, false);
     }
 
     @Test
     public void test_simple_alias_support_on_jcr_content() {
-        internal_test_simple_alias_support(true);
+        internal_test_simple_alias_support(true, true);
     }
 
     private void internal_test_simple_multi_alias_support(boolean onJcrContent) {
@@ -200,9 +217,16 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void internal_test_simple_alias_support_throwing_unsupported_operation_exception_exception() {
-        prepareMapEntriesForAlias(false, false, UnsupportedOperationException.class, "foo", "bar");
+        prepareMapEntriesForAlias(false, false, true, false, "foo", "bar");
         mapEntries.ah.initializeAliases();
         assertFalse(mapEntries.ah.usesCache());
+    }
+
+    @Test
+    public void internal_test_simple_alias_support_throwing_query_syntax_exception_exception() {
+        prepareMapEntriesForAlias(false, false, false, true, "foo", "bar");
+        mapEntries.ah.initializeAliases();
+        assertTrue(mapEntries.ah.usesCache());
     }
 
     @Test
@@ -250,43 +274,69 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private void prepareMapEntriesForAlias(boolean onJcrContent, boolean withNullParent, String... aliases) {
-        prepareMapEntriesForAlias(onJcrContent, withNullParent, null, aliases);
+        prepareMapEntriesForAlias(onJcrContent, withNullParent, false, false, aliases);
     }
 
-    private void prepareMapEntriesForAlias(
+    private Resource prepareMapEntriesForAlias(
             boolean onJcrContent,
             boolean withNullParent,
-            Class<? extends Exception> queryThrowsWith,
+            boolean queryAlwaysThrows,
+            boolean pagedQueryThrows,
             String... aliases) {
         Resource parent = mock(Resource.class);
+        Resource result = mock(Resource.class);
+        Resource content = mock(Resource.class);
+
+        when(parent.getChildren()).thenReturn(Set.of(result));
+        when(result.getParent()).thenReturn(null); // should be root
         when(parent.getPath()).thenReturn("/parent");
+        when(parent.getName()).thenReturn("parent");
 
-        final Resource result = mock(Resource.class);
-        final Resource content = mock(Resource.class);
-        final Resource aliasResource = onJcrContent ? content : result;
-
+        when(result.getChildren()).thenReturn(Set.of(content));
         when(result.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
         when(result.getPath()).thenReturn("/parent/child");
         when(result.getName()).thenReturn("child");
 
+        when(content.getChildren()).thenReturn(Set.of());
         when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : result);
         when(content.getPath()).thenReturn("/parent/child/jcr:content");
         when(content.getName()).thenReturn("jcr:content");
 
+        Resource aliasResource = onJcrContent ? content : result;
+
         when(aliasResource.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, aliases));
 
-        if (queryThrowsWith == null) {
-            when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
-                    .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                        if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+        when(resourceResolver.getResource(anyString())).thenAnswer(invocation -> {
+            String path = invocation.getArgument(0);
+            if (path.equals(parent.getPath())) {
+                return parent;
+            } else if (path.equals(result.getPath())) {
+                return result;
+            } else if (path.equals(content.getPath())) {
+                return content;
+            } else {
+                return null;
+            }
+        });
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    String query = invocation.getArgument(0);
+                    if (queryAlwaysThrows) {
+                        throw new UnsupportedOperationException("test case configured to always throw: " + query);
+                    } else {
+                        if (pagedQueryThrows && matchesPagedQuery(query)) {
+                            throw new QuerySyntaxException(
+                                    "test case configured to throw for paged queries", query, "JCR-SQL2");
+                        } else if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                             return List.of(aliasResource).iterator();
                         } else {
-                            return Collections.emptyIterator();
+                            throw new RuntimeException("unexpected query: " + query);
                         }
-                    });
-        } else {
-            when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenThrow(queryThrowsWith);
-        }
+                    }
+                });
+
+        return parent;
     }
 
     @Test
@@ -308,7 +358,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                    String query = invocation.getArgument(0);
+                    if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                         return Arrays.asList(result, secondResult).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -345,7 +396,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    if (invocation.getArguments()[0].toString().contains(ResourceResolverImpl.PROP_ALIAS)) {
+                    String query = invocation.getArgument(0);
+                    if (query.equals(AQ_SIMPLE) || matchesPagedQuery(query)) {
                         return List.of(node, content).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -378,6 +430,30 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         actualContent = (String) method.invoke(mapEntries, "/content/jcr:content");
         assertEquals("/content", actualContent);
+    }
+
+    @Test
+    public void test_allowed_locations_query() throws LoginException, IOException {
+        when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(Set.of("/a", "/'b'"));
+        Set<String> queryMade = new HashSet<>();
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    String query = invocation.getArgument(0);
+                    if (query.contains("alias")) {
+                        queryMade.add(query);
+                    }
+                    return Collections.emptyIterator();
+                });
+
+        new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+
+        assertTrue("seems no alias query was made", !queryMade.isEmpty());
+        String match1 = "(isdescendantnode('/a') OR isdescendantnode('/''b'''))";
+        String match2 = "(isdescendantnode('/''b''') OR isdescendantnode('/a'))";
+        String actual = queryMade.iterator().next();
+        assertTrue(
+                "query should contain '" + match1 + "' (or reversed), but was: '" + actual + "'",
+                actual.contains(match1) || actual.contains(match2));
     }
 
     // SLING-3727
@@ -1227,5 +1303,37 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.dispose();
         ah.initializeAliases();
         assertFalse("alias handler should not have set up cache", ah.usesCache());
+    }
+
+    // utilities for testing alias queries
+
+    // used for paged query of all
+    private static final String AQ_PAGED_START =
+            "SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL AND FIRST([sling:alias]) >= '";
+    private static final String AQ_PAGED_END = "' ORDER BY FIRST([sling:alias])";
+
+    private static final Pattern AQ_PAGED_PATTERN =
+            Pattern.compile(Pattern.quote(AQ_PAGED_START) + "(?<path>\\p{Alnum}*)" + Pattern.quote(AQ_PAGED_END));
+
+    // used when paged query not available
+    private static final String AQ_SIMPLE =
+            "SELECT [sling:alias] FROM [nt:base] WHERE NOT isdescendantnode('/jcr:system') AND [sling:alias] IS NOT NULL";
+
+    // sanity test on matcher
+    @Test
+    public void testMatcher() {
+        assertTrue(AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + AQ_PAGED_END).matches());
+        assertTrue(
+                AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + "xyz" + AQ_PAGED_END).matches());
+        assertEquals(
+                1,
+                AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + "xyz" + AQ_PAGED_END).groupCount());
+        Matcher m1 = AQ_PAGED_PATTERN.matcher(AQ_PAGED_START + "xyz" + AQ_PAGED_END);
+        assertTrue(m1.find());
+        assertEquals("xyz", m1.group("path"));
+    }
+
+    private boolean matchesPagedQuery(String query) {
+        return AQ_PAGED_PATTERN.matcher(query).matches();
     }
 }
