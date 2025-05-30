@@ -362,7 +362,12 @@ class AliasHandler {
             Map<String, Map<String, Collection<String>>> localMap = new HashMap<>();
             List<String> throwAwayDiagnostics = new ArrayList<>();
             for (Resource child : parent.getChildren()) {
-                loadAlias(child, localMap, throwAwayDiagnostics, throwAwayDiagnostics);
+                Resource jcrContentChild = child.getChild("jcr:content");
+                loadAlias(
+                        jcrContentChild == null ? child : jcrContentChild,
+                        localMap,
+                        throwAwayDiagnostics,
+                        throwAwayDiagnostics);
             }
             result = localMap.get(parent.getPath());
         }
