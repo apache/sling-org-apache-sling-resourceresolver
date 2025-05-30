@@ -167,7 +167,7 @@ class AliasHandler {
     }
 
     boolean doAddAlias(@NotNull Resource resource) {
-        if (this.aliasMapsMap != UNITIALIZED_MAP) {
+        if (usesCache()) {
             return loadAlias(resource, this.aliasMapsMap, null, null);
         } else {
             return false;
@@ -186,7 +186,7 @@ class AliasHandler {
             @NotNull String contentPath,
             @Nullable String path,
             @NotNull Runnable notifyOfChange) {
-        if (this.aliasMapsMap != UNITIALIZED_MAP) {
+        if (usesCache()) {
             return removeAliasInMap(resolver, contentPath, path, notifyOfChange);
         } else {
             return false;
@@ -280,7 +280,7 @@ class AliasHandler {
      * @return {@code true} if any change
      */
     boolean doUpdateAlias(@NotNull Resource resource) {
-        if (this.aliasMapsMap != UNITIALIZED_MAP) {
+        if (usesCache()) {
             return doUpdateAliasInMap(resource);
         } else {
             return false;
@@ -322,16 +322,14 @@ class AliasHandler {
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(@Nullable String parentPath) {
-        Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
-                ? getAliasMapFromCache(parentPath)
-                : getAliasMapFromRepo(parentPath);
+        Map<String, Collection<String>> result =
+                usesCache() ? getAliasMapFromCache(parentPath) : getAliasMapFromRepo(parentPath);
         return result != null ? result : Collections.emptyMap();
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(@NotNull Resource parent) {
-        Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
-                ? getAliasMapFromCache(parent.getPath())
-                : getAliasMapFromRepo(parent);
+        Map<String, Collection<String>> result =
+                usesCache() ? getAliasMapFromCache(parent.getPath()) : getAliasMapFromRepo(parent);
         return result != null ? result : Collections.emptyMap();
     }
 
