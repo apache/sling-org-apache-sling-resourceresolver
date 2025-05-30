@@ -521,7 +521,13 @@ public class ResourceResolverImplTest {
             // correct
         }
         try {
-            this.resResolver.create(r, "a", null);
+            this.resResolver.create(r, "....", null);
+            fail("Only dots in name should throw illegal argument exception");
+        } catch (final IllegalArgumentException pe) {
+            // correct
+        }
+        try {
+            this.resResolver.create(r, "a.b", null);
             fail("This should be unsupported.");
         } catch (final UnsupportedOperationException uoe) {
             // correct
