@@ -36,6 +36,7 @@ import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -211,35 +212,44 @@ public class ResourceMapperImpl implements ResourceMapper {
         return mappedPaths;
     }
 
-    private void resolveAliases(Resource res, PathGenerator pathBuilder) {
-        String path = res.getPath();
+    /*
+     * Populate a {@linkplain PathGenerator} based on the aliases of this resource, plus all ancestors
+     * @param resource the resource from which to start
+     * @param pathGenerator path generator to populate
+     */
+    private void resolveAliases(@NotNull Resource resource, @NotNull PathGenerator pathGenerator) {
+        Resource current = resource;
+        String path = current.getPath();
 
-        while (path != null) {
-            Collection<String> aliases = Collections.emptyList();
-            // read alias only if we can read the resources and it's not a jcr:content leaf
-            if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
-                aliases = readAliases(path);
-            }
-            // build the path from the name segments or aliases
-            pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
+        while (path != null && !"/".equals(path)) {
+            String name = ResourceUtil.getName(path);
+
+            // read aliases only if it's not a jcr:content resource, and we actually have a resource
+            Collection<String> aliases =
+                    current == null || name.equals("jcr:content") ? Collections.emptyList() : readAliases(current);
+
+            // build the path segment from the name and the discovered aliases
+            pathGenerator.insertSegment(aliases, name);
+
+            // current can already be or can become null here due to missing access rights
+            current = current != null ? current.getParent() : null;
+
+            // traverse up
             path = ResourceUtil.getParent(path);
-            if ("/".equals(path)) {
-                path = null;
-            }
         }
     }
 
     /**
      * Resolve the aliases for the given resource by a lookup in MapEntries
-     * @param path path for which to lookup aliases
+     * @param resource resource for which to lookup aliases
      * @return collection of aliases for that resource
      */
-    private Collection<String> readAliases(String path) {
-        String parentPath = ResourceUtil.getParent(path);
-        if (parentPath == null) {
+    private @NotNull Collection<String> readAliases(@NotNull Resource resource) {
+        Resource parent = resource.getParent();
+        if (parent == null) {
             return Collections.emptyList();
         } else {
-            return mapEntries.getAliasMap(parentPath).getOrDefault(ResourceUtil.getName(path), Collections.emptyList());
+            return mapEntries.getAliasMap(parent).getOrDefault(resource.getName(), Collections.emptyList());
         }
     }
 
