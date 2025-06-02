@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.function.UnaryOperator;
 
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.JcrNamespaceMangler;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
@@ -35,7 +36,6 @@ import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.helper.URI;
 import org.apache.sling.resourceresolver.impl.helper.URIException;
 import org.apache.sling.resourceresolver.impl.params.ParsedParameters;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -211,44 +211,35 @@ public class ResourceMapperImpl implements ResourceMapper {
         return mappedPaths;
     }
 
-    /*
-     * Populate a {@linkplain PathGenerator} based on the aliases of this resource, plus all ancestors
-     * @param resource the resource from which to start
-     * @param pathGenerator path generator to populate
-     */
-    private void resolveAliases(@NotNull Resource resource, @NotNull PathGenerator pathGenerator) {
-        Resource current = resource;
+    private void resolveAliases(Resource res, PathGenerator pathBuilder) {
+        String path = res.getPath();
 
-        while (current != null) {
-            String name = current.getName();
-
-            // read aliases only if it's not a jcr:content resource
-            Collection<String> aliases = name.equals("jcr:content") ? Collections.emptyList() : readAliases(current);
-
+        while (path != null) {
+            Collection<String> aliases = Collections.emptyList();
+            // read alias only if we can read the resources and it's not a jcr:content leaf
+            if (!path.endsWith(ResourceResolverImpl.JCR_CONTENT_LEAF)) {
+                aliases = readAliases(path);
+            }
             // build the path from the name segments or aliases
-            pathGenerator.insertSegment(aliases, name);
-
-            // traverse up
-            current = current.getParent();
-
-            // reached the root? -> stop traversing up
-            if (current != null && current.getParent() == null) {
-                current = null;
+            pathBuilder.insertSegment(aliases, ResourceUtil.getName(path));
+            path = ResourceUtil.getParent(path);
+            if ("/".equals(path)) {
+                path = null;
             }
         }
     }
 
     /**
      * Resolve the aliases for the given resource by a lookup in MapEntries
-     * @param resource resource for which to lookup aliases
+     * @param path path for which to lookup aliases
      * @return collection of aliases for that resource
      */
-    private @NotNull Collection<String> readAliases(@NotNull Resource resource) {
-        Resource parent = resource.getParent();
-        if (parent == null) {
+    private Collection<String> readAliases(String path) {
+        String parentPath = ResourceUtil.getParent(path);
+        if (parentPath == null) {
             return Collections.emptyList();
         } else {
-            return mapEntries.getAliasMap(parent).getOrDefault(resource.getName(), Collections.emptyList());
+            return mapEntries.getAliasMap(parentPath).getOrDefault(ResourceUtil.getName(path), Collections.emptyList());
         }
     }
 

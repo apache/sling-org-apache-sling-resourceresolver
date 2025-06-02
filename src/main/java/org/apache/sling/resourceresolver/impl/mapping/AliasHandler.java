@@ -32,6 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
@@ -166,7 +167,7 @@ class AliasHandler {
     }
 
     boolean doAddAlias(@NotNull Resource resource) {
-        if (this.aliasMapsMap != UNITIALIZED_MAP) {
+        if (usesCache()) {
             return loadAlias(resource, this.aliasMapsMap, null, null);
         } else {
             return false;
@@ -185,7 +186,7 @@ class AliasHandler {
             @NotNull String contentPath,
             @Nullable String path,
             @NotNull Runnable notifyOfChange) {
-        if (this.aliasMapsMap != UNITIALIZED_MAP) {
+        if (usesCache()) {
             return removeAliasInMap(resolver, contentPath, path, notifyOfChange);
         } else {
             return false;
@@ -279,7 +280,7 @@ class AliasHandler {
      * @return {@code true} if any change
      */
     boolean doUpdateAlias(@NotNull Resource resource) {
-        if (this.aliasMapsMap != UNITIALIZED_MAP) {
+        if (usesCache()) {
             return doUpdateAliasInMap(resource);
         } else {
             return false;
@@ -321,16 +322,14 @@ class AliasHandler {
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(@Nullable String parentPath) {
-        Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
-                ? getAliasMapFromCache(parentPath)
-                : getAliasMapFromRepo(parentPath);
+        Map<String, Collection<String>> result =
+                usesCache() ? getAliasMapFromCache(parentPath) : getAliasMapFromRepo(parentPath);
         return result != null ? result : Collections.emptyMap();
     }
 
     public @NotNull Map<String, Collection<String>> getAliasMap(@NotNull Resource parent) {
-        Map<String, Collection<String>> result = this.aliasMapsMap != UNITIALIZED_MAP
-                ? getAliasMapFromCache(parent.getPath())
-                : getAliasMapFromRepo(parent);
+        Map<String, Collection<String>> result =
+                usesCache() ? getAliasMapFromCache(parent.getPath()) : getAliasMapFromRepo(parent);
         return result != null ? result : Collections.emptyMap();
     }
 
@@ -440,24 +439,14 @@ class AliasHandler {
     private String generateAliasQuery() {
         Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
 
-        StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE");
+        StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE ");
 
         if (allowedLocations.isEmpty()) {
-            baseQuery.append(" ").append(QueryBuildHelper.excludeSystemPath());
+            baseQuery.append(QueryBuildHelper.excludeSystemPath());
         } else {
-            Iterator<String> pathIterator = allowedLocations.iterator();
-            baseQuery.append(" (");
-            String sep = "";
-            while (pathIterator.hasNext()) {
-                String prefix = pathIterator.next();
-                baseQuery
-                        .append(sep)
-                        .append("isdescendantnode('")
-                        .append(QueryBuildHelper.escapeString(prefix))
-                        .append("')");
-                sep = " OR ";
-            }
-            baseQuery.append(")");
+            baseQuery.append(allowedLocations.stream()
+                    .map(location -> "isdescendantnode('" + QueryBuildHelper.escapeString(location) + "')")
+                    .collect(Collectors.joining(" OR ", "(", ")")));
         }
 
         baseQuery.append(" AND [sling:alias] IS NOT NULL");
