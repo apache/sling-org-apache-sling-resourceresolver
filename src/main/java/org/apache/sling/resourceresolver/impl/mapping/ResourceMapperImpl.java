@@ -27,6 +27,7 @@ import java.util.function.UnaryOperator;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.mapping.ResourceMapper;
 import org.apache.sling.resourceresolver.impl.JcrNamespaceMangler;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
@@ -238,23 +239,23 @@ public class ResourceMapperImpl implements ResourceMapper {
      */
     private void resolveAliases(@NotNull Resource resource, @NotNull PathGenerator pathGenerator) {
         Resource current = resource;
+        String path = current.getPath();
 
-        while (current != null) {
-            String name = current.getName();
+        while (!"/".equals(path)) {
+            String name = ResourceUtil.getName(path);
 
-            // read aliases only if it's not a jcr:content resource
-            Collection<String> aliases = name.equals("jcr:content") ? Collections.emptyList() : readAliases(current);
+            // read aliases only if it's not a jcr:content resource, and we actually have a resource
+            Collection<String> aliases =
+                    current == null || name.equals("jcr:content") ? Collections.emptyList() : readAliases(current);
 
-            // build the path from the name segments or aliases
+            // build the path segment from the name and the discoverd aliases
             pathGenerator.insertSegment(aliases, name);
 
-            // traverse up
-            current = current.getParent();
+            // current can already be or can become null here due to missing access rights
+            current = current != null ? current.getParent() : null;
 
-            // reached the root? -> stop traversing up
-            if (current != null && current.getParent() == null) {
-                current = null;
-            }
+            // traverse up
+            path = ResourceUtil.getParent(path);
         }
     }
 
