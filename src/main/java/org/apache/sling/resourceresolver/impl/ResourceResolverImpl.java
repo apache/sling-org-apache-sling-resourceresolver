@@ -83,12 +83,6 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     public static final String PROP_ALIAS = "sling:alias";
 
-    // The suffix of a resource being a content node of some parent
-    // such as nt:file. The slash is included to prevent false
-    // positives for the String.endsWith check for names like
-    // "xyzjcr:content"
-    public static final String JCR_CONTENT_LEAF = "/jcr:content";
-
     protected static final String PARENT_RT_CACHEKEY = ResourceResolverImpl.class.getName() + ".PARENT_RT";
 
     /** The factory which created this resource resolver. */
