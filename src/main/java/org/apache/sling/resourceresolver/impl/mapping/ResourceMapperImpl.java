@@ -241,14 +241,14 @@ public class ResourceMapperImpl implements ResourceMapper {
         Resource current = resource;
         String path = current.getPath();
 
-        while (!"/".equals(path)) {
+        while (path != null && !"/".equals(path)) {
             String name = ResourceUtil.getName(path);
 
             // read aliases only if it's not a jcr:content resource, and we actually have a resource
             Collection<String> aliases =
                     current == null || name.equals("jcr:content") ? Collections.emptyList() : readAliases(current);
 
-            // build the path segment from the name and the discoverd aliases
+            // build the path segment from the name and the discovered aliases
             pathGenerator.insertSegment(aliases, name);
 
             // current can already be or can become null here due to missing access rights
