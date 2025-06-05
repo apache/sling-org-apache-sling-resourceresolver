@@ -462,17 +462,19 @@ class AliasHandler {
             @Nullable List<String> conflictingAliases,
             @Nullable List<String> invalidAliases) {
 
-        // resource containing the alias
+        // resource containing the alias (i.e., the parent of a jcr:content node, otherwise itself)
         Resource containingResource = getResourceToBeAliased(resource);
 
         if (containingResource == null) {
             log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
             return false;
         } else {
+            // we read the aliases from the resource given in the method call parameters
             String[] aliasArray = resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class);
             if (aliasArray == null) {
                 return false;
             } else {
+                // but apply them to the containing resource
                 return loadAliasFromArray(
                         aliasArray,
                         map,
