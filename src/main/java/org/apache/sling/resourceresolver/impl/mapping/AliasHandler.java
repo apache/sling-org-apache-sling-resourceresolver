@@ -469,27 +469,17 @@ class AliasHandler {
             log.warn("containingResource is null for alias on {}, skipping.", resource.getPath());
             return false;
         } else {
-            Resource parent = containingResource.getParent();
-
-            if (parent == null) {
-                log.warn(
-                        "{} is null for alias on {}, skipping.",
-                        containingResource == resource ? "parent" : "grandparent",
-                        resource.getPath());
+            String[] aliasArray = resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class);
+            if (aliasArray == null) {
                 return false;
             } else {
-                String[] aliasArray = resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class);
-                if (aliasArray == null) {
-                    return false;
-                } else {
-                    return loadAliasFromArray(
-                            aliasArray,
-                            map,
-                            conflictingAliases,
-                            invalidAliases,
-                            containingResource.getName(),
-                            parent.getPath());
-                }
+                return loadAliasFromArray(
+                        aliasArray,
+                        map,
+                        conflictingAliases,
+                        invalidAliases,
+                        containingResource.getName(),
+                        ResourceUtil.getParent(containingResource.getPath()));
             }
         }
     }
