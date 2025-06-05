@@ -398,7 +398,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(node.getPath()).thenReturn(nodePath);
         when(node.getName()).thenReturn(ResourceUtil.getName(nodePath));
         when(node.getChildren()).thenReturn(List.of(content));
-        when(node.getChild(eq(ResourceUtil.getName(contentPath)))).thenReturn(content);
+        when(node.getChild(ResourceUtil.getName(contentPath))).thenReturn(content);
         when(node.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
         when(content.getParent()).thenReturn(node);
