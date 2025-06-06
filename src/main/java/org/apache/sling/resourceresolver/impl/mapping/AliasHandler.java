@@ -289,7 +289,7 @@ class AliasHandler {
 
     private boolean doUpdateAliasInMap(@NotNull Resource resource) {
 
-        // resource containing the alias
+        // resource to which the alias applies
         Resource containingResource = getResourceToBeAliased(resource);
 
         if (containingResource != null) {
@@ -361,7 +361,16 @@ class AliasHandler {
             Map<String, Map<String, Collection<String>>> localMap = new HashMap<>();
             List<String> throwAwayDiagnostics = new ArrayList<>();
             for (Resource child : parent.getChildren()) {
-                loadAlias(child, localMap, throwAwayDiagnostics, throwAwayDiagnostics);
+                // ignore jcr:content nodes, they get special treatment
+                if (!JCR_CONTENT.equals(child.getName())) {
+                    loadAlias(child, localMap, throwAwayDiagnostics, throwAwayDiagnostics);
+                    Resource childContentNode = child.getChild(JCR_CONTENT);
+                    // check for jcr:content child node...
+                    if (childContentNode != null) {
+                        // and apply its aliases to the parent node
+                        loadAlias(childContentNode, localMap, throwAwayDiagnostics, throwAwayDiagnostics);
+                    }
+                }
             }
             result = localMap.get(parent.getPath());
         }
