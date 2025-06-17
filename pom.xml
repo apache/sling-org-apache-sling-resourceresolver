@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>org.apache.sling.resourceresolver</artifactId>
-    <version>1.12.10</version>
+    <version>1.12.11-SNAPSHOT</version>
 
     <name>Apache Sling Resource Resolver</name>
     <description>This bundle provides the Resource Resolver and the Resource Resolver Factory.</description>
@@ -37,7 +37,7 @@
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-resourceresolver.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-resourceresolver.git</developerConnection>
-        <tag>org.apache.sling.resourceresolver-1.12.10</tag>
+        <tag>org.apache.sling.resourceresolver-1.12.6</tag>
         <url>https://github.com/apache/sling-org-apache-sling-resourceresolver.git</url>
     </scm>
 
@@ -45,7 +45,7 @@
         <site.jira.version.id>12314286</site.jira.version.id>
         <sling.java.version>11</sling.java.version>
         <site.javadoc.exclude>**.internal.**</site.javadoc.exclude>
-        <project.build.outputTimestamp>1750151620</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1750151693</project.build.outputTimestamp>
     </properties>
 
     <dependencies>
