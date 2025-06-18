@@ -126,39 +126,58 @@ class AliasHandler {
                 return;
             }
 
-            List<String> conflictingAliases = new ArrayList<>();
-            List<String> invalidAliases = new ArrayList<>();
-
             // optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
-                try {
-                    this.aliasMapsMap = this.loadAliases(conflictingAliases, invalidAliases);
-
-                    // warn if there are more than a few defunct aliases
-                    if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
-                        log.warn(
-                                "There are {} conflicting aliases; excerpt: {}",
-                                conflictingAliases.size(),
-                                conflictingAliases);
-                    } else if (!conflictingAliases.isEmpty()) {
-                        log.warn("There are {} conflicting aliases: {}", conflictingAliases.size(), conflictingAliases);
-                    }
-
-                    if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
-                        log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
-                    } else if (!invalidAliases.isEmpty()) {
-                        log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
-                    }
-                } catch (Exception e) {
-                    this.aliasMapsMap = UNITIALIZED_MAP;
-                    logDisableAliasOptimization(e);
-                }
+                AliasInitializer ai = new AliasInitializer();
+                ai.run();
             }
 
             doUpdateConfiguration.run();
             sendChangeEvent.run();
         } finally {
             this.initializing.unlock();
+        }
+    }
+
+    private class AliasInitializer implements Runnable {
+
+        public AliasInitializer() {}
+
+        @Override
+        public void run() {
+            try {
+                execute();
+            } catch (Exception ex) {
+                log.error("alias initializer thread terminated with an exception", ex);
+            }
+        }
+
+        private void execute() {
+            try {
+                List<String> conflictingAliases = new ArrayList<>();
+                List<String> invalidAliases = new ArrayList<>();
+
+                aliasMapsMap = loadAliases(conflictingAliases, invalidAliases);
+
+                // warn if there are more than a few defunct aliases
+                if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                    log.warn(
+                            "There are {} conflicting aliases; excerpt: {}",
+                            conflictingAliases.size(),
+                            conflictingAliases);
+                } else if (!conflictingAliases.isEmpty()) {
+                    log.warn("There are {} conflicting aliases: {}", conflictingAliases.size(), conflictingAliases);
+                }
+
+                if (invalidAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {
+                    log.warn("There are {} invalid aliases; excerpt: {}", invalidAliases.size(), invalidAliases);
+                } else if (!invalidAliases.isEmpty()) {
+                    log.warn("There are {} invalid aliases: {}", invalidAliases.size(), invalidAliases);
+                }
+            } catch (Exception e) {
+                aliasMapsMap = UNITIALIZED_MAP;
+                logDisableAliasOptimization(e);
+            }
         }
     }
 
