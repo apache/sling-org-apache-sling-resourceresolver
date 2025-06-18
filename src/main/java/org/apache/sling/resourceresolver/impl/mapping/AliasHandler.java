@@ -141,8 +141,6 @@ class AliasHandler {
 
     private class AliasInitializer implements Runnable {
 
-        public AliasInitializer() {}
-
         @Override
         public void run() {
             try {
