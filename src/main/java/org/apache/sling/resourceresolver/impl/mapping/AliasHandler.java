@@ -177,6 +177,70 @@ class AliasHandler {
                 logDisableAliasOptimization(e);
             }
         }
+
+        /**
+         * Load aliases - Search for all nodes (except under /jcr:system) below
+         * configured alias locations having the sling:alias property
+         */
+        @NotNull
+        private Map<String, Map<String, Collection<String>>> loadAliases(
+                @Nullable List<String> conflictingAliases, @Nullable List<String> invalidAliases) {
+
+            Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
+
+            try (ResourceResolver resolver =
+                    factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
+                String baseQueryString = generateAliasQuery();
+
+                Iterator<Resource> it;
+                try {
+                    String queryStringWithSort =
+                            baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
+                    it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
+                } catch (QuerySyntaxException ex) {
+                    log.debug("sort with first() not supported, falling back to base query", ex);
+                    it = queryUnpaged(baseQueryString, resolver);
+                } catch (UnsupportedOperationException ex) {
+                    log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+                    it = queryUnpaged(baseQueryString, resolver);
+                }
+
+                log.debug("alias initialization - start");
+                long count = 0;
+                long processStart = System.nanoTime();
+                while (it.hasNext()) {
+                    count += 1;
+                    loadAlias(it.next(), map, conflictingAliases, invalidAliases);
+                }
+                long processElapsed = System.nanoTime() - processStart;
+                long resourcePerSecond =
+                        (count * TimeUnit.SECONDS.toNanos(1) / (processElapsed == 0 ? 1 : processElapsed));
+
+                String diagnostics = "";
+                if (it instanceof PagedQueryIterator) {
+                    PagedQueryIterator pit = (PagedQueryIterator) it;
+
+                    if (!pit.getWarning().isEmpty()) {
+                        log.warn(pit.getWarning());
+                    }
+
+                    diagnostics = pit.getStatistics();
+                }
+
+                log.info(
+                        "alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
+                        count,
+                        TimeUnit.NANOSECONDS.toMillis(processElapsed),
+                        resourcePerSecond,
+                        diagnostics);
+
+                aliasResourcesOnStartup.set(count);
+            } catch (LoginException ex) {
+                log.error("Alias init failed", ex);
+            }
+
+            return map;
+        }
     }
 
     boolean usesCache() {
@@ -393,69 +457,6 @@ class AliasHandler {
         }
 
         return result;
-    }
-
-    /**
-     * Load aliases - Search for all nodes (except under /jcr:system) below
-     * configured alias locations having the sling:alias property
-     */
-    @NotNull
-    private Map<String, Map<String, Collection<String>>> loadAliases(
-            @Nullable List<String> conflictingAliases, @Nullable List<String> invalidAliases) {
-
-        Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
-
-        try (ResourceResolver resolver =
-                factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo(SERVICE_USER))) {
-            String baseQueryString = generateAliasQuery();
-
-            Iterator<Resource> it;
-            try {
-                String queryStringWithSort =
-                        baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
-                it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
-            } catch (QuerySyntaxException ex) {
-                log.debug("sort with first() not supported, falling back to base query", ex);
-                it = queryUnpaged(baseQueryString, resolver);
-            } catch (UnsupportedOperationException ex) {
-                log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-                it = queryUnpaged(baseQueryString, resolver);
-            }
-
-            log.debug("alias initialization - start");
-            long count = 0;
-            long processStart = System.nanoTime();
-            while (it.hasNext()) {
-                count += 1;
-                loadAlias(it.next(), map, conflictingAliases, invalidAliases);
-            }
-            long processElapsed = System.nanoTime() - processStart;
-            long resourcePerSecond = (count * TimeUnit.SECONDS.toNanos(1) / (processElapsed == 0 ? 1 : processElapsed));
-
-            String diagnostics = "";
-            if (it instanceof PagedQueryIterator) {
-                PagedQueryIterator pit = (PagedQueryIterator) it;
-
-                if (!pit.getWarning().isEmpty()) {
-                    log.warn(pit.getWarning());
-                }
-
-                diagnostics = pit.getStatistics();
-            }
-
-            log.info(
-                    "alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
-                    count,
-                    TimeUnit.NANOSECONDS.toMillis(processElapsed),
-                    resourcePerSecond,
-                    diagnostics);
-
-            this.aliasResourcesOnStartup.set(count);
-        } catch (LoginException ex) {
-            log.error("Alias init failed", ex);
-        }
-
-        return map;
     }
 
     /*
