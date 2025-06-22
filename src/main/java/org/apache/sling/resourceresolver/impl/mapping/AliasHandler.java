@@ -262,6 +262,16 @@ class AliasHandler {
             baseQuery.append(" AND [sling:alias] IS NOT NULL");
             return baseQuery.toString();
         }
+
+        @NotNull
+        private Iterator<Resource> queryUnpaged(@NotNull String query, @NotNull ResourceResolver resolver) {
+            log.debug("start alias query: {}", query);
+            long queryStart = System.nanoTime();
+            Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
+            long queryElapsed = System.nanoTime() - queryStart;
+            log.debug("end alias query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+            return it;
+        }
     }
 
     boolean usesCache() {
@@ -609,16 +619,6 @@ class AliasHandler {
             }
         }
         return invalid;
-    }
-
-    @NotNull
-    private Iterator<Resource> queryUnpaged(@NotNull String query, @NotNull ResourceResolver resolver) {
-        log.debug("start alias query: {}", query);
-        long queryStart = System.nanoTime();
-        Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
-        long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end alias query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
-        return it;
     }
 
     private final AtomicLong lastTimeLogged = new AtomicLong(-1);
