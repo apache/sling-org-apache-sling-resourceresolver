@@ -241,6 +241,27 @@ class AliasHandler {
 
             return map;
         }
+
+        /*
+         * generate alias query based on configured alias locations
+         */
+        @NotNull
+        private String generateAliasQuery() {
+            Set<String> allowedLocations = factory.getAllowedAliasLocations();
+
+            StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE ");
+
+            if (allowedLocations.isEmpty()) {
+                baseQuery.append(QueryBuildHelper.excludeSystemPath());
+            } else {
+                baseQuery.append(allowedLocations.stream()
+                        .map(location -> "isdescendantnode('" + QueryBuildHelper.escapeString(location) + "')")
+                        .collect(Collectors.joining(" OR ", "(", ")")));
+            }
+
+            baseQuery.append(" AND [sling:alias] IS NOT NULL");
+            return baseQuery.toString();
+        }
     }
 
     boolean usesCache() {
@@ -457,27 +478,6 @@ class AliasHandler {
         }
 
         return result;
-    }
-
-    /*
-     * generate alias query based on configured alias locations
-     */
-    @NotNull
-    private String generateAliasQuery() {
-        Set<String> allowedLocations = this.factory.getAllowedAliasLocations();
-
-        StringBuilder baseQuery = new StringBuilder("SELECT [sling:alias] FROM [nt:base] WHERE ");
-
-        if (allowedLocations.isEmpty()) {
-            baseQuery.append(QueryBuildHelper.excludeSystemPath());
-        } else {
-            baseQuery.append(allowedLocations.stream()
-                    .map(location -> "isdescendantnode('" + QueryBuildHelper.escapeString(location) + "')")
-                    .collect(Collectors.joining(" OR ", "(", ")")));
-        }
-
-        baseQuery.append(" AND [sling:alias] IS NOT NULL");
-        return baseQuery.toString();
     }
 
     /**
