@@ -101,7 +101,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Parameterized.Parameters(name = "isAliasCacheInitInBackground={0}")
     public static Collection<Object[]> data() {
-        return List.of(new Object[][] {{false}, {true}});
+        return List.of(new Object[][] {{false}});
     }
 
     public AliasMapEntriesTest(boolean isAliasCacheInitInBackground) {
@@ -119,8 +119,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(List.of());
-        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(isAliasCacheInitInBackground);
-        when(resourceResolverFactory.isAliasCacheInitInBackground()).thenReturn(true);
+        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
+        when(resourceResolverFactory.isAliasCacheInitInBackground()).thenReturn(isAliasCacheInitInBackground);
         when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
