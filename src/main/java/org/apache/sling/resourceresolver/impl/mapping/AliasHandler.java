@@ -129,7 +129,13 @@ class AliasHandler {
             // optimization made in SLING-2521
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 AliasInitializer ai = new AliasInitializer();
-                ai.run();
+                if (this.factory.isAliasCacheInitInBackground()) {
+                    this.log.debug("bg init starting");
+                    Thread aiinit = new Thread(ai, "AliasInitializer");
+                    aiinit.start();
+                } else {
+                    ai.run();
+                }
             }
 
             doUpdateConfiguration.run();

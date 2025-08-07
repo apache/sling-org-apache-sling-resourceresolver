@@ -397,6 +397,12 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
         return this.activator.getVanityPathConfigurer().isVanityPathCacheInitInBackground();
     }
 
+    @Override
+    public boolean isAliasCacheInitInBackground() {
+        // wiring to config will be added later
+        return false;
+    }
+
     /**
      * get's the ServiceTracker of the ResourceAccessSecurity service
      */
