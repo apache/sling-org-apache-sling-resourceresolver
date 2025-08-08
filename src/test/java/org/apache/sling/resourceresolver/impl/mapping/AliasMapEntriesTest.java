@@ -41,6 +41,7 @@ import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
@@ -310,6 +311,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(result.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
         when(result.getPath()).thenReturn("/parent/child");
         when(result.getName()).thenReturn("child");
+        when(result.getValueMap()).thenReturn(ValueMap.EMPTY);
 
         when(content.getChildren()).thenReturn(Set.of());
         when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : result);
