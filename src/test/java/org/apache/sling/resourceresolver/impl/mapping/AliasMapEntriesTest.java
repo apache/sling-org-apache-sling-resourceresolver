@@ -1249,8 +1249,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private void attachChildResource(Resource parent, Resource child) {
 
-        // TODO: support adding multiple children
-        when(parent.getChildren()).thenReturn(Set.of(child));
+        Set<Resource> newChildren = new HashSet<>();
+        parent.getChildren().forEach(newChildren::add);
+        newChildren.add(child);
+
+        when(parent.getChildren()).thenReturn(newChildren);
         when(parent.getChild(child.getName())).thenReturn(child);
 
         when(child.getParent()).thenReturn(parent);
