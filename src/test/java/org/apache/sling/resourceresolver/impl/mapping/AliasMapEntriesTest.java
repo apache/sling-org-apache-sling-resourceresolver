@@ -977,7 +977,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/");
-        Resource result = createMockedResource("/parent");
+        Resource result = createMockedResource(parent, "parent");
 
         when(result.getValueMap()).thenReturn(buildValueMap());
 
