@@ -287,11 +287,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
             String... aliases) {
 
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-        Resource content = createMockedResource("/parent/child/jcr:content");
-
-        attachChildResource(parent, result);
-        attachChildResource(result, content);
+        Resource result = createMockedResource(parent, "child");
+        Resource content = createMockedResource(result, "jcr:content");
 
         when(result.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
         when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : result);
@@ -336,16 +333,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_that_duplicate_alias_does_not_replace_first_alias() {
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "child");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
-        Resource secondResult = createMockedResource("/parent/child2");
-
-        attachChildResource(parent, secondResult);
-
+        Resource secondResult = createMockedResource(parent, "child2");
         when(secondResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -370,11 +362,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     // checks that alias lists for "x" and "x/jcr:content" are merged
     private void internal_test_alias_on_parent_and_on_content_child(boolean cached) {
         Resource parent = createMockedResource("/parent");
-        Resource node = createMockedResource("/parent/node");
-        Resource content = createMockedResource("/parent/node/jcr:content");
-
-        attachChildResource(parent, node);
-        attachChildResource(node, content);
+        Resource node = createMockedResource(parent, "node");
+        Resource content = createMockedResource(node, "jcr:content");
 
         when(node.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
         when(content.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "contentalias"));
@@ -466,9 +455,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "child");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -486,10 +473,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "child");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+
         Map<String, Collection<String>> aliasMapBefore = mapEntries.getAliasMap("/parent");
         assertEquals(1, aliasMapBefore.size());
 
@@ -510,9 +497,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "child");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -533,8 +518,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "child");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -548,8 +532,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         // test_that_duplicate_alias_does_not_replace_first_alias
-        Resource secondResult = createMockedResource("/parent/child2");
-        attachChildResource(parent, secondResult);
+        Resource secondResult = createMockedResource(parent, "child2");
 
         when(secondResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -563,8 +546,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         // testing jcr:content node
-        Resource jcrContentResult = createMockedResource("/parent/child/jcr:content");
-        attachChildResource(result, jcrContentResult);
+        Resource jcrContentResult = createMockedResource(result, "jcr:content");
 
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
@@ -585,8 +567,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/");
-        Resource result = createMockedResource("/parent");
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "parent");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -600,8 +581,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         // test_that_duplicate_alias_does_not_replace_first_alias
-        Resource secondResult = createMockedResource("/parent2");
-        attachChildResource(parent, secondResult);
+        Resource secondResult = createMockedResource(parent, "parent2");
 
         when(secondResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -615,8 +595,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         // testing jcr:content node
-        Resource jcrContentResult = createMockedResource("/parent/jcr:content");
-        attachChildResource(result, jcrContentResult);
+        Resource jcrContentResult = createMockedResource(result, "jcr:content");
 
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
@@ -632,8 +611,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         // trying to add invalid alias path
-        Resource invalidResourcePath = createMockedResource("/notallowedparent");
-        attachChildResource(parent, invalidResourcePath);
+        Resource invalidResourcePath = createMockedResource(parent, "notallowedparent");
 
         when(invalidResourcePath.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -651,8 +629,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "child");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -677,8 +654,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
 
         // testing jcr:content node update
-        Resource jcrContentResult = createMockedResource("/parent/child/jcr:content");
-        attachChildResource(result, jcrContentResult);
+        Resource jcrContentResult = createMockedResource(result, "jcr:content");
 
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
@@ -716,8 +692,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(List.of("aliasUpdated", "aliasJcrContentUpdated"), aliasMapEntry.get("child"));
 
         // add another node with different alias and check that the update doesn't break anything (see also SLING-3728)
-        Resource secondResult = createMockedResource("/parent/child2");
-        attachChildResource(parent, secondResult);
+        Resource secondResult = createMockedResource(parent, "child2");
 
         when(secondResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
 
@@ -760,8 +735,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
-        Resource child = createMockedResource("/parent/child");
-        attachChildResource(parent, child);
+        Resource child = createMockedResource(parent, "child");
 
         when(child.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -807,14 +781,12 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
-        Resource result = createMockedResource("/parent/child");
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "child");
 
         when(result.getValueMap()).thenReturn(buildValueMap());
 
         // testing jcr:content node removal
-        Resource jcrContentResult = createMockedResource("/parent/child/jcr:content");
-        attachChildResource(result, jcrContentResult);
+        Resource jcrContentResult = createMockedResource(result, "jcr:content");
 
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
@@ -863,15 +835,13 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parentRsrc = createMockedResource("/parent");
-        Resource childRsrc = createMockedResource("/parent/child");
-        attachChildResource(parentRsrc, childRsrc);
+        Resource childRsrc = createMockedResource(parentRsrc, "child");
 
         when(childRsrc.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
         addResource(mapEntries, "/parent/child", new AtomicBoolean());
 
-        Resource jcrContentResult = createMockedResource("/parent/child/jcr:content");
-        attachChildResource(childRsrc, jcrContentResult);
+        Resource jcrContentResult = createMockedResource(childRsrc, "jcr:content");
 
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
@@ -961,8 +931,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/");
-        Resource result = createMockedResource("/parent");
-        attachChildResource(parent, result);
+        Resource result = createMockedResource(parent, "parent");
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
@@ -1013,8 +982,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(result.getValueMap()).thenReturn(buildValueMap());
 
         // testing jcr:content node removal
-        Resource jcrContentResult = createMockedResource("/parent/jcr:content");
-        attachChildResource(result, jcrContentResult);
+        Resource jcrContentResult = createMockedResource(result, "jcr:content");
 
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
@@ -1046,28 +1014,23 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         Resource parent = createMockedResource("/parent");
         when(parent.getValueMap()).thenReturn(buildValueMap());
 
-        Resource container = createMockedResource("/parent/container");
-        attachChildResource(parent, container);
+        Resource container = createMockedResource(parent, "container");
 
         when(container.getValueMap()).thenReturn(buildValueMap());
 
-        Resource jcrContent = createMockedResource("/parent/container/jcr:content");
-        attachChildResource(container, jcrContent);
+        Resource jcrContent = createMockedResource(container, "jcr:content");
 
         when(jcrContent.getValueMap()).thenReturn(buildValueMap());
 
-        Resource childContainer = createMockedResource("/parent/container/childContainer");
-        attachChildResource(container, childContainer);
+        Resource childContainer = createMockedResource(container, "childContainer");
 
         when(childContainer.getValueMap()).thenReturn(buildValueMap());
 
-        Resource grandChild = createMockedResource("/parent/container/childContainer/grandChild");
-        attachChildResource(childContainer, grandChild);
+        Resource grandChild = createMockedResource(childContainer, "grandChild");
 
         when(grandChild.getValueMap()).thenReturn(buildValueMap());
 
-        Resource grandChildJcrContent = createMockedResource("/parent/container/childContainer/grandChild/jcr:content");
-        attachChildResource(grandChild, grandChildJcrContent);
+        Resource grandChildJcrContent = createMockedResource(grandChild, "jcr:content");
 
         when(grandChildJcrContent.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "gc"));
 
@@ -1099,13 +1062,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(parent.getValueMap()).thenReturn(buildValueMap());
 
-        Resource child1 = createMockedResource("/parent/child1");
-        attachChildResource(parent, child1);
+        Resource child1 = createMockedResource(parent, "child1");
 
         when(child1.getValueMap()).thenReturn(buildValueMap());
 
-        Resource child1JcrContent = createMockedResource("/parent/child1/jcr:content");
-        attachChildResource(child1, child1JcrContent);
+        Resource child1JcrContent = createMockedResource(child1, "jcr:content");
 
         when(child1JcrContent.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "test1"));
 
@@ -1120,13 +1081,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         assertEquals(1, aliasMap.size());
 
-        Resource child2 = createMockedResource("/parent/child2");
-        attachChildResource(parent, child2);
+        Resource child2 = createMockedResource(parent, "child2");
 
         when(child2.getValueMap()).thenReturn(buildValueMap());
 
-        Resource child2JcrContent = createMockedResource("/parent/child2/jcr:content");
-        attachChildResource(child2, child2JcrContent);
+        Resource child2JcrContent = createMockedResource(child2, "jcr:content");
 
         when(child2JcrContent.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "test2"));
         when(child2.getChild("jcr:content")).thenReturn(child2JcrContent);
@@ -1145,8 +1104,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, aliasMap.size());
         assertEquals(2, mapEntries.getAliasMap("/parent").size());
 
-        Resource child2JcrContentChild = createMockedResource("/parent/child2/jcr:content/test");
-        attachChildResource(child2, child2JcrContentChild);
+        Resource child2JcrContentChild = createMockedResource(child2, "test");
 
         when(child2JcrContent.getChild("test")).thenReturn(child2JcrContentChild);
 
@@ -1245,6 +1203,27 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private boolean matchesPagedQuery(String query) {
         return AQ_PAGED_PATTERN.matcher(query).matches();
+    }
+
+    private Resource createMockedResource(Resource parent, String name) {
+
+        String path =
+                ResourceUtil.normalize(parent.getPath() + (parent.getPath().equals("/") ? "" : "/") + name);
+        Resource result = mock(Resource.class, "mock for " + path);
+
+        // the basics
+        when(result.getName()).thenReturn(ResourceUtil.getName(path));
+        when(result.getPath()).thenReturn(path);
+
+        // need to be specified later
+        when(result.getValueMap()).thenReturn(ValueMap.EMPTY);
+
+        // attach to resource resolver
+        when(resourceResolver.getResource(path)).thenReturn(result);
+
+        attachChildResource(parent, result);
+
+        return result;
     }
 
     private Resource createMockedResource(String path) {
