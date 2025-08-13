@@ -487,18 +487,19 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         Resource parent = createMockedResource("/parent");
         Resource result = createMockedResource("/parent/child");
-
-        // TODO: using attachChildResource causes the test to fail
-        // attachChildResource(parent, result);
-
-        when(result.getParent()).thenReturn(parent);
+        attachChildResource(parent, result);
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+        Map<String, Collection<String>> aliasMapBefore = mapEntries.getAliasMap("/parent");
+        assertEquals(1, aliasMapBefore.size());
 
+        // this simulates an add event, but that is immaterial here as there is no cache anyway
         addResource(mapEntries, "/parent/child", new AtomicBoolean());
 
-        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
-        assertEquals(Collections.emptyMap(), aliasMap);
+        Map<String, Collection<String>> aliasMapAfter = mapEntries.getAliasMap("/parent");
+        assertEquals(1, aliasMapAfter.size());
+
+        assertEquals(aliasMapBefore, aliasMapAfter);
     }
 
     // SLING-3727
@@ -511,16 +512,20 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         Resource parent = createMockedResource("/parent");
         Resource result = createMockedResource("/parent/child");
 
-        // TODO: using attachChildResource causes the test to fail
-        // attachChildResource(parent, result);
+        attachChildResource(parent, result);
 
-        when(result.getParent()).thenReturn(parent);
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
+        Map<String, Collection<String>> aliasMapBefore = mapEntries.getAliasMap("/parent");
+        assertEquals(1, aliasMapBefore.size());
+
+        // this simulates a remove event, but that is immaterial here as there is no cache anyway
         removeAlias(mapEntries, resourceResolver, "/parent", "/parent/child", NOOP);
 
-        Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
-        assertEquals(Collections.emptyMap(), aliasMap);
+        Map<String, Collection<String>> aliasMapAfter = mapEntries.getAliasMap("/parent");
+        assertEquals(1, aliasMapAfter.size());
+
+        assertEquals(aliasMapBefore, aliasMapAfter);
     }
 
     @Test
