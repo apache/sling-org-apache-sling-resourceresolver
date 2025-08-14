@@ -118,19 +118,15 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
         when(bundleContext.getBundle()).thenReturn(bundle);
-        when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
-        when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
-        when(resourceResolverFactory.getVanityPathConfig()).thenReturn(List.of());
-        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(isOptimizeAliasResolutionEnabled);
-        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
-        when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
-        when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
-        when(resourceResolverFactory.isMaxCachedVanityPathEntriesStartup()).thenReturn(true);
-        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(Collections.emptyIterator());
-        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(Collections.emptyIterator());
-        // when(resourceResolverFactory.getAliasPath()).thenReturn(Arrays.asList("/child"));
 
         when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(Set.of());
+        when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
+        when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
+        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(isOptimizeAliasResolutionEnabled);
+        when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
+
+        when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(Collections.emptyIterator());
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2"))).thenReturn(Collections.emptyIterator());
 
         Optional<ResourceResolverMetrics> metrics = Optional.empty();
 
