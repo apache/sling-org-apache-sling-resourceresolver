@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -345,6 +346,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_that_duplicate_alias_does_not_replace_first_alias() {
+
+        // note that this test depends on the order of nodes returned
+        // on getChildren
+
         Resource parent = createMockedResource("/parent");
         Resource result = createMockedResource(parent, "child");
 
@@ -367,7 +372,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
-        assertTrue(aliasMap.containsKey("child"));
+        assertTrue("map should contain 'child': " + aliasMap, aliasMap.containsKey("child"));
         assertEquals(Collections.singletonList("alias"), aliasMap.get("child"));
         assertEquals(1, detectedConflictingAliases.get());
     }
@@ -1282,7 +1287,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private void attachChildResource(Resource parent, Resource child) {
 
-        Set<Resource> newChildren = new HashSet<>();
+        List<Resource> newChildren = new ArrayList<>();
         parent.getChildren().forEach(newChildren::add);
         newChildren.add(child);
 
