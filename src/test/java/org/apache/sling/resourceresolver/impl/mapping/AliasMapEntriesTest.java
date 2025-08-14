@@ -46,8 +46,11 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
@@ -68,6 +71,7 @@ import static org.mockito.Mockito.when;
 /**
  * Tests related to {@link MapEntries} that are specific to aliases.
  */
+@RunWith(Parameterized.class)
 public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private MapEntries mapEntries;
@@ -93,7 +97,16 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private static final Runnable NOOP = () -> {};
 
-    public AliasMapEntriesTest() {}
+    private final boolean isOptimizeAliasResolutionEnabled;
+
+    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0}")
+    public static Collection<Object[]> data() {
+        return List.of(new Object[][] {{false}, {true}});
+    }
+
+    public AliasMapEntriesTest(boolean isOptimizeAliasResolutionEnabled) {
+        this.isOptimizeAliasResolutionEnabled = isOptimizeAliasResolutionEnabled;
+    }
 
     private AutoCloseable mockCloser;
 
@@ -108,7 +121,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isVanityPathEnabled()).thenReturn(true);
         when(resourceResolverFactory.getVanityPathConfig()).thenReturn(List.of());
-        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(true);
+        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(isOptimizeAliasResolutionEnabled);
         when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
         when(resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(-1L);
@@ -226,6 +239,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void internal_test_simple_alias_support_throwing_query_syntax_exception_exception() {
+        Assume.assumeTrue(
+                "simulation of query exceptions only meaningful in 'optimized' case",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         prepareMapEntriesForAlias(false, false, false, true, "foo", "bar");
         mapEntries.ah.initializeAliases();
         assertTrue(mapEntries.ah.usesCache());
@@ -425,6 +442,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_allowed_locations_query() throws LoginException, IOException {
+        Assume.assumeTrue(
+                "allowed alias locations only processed in 'optimized' mode",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         when(resourceResolverFactory.getAllowedAliasLocations()).thenReturn(Set.of("/a", "/'b'"));
         Set<String> queryMade = new HashSet<>();
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -515,6 +536,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doAddAlias() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
@@ -564,6 +589,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doAddAlias2() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/");
@@ -626,6 +655,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doUpdateAlias() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
@@ -731,7 +764,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doRemoveAlias() throws Exception {
-        // check that alias map is empty
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
@@ -778,6 +814,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doRemoveAlias2() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
@@ -832,6 +872,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doRemoveAlias3() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parentRsrc = createMockedResource("/parent");
@@ -928,6 +972,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doRemoveAlias4() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/");
@@ -974,6 +1022,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doRemoveAlias5() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/");
@@ -1056,6 +1108,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doRemoveAliasFromSibling() throws Exception {
+        Assume.assumeTrue(
+                "observation events have no effect when no cache is used",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
