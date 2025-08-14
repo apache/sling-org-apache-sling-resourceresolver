@@ -467,9 +467,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-3727
     @Test
     public void test_doAddAliasAttributesWithDisableAliasOptimization() throws Exception {
-        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(
-                resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+        Assume.assumeFalse(
+                "checks behaviour for non-optimized case only",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
 
         Resource parent = createMockedResource("/parent");
         Resource result = createMockedResource(parent, "child");
@@ -485,9 +485,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-3727
     @Test
     public void test_doUpdateAttributesWithDisableAliasOptimization() throws Exception {
-        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
-        mapEntries = new MapEntries(
-                resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+        Assume.assumeFalse(
+                "checks behaviour for non-optimized case only",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
 
         Resource parent = createMockedResource("/parent");
         Resource result = createMockedResource(parent, "child");
