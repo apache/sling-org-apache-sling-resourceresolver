@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -63,6 +64,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -100,13 +102,16 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private final boolean isOptimizeAliasResolutionEnabled;
 
-    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0}")
+    private final boolean isAliasCacheInitInBackground;
+
+    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground{1}")
     public static Collection<Object[]> data() {
-        return List.of(new Object[][] {{false}, {true}});
+        return List.of(new Object[][] {{false, false}, {true, false}, {true, true}});
     }
 
-    public AliasMapEntriesTest(boolean isOptimizeAliasResolutionEnabled) {
+    public AliasMapEntriesTest(boolean isOptimizeAliasResolutionEnabled, boolean isAliasCacheInitInBackground) {
         this.isOptimizeAliasResolutionEnabled = isOptimizeAliasResolutionEnabled;
+        this.isAliasCacheInitInBackground = isAliasCacheInitInBackground;
     }
 
     private AutoCloseable mockCloser;
@@ -124,6 +129,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolverFactory.getObservationPaths()).thenReturn(new Path[] {new Path("/")});
         when(resourceResolverFactory.getServiceResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(isOptimizeAliasResolutionEnabled);
+        when(resourceResolverFactory.isAliasCacheInitInBackground()).thenReturn(isAliasCacheInitInBackground);
         when(resourceResolverFactory.getMapRoot()).thenReturn(MapEntries.DEFAULT_MAP_ROOT);
 
         when(resourceResolver.findResources(anyString(), eq("sql"))).thenReturn(Collections.emptyIterator());
@@ -133,6 +139,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         mapEntries = new MapEntries(
                 resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+
+        waitForBackgroundInitReady();
 
         final Field aliasMapField = AliasHandler.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
@@ -152,6 +160,22 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void tearDown() throws Exception {
         mapEntries.dispose();
         mockCloser.close();
+    }
+
+    private void waitForBackgroundInitReady() {
+        if (resourceResolverFactory.isAliasCacheInitInBackground()) {
+            long until = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+            while (!mapEntries.ah.usesCache()) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+                if (System.currentTimeMillis() > until) {
+                    fail("background init did not finish in time");
+                }
+            }
+        }
     }
 
     private static void addResource(MapEntries mapEntries, String path, AtomicBoolean bool)
@@ -242,6 +266,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         prepareMapEntriesForAlias(false, false, false, true, "foo", "bar");
         mapEntries.ah.initializeAliases();
+        waitForBackgroundInitReady();
         assertTrue(mapEntries.ah.usesCache());
     }
 
@@ -283,6 +308,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         for (String invalidAlias : invalidAliases) {
             prepareMapEntriesForAlias(false, false, invalidAlias);
             mapEntries.ah.initializeAliases();
+            waitForBackgroundInitReady();
             Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
             assertEquals(Collections.emptyMap(), aliasMap);
         }
@@ -458,7 +484,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                     return Collections.emptyIterator();
                 });
 
-        new MapEntries(resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
+        mapEntries.ah.initializeAliases();
+        waitForBackgroundInitReady();
 
         assertTrue("seems no alias query was made", !queryMade.isEmpty());
         String match1 = "(isdescendantnode('/a') OR isdescendantnode('/''b'''))";
