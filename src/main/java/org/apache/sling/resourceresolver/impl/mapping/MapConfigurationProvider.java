@@ -57,9 +57,11 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
 
     int getVanityBloomFilterMaxBytes();
 
+    boolean hasVanityPathPrecedence();
+
     boolean isOptimizeAliasResolutionEnabled();
 
-    boolean hasVanityPathPrecedence();
+    boolean isAliasCacheInitInBackground();
 
     Map<String, Object> getServiceUserAuthenticationInfo(final String subServiceName) throws LoginException;
 
