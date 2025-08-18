@@ -293,6 +293,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         // invalid aliases filtered out
         prepareMapEntriesForAlias(false, false, "", "foo", ".", "bar", "x/y", "qux", " ");
         mapEntries.ah.initializeAliases();
+        waitForBgInit();
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
         assertTrue(aliasMap.containsKey("child"));
