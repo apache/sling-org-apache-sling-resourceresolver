@@ -129,7 +129,7 @@ public class VanityPathHandler {
                 VanityPathInitializer vpi = new VanityPathInitializer(this.factory);
 
                 if (this.factory.isVanityPathCacheInitInBackground()) {
-                    this.log.debug("bg init starting");
+                    this.log.debug("starting vanity path initialization in the background");
                     Thread vpinit = new Thread(vpi, "VanityPathInitializer");
                     vpinit.start();
                 } else {
