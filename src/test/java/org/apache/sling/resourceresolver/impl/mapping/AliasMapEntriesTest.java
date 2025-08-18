@@ -103,6 +103,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground{1}")
     public static Collection<Object[]> data() {
+        // (optimized==false && backgroundInit == false) does not need to be tested
         return List.of(new Object[][] {{false, false}, {true, false}, {true, true}});
     }
 
