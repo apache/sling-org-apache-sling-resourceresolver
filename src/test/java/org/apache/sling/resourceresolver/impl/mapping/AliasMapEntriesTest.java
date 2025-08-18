@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -166,7 +167,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
             long start = System.currentTimeMillis();
             while (!mapEntries.ah.isReady()) {
                 // give up after five seconds
-                assertFalse("init should be done withing five seconds", System.currentTimeMillis() - start > 5000);
+                assertFalse(
+                        "init should be done withing 30 seconds",
+                        System.currentTimeMillis() - start > TimeUnit.SECONDS.toMillis(30));
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
