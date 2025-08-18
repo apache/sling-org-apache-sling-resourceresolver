@@ -138,7 +138,7 @@ class AliasHandler {
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 AliasInitializer ai = new AliasInitializer();
                 if (this.factory.isAliasCacheInitInBackground()) {
-                    this.log.debug("bg init starting");
+                    this.log.debug("starting alias initialization in the background");
                     Thread aiinit = new Thread(ai, "AliasInitializer");
                     aiinit.start();
                 } else {
