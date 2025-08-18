@@ -18,7 +18,6 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -37,7 +36,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -46,6 +44,7 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -427,7 +426,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         Map<String, Collection<String>> parentAliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull("alias map should never be null", parentAliasMap);
         assertTrue("should have entry for node 'node'", parentAliasMap.containsKey("node"));
-        List nodeAliases = List.of("alias", "contentalias");
+        List<@NotNull String> nodeAliases = List.of("alias", "contentalias");
         assertEquals(
                 "alias map " + parentAliasMap + " should have " + nodeAliases.size() + " entries",
                 nodeAliases.size(),
@@ -466,7 +465,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_allowed_locations_query() throws LoginException, IOException {
+    public void test_allowed_locations_query() {
         Assume.assumeTrue(
                 "allowed alias locations only processed in 'optimized' mode",
                 resourceResolverFactory.isOptimizeAliasResolutionEnabled());
@@ -485,7 +484,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.ah.initializeAliases();
         waitForBgInit();
 
-        assertTrue("seems no alias query was made", !queryMade.isEmpty());
+        assertFalse("seems no alias query was made", queryMade.isEmpty());
         String match1 = "(isdescendantnode('/a') OR isdescendantnode('/''b'''))";
         String match2 = "(isdescendantnode('/''b''') OR isdescendantnode('/a'))";
         String actual = queryMade.iterator().next();
