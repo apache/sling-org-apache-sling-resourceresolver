@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -88,6 +89,8 @@ class AliasHandler {
     final AtomicLong detectedConflictingAliases;
     final AtomicLong detectedInvalidAliases;
 
+    private final AtomicBoolean aliasesProcessed = new AtomicBoolean(false);
+
     public AliasHandler(
             @NotNull MapConfigurationProvider factory,
             @NotNull ReentrantLock initializing,
@@ -101,6 +104,10 @@ class AliasHandler {
         this.aliasResourcesOnStartup = new AtomicLong(0);
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
+    }
+
+    public boolean isReady() {
+        return this.aliasesProcessed.get();
     }
 
     public void dispose() {
@@ -126,7 +133,8 @@ class AliasHandler {
                 return;
             }
 
-            // optimization made in SLING-2521
+            aliasesProcessed.set(false);
+
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 AliasInitializer ai = new AliasInitializer();
                 if (this.factory.isAliasCacheInitInBackground()) {
@@ -162,6 +170,8 @@ class AliasHandler {
                 List<String> invalidAliases = new ArrayList<>();
 
                 aliasMapsMap = loadAliases(conflictingAliases, invalidAliases);
+
+                aliasesProcessed.set(true);
 
                 // warn if there are more than a few defunct aliases
                 if (conflictingAliases.size() >= MAX_REPORT_DEFUNCT_ALIASES) {

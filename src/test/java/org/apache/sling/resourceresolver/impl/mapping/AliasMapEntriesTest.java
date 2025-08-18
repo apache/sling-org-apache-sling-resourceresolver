@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -64,7 +63,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -140,7 +138,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries = new MapEntries(
                 resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
-        waitForBackgroundInitReady();
+        waitForBgInit();
 
         final Field aliasMapField = AliasHandler.class.getDeclaredField("aliasMapsMap");
         aliasMapField.setAccessible(true);
@@ -162,17 +160,17 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mockCloser.close();
     }
 
-    private void waitForBackgroundInitReady() {
-        if (resourceResolverFactory.isAliasCacheInitInBackground()) {
-            long until = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
-            while (!mapEntries.ah.usesCache()) {
+    // wait for background thread to complete
+    private void waitForBgInit() {
+        if (this.isOptimizeAliasResolutionEnabled) {
+            long start = System.currentTimeMillis();
+            while (!mapEntries.ah.isReady()) {
+                // give up after five seconds
+                assertFalse("init should be done withing five seconds", System.currentTimeMillis() - start > 5000);
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
-                    // ignore
-                }
-                if (System.currentTimeMillis() > until) {
-                    fail("background init did not finish in time");
+                    // ignored
                 }
             }
         }
@@ -266,7 +264,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         prepareMapEntriesForAlias(false, false, false, true, "foo", "bar");
         mapEntries.ah.initializeAliases();
-        waitForBackgroundInitReady();
+        waitForBgInit();
         assertTrue(mapEntries.ah.usesCache());
     }
 
@@ -308,7 +306,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         for (String invalidAlias : invalidAliases) {
             prepareMapEntriesForAlias(false, false, invalidAlias);
             mapEntries.ah.initializeAliases();
-            waitForBackgroundInitReady();
+            waitForBgInit();
             Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
             assertEquals(Collections.emptyMap(), aliasMap);
         }
@@ -485,7 +483,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 });
 
         mapEntries.ah.initializeAliases();
-        waitForBackgroundInitReady();
+        waitForBgInit();
 
         assertTrue("seems no alias query was made", !queryMade.isEmpty());
         String match1 = "(isdescendantnode('/a') OR isdescendantnode('/''b'''))";
