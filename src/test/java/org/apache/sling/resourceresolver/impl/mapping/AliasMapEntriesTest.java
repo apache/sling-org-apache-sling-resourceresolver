@@ -394,6 +394,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 });
 
         mapEntries.ah.initializeAliases();
+        waitForBgInit();
 
         Map<String, Collection<String>> aliasMap = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMap);
