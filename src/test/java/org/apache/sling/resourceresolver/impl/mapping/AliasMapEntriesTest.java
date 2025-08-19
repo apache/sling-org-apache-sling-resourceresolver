@@ -1238,6 +1238,44 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertFalse("alias handler should not have set up cache", ah.usesCache());
     }
 
+    @Test
+    public void test_remove_alias_during_bg_init()
+            throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+        Assume.assumeTrue(
+                "simulation of resource removal during bg init only meaningful in 'bg init' case",
+                resourceResolverFactory.isAliasCacheInitInBackground());
+        AliasHandler ah = mapEntries.ah;
+
+        Resource root = createMockedResource("/");
+        Resource top = createMockedResource(root, "top");
+        Resource leaf = createMockedResource(top, "leaf");
+        when(leaf.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+
+        AtomicBoolean greenLight = new AtomicBoolean(false);
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    while (!greenLight.get()) {
+                        // yes, busy wait; eat this, code quality checkers
+                    }
+                    return Set.of(leaf).iterator();
+                });
+
+        ah.initializeAliases();
+
+        // bg init will wait until we give green light
+        removeResource(mapEntries, leaf.getPath(), null);
+
+        greenLight.set(true);
+        waitForBgInit();
+
+        Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap(top);
+        assertTrue(
+                "Alias Map for " + top.getPath()
+                        + " should be empty due to removal event during background init, bug got: " + aliasMapEntry,
+                aliasMapEntry.isEmpty());
+    }
+
     // utilities for testing alias queries
 
     // used for paged query of all
