@@ -135,10 +135,11 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     // tests SLING-6542
     @Test
     public void sessionConcurrency() throws Exception {
-        final Method addResource = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
+        final Method addResource = MapEntries.class.getDeclaredMethod(
+                "addResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         addResource.setAccessible(true);
         final Method updateResource =
-                MapEntries.class.getDeclaredMethod("updateResource", String.class, AtomicBoolean.class);
+                MapEntries.class.getDeclaredMethod("updateResource", String.class, true, true, tomicBoolean.class);
         updateResource.setAccessible(true);
         final Method handleConfigurationUpdate = MapEntries.class.getDeclaredMethod(
                 "handleConfigurationUpdate", String.class, AtomicBoolean.class, AtomicBoolean.class, boolean.class);

@@ -178,16 +178,18 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private static void addResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
+        Method method = MapEntries.class.getDeclaredMethod(
+                "addResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, bool);
+        method.invoke(mapEntries, path, true, false, bool);
     }
 
     private static void removeResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod("removeResource", String.class, AtomicBoolean.class);
+        Method method = MapEntries.class.getDeclaredMethod(
+                "removeResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, bool);
+        method.invoke(mapEntries, path, true, false, bool);
     }
 
     private static void removeAlias(
@@ -205,9 +207,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private static void updateResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod("updateResource", String.class, AtomicBoolean.class);
+        Method method = MapEntries.class.getDeclaredMethod(
+                "updateResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, bool);
+        method.invoke(mapEntries, path, true, false, bool);
     }
 
     private void internal_test_simple_alias_support(boolean onJcrContent, boolean cached) {
@@ -1272,7 +1275,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap(top);
         assertTrue(
                 "Alias Map for " + top.getPath()
-                        + " should be empty due to removal event during background init, bug got: " + aliasMapEntry,
+                        + " should be empty due to removal event during background init, but got: " + aliasMapEntry,
                 aliasMapEntry.isEmpty());
     }
 
