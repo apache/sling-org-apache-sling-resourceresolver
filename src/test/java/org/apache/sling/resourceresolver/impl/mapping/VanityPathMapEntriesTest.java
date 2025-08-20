@@ -1255,7 +1255,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(eventTest.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/baa"));
 
         // target for the resource got which we sent the event
-        Resource eventTestTarget = createMockedResource("/baa");
+        createMockedResource("/baa");
 
         mapEntries.onChange(List.of(new ResourceChange(ChangeType.ADDED, eventTest.getPath(), false)));
 
