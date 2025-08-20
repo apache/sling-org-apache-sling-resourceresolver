@@ -43,6 +43,8 @@ import java.util.regex.Pattern;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChange.ChangeType;
 import org.apache.sling.api.resource.path.Path;
@@ -286,34 +288,21 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
             String additionalChildName,
             String vanityPath) {
 
-        final Resource parent = mock(Resource.class);
-
+        Resource parent = createMockedResource("/" + containerName);
         when(parent.getParent()).thenReturn(null);
-        when(parent.getPath()).thenReturn("/" + containerName);
-        when(parent.getName()).thenReturn(containerName);
 
-        final Resource vanity = mock(Resource.class);
-
+        Resource vanity = createMockedResource("/" + containerName + "/" + childName);
         when(vanity.getParent()).thenReturn(withNullParent && !onJcrContent ? null : parent);
-        when(vanity.getPath()).thenReturn("/" + containerName + "/" + childName);
-        when(vanity.getName()).thenReturn(childName);
 
-        final Resource content = mock(Resource.class);
-
+        Resource content = createMockedResource("/" + containerName + "/" + childName + "/jcr:content");
         when(content.getParent()).thenReturn(withNullParent && onJcrContent ? null : vanity);
-        when(content.getPath()).thenReturn("/" + containerName + "/" + childName + "/jcr:content");
-        when(content.getName()).thenReturn("jcr:content");
 
-        final Resource oneMore = mock(Resource.class);
-
+        Resource oneMore = createMockedResource("/" + containerName + "/" + additionalChildName);
         when(oneMore.getParent()).thenReturn(parent);
-        when(oneMore.getPath()).thenReturn("/" + containerName + "/" + additionalChildName);
-        when(oneMore.getName()).thenReturn(additionalChildName);
-
         when(oneMore.getValueMap())
                 .thenReturn(buildValueMap(VanityPathHandler.PROP_VANITY_PATH, vanityPath + "/onemore"));
 
-        final Resource vanityPropHolder = onJcrContent ? content : vanity;
+        Resource vanityPropHolder = onJcrContent ? content : vanity;
 
         when(vanityPropHolder.getValueMap()).thenReturn(buildValueMap(VanityPathHandler.PROP_VANITY_PATH, vanityPath));
 
@@ -336,30 +325,22 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(resourceResolverFactory.getDefaultVanityPathRedirectStatus()).thenReturn(DEFAULT_VANITY_STATUS);
 
-        final List<Resource> resources = new ArrayList<>();
+        List<Resource> resources = new ArrayList<>();
 
-        Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
         resources.add(justVanityPath);
 
-        Resource badVanityPath = mock(Resource.class, "badVanityPath");
-        when(badVanityPath.getPath()).thenReturn("/badVanityPath");
-        when(badVanityPath.getName()).thenReturn("badVanityPath");
+        Resource badVanityPath = createMockedResource("/badVanityPath");
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
         resources.add(badVanityPath);
 
-        Resource redirectingVanityPath = mock(Resource.class, "redirectingVanityPath");
-        when(redirectingVanityPath.getPath()).thenReturn("/redirectingVanityPath");
-        when(redirectingVanityPath.getName()).thenReturn("redirectingVanityPath");
+        Resource redirectingVanityPath = createMockedResource("/redirectingVanityPath");
         when(redirectingVanityPath.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/redirectingVanityPath", "sling:redirect", true));
         resources.add(redirectingVanityPath);
 
-        Resource redirectingVanityPath301 = mock(Resource.class, "redirectingVanityPath301");
-        when(redirectingVanityPath301.getPath()).thenReturn("/redirectingVanityPath301");
-        when(redirectingVanityPath301.getName()).thenReturn("redirectingVanityPath301");
+        Resource redirectingVanityPath301 = createMockedResource("/redirectingVanityPath301");
         when(redirectingVanityPath301.getValueMap())
                 .thenReturn(buildValueMap(
                         "sling:vanityPath",
@@ -370,13 +351,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                         301));
         resources.add(redirectingVanityPath301);
 
-        Resource vanityPathOnJcrContentParent = mock(Resource.class, "vanityPathOnJcrContentParent");
-        when(vanityPathOnJcrContentParent.getPath()).thenReturn("/vanityPathOnJcrContent");
-        when(vanityPathOnJcrContentParent.getName()).thenReturn("vanityPathOnJcrContent");
+        Resource vanityPathOnJcrContentParent = createMockedResource("/vanityPathOnJcrContent");
 
-        Resource vanityPathOnJcrContent = mock(Resource.class, "vanityPathOnJcrContent");
-        when(vanityPathOnJcrContent.getPath()).thenReturn("/vanityPathOnJcrContent/jcr:content");
-        when(vanityPathOnJcrContent.getName()).thenReturn("jcr:content");
+        Resource vanityPathOnJcrContent = createMockedResource("/vanityPathOnJcrContent/jcr:content");
         when(vanityPathOnJcrContent.getParent()).thenReturn(vanityPathOnJcrContentParent);
         when(vanityPathOnJcrContent.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
@@ -424,19 +401,13 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_vanity_path_updates() {
-        Resource parent = mock(Resource.class, "parent");
-        when(parent.getPath()).thenReturn("/foo/parent");
-        when(parent.getName()).thenReturn("parent");
+        Resource parent = createMockedResource("/foo/parent");
         when(parent.getValueMap()).thenReturn(new ValueMapDecorator(Collections.emptyMap()));
-        when(resourceResolver.getResource(parent.getPath())).thenReturn(parent);
 
-        Resource child = mock(Resource.class, "jcrcontent");
-        when(child.getPath()).thenReturn("/foo/parent/jcr:content");
-        when(child.getName()).thenReturn("jcr:content");
+        Resource child = createMockedResource("/foo/parent/jcr:content");
         when(child.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/found"));
         when(child.getParent()).thenReturn(parent);
         when(parent.getChild(child.getName())).thenReturn(child);
-        when(resourceResolver.getResource(child.getPath())).thenReturn(child);
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> Collections.emptyIterator());
@@ -490,27 +461,18 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_vanity_path_updates_do_not_reload_multiple_times() {
-        Resource parent = mock(Resource.class, "parent");
-        when(parent.getPath()).thenReturn("/foo/parent");
-        when(parent.getName()).thenReturn("parent");
+        Resource parent = createMockedResource("/foo/parent");
         when(parent.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/found1"));
-        when(resourceResolver.getResource(parent.getPath())).thenReturn(parent);
 
-        Resource child = mock(Resource.class, "jcr:content");
-        when(child.getPath()).thenReturn("/foo/parent/jcr:content");
-        when(child.getName()).thenReturn("jcr:content");
+        Resource child = createMockedResource("/foo/parent/jcr:content");
         when(child.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/found2"));
         when(child.getParent()).thenReturn(parent);
         when(parent.getChild(child.getName())).thenReturn(child);
-        when(resourceResolver.getResource(child.getPath())).thenReturn(child);
 
-        Resource child2 = mock(Resource.class, "child2");
-        when(child2.getPath()).thenReturn("/foo/parent/child2");
-        when(child2.getName()).thenReturn("child2");
+        Resource child2 = createMockedResource("/foo/parent/child2");
         when(child2.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/found3"));
         when(child2.getParent()).thenReturn(parent);
         when(parent.getChild(child2.getName())).thenReturn(child2);
-        when(resourceResolver.getResource(child2.getPath())).thenReturn(child2);
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> Collections.emptyIterator());
@@ -619,10 +581,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, entries.size());
         assertEquals(0, getVanityTargets(mapEntries).size());
 
-        Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
@@ -633,10 +592,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(2, getVanityCounter(mapEntries).longValue());
 
         // bad vanity
-        Resource badVanityPath = mock(Resource.class, "badVanityPath");
-        when(resourceResolver.getResource("/badVanityPath")).thenReturn(badVanityPath);
-        when(badVanityPath.getPath()).thenReturn("/badVanityPath");
-        when(badVanityPath.getName()).thenReturn("badVanityPath");
+        Resource badVanityPath = createMockedResource("/badVanityPath");
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
         addResource(mapEntries, "/badVanityPath", new AtomicBoolean());
@@ -645,15 +601,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, getVanityTargets(mapEntries).size());
 
         // vanity under jcr:content
-        Resource vanityPathOnJcrContentParent = mock(Resource.class, "vanityPathOnJcrContentParent");
-        when(vanityPathOnJcrContentParent.getPath()).thenReturn("/vanityPathOnJcrContent");
-        when(vanityPathOnJcrContentParent.getName()).thenReturn("vanityPathOnJcrContent");
+        Resource vanityPathOnJcrContentParent = createMockedResource("/vanityPathOnJcrContent");
 
-        Resource vanityPathOnJcrContent = mock(Resource.class, "vanityPathOnJcrContent");
-        when(resourceResolver.getResource("/vanityPathOnJcrContent/jcr:content"))
-                .thenReturn(vanityPathOnJcrContent);
-        when(vanityPathOnJcrContent.getPath()).thenReturn("/vanityPathOnJcrContent/jcr:content");
-        when(vanityPathOnJcrContent.getName()).thenReturn("jcr:content");
+        Resource vanityPathOnJcrContent = createMockedResource("/vanityPathOnJcrContent/jcr:content");
         when(vanityPathOnJcrContent.getParent()).thenReturn(vanityPathOnJcrContentParent);
         when(vanityPathOnJcrContent.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
@@ -680,10 +630,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, entries.size());
         assertEquals(0, getVanityTargets(mapEntries).size());
 
-        Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
@@ -694,10 +641,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(2, getVanityCounter(mapEntries).longValue());
 
         // bad vanity
-        Resource badVanityPath = mock(Resource.class, "badVanityPath");
-        when(resourceResolver.getResource("/badVanityPath")).thenReturn(badVanityPath);
-        when(badVanityPath.getPath()).thenReturn("/badVanityPath");
-        when(badVanityPath.getName()).thenReturn("badVanityPath");
+        Resource badVanityPath = createMockedResource("/badVanityPath");
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
         addResource(mapEntries, "/badVanityPath", new AtomicBoolean());
@@ -707,15 +651,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(1, getVanityTargets(mapEntries).size());
 
         // vanity under jcr:content
-        Resource vanityPathOnJcrContentParent = mock(Resource.class, "vanityPathOnJcrContentParent");
-        when(vanityPathOnJcrContentParent.getPath()).thenReturn("/vanityPathOnJcrContent");
-        when(vanityPathOnJcrContentParent.getName()).thenReturn("vanityPathOnJcrContent");
+        Resource vanityPathOnJcrContentParent = createMockedResource("/vanityPathOnJcrContent");
 
-        Resource vanityPathOnJcrContent = mock(Resource.class, "vanityPathOnJcrContent");
-        when(resourceResolver.getResource("/vanityPathOnJcrContent/jcr:content"))
-                .thenReturn(vanityPathOnJcrContent);
-        when(vanityPathOnJcrContent.getPath()).thenReturn("/vanityPathOnJcrContent/jcr:content");
-        when(vanityPathOnJcrContent.getName()).thenReturn("jcr:content");
+        Resource vanityPathOnJcrContent = createMockedResource("/vanityPathOnJcrContent/jcr:content");
         when(vanityPathOnJcrContent.getParent()).thenReturn(vanityPathOnJcrContentParent);
         when(vanityPathOnJcrContent.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
@@ -746,10 +684,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 MapEntries.class.getDeclaredMethod("updateResource", String.class, AtomicBoolean.class);
         updateResource.setAccessible(true);
 
-        Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
@@ -777,16 +712,10 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 vanityTargets.get("/justVanityPath").get(0));
 
         // vanity under jcr:content
-        Resource vanityPathOnJcrContentParent = mock(Resource.class, "vanityPathOnJcrContentParent");
-        when(vanityPathOnJcrContentParent.getPath()).thenReturn("/vanityPathOnJcrContent");
-        when(vanityPathOnJcrContentParent.getName()).thenReturn("vanityPathOnJcrContent");
+        Resource vanityPathOnJcrContentParent = createMockedResource("/vanityPathOnJcrContent");
         when(vanityPathOnJcrContentParent.getValueMap()).thenReturn(buildValueMap());
 
-        Resource vanityPathOnJcrContent = mock(Resource.class, "vanityPathOnJcrContent");
-        when(resourceResolver.getResource("/vanityPathOnJcrContent/jcr:content"))
-                .thenReturn(vanityPathOnJcrContent);
-        when(vanityPathOnJcrContent.getPath()).thenReturn("/vanityPathOnJcrContent/jcr:content");
-        when(vanityPathOnJcrContent.getName()).thenReturn("jcr:content");
+        Resource vanityPathOnJcrContent = createMockedResource("/vanityPathOnJcrContent/jcr:content");
         when(vanityPathOnJcrContent.getParent()).thenReturn(vanityPathOnJcrContentParent);
         when(vanityPathOnJcrContent.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
@@ -828,10 +757,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         Method method1 = VanityPathHandler.class.getDeclaredMethod("doRemoveVanity", String.class);
         method1.setAccessible(true);
 
-        Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
@@ -854,15 +780,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertNull(resolveMapsMap.get("/target/justVanityPath"));
 
         // vanity under jcr:content
-        Resource vanityPathOnJcrContentParent = mock(Resource.class, "vanityPathOnJcrContentParent");
-        when(vanityPathOnJcrContentParent.getPath()).thenReturn("/vanityPathOnJcrContent");
-        when(vanityPathOnJcrContentParent.getName()).thenReturn("vanityPathOnJcrContent");
+        Resource vanityPathOnJcrContentParent = createMockedResource("/vanityPathOnJcrContent");
 
-        Resource vanityPathOnJcrContent = mock(Resource.class, "vanityPathOnJcrContent");
-        when(resourceResolver.getResource("/vanityPathOnJcrContent/jcr:content"))
-                .thenReturn(vanityPathOnJcrContent);
-        when(vanityPathOnJcrContent.getPath()).thenReturn("/vanityPathOnJcrContent/jcr:content");
-        when(vanityPathOnJcrContent.getName()).thenReturn("jcr:content");
+        Resource vanityPathOnJcrContent = createMockedResource("/vanityPathOnJcrContent/jcr:content");
         when(vanityPathOnJcrContent.getParent()).thenReturn(vanityPathOnJcrContentParent);
         when(vanityPathOnJcrContent.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
@@ -974,10 +894,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-4891
     public void test_getVanityPaths_2() throws Exception {
 
-        final Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -998,10 +915,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 this.isMaxCachedVanityPathEntriesStartup ? 2 : 0,
                 getVanityCounter(mapEntries).longValue());
 
-        final Resource justVanityPath2 = mock(Resource.class, "justVanityPath2");
-        when(resourceResolver.getResource("/justVanityPath2")).thenReturn(justVanityPath2);
-        when(justVanityPath2.getPath()).thenReturn("/justVanityPath2");
-        when(justVanityPath2.getName()).thenReturn("justVanityPath2");
+        Resource justVanityPath2 = createMockedResource("/justVanityPath2");
         when(justVanityPath2.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath", "sling:vanityOrder", 100));
 
@@ -1026,10 +940,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-4891
     public void test_getVanityPaths_3() throws Exception {
 
-        final Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -1054,9 +965,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-4891
     public void test_getVanityPaths_4() throws Exception {
 
-        final Resource badVanityPath = mock(Resource.class, "badVanityPath");
-        when(badVanityPath.getPath()).thenReturn("/badVanityPath");
-        when(badVanityPath.getName()).thenReturn("badVanityPath");
+        Resource badVanityPath = createMockedResource("/badVanityPath");
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -1081,10 +990,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-4891
     public void test_getVanityPaths_5() throws Exception {
 
-        final Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -1104,10 +1010,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         assertEquals(2, getVanityCounter(mapEntries).longValue());
 
-        final Resource justVanityPath2 = mock(Resource.class, "justVanityPath2");
-        when(resourceResolver.getResource("/justVanityPath2")).thenReturn(justVanityPath2);
-        when(justVanityPath2.getPath()).thenReturn("/justVanityPath2");
-        when(justVanityPath2.getName()).thenReturn("justVanityPath2");
+        Resource justVanityPath2 = createMockedResource("/justVanityPath2");
         when(justVanityPath2.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath", "sling:vanityOrder", 100));
 
@@ -1130,10 +1033,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void test_loadVanityPaths() throws Exception {
         when(this.resourceResolverFactory.getMaxCachedVanityPathEntries()).thenReturn(2L);
 
-        final Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -1155,10 +1055,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-4891
     public void test_loadVanityPaths_1() throws Exception {
 
-        final Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -1192,11 +1089,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertEquals(0, entries.size());
         String vpName = "justVanityPath" + (withExtension ? ".txt" : "");
 
-        final Resource justVanityPath = mock(Resource.class, vpName);
-        when(resourceResolver.getResource("/" + vpName)).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/" + vpName);
-        when(justVanityPath.getName()).thenReturn(vpName);
-
+        Resource justVanityPath = createMockedResource("/" + vpName);
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -1243,10 +1136,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void test_concurrent_getResolveMapsIterator() throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(10);
 
-        final Resource justVanityPath = mock(Resource.class, "justVanityPath");
-        when(resourceResolver.getResource("/justVanityPath")).thenReturn(justVanityPath);
-        when(justVanityPath.getPath()).thenReturn("/justVanityPath");
-        when(justVanityPath.getName()).thenReturn("justVanityPath");
+        Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
@@ -1294,10 +1184,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         String targetPath = "/foo";
 
-        final Resource simpleVanityResource = mock(Resource.class, "simpleVanityPath");
-        when(resourceResolver.getResource("/simpleVanityPath")).thenReturn(simpleVanityResource);
-        when(simpleVanityResource.getPath()).thenReturn("/simpleVanityPath");
-        when(simpleVanityResource.getName()).thenReturn("simpleVanityPath");
+        Resource simpleVanityResource = createMockedResource("/simpleVanityPath");
         when(simpleVanityResource.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", targetPath));
 
         // exactly one resource found, both on regular (init) or specific query
@@ -1378,18 +1265,11 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         // send a change event for a resource with vanity path;
         // this will be queued while init is running and then processed later on
-        Resource eventTest = mock(Resource.class, "eventTest");
-        when(eventTest.getName()).thenReturn("eventTest");
-        when(eventTest.getPath()).thenReturn("/eventTest");
+        Resource eventTest = createMockedResource("/eventTest");
         when(eventTest.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/baa"));
 
         // target for the resource got which we sent the event
-        Resource eventTestTarget = mock(Resource.class, "eventTestTarget");
-        when(eventTestTarget.getName()).thenReturn("baa");
-        when(eventTestTarget.getPath()).thenReturn("/baa");
-
-        when(resourceResolver.getResource(eventTest.getPath())).thenReturn(eventTest);
-        when(resourceResolver.getResource(eventTestTarget.getPath())).thenReturn(eventTestTarget);
+        Resource eventTestTarget = createMockedResource("/baa");
 
         mapEntries.onChange(List.of(new ResourceChange(ChangeType.ADDED, eventTest.getPath(), false)));
 
@@ -1519,4 +1399,25 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         String s2 = getFirstVanityPath(o2);
         return s1.compareTo(s2);
     };
+
+    private Resource createMockedResource(String path) {
+        Resource result = mock(Resource.class, "mock for " + path);
+
+        // the basics
+        when(result.getName()).thenReturn(ResourceUtil.getName(path));
+        when(result.getPath()).thenReturn(path);
+
+        // need to be attached later
+        when(result.getChildren()).thenReturn(Set.of());
+        when(result.getChild(anyString())).thenReturn(null);
+        when(result.getParent()).thenReturn(null);
+
+        // need to be specified later
+        when(result.getValueMap()).thenReturn(ValueMap.EMPTY);
+
+        // attach to resource resolver
+        when(resourceResolver.getResource(path)).thenReturn(result);
+
+        return result;
+    }
 }
