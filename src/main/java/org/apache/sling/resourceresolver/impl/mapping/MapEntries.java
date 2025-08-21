@@ -463,14 +463,13 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
             boolean queued = false;
 
-            if (RELEVANT_CHANGE_TYPES.contains(type)) {
-                // during startup: just enqueue the events
-                if (inStartup) {
-                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
-                    log.trace("enqueue: {}", entry);
-                    resourceChangeQueue.add(entry);
-                    queued = true;
-                }
+            // during startup: just enqueue the events
+
+            if (inStartup && RELEVANT_CHANGE_TYPES.contains(type)) {
+                Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
+                log.trace("enqueue: {}", entry);
+                resourceChangeQueue.add(entry);
+                queued = true;
             }
 
             if (!queued) {
