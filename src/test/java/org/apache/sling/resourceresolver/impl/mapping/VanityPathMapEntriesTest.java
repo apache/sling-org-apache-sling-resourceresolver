@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,6 +53,7 @@ import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -1271,6 +1273,44 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         Map<String, List<String>> finalVanityMap = mapEntries.getVanityPathMappings();
         assertTrue(finalVanityMap.get("/simpleVanityPath").contains(targetPath));
         assertTrue(finalVanityMap.get("/eventTest").contains("/baa"));
+    }
+
+    @Test
+    public void test_remove_vanity_path_during_bg_init() {
+        Assume.assumeTrue(
+                "simulation of resource removal during bg init only meaningful in 'bg init' case",
+                resourceResolverFactory.isVanityPathCacheInitInBackground());
+
+        Resource root = createMockedResource("/");
+        Resource foo = createMockedResource(root, "foo");
+        Resource leaf = createMockedResource(foo, "leaf");
+
+        when(leaf.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/bar"));
+
+        CountDownLatch greenLight = new CountDownLatch(1);
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    greenLight.await();
+                    return Set.of(leaf).iterator();
+                });
+
+        VanityPathHandler vph = mapEntries.vph;
+        vph.initializeVanityPaths();
+        assertFalse(vph.isReady());
+
+        // bg init will wait until we give green light
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf.getPath(), false)));
+
+        greenLight.countDown();
+        waitForBgInit();
+
+        assertTrue(vph.isReady());
+
+        Map<String, List<String>> vanityPathMappings = mapEntries.getVanityPathMappings();
+        List<String> mappings = vanityPathMappings.get("/foo/leaf");
+
+        assertNull("expected no (null) mapping for /foo/leaf", mappings);
     }
 
     // checks for the expected list of queries and the cache statistics

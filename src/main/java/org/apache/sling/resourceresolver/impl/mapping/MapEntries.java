@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -426,8 +427,11 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
     // ---------- ResourceChangeListener interface
 
+    private final Set<ResourceChange.ChangeType> RELEVANT_CHANGE_TYPES = Set.of(
+            ResourceChange.ChangeType.ADDED, ResourceChange.ChangeType.CHANGED, ResourceChange.ChangeType.REMOVED);
+
     /**
-     * Handles the change to any of the node properties relevant for vanity URL
+     * Handles the change to any of the node properties relevant for vanity paths
      * mappings. The {@link #MapEntries(MapConfigurationProvider, BundleContext, EventAdmin, StringInterpolationProvider, Optional)}
      * constructor makes sure the event listener is registered to only get
      * appropriate events.
@@ -450,28 +454,26 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             final ResourceChange.ChangeType type = rc.getType();
             final String path = rc.getPath();
 
-            log.debug("onChange, type={}, path={}", rc.getType(), path);
+            log.debug("onChange, type={}, path={}", type, path);
 
             // don't care for system area
             if (path.startsWith(JCR_SYSTEM_PREFIX)) {
                 continue;
             }
 
-            // during startup: just enqueue the events
-            if (inStartup) {
-                if (type == ResourceChange.ChangeType.REMOVED
-                        || type == ResourceChange.ChangeType.ADDED
-                        || type == ResourceChange.ChangeType.CHANGED) {
-                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
-                    log.trace("enqueue: {}", entry);
-                    resourceChangeQueue.add(entry);
-                }
-            } else {
-                boolean changed = handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
+            boolean queued = false;
 
-                if (changed) {
-                    sendEvent = true;
-                }
+            // during startup: just enqueue the events
+
+            if (inStartup && RELEVANT_CHANGE_TYPES.contains(type)) {
+                Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
+                log.trace("enqueue: {}", entry);
+                resourceChangeQueue.add(entry);
+                queued = true;
+            }
+
+            if (!queued) {
+                sendEvent |= handleResourceChange(type, path, resolverRefreshed, hasReloadedConfig);
             }
         }
 
