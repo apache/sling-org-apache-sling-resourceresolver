@@ -481,22 +481,20 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             boolean queuedForAlias = false;
             boolean queuedForVanityPath = false;
 
-            if (RELEVANT_CHANGE_TYPES.contains(type)) {
-                // during startup: just enqueue the events
+            // during startup: just enqueue the events
 
-                if (ahInStartup) {
-                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
-                    log.trace("enqueued for aliases {}", entry);
-                    resourceChangeQueueForAliases.add(entry);
-                    queuedForAlias = true;
-                }
+            if (ahInStartup && RELEVANT_CHANGE_TYPES.contains(type)) {
+                Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
+                log.trace("enqueued for aliases {}", entry);
+                resourceChangeQueueForAliases.add(entry);
+                queuedForAlias = true;
+            }
 
-                if (vphInStartup) {
-                    Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
-                    log.trace("enqueued for vanity paths {}", entry);
-                    resourceChangeQueueForVanityPaths.add(entry);
-                    queuedForVanityPath = true;
-                }
+            if (vphInStartup && RELEVANT_CHANGE_TYPES.contains(type)) {
+                Map.Entry<String, ResourceChange.ChangeType> entry = new SimpleEntry<>(path, type);
+                log.trace("enqueued for vanity paths {}", entry);
+                resourceChangeQueueForVanityPaths.add(entry);
+                queuedForVanityPath = true;
             }
 
             if (!queuedForAlias || !queuedForVanityPath) {
