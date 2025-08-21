@@ -41,6 +41,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
@@ -101,7 +102,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private final boolean isAliasCacheInitInBackground;
 
-    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground{1}")
+    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1}")
     public static Collection<Object[]> data() {
         // (optimized==false && backgroundInit == false) does not need to be tested
         return List.of(new Object[][] {{false, false}, {true, false}, {true, true}});
@@ -1242,12 +1243,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_remove_alias_during_bg_init()
-            throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    public void test_remove_alias_during_bg_init() {
         Assume.assumeTrue(
                 "simulation of resource removal during bg init only meaningful in 'bg init' case",
                 resourceResolverFactory.isAliasCacheInitInBackground());
-        AliasHandler ah = mapEntries.ah;
 
         Resource root = createMockedResource("/");
         Resource top = createMockedResource(root, "top");
@@ -1260,17 +1259,22 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     while (!greenLight.get()) {
                         // yes, busy wait; eat this, code quality checkers
+                        Thread.sleep(10);
                     }
                     return Set.of(leaf).iterator();
                 });
 
+        AliasHandler ah = mapEntries.ah;
         ah.initializeAliases();
+        assertFalse(ah.isReady());
 
         // bg init will wait until we give green light
-        removeResource(mapEntries, leaf.getPath(), null);
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf.getPath(), false)));
 
         greenLight.set(true);
         waitForBgInit();
+
+        assertTrue(ah.isReady());
 
         Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap(top);
         assertTrue(
