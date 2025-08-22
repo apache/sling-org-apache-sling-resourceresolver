@@ -180,12 +180,12 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         }
     }
 
-    private static void addResource(MapEntries mapEntries, String path, AtomicBoolean bool)
+    private static boolean addResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Method method = MapEntries.class.getDeclaredMethod(
                 "addResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, true, false, bool);
+        return (Boolean) method.invoke(mapEntries, path, true, false, bool);
     }
 
     private static void removeResource(MapEntries mapEntries, String path, AtomicBoolean bool)
@@ -503,6 +503,17 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 actual.contains(match1) || actual.contains(match2));
     }
 
+    // SLING-12901
+    @Test
+    public void test_doAddAliasOnRoot() throws Exception {
+        Resource root = createMockedResource("/");
+        when(root.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+
+        assertFalse(
+                "attempts to add aliases to root must be ignored",
+                addResource(mapEntries, root.getPath(), new AtomicBoolean()));
+    }
+
     // SLING-3727
     @Test
     public void test_doAddAliasAttributesWithDisableAliasOptimization() throws Exception {
@@ -548,7 +559,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     // SLING-3727
     @Test
     public void test_doRemoveAttributesWithDisableAliasOptimization() throws Exception {
-        when(resourceResolverFactory.isOptimizeAliasResolutionEnabled()).thenReturn(false);
+        Assume.assumeFalse(
+                "checks behaviour for non-optimized case only",
+                resourceResolverFactory.isOptimizeAliasResolutionEnabled());
+
         mapEntries = new MapEntries(
                 resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, metrics);
 
