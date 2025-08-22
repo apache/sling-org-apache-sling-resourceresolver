@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -1253,14 +1254,11 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         Resource leaf = createMockedResource(top, "leaf");
         when(leaf.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
-        AtomicBoolean greenLight = new AtomicBoolean(false);
+        CountDownLatch greenLight = new CountDownLatch(1);
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    while (!greenLight.get()) {
-                        // yes, busy wait; eat this, code quality checkers
-                        Thread.sleep(10);
-                    }
+                    greenLight.await();
                     return Set.of(leaf).iterator();
                 });
 
@@ -1276,7 +1274,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf.getPath(), false)));
         // mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
 
-        greenLight.set(true);
+        greenLight.countDown();
         waitForBgInit();
 
         assertTrue(ah.isReady());
