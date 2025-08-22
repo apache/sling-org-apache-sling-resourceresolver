@@ -63,7 +63,9 @@ import org.osgi.service.event.EventAdmin;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -1251,15 +1253,15 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         Resource root = createMockedResource("/");
         Resource top = createMockedResource(root, "top");
-        Resource leaf = createMockedResource(top, "leaf");
-        when(leaf.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
+        Resource leaf1 = createMockedResource(top, "leaf1");
+        when(leaf1.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias1"));
 
         CountDownLatch greenLight = new CountDownLatch(1);
 
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     greenLight.await();
-                    return Set.of(leaf).iterator();
+                    return Set.of(leaf1).iterator();
                 });
 
         AliasHandler ah = mapEntries.ah;
@@ -1267,12 +1269,13 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertFalse(ah.isReady());
 
         // bg init will wait until we give green light
-        // Resource leaf2 = createMockedResource(top, "leaf2");
-        // when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
 
-        removeResource(leaf);
-        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf.getPath(), false)));
-        // mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
+        Resource leaf2 = createMockedResource(top, "leaf2");
+        when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
+
+        removeResource(leaf1);
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf1.getPath(), false)));
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
 
         greenLight.countDown();
         waitForBgInit();
@@ -1280,10 +1283,22 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertTrue(ah.isReady());
 
         Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap(top);
-        assertTrue(
-                "Alias Map for " + top.getPath()
-                        + " should be empty due to removal event during background init, but got: " + aliasMapEntry,
-                aliasMapEntry.isEmpty());
+        assertNotNull(aliasMapEntry);
+
+        Collection<String> leaf1Entry = aliasMapEntry.get(leaf1.getName());
+        assertNull(
+                "Alias Map Entry for " + top.getPath() + " should not contain an entry for " + leaf1.getName()
+                        + " due to removal event during background init, but got: "
+                        + leaf1Entry,
+                leaf1Entry);
+
+        Collection<String> leaf2Entry = aliasMapEntry.get(leaf2.getName());
+        assertNotNull(
+                "Alias Map Entry for " + top.getPath() + " should contain an entry for " + leaf2.getName()
+                        + " due to addition event during background init, but got: " + leaf2Entry,
+                leaf2Entry);
+
+        assertIterableEquals(Set.of("alias2"), leaf2Entry, "Alias Array for " + leaf2.getName() + " incorrect");
     }
 
     // utilities for testing alias queries
