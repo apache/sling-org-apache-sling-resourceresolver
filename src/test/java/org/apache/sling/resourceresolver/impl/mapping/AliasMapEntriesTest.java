@@ -1269,7 +1269,12 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertFalse(ah.isReady());
 
         // bg init will wait until we give green light
+        // Resource leaf2 = createMockedResource(top, "leaf2");
+        // when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
+
+        removeResource(leaf);
         mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf.getPath(), false)));
+        // mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
 
         greenLight.set(true);
         waitForBgInit();
@@ -1358,7 +1363,6 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private void attachChildResource(Resource parent, Resource child) {
-
         List<Resource> newChildren = new ArrayList<>();
         parent.getChildren().forEach(newChildren::add);
         newChildren.add(child);
@@ -1367,5 +1371,25 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(parent.getChild(child.getName())).thenReturn(child);
 
         when(child.getParent()).thenReturn(parent);
+    }
+
+    private void detachChildResource(Resource parent, Resource child) {
+        List<Resource> oldChildren = new ArrayList<>();
+        parent.getChildren().forEach(oldChildren::add);
+        oldChildren.remove(child);
+
+        when(parent.getChildren()).thenReturn(oldChildren);
+        when(parent.getChild(child.getName())).thenReturn(null);
+
+        when(child.getParent()).thenReturn(null);
+    }
+
+    private void removeResource(Resource resource) {
+        Resource parent = resource.getParent();
+        if (parent != null) {
+            detachChildResource(parent, resource);
+        }
+        when(resource.getParent()).thenReturn(null);
+        when(resourceResolver.getResource(resource.getPath())).thenReturn(null);
     }
 }
