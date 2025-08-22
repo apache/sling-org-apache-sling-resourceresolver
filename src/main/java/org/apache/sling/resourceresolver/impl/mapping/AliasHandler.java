@@ -203,8 +203,8 @@ class AliasHandler {
         @NotNull
         private Map<String, Map<String, Collection<String>>> loadAliases(
                 @NotNull ResourceResolver resolver,
-                @Nullable List<String> conflictingAliases,
-                @Nullable List<String> invalidAliases,
+                @NotNull List<String> conflictingAliases,
+                @NotNull List<String> invalidAliases,
                 @NotNull StringBuilder diagnostics) {
 
             Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
@@ -529,13 +529,21 @@ class AliasHandler {
                 return false;
             } else {
                 // but apply them to the containing resource
-                return loadAliasFromArray(
-                        aliasArray,
-                        map,
-                        conflictingAliases,
-                        invalidAliases,
-                        containingResource.getName(),
-                        ResourceUtil.getParent(containingResource.getPath()));
+
+                String parentPath = ResourceUtil.getParent(containingResource.getPath());
+
+                if (parentPath == null) {
+                    log.debug("the root path cannot have aliases");
+                    return false;
+                } else {
+                    return loadAliasFromArray(
+                            aliasArray,
+                            map,
+                            conflictingAliases,
+                            invalidAliases,
+                            containingResource.getName(),
+                            parentPath);
+                }
             }
         }
     }
