@@ -70,6 +70,7 @@ class AliasHandler {
 
     private final Runnable doUpdateConfiguration;
     private final Runnable sendChangeEvent;
+    private final Runnable drain;
 
     // static value for the case when cache is not (yet) not initialized
     private static final Map<String, Map<String, Collection<String>>> UNITIALIZED_MAP = Collections.emptyMap();
@@ -95,11 +96,13 @@ class AliasHandler {
             @NotNull MapConfigurationProvider factory,
             @NotNull ReentrantLock initializing,
             @NotNull Runnable doUpdateConfiguration,
-            @NotNull Runnable sendChangeEvent) {
+            @NotNull Runnable sendChangeEvent,
+            @NotNull Runnable drain) {
         this.factory = factory;
         this.initializing = initializing;
         this.doUpdateConfiguration = doUpdateConfiguration;
         this.sendChangeEvent = sendChangeEvent;
+        this.drain = drain;
 
         this.aliasResourcesOnStartup = new AtomicLong(0);
         this.detectedConflictingAliases = new AtomicLong(0);
@@ -176,7 +179,13 @@ class AliasHandler {
 
                 aliasMapsMap = loadAliases(resolver, conflictingAliases, invalidAliases, diagnostics);
 
+                // process pending events
+                AliasHandler.this.drain.run();
+
                 aliasesProcessed.set(true);
+
+                // drain once more in case more events have arrived
+                AliasHandler.this.drain.run();
 
                 long processElapsed = System.nanoTime() - initStart;
                 long resourcePerSecond = (aliasResourcesOnStartup.get()
@@ -203,8 +212,8 @@ class AliasHandler {
         @NotNull
         private Map<String, Map<String, Collection<String>>> loadAliases(
                 @NotNull ResourceResolver resolver,
-                @Nullable List<String> conflictingAliases,
-                @Nullable List<String> invalidAliases,
+                @NotNull List<String> conflictingAliases,
+                @NotNull List<String> invalidAliases,
                 @NotNull StringBuilder diagnostics) {
 
             Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();

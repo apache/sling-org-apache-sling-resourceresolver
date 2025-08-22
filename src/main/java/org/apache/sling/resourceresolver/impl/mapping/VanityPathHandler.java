@@ -176,7 +176,7 @@ public class VanityPathHandler {
 
                 vanityTargets = loadVanityPaths(resolver);
 
-                // process pending event
+                // process pending events
                 VanityPathHandler.this.drain.run();
 
                 vanityPathsProcessed.set(true);
