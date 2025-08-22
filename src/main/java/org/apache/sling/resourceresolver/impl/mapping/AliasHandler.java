@@ -538,13 +538,21 @@ class AliasHandler {
                 return false;
             } else {
                 // but apply them to the containing resource
-                return loadAliasFromArray(
-                        aliasArray,
-                        map,
-                        conflictingAliases,
-                        invalidAliases,
-                        containingResource.getName(),
-                        ResourceUtil.getParent(containingResource.getPath()));
+
+                String parentPath = ResourceUtil.getParent(containingResource.getPath());
+
+                if (parentPath == null) {
+                    log.debug("the root path cannot have aliases");
+                    return false;
+                } else {
+                    return loadAliasFromArray(
+                            aliasArray,
+                            map,
+                            conflictingAliases,
+                            invalidAliases,
+                            containingResource.getName(),
+                            parentPath);
+                }
             }
         }
     }
