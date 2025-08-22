@@ -133,12 +133,17 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         this.stringInterpolationProvider = stringInterpolationProvider;
 
         this.ah = new AliasHandler(
-                this.factory, this.initializing, this::doUpdateConfiguration, this::sendChangeEvent, this::drainQueue);
+                this.factory,
+                this.initializing,
+                this::doUpdateConfiguration,
+                this::sendChangeEvent,
+                this::drainAliasQueue);
         this.ah.initializeAliases();
 
         this.registration = registerResourceChangeListener(bundleContext);
 
-        this.vph = new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this::drainQueue);
+        this.vph =
+                new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this::drainVanityPathQueue);
         this.vph.initializeVanityPaths();
 
         if (metrics.isPresent()) {
@@ -748,11 +753,12 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     // Drains the resource event queue for a specific queue
-    private boolean drainSpecificQueue(
-            boolean isAlias,
-            List<Map.Entry<String, ResourceChange.ChangeType>> queue,
-            AtomicBoolean resolverRefreshed,
-            AtomicBoolean hasReloadedConfig) {
+    private boolean drainSpecificQueue(boolean isAlias, List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
+        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+
+        // the config needs to be reloaded only once
+        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
+
         boolean sendEvent = false;
 
         while (!queue.isEmpty()) {
@@ -768,20 +774,16 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         return sendEvent;
     }
 
-    // Drains the resource event queues both for aliases and vanity paths
-    private void drainQueue() {
-        final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
+    // Drains the resource event queue for aliases
+    private void drainAliasQueue() {
+        if (drainSpecificQueue(true, resourceChangeQueueForAliases)) {
+            sendChangeEvent();
+        }
+    }
 
-        // send the change event only once
-        boolean sendEvent = false;
-
-        // the config needs to be reloaded only once
-        final AtomicBoolean hasReloadedConfig = new AtomicBoolean(false);
-
-        sendEvent |= drainSpecificQueue(true, resourceChangeQueueForAliases, resolverRefreshed, hasReloadedConfig);
-        sendEvent |= drainSpecificQueue(false, resourceChangeQueueForVanityPaths, resolverRefreshed, hasReloadedConfig);
-
-        if (sendEvent) {
+    // Drains the resource event queue for vanity paths
+    private void drainVanityPathQueue() {
+        if (drainSpecificQueue(false, resourceChangeQueueForVanityPaths)) {
             sendChangeEvent();
         }
     }
