@@ -71,19 +71,7 @@ public interface MapEntriesHandler {
         public Map<String, List<String>> getVanityPathMappings() {
             return Collections.emptyMap();
         }
-
-        @Override
-        public boolean isOptimizeAliasResolutionEnabled() {
-            return false;
-        }
     };
-
-    /**
-     * Whether alias resolution optimization is enabled.
-     * If it is enabled {@link #getAliasMap(String)} can be used.
-     * @return true if the optimizedAliasResolution should be used, false otherwise
-     */
-    boolean isOptimizeAliasResolutionEnabled();
 
     /**
      * Returns all alias entries for children of the specified <code>parentPath</code>

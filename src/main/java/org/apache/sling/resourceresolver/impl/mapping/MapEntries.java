@@ -377,10 +377,6 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         return mapMaps;
     }
 
-    public boolean isOptimizeAliasResolutionEnabled() {
-        return this.ah.usesCache();
-    }
-
     @Override
     public @NotNull Map<String, List<String>> getVanityPathMappings() {
         return vph.getVanityPathMappings();
