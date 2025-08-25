@@ -1260,63 +1260,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
-    public void test_event_alias_during_bg_init1() {
-        Assume.assumeTrue(
-                "simulation of resource removal during bg init only meaningful in 'bg init' case",
-                resourceResolverFactory.isAliasCacheInitInBackground());
-
-        Resource root = createMockedResource("/");
-        Resource top = createMockedResource(root, "top");
-        Resource leaf1 = createMockedResource(top, "leaf1");
-        when(leaf1.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias1"));
-
-        CountDownLatch greenLight = new CountDownLatch(1);
-
-        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
-                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
-                    greenLight.await();
-                    return Set.of(leaf1).iterator();
-                });
-
-        AliasHandler ah = mapEntries.ah;
-        ah.initializeAliases();
-        assertFalse(ah.isReady());
-
-        // bg init will wait until we give green light
-
-        Resource leaf2 = createMockedResource(top, "leaf2");
-        when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
-
-        removeResource(leaf1);
-        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf1.getPath(), false)));
-        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
-
-        greenLight.countDown();
-        waitForBgInit();
-
-        assertTrue(ah.isReady());
-
-        Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap(top);
-        assertNotNull(aliasMapEntry);
-
-        Collection<String> leaf1Entry = aliasMapEntry.get(leaf1.getName());
-        assertNull(
-                "Alias Map Entry for " + top.getPath() + " should not contain an entry for " + leaf1.getName()
-                        + " due to removal event during background init, but got: "
-                        + leaf1Entry,
-                leaf1Entry);
-
-        Collection<String> leaf2Entry = aliasMapEntry.get(leaf2.getName());
-        assertNotNull(
-                "Alias Map Entry for " + top.getPath() + " should contain an entry for " + leaf2.getName()
-                        + " due to addition event during background init, but got: " + leaf2Entry,
-                leaf2Entry);
-
-        assertIterableEquals(Set.of("alias2"), leaf2Entry, "Alias Array for " + leaf2.getName() + " incorrect");
-    }
-
-    @Test
-    public void test_event_alias_during_bg_init2() {
+    public void test_event_alias_during_bg_init() {
         Assume.assumeTrue(
                 "simulation of resource removal during bg init only meaningful in 'bg init' case",
                 resourceResolverFactory.isAliasCacheInitInBackground());
