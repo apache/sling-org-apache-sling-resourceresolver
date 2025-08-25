@@ -201,7 +201,6 @@ class AliasHandler {
             } catch (Exception ex) {
                 log.error("Alias init failed", ex);
                 aliasMapsMap = UNITIALIZED_MAP;
-                logDisableAliasOptimization(ex);
             }
         }
 
@@ -653,22 +652,5 @@ class AliasHandler {
             }
         }
         return invalid;
-    }
-
-    private final AtomicLong lastTimeLogged = new AtomicLong(-1);
-
-    void logDisableAliasOptimization(@Nullable Exception e) {
-        if (e != null) {
-            log.error(
-                    "Unexpected problem during initialization of optimize alias resolution. Therefore disabling optimize alias resolution. Please fix the problem.",
-                    e);
-        } else {
-            final long now = System.currentTimeMillis();
-            long LOGGING_ERROR_PERIOD = TimeUnit.MINUTES.toMillis(5);
-            if (now - lastTimeLogged.getAndSet(now) > LOGGING_ERROR_PERIOD) {
-                log.error(
-                        "A problem occurred during initialization of optimize alias resolution. Optimize alias resolution is disabled. Check the logs for the reported problem.");
-            }
-        }
     }
 }

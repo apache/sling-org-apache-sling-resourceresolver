@@ -751,11 +751,6 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         }
     }
 
-    @Override
-    public void logDisableAliasOptimization() {
-        this.ah.logDisableAliasOptimization(null);
-    }
-
     private MapEntry getMapEntry(final String url, final int status, final String... redirect) {
         try {
             return new MapEntry(url, status, false, 0, redirect);
