@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -41,6 +42,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
@@ -61,7 +63,9 @@ import org.osgi.service.event.EventAdmin;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -101,7 +105,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private final boolean isAliasCacheInitInBackground;
 
-    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground{1}")
+    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1}")
     public static Collection<Object[]> data() {
         // (optimized==false && backgroundInit == false) does not need to be tested
         return List.of(new Object[][] {{false, false}, {true, false}, {true, true}});
@@ -178,16 +182,18 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private static boolean addResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod("addResource", String.class, AtomicBoolean.class);
+        Method method = MapEntries.class.getDeclaredMethod(
+                "addResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         method.setAccessible(true);
-        return (Boolean) method.invoke(mapEntries, path, bool);
+        return (Boolean) method.invoke(mapEntries, path, true, false, bool);
     }
 
     private static void removeResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod("removeResource", String.class, AtomicBoolean.class);
+        Method method = MapEntries.class.getDeclaredMethod(
+                "removeResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, bool);
+        method.invoke(mapEntries, path, true, false, bool);
     }
 
     private static void removeAlias(
@@ -205,9 +211,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private static void updateResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod("updateResource", String.class, AtomicBoolean.class);
+        Method method = MapEntries.class.getDeclaredMethod(
+                "updateResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, bool);
+        method.invoke(mapEntries, path, true, false, bool);
     }
 
     private void internal_test_simple_alias_support(boolean onJcrContent, boolean cached) {
@@ -1252,6 +1259,118 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertFalse("alias handler should not have set up cache", ah.usesCache());
     }
 
+    @Test
+    public void test_event_alias_during_bg_init1() {
+        Assume.assumeTrue(
+                "simulation of resource removal during bg init only meaningful in 'bg init' case",
+                resourceResolverFactory.isAliasCacheInitInBackground());
+
+        Resource root = createMockedResource("/");
+        Resource top = createMockedResource(root, "top");
+        Resource leaf1 = createMockedResource(top, "leaf1");
+        when(leaf1.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias1"));
+
+        CountDownLatch greenLight = new CountDownLatch(1);
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    greenLight.await();
+                    return Set.of(leaf1).iterator();
+                });
+
+        AliasHandler ah = mapEntries.ah;
+        ah.initializeAliases();
+        assertFalse(ah.isReady());
+
+        // bg init will wait until we give green light
+
+        Resource leaf2 = createMockedResource(top, "leaf2");
+        when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
+
+        removeResource(leaf1);
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf1.getPath(), false)));
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
+
+        greenLight.countDown();
+        waitForBgInit();
+
+        assertTrue(ah.isReady());
+
+        Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap(top);
+        assertNotNull(aliasMapEntry);
+
+        Collection<String> leaf1Entry = aliasMapEntry.get(leaf1.getName());
+        assertNull(
+                "Alias Map Entry for " + top.getPath() + " should not contain an entry for " + leaf1.getName()
+                        + " due to removal event during background init, but got: "
+                        + leaf1Entry,
+                leaf1Entry);
+
+        Collection<String> leaf2Entry = aliasMapEntry.get(leaf2.getName());
+        assertNotNull(
+                "Alias Map Entry for " + top.getPath() + " should contain an entry for " + leaf2.getName()
+                        + " due to addition event during background init, but got: " + leaf2Entry,
+                leaf2Entry);
+
+        assertIterableEquals(Set.of("alias2"), leaf2Entry, "Alias Array for " + leaf2.getName() + " incorrect");
+    }
+
+    @Test
+    public void test_event_alias_during_bg_init2() {
+        Assume.assumeTrue(
+                "simulation of resource removal during bg init only meaningful in 'bg init' case",
+                resourceResolverFactory.isAliasCacheInitInBackground());
+
+        Resource root = createMockedResource("/");
+        Resource top = createMockedResource(root, "top");
+        Resource leaf1 = createMockedResource(top, "leaf1");
+        when(leaf1.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias1"));
+
+        CountDownLatch greenLight = new CountDownLatch(1);
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    greenLight.await();
+                    return Set.of(leaf1).iterator();
+                });
+
+        AliasHandler ah = mapEntries.ah;
+        ah.initializeAliases();
+        assertFalse(ah.isReady());
+
+        // bg init will wait until we give green light
+
+        Resource leaf2 = createMockedResource(top, "leaf2");
+        when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
+
+        removeResource(leaf1);
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf1.getPath(), false)));
+        mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
+
+        greenLight.countDown();
+        waitForBgInit();
+
+        assertTrue(ah.isReady());
+
+        Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap(top);
+        assertNotNull(aliasMapEntry);
+
+        Collection<String> leaf1Entry = aliasMapEntry.get(leaf1.getName());
+        assertNull(
+                "Alias Map Entry for " + top.getPath() + " should not contain an entry for " + leaf1.getName()
+                        + " due to removal event during background init, but got: "
+                        + leaf1Entry,
+                leaf1Entry);
+
+        Collection<String> leaf2Entry = aliasMapEntry.get(leaf2.getName());
+        assertNotNull(
+                "Alias Map Entry for " + top.getPath() + " should contain an entry for " + leaf2.getName()
+                        + " due to addition event during background init, but got: " + leaf2Entry,
+                leaf2Entry);
+
+        assertIterableEquals(Set.of("alias2"), leaf2Entry, "Alias Array for " + leaf2.getName() + " incorrect");
+    }
+
     // utilities for testing alias queries
 
     // used for paged query of all
@@ -1327,7 +1446,6 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     private void attachChildResource(Resource parent, Resource child) {
-
         List<Resource> newChildren = new ArrayList<>();
         parent.getChildren().forEach(newChildren::add);
         newChildren.add(child);
@@ -1336,5 +1454,25 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(parent.getChild(child.getName())).thenReturn(child);
 
         when(child.getParent()).thenReturn(parent);
+    }
+
+    private void detachChildResource(Resource parent, Resource child) {
+        List<Resource> oldChildren = new ArrayList<>();
+        parent.getChildren().forEach(oldChildren::add);
+        oldChildren.remove(child);
+
+        when(parent.getChildren()).thenReturn(oldChildren);
+        when(parent.getChild(child.getName())).thenReturn(null);
+
+        when(child.getParent()).thenReturn(null);
+    }
+
+    private void removeResource(Resource resource) {
+        Resource parent = resource.getParent();
+        if (parent != null) {
+            detachChildResource(parent, resource);
+        }
+        when(resource.getParent()).thenReturn(null);
+        when(resourceResolver.getResource(resource.getPath())).thenReturn(null);
     }
 }
