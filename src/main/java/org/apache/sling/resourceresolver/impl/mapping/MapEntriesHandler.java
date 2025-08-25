@@ -76,11 +76,6 @@ public interface MapEntriesHandler {
         public boolean isOptimizeAliasResolutionEnabled() {
             return false;
         }
-
-        @Override
-        public void logDisableAliasOptimization() {
-            // nothing to do
-        }
     };
 
     /**
@@ -89,11 +84,6 @@ public interface MapEntriesHandler {
      * @return true if the optimizedAliasResolution should be used, false otherwise
      */
     boolean isOptimizeAliasResolutionEnabled();
-
-    /**
-     * Log an error if alias optimization should be used but is currently disabled
-     */
-    void logDisableAliasOptimization();
 
     /**
      * Returns all alias entries for children of the specified <code>parentPath</code>
