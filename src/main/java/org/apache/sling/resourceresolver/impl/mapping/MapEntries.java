@@ -180,16 +180,16 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         return bundleContext.registerService(ResourceChangeListener.class, this, props);
     }
 
-    private boolean addResource(String path, boolean forAlias, boolean forVanityPath, AtomicBoolean resolverRefreshed) {
+    private boolean addResource(ChangeContext ctx, AtomicBoolean resolverRefreshed) {
         this.initializing.lock();
 
         try {
             this.refreshResolverIfNecessary(resolverRefreshed);
 
-            Resource resource = this.resolver != null ? resolver.getResource(path) : null;
+            Resource resource = this.resolver != null ? resolver.getResource(ctx.path) : null;
             if (resource != null) {
-                boolean vanityPathAdded = forVanityPath && vph.doAddVanity(resource);
-                boolean aliasAdded = forAlias && ah.doAddAlias(resource);
+                boolean vanityPathAdded = ctx.forVanityPath && vph.doAddVanity(resource);
+                boolean aliasAdded = ctx.forAlias && ah.doAddAlias(resource);
                 return vanityPathAdded || aliasAdded;
             } else {
                 return false;
@@ -199,25 +199,24 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         }
     }
 
-    private boolean updateResource(
-            String path, boolean forAlias, boolean forVanityPath, AtomicBoolean resolverRefreshed) {
+    private boolean updateResource(ChangeContext ctx, AtomicBoolean resolverRefreshed) {
 
         this.initializing.lock();
 
         try {
             this.refreshResolverIfNecessary(resolverRefreshed);
 
-            Resource resource = this.resolver != null ? resolver.getResource(path) : null;
+            Resource resource = this.resolver != null ? resolver.getResource(ctx.path) : null;
 
-            boolean isValidVanityPath = vph.isValidVanityPath(path);
+            boolean isValidVanityPath = vph.isValidVanityPath(ctx.path);
 
             if (resource != null) {
 
                 boolean vanityPathChanged = false;
 
-                if (forVanityPath && isValidVanityPath) {
+                if (ctx.forVanityPath && isValidVanityPath) {
                     // we remove the old vanity path first
-                    vanityPathChanged |= vph.doRemoveVanity(path);
+                    vanityPathChanged |= vph.doRemoveVanity(ctx.path);
 
                     // add back vanity path
                     Resource contentRsrc = null;
@@ -228,7 +227,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                     vanityPathChanged |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                 }
 
-                boolean aliasChanged = forAlias && ah.doUpdateAlias(resource);
+                boolean aliasChanged = ctx.forAlias && ah.doUpdateAlias(resource);
                 return vanityPathChanged || aliasChanged;
             }
         } finally {
@@ -238,26 +237,25 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         return false;
     }
 
-    private boolean removeResource(
-            String path, boolean forAlias, boolean forVanityPath, AtomicBoolean resolverRefreshed) {
+    private boolean removeResource(ChangeContext ctx, AtomicBoolean resolverRefreshed) {
 
         boolean vanityPathChanged = false;
         boolean aliasChanged = false;
 
-        if (forAlias) {
-            String pathPrefix = path + "/";
+        if (ctx.forAlias) {
+            String pathPrefix = ctx.path + "/";
             for (String contentPath : ah.aliasMapsMap.keySet()) {
-                if (path.startsWith(contentPath + "/")
-                        || path.equals(contentPath)
+                if (ctx.path.startsWith(contentPath + "/")
+                        || ctx.path.equals(contentPath)
                         || contentPath.startsWith(pathPrefix)) {
                     aliasChanged |= ah.removeAlias(
-                            resolver, contentPath, path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
+                            resolver, contentPath, ctx.path, () -> this.refreshResolverIfNecessary(resolverRefreshed));
                 }
             }
         }
 
-        if (forVanityPath) {
-            String actualContentPath = getActualContentPath(path);
+        if (ctx.forVanityPath) {
+            String actualContentPath = getActualContentPath(ctx.path);
             String actualContentPathPrefix = actualContentPath + "/";
 
             for (String target : vph.getVanityPathMappings().keySet()) {
@@ -504,7 +502,9 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
             if (!queuedForAlias || !queuedForVanityPath) {
                 sendEvent |= handleResourceChange(
-                        type, path, !queuedForAlias, !queuedForVanityPath, resolverRefreshed, hasReloadedConfig);
+                        new ChangeContext(type, path, !queuedForAlias, !queuedForVanityPath),
+                        resolverRefreshed,
+                        hasReloadedConfig);
             }
         }
 
@@ -513,42 +513,56 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         }
     }
 
+    // bundles information about contents and target of change event
+    static class ChangeContext {
+        final ResourceChange.ChangeType type;
+        final String path;
+        final boolean forAlias;
+        final boolean forVanityPath;
+
+        public ChangeContext(ResourceChange.ChangeType type, String path, boolean forAlias, boolean forVanityPath) {
+            this.type = type;
+            this.path = path;
+            this.forAlias = forAlias;
+            this.forVanityPath = forVanityPath;
+        }
+
+        public ChangeContext(String path, boolean forAlias, boolean forVanityPath) {
+            this(null, path, forAlias, forVanityPath);
+        }
+    }
+
     private boolean handleResourceChange(
-            ResourceChange.ChangeType type,
-            String path,
-            boolean forAlias,
-            boolean forVanityPath,
-            AtomicBoolean resolverRefreshed,
-            AtomicBoolean hasReloadedConfig) {
+            ChangeContext ctx, AtomicBoolean resolverRefreshed, AtomicBoolean hasReloadedConfig) {
         boolean changed = false;
 
         // removal of a resource is handled differently
-        if (type == ResourceChange.ChangeType.REMOVED) {
-            final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, true);
+        if (ctx.type == ResourceChange.ChangeType.REMOVED) {
+            final Boolean result = handleConfigurationUpdate(ctx.path, hasReloadedConfig, resolverRefreshed, true);
             if (result != null) {
                 if (result) {
                     changed = true;
                 } else {
-                    changed |= removeResource(path, forAlias, forVanityPath, resolverRefreshed);
+                    changed |= removeResource(ctx, resolverRefreshed);
                 }
             }
             // session.move() is handled differently see also SLING-3713 and
-        } else if (type == ResourceChange.ChangeType.ADDED) {
-            final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
+        } else if (ctx.type == ResourceChange.ChangeType.ADDED) {
+            final Boolean result = handleConfigurationUpdate(ctx.path, hasReloadedConfig, resolverRefreshed, false);
             if (result != null) {
                 if (result) {
                     changed = true;
                 } else {
-                    changed |= addResource(path, forAlias, forVanityPath, resolverRefreshed);
+                    changed |= addResource(ctx, resolverRefreshed);
                 }
             }
-        } else if (type == ResourceChange.ChangeType.CHANGED) {
-            final Boolean result = handleConfigurationUpdate(path, hasReloadedConfig, resolverRefreshed, false);
+        } else if (ctx.type == ResourceChange.ChangeType.CHANGED) {
+            final Boolean result = handleConfigurationUpdate(ctx.path, hasReloadedConfig, resolverRefreshed, false);
             if (result != null) {
                 if (result) {
                     changed = true;
                 } else {
-                    changed |= updateResource(path, forAlias, forVanityPath, resolverRefreshed);
+                    changed |= updateResource(ctx, resolverRefreshed);
                 }
             }
         }
@@ -767,7 +781,8 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             final String path = entry.getKey();
 
             log.trace("drain {} queue - type={}, path={}", isAlias ? "alias" : "vanity path", type, path);
-            sendEvent |= handleResourceChange(type, path, isAlias, !isAlias, resolverRefreshed, hasReloadedConfig);
+            sendEvent |= handleResourceChange(
+                    new ChangeContext(type, path, isAlias, !isAlias), resolverRefreshed, hasReloadedConfig);
         }
 
         // do we need to send an event?

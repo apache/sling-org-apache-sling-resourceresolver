@@ -125,22 +125,22 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     // SLING-4847
     public void test_doNodeAdded1() throws Exception {
-        final Method addResource = MapEntries.class.getDeclaredMethod(
-                "addResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
+        final Method addResource =
+                MapEntries.class.getDeclaredMethod("addResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
         addResource.setAccessible(true);
         final AtomicBoolean refreshed = new AtomicBoolean(false);
-        addResource.invoke(mapEntries, "/node", true, true, refreshed);
+        addResource.invoke(mapEntries, new MapEntries.ChangeContext("/node", true, true), refreshed);
         assertTrue(refreshed.get());
     }
 
     // tests SLING-6542
     @Test
     public void sessionConcurrency() throws Exception {
-        final Method addResource = MapEntries.class.getDeclaredMethod(
-                "addResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
+        final Method addResource =
+                MapEntries.class.getDeclaredMethod("addResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
         addResource.setAccessible(true);
         final Method updateResource = MapEntries.class.getDeclaredMethod(
-                "updateResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
+                "updateResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
         updateResource.setAccessible(true);
         final Method handleConfigurationUpdate = MapEntries.class.getDeclaredMethod(
                 "handleConfigurationUpdate", String.class, AtomicBoolean.class, AtomicBoolean.class, boolean.class);
@@ -176,8 +176,10 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 try {
                     Thread.sleep(randomWait);
                     for (int i1 = 0; i1 < 3; i1++) {
-                        addResource.invoke(mapEntries, "/node", true, true, new AtomicBoolean());
-                        updateResource.invoke(mapEntries, "/node", true, true, new AtomicBoolean());
+                        addResource.invoke(
+                                mapEntries, new MapEntries.ChangeContext("/node", true, true), new AtomicBoolean());
+                        updateResource.invoke(
+                                mapEntries, new MapEntries.ChangeContext("/node", true, true), new AtomicBoolean());
                         handleConfigurationUpdate.invoke(
                                 mapEntries, "/node", new AtomicBoolean(), new AtomicBoolean(), false);
                     }

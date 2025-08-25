@@ -182,18 +182,18 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private static boolean addResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod(
-                "addResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
+        Method method =
+                MapEntries.class.getDeclaredMethod("addResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
         method.setAccessible(true);
-        return (Boolean) method.invoke(mapEntries, path, true, false, bool);
+        return (Boolean) method.invoke(mapEntries, new MapEntries.ChangeContext(path, true, false), bool);
     }
 
     private static void removeResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Method method = MapEntries.class.getDeclaredMethod(
-                "removeResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
+                "removeResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, true, false, bool);
+        method.invoke(mapEntries, new MapEntries.ChangeContext(path, true, false), bool);
     }
 
     private static void removeAlias(
@@ -212,9 +212,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     private static void updateResource(MapEntries mapEntries, String path, AtomicBoolean bool)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Method method = MapEntries.class.getDeclaredMethod(
-                "updateResource", String.class, boolean.class, boolean.class, AtomicBoolean.class);
+                "updateResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
         method.setAccessible(true);
-        method.invoke(mapEntries, path, true, false, bool);
+        method.invoke(mapEntries, new MapEntries.ChangeContext(path, true, false), bool);
     }
 
     private void internal_test_simple_alias_support(boolean onJcrContent, boolean cached) {
