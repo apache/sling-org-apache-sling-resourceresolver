@@ -192,6 +192,10 @@ public class ResourceResolverFactoryActivator {
         return this.config.resource_resolver_optimize_alias_resolution();
     }
 
+    public boolean isAliasCacheInitInBackground() {
+        return this.config.resource_resolver_alias_cache_in_background();
+    }
+
     public Set<String> getAllowedAliasLocations() {
         return this.allowedAliasLocations;
     }
