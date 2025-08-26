@@ -272,6 +272,11 @@ public class MockedResourceResolverImplTest {
                     }
 
                     @Override
+                    public boolean resource_resolver_alias_cache_in_background() {
+                        return false;
+                    }
+
+                    @Override
                     public String[] resource_resolver_allowed_alias_locations() {
                         // deliberately put a mixture of paths with and without ending slash in here - both should be
                         // handled correct
