@@ -174,7 +174,7 @@ public @interface ResourceResolverFactoryConfig {
     @AttributeDefinition(
             name = "Alias Cache Init In Background",
             description =
-                    "This flag controls whether the vanity path cache will be initialized immediately or later as a background task.")
+                    "This flag controls whether the alias cache will be initialized synchronously or as a background thread, not blocking the startup.")
     boolean resource_resolver_alias_cache_in_background() default true;
 
     @AttributeDefinition(
