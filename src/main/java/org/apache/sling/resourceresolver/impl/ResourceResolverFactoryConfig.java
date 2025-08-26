@@ -168,9 +168,14 @@ public @interface ResourceResolverFactoryConfig {
     @AttributeDefinition(
             name = "Optimize alias resolution",
             description = "This flag controls whether to optimize"
-                    + " the alias resolution by creating an internal cache of aliases. NOTE: this setting will be removed "
-                    + " with the optimized resolution being the default (see SLING-12025).")
+                    + " the alias resolution by creating an internal cache of aliases.")
     boolean resource_resolver_optimize_alias_resolution() default true;
+
+    @AttributeDefinition(
+            name = "Alias Cache Init In Background",
+            description =
+                    "This flag controls whether the vanity path cache will be initialized immediately or later as a background task.")
+    boolean resource_resolver_alias_cache_in_background() default true;
 
     @AttributeDefinition(
             name = "Allowed Optimized Alias Locations",
