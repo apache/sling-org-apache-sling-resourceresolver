@@ -20,6 +20,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -220,5 +221,21 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 });
 
         mapEntries.ah.initializeAliases();
+    }
+
+    @Test
+    public void testTimingFormatter() {
+        assertEquals(
+                "PT0S (0 ms) - 1 operations (~ 1000000000 operations/s)",
+                MapEntries.getTimingMessage("", Duration.ofNanos(0), 1));
+        assertEquals(
+                "foobar: PT0S (0 ms) - 1 operations (~ 1000000000 operations/s)",
+                MapEntries.getTimingMessage("foobar", Duration.ofNanos(0), 1));
+        assertEquals(
+                "PT3M (180000 ms) - 567 operations (~ 3 operations/s)",
+                MapEntries.getTimingMessage("", Duration.ofMinutes(3), 567));
+        assertEquals(
+                "PT4H10M (15000000 ms) - 82304 operations (~ 5 operations/s)",
+                MapEntries.getTimingMessage("", Duration.ofMinutes(250), 82304));
     }
 }
