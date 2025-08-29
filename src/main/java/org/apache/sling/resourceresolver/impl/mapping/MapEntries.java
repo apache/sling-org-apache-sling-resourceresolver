@@ -805,13 +805,13 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
         }
     }
 
-    // builds a string based on (optional) message, duration, number of operations
+    // builds a string based on description, duration, number of operations
     // computes and inserts the number of operations per second
-    static String getTimingMessage(String description, Duration duration, long operations) {
+    static @NotNull String getTimingMessage(@NotNull String description, @NotNull Duration duration, long operations) {
         StringBuilder result = new StringBuilder(description);
 
         long nanos = duration.toNanos();
-        if (description != null && !description.isEmpty()) {
+        if (!description.isEmpty()) {
             result.append(": ");
         }
 
