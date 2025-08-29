@@ -29,13 +29,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections4.map.LRUMap;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
@@ -93,13 +94,13 @@ public class VanityPathHandler {
 
     private final ReentrantLock initializing;
 
-    private final Runnable drain;
+    private final Consumer<String> drain;
 
     public VanityPathHandler(
             MapConfigurationProvider factory,
             Map<String, List<MapEntry>> resolveMapsMap,
             ReentrantLock initializing,
-            Runnable drain) {
+            Consumer<String> drain) {
         this.factory = factory;
         this.resolveMapsMap = resolveMapsMap;
         this.initializing = initializing;
@@ -171,31 +172,24 @@ public class VanityPathHandler {
             try (ResourceResolver resolver =
                     factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
 
-                long initStart = System.nanoTime();
+                StopWatch sw = StopWatch.createStarted();
                 log.debug("vanity path initialization - start");
 
                 vanityTargets = loadVanityPaths(resolver);
 
                 // process pending events
-                VanityPathHandler.this.drain.run();
+                VanityPathHandler.this.drain.accept("draining vanity path event queue (during cache initialization)");
 
                 vanityPathsProcessed.set(true);
 
                 // drain once more in case more events have arrived
-                VanityPathHandler.this.drain.run();
+                VanityPathHandler.this.drain.accept("draining vanity path event queue (after cache initialization)");
 
-                long initElapsed = System.nanoTime() - initStart;
-                long resourcesPerSecond = (vanityResourcesOnStartup.get()
-                        * TimeUnit.SECONDS.toNanos(1)
-                        / (initElapsed == 0 ? 1 : initElapsed));
-
-                log.info(
-                        "vanity path initialization - completed, processed {} resources with sling:vanityPath properties in {}ms (~{} resource/s)",
-                        vanityResourcesOnStartup.get(),
-                        TimeUnit.NANOSECONDS.toMillis(initElapsed),
-                        resourcesPerSecond);
+                String message = MapEntries.getTimingMessage(
+                        "vanity path initialization - completed", sw.getDuration(), vanityResourcesOnStartup.get());
+                log.info(message);
             } catch (LoginException ex) {
-                log.error("Vanity path init failed", ex);
+                log.error("vanity path init failed", ex);
             } finally {
                 log.debug(
                         "dropping temporary resolver map - {}/{} entries, {} hits, {} misses",
@@ -471,7 +465,7 @@ public class VanityPathHandler {
 
         long count = 0;
         long countInScope = 0;
-        long processStart = System.nanoTime();
+        StopWatch sw = StopWatch.createStarted();
 
         while (it.hasNext()) {
             count += 1;
@@ -484,12 +478,15 @@ public class VanityPathHandler {
                 loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
             }
         }
-        long processElapsed = System.nanoTime() - processStart;
-        log.debug(
-                "processed {} resources with sling:vanityPath properties (of which {} in scope) in {}ms",
-                count,
-                countInScope,
-                TimeUnit.NANOSECONDS.toMillis(processElapsed));
+
+        String message = MapEntries.getTimingMessage(
+                String.format(
+                        "processed %d resources with sling:vanityPath properties (of which %d in scope)",
+                        count, countInScope),
+                sw.getDuration(),
+                count);
+        log.debug(message);
+
         if (!isAllVanityPathEntriesCached()) {
             if (countInScope > this.factory.getMaxCachedVanityPathEntries()) {
                 log.warn(
@@ -746,10 +743,12 @@ public class VanityPathHandler {
 
     private Iterator<Resource> queryUnpaged(String query, ResourceResolver resolver) {
         log.debug("start vanity path query: {}", query);
-        long queryStart = System.nanoTime();
+        StopWatch sw = StopWatch.createStarted();
         final Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
-        long queryElapsed = System.nanoTime() - queryStart;
-        log.debug("end vanity path query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+        log.debug(
+                "end vanity path query; elapsed {} ({}ms)",
+                sw.getDuration(),
+                sw.getDuration().toMillis());
         return it;
     }
 }

@@ -21,6 +21,7 @@ package org.apache.sling.resourceresolver.impl.mapping;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.sling.api.SlingConstants;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
@@ -758,7 +760,8 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
     }
 
     // Drains the resource event queue for a specific queue
-    private boolean drainSpecificQueue(boolean isAlias, List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
+    private boolean drainSpecificQueue(
+            boolean isAlias, String message, List<Map.Entry<String, ResourceChange.ChangeType>> queue) {
         final AtomicBoolean resolverRefreshed = new AtomicBoolean(false);
 
         // the config needs to be reloaded only once
@@ -766,7 +769,11 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
         boolean sendEvent = false;
 
+        int count = 0;
+        StopWatch sw = StopWatch.createStarted();
+
         while (!queue.isEmpty()) {
+            count += 1;
             Map.Entry<String, ResourceChange.ChangeType> entry = queue.remove(0);
             final ResourceChange.ChangeType type = entry.getValue();
             final String path = entry.getKey();
@@ -776,21 +783,46 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                     new ChangeContext(type, path, isAlias, !isAlias), resolverRefreshed, hasReloadedConfig);
         }
 
+        if (count > 0) {
+            log.info(getTimingMessage(message, sw.getDuration(), count));
+        }
+
         // do we need to send an event?
         return sendEvent;
     }
 
     // Drains the resource event queue for aliases
-    private void drainAliasQueue() {
-        if (drainSpecificQueue(true, resourceChangeQueueForAliases)) {
+    private void drainAliasQueue(String message) {
+        if (drainSpecificQueue(true, message, resourceChangeQueueForAliases)) {
             sendChangeEvent();
         }
     }
 
     // Drains the resource event queue for vanity paths
-    private void drainVanityPathQueue() {
-        if (drainSpecificQueue(false, resourceChangeQueueForVanityPaths)) {
+    private void drainVanityPathQueue(String message) {
+        if (drainSpecificQueue(false, message, resourceChangeQueueForVanityPaths)) {
             sendChangeEvent();
         }
+    }
+
+    // builds a string based on description, duration, number of operations
+    // computes and inserts the number of operations per second
+    static @NotNull String getTimingMessage(@NotNull String description, @NotNull Duration duration, long operations) {
+        StringBuilder result = new StringBuilder(description);
+
+        long nanos = duration.toNanos();
+        if (!description.isEmpty()) {
+            result.append(": ");
+        }
+
+        result.append(String.format(
+                "%s (%d ms) - %d operations", duration, TimeUnit.NANOSECONDS.toMillis(nanos), operations));
+
+        if (operations > 0) {
+            long operationsPerSecond = (operations * TimeUnit.SECONDS.toNanos(1) / (nanos == 0 ? 1 : nanos));
+            result.append(String.format(" (~ %d operations/s)", operationsPerSecond));
+        }
+
+        return result.toString();
     }
 }
