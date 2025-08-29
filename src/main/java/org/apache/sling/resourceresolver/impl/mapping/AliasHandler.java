@@ -131,12 +131,22 @@ class AliasHandler {
         // the map here
         this.aliasMapsMap = UNITIALIZED_MAP;
 
-        try {
-            // already disposed?
-            if (this.factory == null) {
-                return;
-            }
+        // already disposed?
+        if (this.factory == null) {
+            log.error("Can't initialize aliases when MapConfigurationProvider is null");
+            return;
+        }
 
+        log.info(
+                "Initializing Aliases ({}={}, {}={}, {}={})",
+                "alias_cache_in_background",
+                this.factory.isAliasCacheInitInBackground(),
+                "optimize_alias_resolution",
+                this.factory.isOptimizeAliasResolutionEnabled(),
+                "allowed_alias_locations",
+                this.factory.getAllowedAliasLocations());
+
+        try {
             aliasesProcessed.set(false);
 
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
