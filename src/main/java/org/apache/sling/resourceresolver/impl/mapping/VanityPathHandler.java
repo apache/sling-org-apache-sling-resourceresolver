@@ -121,7 +121,28 @@ public class VanityPathHandler {
      * been null-ed.
      */
     protected void initializeVanityPaths() {
+
         this.initializing.lock();
+
+        // already disposed?
+        if (this.factory == null) {
+            log.error("Can't initialize vanity paths when MapConfigurationProvider is null");
+            return;
+        }
+
+        log.info(
+                "Initializing Vanity Paths ({}={}, {}={}, {}={}, {}={}, {}={})",
+                "enable_vanitypath",
+                this.factory.isVanityPathEnabled(),
+                "vanitypath_cache_in_background",
+                this.factory.isVanityPathCacheInitInBackground(),
+                "vanitypath_maxEntries",
+                this.factory.getMaxCachedVanityPathEntries(),
+                "vanitypath_(allowlist/denylist)",
+                this.factory.getVanityPathConfig(),
+                "vanitypath_bloomfilter_maxBytes",
+                this.factory.getVanityBloomFilterMaxBytes());
+
         try {
             if (this.factory.isVanityPathEnabled()) {
                 vanityPathsProcessed.set(false);
