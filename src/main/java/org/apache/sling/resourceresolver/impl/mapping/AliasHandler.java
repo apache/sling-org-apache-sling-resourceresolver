@@ -29,12 +29,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
@@ -70,7 +71,7 @@ class AliasHandler {
 
     private final Runnable doUpdateConfiguration;
     private final Runnable sendChangeEvent;
-    private final Runnable drain;
+    private final Consumer<String> drain;
 
     // static value for the case when cache is not (yet) not initialized
     private static final Map<String, Map<String, Collection<String>>> UNITIALIZED_MAP = Collections.emptyMap();
@@ -97,7 +98,7 @@ class AliasHandler {
             @NotNull ReentrantLock initializing,
             @NotNull Runnable doUpdateConfiguration,
             @NotNull Runnable sendChangeEvent,
-            @NotNull Runnable drain) {
+            @NotNull Consumer<String> drain) {
         this.factory = factory;
         this.initializing = initializing;
         this.doUpdateConfiguration = doUpdateConfiguration;
@@ -174,30 +175,23 @@ class AliasHandler {
                 List<String> invalidAliases = new ArrayList<>();
                 StringBuilder diagnostics = new StringBuilder();
 
-                long initStart = System.nanoTime();
+                StopWatch sw = StopWatch.createStarted();
                 log.debug("alias initialization - start");
 
                 aliasMapsMap = loadAliases(resolver, conflictingAliases, invalidAliases, diagnostics);
 
                 // process pending events
-                AliasHandler.this.drain.run();
+                AliasHandler.this.drain.accept("draining alias event queue (during cache initialization)");
 
                 aliasesProcessed.set(true);
 
                 // drain once more in case more events have arrived
-                AliasHandler.this.drain.run();
+                AliasHandler.this.drain.accept("draining alias event queue (after cache initialization)");
 
-                long processElapsed = System.nanoTime() - initStart;
-                long resourcePerSecond = (aliasResourcesOnStartup.get()
-                        * TimeUnit.SECONDS.toNanos(1)
-                        / (processElapsed == 0 ? 1 : processElapsed));
-                log.info(
-                        "alias initialization - completed, processed {} resources with sling:alias properties in {}ms (~{} resource/s){}",
-                        aliasResourcesOnStartup.get(),
-                        TimeUnit.NANOSECONDS.toMillis(processElapsed),
-                        resourcePerSecond,
-                        diagnostics);
+                String message = MapEntries.getTimingMessage(
+                        "alias initialization - completed", sw.getDuration(), aliasResourcesOnStartup.get());
 
+                log.info(message);
             } catch (Exception ex) {
                 log.error("Alias init failed", ex);
                 aliasMapsMap = UNITIALIZED_MAP;
@@ -291,10 +285,12 @@ class AliasHandler {
         @NotNull
         private Iterator<Resource> queryUnpaged(@NotNull String query, @NotNull ResourceResolver resolver) {
             log.debug("start alias query: {}", query);
-            long queryStart = System.nanoTime();
+            StopWatch sw = StopWatch.createStarted();
             Iterator<Resource> it = resolver.findResources(query, "JCR-SQL2");
-            long queryElapsed = System.nanoTime() - queryStart;
-            log.debug("end alias query; elapsed {}ms", TimeUnit.NANOSECONDS.toMillis(queryElapsed));
+            log.debug(
+                    "end alias query; elapsed {} ({}ms)",
+                    sw.getDuration(),
+                    sw.getDuration().toMillis());
             return it;
         }
     }
