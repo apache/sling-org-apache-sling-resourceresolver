@@ -29,7 +29,7 @@ import org.apache.sling.api.resource.path.Path;
 /**
  * Internal interface representing the additional methods
  * MapEntries needs from the ResourceResolverFactory.
- *
+ * <p>
  * Exists primarily to facilitate mocking of the ResourceResolverFactory
  * when testing MapEntries.
  */
@@ -65,7 +65,7 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
 
     Map<String, Object> getServiceUserAuthenticationInfo(final String subServiceName) throws LoginException;
 
-    public class VanityPathConfig implements Comparable<VanityPathConfig> {
+    class VanityPathConfig implements Comparable<VanityPathConfig> {
         public final boolean isExclude;
         public final String prefix;
 
@@ -76,7 +76,12 @@ public interface MapConfigurationProvider extends ResourceResolverFactory {
 
         @Override
         public int compareTo(VanityPathConfig o2) {
-            return Integer.valueOf(o2.prefix.length()).compareTo(this.prefix.length());
+            return Integer.compare(o2.prefix.length(), this.prefix.length());
+        }
+
+        @Override
+        public String toString() {
+            return (this.isExclude ? "deny " : "allow ") + "'" + this.prefix + "'";
         }
     }
 

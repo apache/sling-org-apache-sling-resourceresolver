@@ -244,6 +244,12 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
+    public void test_vanity_pathconfig_to_string() {
+        assertEquals("deny '/libs/'", new VanityPathConfig("/libs/", true).toString());
+        assertEquals("allow '/2025/12/19'", new VanityPathConfig("/2025/12/19", false).toString());
+    }
+
+    @Test
     public void test_simple_vanity_path() {
         String vanityPath = "/xyz";
         String containerName = "foo";
