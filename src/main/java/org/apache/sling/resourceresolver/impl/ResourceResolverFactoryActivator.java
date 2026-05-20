@@ -369,6 +369,12 @@ public class ResourceResolverFactoryActivator {
         // factoryRegistrationHandler must be closed before bundleContext is set to null
         this.factoryRegistrationHandler.close();
         this.bundleContext = null;
+        // Close the decorator tracker only on true deactivation.  The tracker must NOT be
+        // closed inside deactivateInternal(), which is also called from @Modified.  When
+        // @Modified fires, OSGi does not re-fire bindResourceDecorator for already-bound
+        // DYNAMIC references, so closing the tracker here would permanently lose all
+        // registered ResourceDecorators for the lifetime of the component.
+        this.resourceDecoratorTracker.close();
         deactivateInternal();
     }
 
@@ -379,7 +385,6 @@ public class ResourceResolverFactoryActivator {
         this.changeListenerWhiteboard = null;
         this.resourceProviderTracker.deactivate();
         this.resourceProviderTracker = null;
-        this.resourceDecoratorTracker.close();
     }
 
     /**
