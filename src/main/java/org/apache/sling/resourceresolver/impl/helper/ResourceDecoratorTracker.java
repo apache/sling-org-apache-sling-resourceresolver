@@ -141,6 +141,15 @@ public class ResourceDecoratorTracker {
         }
 
         public int compareTo(final ResourceDecoratorEntry o) {
+            if (this.comparable == null && o.comparable == null) {
+                return 0;
+            }
+            if (this.comparable == null) {
+                return -1;
+            }
+            if (o.comparable == null) {
+                return 1;
+            }
             return comparable.compareTo(o.comparable);
         }
     }
