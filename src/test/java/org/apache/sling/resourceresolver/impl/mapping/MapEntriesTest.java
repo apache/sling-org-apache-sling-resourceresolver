@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.observation.ResourceChange;
+import org.apache.sling.api.resource.observation.ResourceChangeListener;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.junit.After;
@@ -48,6 +50,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.EventAdmin;
 
 import static org.junit.Assert.assertEquals;
@@ -221,6 +224,57 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                 });
 
         mapEntries.ah.initializeAliases();
+    }
+
+    // tests SLING-13236: a resource change delivered while the MapEntries constructor is still
+    // running (the listener may be called as soon as it is registered) must not cause an NPE on
+    // the not-yet-assigned VanityPathHandler
+    @Test
+    public void testChangeDeliveredDuringListenerRegistration() throws Exception {
+        final AtomicBoolean changeDelivered = new AtomicBoolean(false);
+        when(bundleContext.registerService(eq(ResourceChangeListener.class), any(ResourceChangeListener.class), any()))
+                .thenAnswer((Answer<ServiceRegistration<ResourceChangeListener>>) invocation -> {
+                    final ResourceChangeListener listener = invocation.getArgument(1);
+                    listener.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, "/node", false)));
+                    changeDelivered.set(true);
+                    return null;
+                });
+
+        final MapEntries entries = new MapEntries(
+                resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, Optional.empty());
+        try {
+            assertTrue("change should have been delivered during listener registration", changeDelivered.get());
+        } finally {
+            entries.dispose();
+        }
+    }
+
+    // tests SLING-13236: a resource change delivered while dispose() is unregistering the
+    // listener must not cause an NPE on an already torn down AliasHandler
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testChangeDeliveredDuringDispose() throws Exception {
+        final AtomicBoolean changeDelivered = new AtomicBoolean(false);
+        when(bundleContext.registerService(eq(ResourceChangeListener.class), any(ResourceChangeListener.class), any()))
+                .thenAnswer((Answer<ServiceRegistration<ResourceChangeListener>>) invocation -> {
+                    final ResourceChangeListener listener = invocation.getArgument(1);
+                    final ServiceRegistration<ResourceChangeListener> registration =
+                            Mockito.mock(ServiceRegistration.class);
+                    Mockito.doAnswer(unregisterInvocation -> {
+                                listener.onChange(
+                                        List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, "/node", false)));
+                                changeDelivered.set(true);
+                                return null;
+                            })
+                            .when(registration)
+                            .unregister();
+                    return registration;
+                });
+
+        final MapEntries entries = new MapEntries(
+                resourceResolverFactory, bundleContext, eventAdmin, stringInterpolationProvider, Optional.empty());
+        entries.dispose();
+        assertTrue("change should have been delivered during listener unregistration", changeDelivered.get());
     }
 
     @Test
