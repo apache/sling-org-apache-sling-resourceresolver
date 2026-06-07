@@ -235,7 +235,7 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
         when(bundleContext.registerService(eq(ResourceChangeListener.class), any(ResourceChangeListener.class), any()))
                 .thenAnswer((Answer<ServiceRegistration<ResourceChangeListener>>) invocation -> {
                     final ResourceChangeListener listener = invocation.getArgument(1);
-                    listener.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, "/node", false)));
+                    listener.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, "/resource", false)));
                     changeDelivered.set(true);
                     return null;
                 });
