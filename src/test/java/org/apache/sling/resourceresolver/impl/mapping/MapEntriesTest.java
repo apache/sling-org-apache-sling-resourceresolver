@@ -261,8 +261,8 @@ public class MapEntriesTest extends AbstractMappingMapEntriesTest {
                     final ServiceRegistration<ResourceChangeListener> registration =
                             Mockito.mock(ServiceRegistration.class);
                     Mockito.doAnswer(unregisterInvocation -> {
-                                listener.onChange(
-                                        List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, "/resource", false)));
+                                listener.onChange(List.of(
+                                        new ResourceChange(ResourceChange.ChangeType.ADDED, "/resource", false)));
                                 changeDelivered.set(true);
                                 return null;
                             })
