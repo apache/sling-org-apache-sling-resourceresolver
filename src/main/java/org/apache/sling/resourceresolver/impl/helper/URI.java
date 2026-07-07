@@ -24,6 +24,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -4018,11 +4019,7 @@ public class URI implements Cloneable, Comparable<URI>, Serializable {
             throw new IllegalArgumentException("Parameter may not be null");
         }
 
-        try {
-            return new String(data, "US-ASCII");
-        } catch (UnsupportedEncodingException e) {
-            throw new URIException("HttpClient requires ASCII support");
-        }
+        return new String(data, StandardCharsets.US_ASCII);
     }
 
     /**
