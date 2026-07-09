@@ -4008,8 +4008,6 @@ public class URI implements Cloneable, Comparable<URI>, Serializable {
      * headers)
      *
      * @param data the byte array to be encoded
-     * @param offset the index of the first byte to encode
-     * @param length the number of bytes to encode
      * @return The string representation of the byte array
      * @since 3.0
      */
@@ -4066,11 +4064,7 @@ public class URI implements Cloneable, Comparable<URI>, Serializable {
             throw new IllegalArgumentException("Parameter may not be null");
         }
 
-        try {
-            return data.getBytes("US-ASCII");
-        } catch (UnsupportedEncodingException e) {
-            throw new URIException("HttpClient requires ASCII support");
-        }
+        return data.getBytes(StandardCharsets.US_ASCII);
     }
 
     /**
