@@ -142,10 +142,15 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 this::drainAliasQueue);
         this.ah.initializeAliases();
 
-        this.registration = registerResourceChangeListener(bundleContext);
-
+        // create the vanity path handler before registering the resource change listener: the
+        // listener may be called as soon as it is registered, and onChange requires both handlers
+        // to be present (events arriving before initializeVanityPaths completes are queued and
+        // drained by the initializer)
         this.vph =
                 new VanityPathHandler(this.factory, this.resolveMapsMap, this.initializing, this::drainVanityPathQueue);
+
+        this.registration = registerResourceChangeListener(bundleContext);
+
         this.vph.initializeVanityPaths();
 
         if (metrics.isPresent()) {
@@ -293,14 +298,17 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
      */
     public void dispose() {
 
-        if (this.ah != null) {
-            ah.dispose();
-            ah = null;
-        }
-
+        // unregister the resource change listener before disposing the alias handler: onChange
+        // requires the handlers to be present, so they must not be torn down while the listener
+        // can still be called
         if (this.registration != null) {
             this.registration.unregister();
             this.registration = null;
+        }
+
+        if (this.ah != null) {
+            ah.dispose();
+            ah = null;
         }
 
         /*
