@@ -8,5 +8,25 @@ This module is part of the [Apache Sling](https://sling.apache.org) project.
 
 This bundle provides the Resource Resolver and Resource Resolver Factory.
 
+## Current baseline
+
+- Java version: **17**
+- Parent POM: **org.apache.sling:sling-bundle-parent:66**
+- Current development version: **2.0.5-SNAPSHOT**
+
+## Build and test
+
+- Full build and verification: `mvn clean verify`
+- Run tests: `mvn test`
+- Build bundle artifact: `mvn clean package`
+
+## Recent implementation updates
+
+- `MapEntries` listener lifecycle ordering is race-safe during construction/disposal, with regression coverage in `MapEntriesTest` (SLING-13236).
+- URI helper code uses `StandardCharsets.US_ASCII` for charset handling (SLING-13260).
+- Web console servlet (`ResourceResolverWebConsolePlugin`) handles `IOException` in `doGet`/`doPost`, logs failures, and returns HTTP 500 on rendering/redirect errors.
+- Alias and vanity-path handling received broader refactoring and startup/queue logging improvements across the `MapEntries` area.
+- Build/test dependency baseline was refreshed, including `sling-bundle-parent` 66 and updated `commons-lang3`.
+
 The `/etc/map` mapping configurations are documented on the Sling website's 
 [Mappings for Resource Resolution](https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html) page.
