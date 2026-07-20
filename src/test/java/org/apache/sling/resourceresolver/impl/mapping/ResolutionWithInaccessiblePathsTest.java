@@ -52,15 +52,27 @@ public class ResolutionWithInaccessiblePathsTest {
     OsgiContextExtension osgiContextExtension = new OsgiContextExtension();
 
     @ParameterizedTest(name = "[{index}] inaccessible path: {0}")
-    @ValueSource(strings = {"none (equivalent to admin access)", "/", "/content", "/content/en"})
+    @ValueSource(
+            strings = {
+                "none (equivalent to admin access)",
+                "/",
+                "/content",
+                "/content/en",
+                "/content/en/solutions",
+                "/content/en/solutions/airlines",
+                "/content/en/solutions/airlines/products"
+            })
     void simpleResolution(String inaccessiblePath, OsgiContext ctx) throws InterruptedException, LoginException {
         ResourceResolverFactory resourceResolverFactory = registerResourceResolverfactory(ctx, p -> {
-            Stream.of("/", "/content", "/content/en")
+            Stream.of(
+                            "/",
+                            "/content",
+                            "/content/en",
+                            "/content/en/solutions",
+                            "/content/en/solutions/airlines",
+                            "/content/en/solutions/airlines/products")
                     .filter(path -> !Objects.equals(path, inaccessiblePath))
                     .forEach(p::putResource);
-            p.putResource("/content/en/solutions");
-            p.putResource("/content/en/solutions/airlines");
-            p.putResource("/content/en/solutions/airlines/products");
             p.putResource("/content/en/solutions/airlines/products/wings");
         });
 
@@ -109,6 +121,22 @@ public class ResolutionWithInaccessiblePathsTest {
                 resource.getResourceMetadata().getResolutionPath());
         assertEquals(".json", resource.getResourceMetadata().getResolutionPathInfo());
         assertEquals("/content/es/solutions/airlines/products/wings", resource.getPath());
+    }
+
+    @ParameterizedTest(name = "[{index}] inaccessible path: {0}")
+    @ValueSource(strings = {"none (equivalent to admin access)", "/", "/content"})
+    void emptySegmentResolution(String inaccessiblePath, OsgiContext ctx) throws InterruptedException, LoginException {
+        ResourceResolverFactory resourceResolverFactory = registerResourceResolverfactory(ctx, p -> {
+            Stream.of("/", "/content", "/content/en")
+                    .filter(path -> !Objects.equals(path, inaccessiblePath))
+                    .forEach(p::putResource);
+        });
+
+        ResourceResolver resolver = resourceResolverFactory.getResourceResolver(Collections.emptyMap());
+        Resource resource = resolver.resolve("//content/en.html"); // leading double slash
+        assertEquals("/content/en", resource.getResourceMetadata().getResolutionPath());
+        assertEquals(".html", resource.getResourceMetadata().getResolutionPathInfo());
+        assertEquals("/content/en", resource.getPath());
     }
 
     private static ResourceResolverFactory registerResourceResolverfactory(

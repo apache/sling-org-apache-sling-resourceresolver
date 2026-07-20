@@ -333,6 +333,11 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             absPath = "/" + absPath;
         }
 
+        // replace multiple slashes with single slashes to support paths like e.g. //bin/browser.html
+        while (absPath.startsWith("//")) {
+            absPath = absPath.substring(1);
+        }
+
         // check for special namespace prefix treatment
         absPath = unmangleNamespaces(absPath);
 
@@ -859,7 +864,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
                 resolutionPath.append(resolutionPathPrefix);
             }
 
-            while (tokener.hasMoreTokens()) {
+            while (resource != null && tokener.hasMoreTokens()) {
                 final String childNameRaw = tokener.nextToken();
 
                 Resource nextResource = getChildInternal(resource, childNameRaw);
