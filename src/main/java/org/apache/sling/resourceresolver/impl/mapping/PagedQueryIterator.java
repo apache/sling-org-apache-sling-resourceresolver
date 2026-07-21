@@ -18,6 +18,8 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -88,7 +90,11 @@ public class PagedQueryIterator implements Iterator<Resource> {
         final String[] values = resource.getValueMap().get(propertyName, defaultValue);
 
         if (values.length > 0) {
-            String value = values[0];
+            // The query orders by FIRST([propertyName]), i.e. the smallest value of a (possibly
+            // multivalued) property. The ValueMap, however, returns the values in storage order, so
+            // values[0] is not necessarily the smallest one. Use the minimum to match the query's
+            // sort key; otherwise the ordering checks below raise false positives (SLING-13266).
+            String value = Arrays.stream(values).min(Comparator.naturalOrder()).orElse(values[0]);
             if (value.compareTo(lastKey) < 0) {
                 String message = String.format(
                         "unexpected query result in page %d, property name '%s', got '%s', despite querying for > '%s'",

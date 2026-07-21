@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -168,6 +169,37 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 "alias", PROPNAME, resourceResolver, "testPagedResourcesOnPageBoundaryLost '%s'", 5);
 
         checkResult(it, expected);
+    }
+
+    /**
+     * A multivalued property is returned by the query in the order of its smallest value
+     * ({@code FIRST([prop])}), but the ValueMap exposes the values in storage order. The iterator
+     * must therefore compare on the smallest value, not on {@code values[0]}: when index 0 is not
+     * the smallest value, the two orderings diverge and comparing on {@code values[0]} would raise
+     * a spurious {@link PagedQueryIterator.QueryImplementationException}.
+     */
+    @Test
+    public void testMultiValuedFirstNotAtIndexZero() {
+        // resources are returned in FIRST()/minimum order: "/aaa" < "/acs-commons"
+        Resource r1 = multiValuedResource("2025-10-14T20:32:01.481Z", "/aaa");
+        Resource r2 = multiValuedResource("/acs-commons");
+        Collection<Resource> resources = Arrays.asList(r1, r2);
+        when(resourceResolver.findResources("multivalued ''", "JCR-SQL2")).thenReturn(resources.iterator());
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "multivalued '%s'", 2000);
+
+        List<Resource> result = new ArrayList<>();
+        while (it.hasNext()) {
+            result.add(it.next());
+        }
+        assertEquals(Arrays.asList(r1, r2), result);
+    }
+
+    private static Resource multiValuedResource(String... values) {
+        ValueMap m = mock(ValueMap.class);
+        when(m.get(eq(PROPNAME), any(Object.class))).thenReturn(values);
+        Resource r = mock(Resource.class);
+        when(r.getValueMap()).thenReturn(m);
+        return r;
     }
 
     private static Collection<Resource> toResourceList(String... keys) {
