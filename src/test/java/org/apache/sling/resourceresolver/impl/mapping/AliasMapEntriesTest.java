@@ -1270,8 +1270,16 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         Resource leaf1 = createMockedResource(top, "leaf1");
         when(leaf1.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias1"));
 
+        Resource leaf2 = createMockedResource(top, "leaf2");
+        when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
+
+        // all stubbing must happen before bg init starts - Mockito stubbing is not thread-safe against
+        // concurrent invocations of the same mock
+        removeResource(leaf1);
+
         CountDownLatch greenLight = new CountDownLatch(1);
 
+        // the query still yields the pre-removal snapshot, so the events have to win over it
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     greenLight.await();
@@ -1282,12 +1290,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         ah.initializeAliases();
         assertFalse(ah.isReady());
 
-        // bg init will wait until we give green light
-
-        Resource leaf2 = createMockedResource(top, "leaf2");
-        when(leaf2.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
-
-        removeResource(leaf1);
+        // bg init will wait until we give green light - events only from here on, no stubbing
         mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.REMOVED, leaf1.getPath(), false)));
         mapEntries.onChange(List.of(new ResourceChange(ResourceChange.ChangeType.ADDED, leaf2.getPath(), false)));
 
