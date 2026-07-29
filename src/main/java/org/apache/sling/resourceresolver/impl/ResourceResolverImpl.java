@@ -97,6 +97,9 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     protected final Map<ResourceTypeInformation, Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
 
+    // Store the resourceSupertype mapping (supertype can be null)
+    protected final Map<String, Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
+
     private Map<String, Object> propertyMap;
 
     private volatile Exception closedResolverException;
@@ -1101,10 +1104,22 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         checkClosed();
         String resourceSuperType = null;
         if (resource != null) {
-            resourceSuperType = resource.getResourceSuperType();
-            if (resourceSuperType == null) {
-                resourceSuperType = this.getParentResourceType(resource.getResourceType());
+            if (parentResourceTypeMap.containsKey(resource.getPath())) {
+                resourceSuperType =
+                        parentResourceTypeMap.get(resource.getPath()).orElse(null);
+            } else {
+                resourceSuperType = getParentResourceTypeInternal(resource);
+                parentResourceTypeMap.put(resource.getPath(), Optional.ofNullable(resourceSuperType));
             }
+        }
+        return resourceSuperType;
+    }
+
+    String getParentResourceTypeInternal(final Resource resource) {
+        String resourceSuperType;
+        resourceSuperType = resource.getResourceSuperType();
+        if (resourceSuperType == null) {
+            resourceSuperType = this.getParentResourceType(resource.getResourceType());
         }
         return resourceSuperType;
     }
@@ -1179,6 +1194,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         checkClosed();
         this.control.refresh(this.context);
         resourceTypeLookupCache.clear();
+        parentResourceTypeMap.clear();
     }
 
     @Override
