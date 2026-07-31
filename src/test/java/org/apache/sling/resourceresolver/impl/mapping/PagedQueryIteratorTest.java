@@ -112,6 +112,27 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
+    public void testWrongResultBelowPageBoundary() {
+        // SLING-13284: a result on a new page has a value below the page boundary key.
+        // This can happen when the async index uses a stale sort key for filtering.
+        // Page 1: ["b", "c"] with pageSize=1 → "c" triggers page break (lastKey="c").
+        // Page 2: returns "a" which is < lastKey "c" — must not abort.
+        // Note: the page-break row ("c") is consumed as a boundary marker and not returned.
+        Collection<Resource> page1 = toResourceList("b", "c");
+        Collection<Resource> page2 = toResourceList("a");
+        when(resourceResolver.findResources("boundary ''", "JCR-SQL2")).thenReturn(page1.iterator());
+        when(resourceResolver.findResources("boundary 'c'", "JCR-SQL2")).thenReturn(page2.iterator());
+
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "boundary '%s'", 1);
+        int count = 0;
+        while (it.hasNext()) {
+            it.next();
+            count++;
+        }
+        assertEquals(2, count);
+    }
+
+    @Test
     public void testStaleAsyncIndexDoesNotAbortIteration() {
         // SLING-13284: Reproduces the scenario where an async index delivers rows in an order
         // that no longer matches the live property values (e.g. sling:alias was rewritten
