@@ -90,18 +90,22 @@ public class PagedQueryIterator implements Iterator<Resource> {
         if (values.length > 0) {
             String value = values[0];
             if (value.compareTo(lastKey) < 0) {
-                String message = String.format(
-                        "unexpected query result in page %d, property name '%s', got '%s', despite querying for > '%s'",
-                        (page - 1), propertyName, value, lastKey);
-                log.error(message);
-                throw new QueryImplementationException(message);
+                log.warn(
+                        "unexpected query result in page {}, property name '{}', got '{}', despite querying for > '{}'"
+                                + " (the async index may not yet reflect the current property value)",
+                        (page - 1),
+                        propertyName,
+                        value,
+                        lastKey);
             }
             if (lastValue != null && value.compareTo(lastValue) < 0) {
-                String message = String.format(
-                        "unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
-                        (page - 1), propertyName, value, lastValue);
-                log.error(message);
-                throw new QueryImplementationException(message);
+                log.warn(
+                        "unexpected query result in page {}, property name '{}', got '{}', last value was '{}'"
+                                + " (the async index may not yet reflect the current property value)",
+                        (page - 1),
+                        propertyName,
+                        value,
+                        lastValue);
             }
 
             // keep information about large key counts
