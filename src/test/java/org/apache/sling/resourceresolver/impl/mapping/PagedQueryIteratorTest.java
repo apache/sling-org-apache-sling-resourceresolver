@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -37,6 +38,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -99,13 +101,35 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
+    public void testSimpleWrongType() {
+        // SLING-13284: out-of-order results (from a stale async index) should not abort iteration
+        String[] expected = new String[] {"a", "b", "c"};
+        Collection<Resource> expectedResources = toResourceList(expected);
+
+        ValueMap m = mock(ValueMap.class);
+        when(m.get(eq(PROPNAME), any(Object.class))).thenReturn(new Date[] {new Date(0)});
+        Resource r = mock(Resource.class);
+        when(r.getValueMap()).thenReturn(m);
+
+        expectedResources.add(r);
+
+        when(resourceResolver.findResources(eq("testSimpleWrongType"), eq("JCR-SQL2")))
+                .thenReturn(expectedResources.iterator());
+        PagedQueryIterator it =
+                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongType", 2000);
+        assertNotNull(it);
+        checkResult(it, expected);
+    }
+
+    @Test
     public void testSimpleWrongResultAfterKey() {
         // SLING-13284: out-of-order results across page boundaries should not abort iteration
         String[] expected = new String[] {"x", "x", "a", "a"};
         Collection<Resource> expectedResources = toResourceList(expected);
-        when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2"))
+        when(resourceResolver.findResources("testSimpleWrongResultAfterKey", "JCR-SQL2"))
                 .thenReturn(expectedResources.iterator());
-        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 1);
+        PagedQueryIterator it =
+                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongResultAfterKey", 1);
         int count = 0;
         while (it.hasNext()) {
             it.next();
