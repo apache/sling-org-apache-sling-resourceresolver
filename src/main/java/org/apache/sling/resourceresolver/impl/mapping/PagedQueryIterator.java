@@ -182,13 +182,4 @@ public class PagedQueryIterator implements Iterator<Resource> {
             return "";
         }
     }
-
-    /**
-     * Thrown when the underlying repository misbehaves with respect to sorting on multivalued properties.
-     */
-    public static class QueryImplementationException extends RuntimeException {
-        public QueryImplementationException(String message) {
-            super(message);
-        }
-    }
 }
