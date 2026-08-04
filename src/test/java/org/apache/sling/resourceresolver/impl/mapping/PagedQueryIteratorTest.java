@@ -106,9 +106,12 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2"))
                 .thenReturn(expectedResources.iterator());
         PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 1);
+        int count = 0;
         while (it.hasNext()) {
             it.next();
+            count++;
         }
+        assertEquals(3, count);
     }
 
     @Test
@@ -141,7 +144,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         // first([sling:alias]) value that no longer matches the current values[0].
         String[] staleOrder = new String[] {"ayacucho-fleeces", "ayacucho-bamboo", "ayacucho"};
         Collection<Resource> resources = toResourceList(staleOrder);
-        when(resourceResolver.findResources(eq("staleIndex"), eq("JCR-SQL2"))).thenReturn(resources.iterator());
+        when(resourceResolver.findResources("staleIndex", "JCR-SQL2")).thenReturn(resources.iterator());
 
         PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "staleIndex", 2000);
         int count = 0;
