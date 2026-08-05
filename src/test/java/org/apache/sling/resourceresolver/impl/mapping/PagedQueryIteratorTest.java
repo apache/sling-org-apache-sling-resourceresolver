@@ -32,13 +32,13 @@ import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -106,10 +106,10 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         String[] expected = new String[] {"a", "b", "c"};
         Collection<Resource> expectedResources = toResourceList(expected);
 
-        ValueMap m = mock(ValueMap.class);
-        when(m.get(eq(PROPNAME), any(Object.class))).thenReturn(new Date[] {new Date(0)});
+        Date oneMore = new Date(0);
+        ValueMap properties = new ValueMapDecorator(Map.of(PROPNAME, new Date[] {oneMore}));
         Resource r = mock(Resource.class);
-        when(r.getValueMap()).thenReturn(m);
+        when(r.getValueMap()).thenReturn(properties);
 
         expectedResources.add(r);
 
@@ -117,8 +117,12 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(expectedResources.iterator());
         PagedQueryIterator it =
                 new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongType", 2000);
-        assertNotNull(it);
-        checkResult(it, expected);
+
+        String[] expWithOneMore = Arrays.copyOf(expected, expected.length + 1);
+        // this assumes the way Sling converts Dates to Strings
+        expWithOneMore[expected.length] = oneMore.toInstant().toString();
+
+        checkResult(it, expWithOneMore);
     }
 
     @Test
