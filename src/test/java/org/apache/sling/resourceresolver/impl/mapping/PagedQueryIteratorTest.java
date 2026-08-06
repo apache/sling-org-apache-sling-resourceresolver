@@ -39,6 +39,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
+import org.apache.sling.api.wrappers.impl.ObjectConverter;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
@@ -130,7 +131,7 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
             String[] expWithOneMore = Arrays.copyOf(expected, expected.length + 1);
             // implementation detail: this assumes the way Sling converts Dates to Strings
-            expWithOneMore[expected.length] = oneMore.toInstant().toString();
+            expWithOneMore[expected.length] = ObjectConverter.convert(oneMore, String.class);
 
             checkResult(it, expWithOneMore);
 
