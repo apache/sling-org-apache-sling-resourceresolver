@@ -24,10 +24,16 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.AppenderBase;
 import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
@@ -36,9 +42,11 @@ import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -102,27 +110,36 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void testSimpleWrongType() {
-        // SLING-13284: out-of-order results (from a stale async index) should not abort iteration
-        String[] expected = new String[] {"a", "b", "c"};
-        Collection<Resource> expectedResources = toResourceList(expected);
+        try (TestLogger logger =
+                TestLogger.createStartedFor(PagedQueryIterator.class).contains("unexpected")) {
 
-        Date oneMore = new Date(0);
-        ValueMap properties = new ValueMapDecorator(Map.of(PROPNAME, new Date[] {oneMore}));
-        Resource r = mock(Resource.class);
-        when(r.getValueMap()).thenReturn(properties);
+            String[] expected = new String[] {"a", "b", "c"};
+            Collection<Resource> expectedResources = toResourceList(expected);
 
-        expectedResources.add(r);
+            Date oneMore = new Date(0);
+            ValueMap properties = new ValueMapDecorator(Map.of(PROPNAME, new Date[] {oneMore}));
+            Resource r = mock(Resource.class);
+            when(r.getValueMap()).thenReturn(properties);
 
-        when(resourceResolver.findResources(eq("testSimpleWrongType"), eq("JCR-SQL2")))
-                .thenReturn(expectedResources.iterator());
-        PagedQueryIterator it =
-                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongType", 2000);
+            expectedResources.add(r);
 
-        String[] expWithOneMore = Arrays.copyOf(expected, expected.length + 1);
-        // this assumes the way Sling converts Dates to Strings
-        expWithOneMore[expected.length] = oneMore.toInstant().toString();
+            when(resourceResolver.findResources(eq("testSimpleWrongType"), eq("JCR-SQL2")))
+                    .thenReturn(expectedResources.iterator());
+            PagedQueryIterator it =
+                    new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongType", 2000);
 
-        checkResult(it, expWithOneMore);
+            String[] expWithOneMore = Arrays.copyOf(expected, expected.length + 1);
+            // implementation detail: this assumes the way Sling converts Dates to Strings
+            expWithOneMore[expected.length] = oneMore.toInstant().toString();
+
+            checkResult(it, expWithOneMore);
+
+            // implementation detail: assumes format of log message
+            List<String> logEntries = logger.stopAndGetLogs();
+            assertTrue(
+                    "Log should contain 'class [Ljava.util.Date;', but got: " + logEntries,
+                    logEntries.toString().contains("class [Ljava.util.Date;"));
+        }
     }
 
     @Test
@@ -266,5 +283,59 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
             pos += 1;
         }
         assertFalse(it.hasNext());
+    }
+
+    // inspired by Oak LogCustomizer, to be factored out when needed
+    private static class TestLogger implements AutoCloseable {
+
+        private final Appender<ILoggingEvent> customLogger;
+
+        private final Logger logger;
+        private String matchContainsMessage;
+        private final List<String> logs = Collections.synchronizedList(new ArrayList<>());
+
+        private TestLogger(Class<?> clazz) {
+            this.logger = getLogger(clazz);
+
+            this.customLogger = new AppenderBase<>() {
+                @Override
+                protected void append(ILoggingEvent e) {
+                    String message = e.getFormattedMessage();
+                    if (matchContainsMessage == null || message.contains(matchContainsMessage)) {
+                        logs.add(message);
+                    }
+                }
+            };
+
+            this.customLogger.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
+        }
+
+        public static TestLogger createStartedFor(Class<?> clazz) {
+            TestLogger logger = new TestLogger(clazz);
+            logger.customLogger.start();
+            logger.logger.addAppender(logger.customLogger);
+            return logger;
+        }
+
+        public TestLogger contains(String matchContainsMessage) {
+            this.matchContainsMessage = matchContainsMessage;
+            return this;
+        }
+
+        public List<String> stopAndGetLogs() {
+            logger.detachAppender(customLogger);
+            customLogger.stop();
+            return logs;
+        }
+
+        public void close() {
+            logger.detachAppender(customLogger);
+            customLogger.stop();
+            logs.clear();
+        }
+
+        private static Logger getLogger(Class<?> clazz) {
+            return ((LoggerContext) LoggerFactory.getILoggerFactory()).getLogger(clazz);
+        }
     }
 }
