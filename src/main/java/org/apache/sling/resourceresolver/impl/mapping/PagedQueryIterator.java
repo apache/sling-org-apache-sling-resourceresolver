@@ -83,8 +83,8 @@ public class PagedQueryIterator implements Iterator<Resource> {
         page += 1;
     }
 
-    private static String getDiagInformationWhenNotString(ValueMap valueMap, String propertyNName) {
-        Object value = valueMap.get(propertyNName);
+    private static String getDiagInformationWhenNotString(ValueMap valueMap, String propertyName) {
+        Object value = valueMap.get(propertyName);
         if (value == null || value instanceof String[] || value instanceof String) {
             // all good
             return "";
