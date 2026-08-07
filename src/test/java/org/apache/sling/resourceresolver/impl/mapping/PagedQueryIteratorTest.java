@@ -111,8 +111,9 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void testSimpleWrongType() {
-        try (TestLogger logger =
-                TestLogger.createStartedFor(PagedQueryIterator.class).contains("unexpected")) {
+        try (TestLogger logger = TestLogger.create(PagedQueryIterator.class)
+                .contains("unexpected")
+                .start()) {
 
             String[] expected = new String[] {"a", "b", "c"};
             Collection<Resource> expectedResources = toResourceList(expected);
@@ -291,12 +292,12 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
 
         private final Appender<ILoggingEvent> customLogger;
 
-        private final Logger logger;
+        private final Logger delegate;
         private String matchContainsMessage;
         private final List<String> logs = Collections.synchronizedList(new ArrayList<>());
 
         private TestLogger(Class<?> clazz) {
-            this.logger = getLogger(clazz);
+            this.delegate = getLogger(clazz);
 
             this.customLogger = new AppenderBase<>() {
                 @Override
@@ -311,11 +312,17 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
             this.customLogger.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
         }
 
-        public static TestLogger createStartedFor(Class<?> clazz) {
-            TestLogger logger = new TestLogger(clazz);
-            logger.customLogger.start();
-            logger.logger.addAppender(logger.customLogger);
-            return logger;
+        public static TestLogger create(Class<?> clazz) {
+            return new TestLogger(clazz);
+        }
+
+        public TestLogger start() {
+            if (delegate == null) {
+                throw new IllegalStateException();
+            }
+            this.delegate.addAppender(this.customLogger);
+            this.customLogger.start();
+            return this;
         }
 
         public TestLogger contains(String matchContainsMessage) {
@@ -324,13 +331,19 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         }
 
         public List<String> stopAndGetLogs() {
-            logger.detachAppender(customLogger);
+            if (this.delegate == null) {
+                throw new IllegalStateException();
+            }
+            delegate.detachAppender(customLogger);
             customLogger.stop();
             return logs;
         }
 
         public void close() {
-            logger.detachAppender(customLogger);
+            if (this.delegate == null) {
+                throw new IllegalStateException();
+            }
+            delegate.detachAppender(customLogger);
             customLogger.stop();
             logs.clear();
         }
