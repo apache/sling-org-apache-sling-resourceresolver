@@ -29,11 +29,6 @@ import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
-import ch.qos.logback.core.AppenderBase;
 import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
@@ -43,7 +38,6 @@ import org.apache.sling.api.wrappers.impl.ObjectConverter;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -285,71 +279,5 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
             pos += 1;
         }
         assertFalse(it.hasNext());
-    }
-
-    // inspired by Oak LogCustomizer, to be factored out when needed
-    private static class TestLogger implements AutoCloseable {
-
-        private final Appender<ILoggingEvent> customLogger;
-
-        private final Logger delegate;
-        private String matchContainsMessage;
-        private final List<String> logs = Collections.synchronizedList(new ArrayList<>());
-
-        private TestLogger(Class<?> clazz) {
-            this.delegate = getLogger(clazz);
-
-            this.customLogger = new AppenderBase<>() {
-                @Override
-                protected void append(ILoggingEvent e) {
-                    String message = e.getFormattedMessage();
-                    if (matchContainsMessage == null || message.contains(matchContainsMessage)) {
-                        logs.add(message);
-                    }
-                }
-            };
-
-            this.customLogger.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
-        }
-
-        public static TestLogger create(Class<?> clazz) {
-            return new TestLogger(clazz);
-        }
-
-        public TestLogger start() {
-            if (delegate == null) {
-                throw new IllegalStateException();
-            }
-            this.delegate.addAppender(this.customLogger);
-            this.customLogger.start();
-            return this;
-        }
-
-        public TestLogger contains(String matchContainsMessage) {
-            this.matchContainsMessage = matchContainsMessage;
-            return this;
-        }
-
-        public List<String> stopAndGetLogs() {
-            if (this.delegate == null) {
-                throw new IllegalStateException();
-            }
-            delegate.detachAppender(customLogger);
-            customLogger.stop();
-            return logs;
-        }
-
-        public void close() {
-            if (this.delegate == null) {
-                throw new IllegalStateException();
-            }
-            delegate.detachAppender(customLogger);
-            customLogger.stop();
-            logs.clear();
-        }
-
-        private static Logger getLogger(Class<?> clazz) {
-            return ((LoggerContext) LoggerFactory.getILoggerFactory()).getLogger(clazz);
-        }
     }
 }
