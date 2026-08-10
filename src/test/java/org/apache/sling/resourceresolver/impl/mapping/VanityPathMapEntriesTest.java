@@ -229,11 +229,12 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, ctx, bool);
     }
 
-    private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver)
+    private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver, List<String> dubious)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = VanityPathHandler.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class);
+        Method method =
+                VanityPathHandler.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class, List.class);
         method.setAccessible(true);
-        method.invoke(mapEntries.vph, resourceResolver);
+        method.invoke(mapEntries.vph, resourceResolver, dubious);
     }
 
     @Override
@@ -263,6 +264,25 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertNotNull(vanityMap);
         assertEquals(
                 vanityPath, vanityMap.get("/" + containerName + "/" + childName).get(0));
+        assertEquals(2, vanityMap.size());
+        assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
+    }
+
+    @Test
+    public void test_simple_dubious_vanity_path() {
+        String vanityPath = "";
+        String containerName = "foo";
+        String childName = "child";
+        String oneMore = "one-more";
+        prepareMapEntriesForVanityPath(false, false, containerName, childName, oneMore, vanityPath);
+
+        initializeVanityPaths();
+
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+        assertNotNull(vanityMap);
+        assertEquals(
+                "/" + vanityPath,
+                vanityMap.get("/" + containerName + "/" + childName).get(0));
         assertEquals(2, vanityMap.size());
         assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
     }
@@ -1046,7 +1066,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                     }
                 });
 
-        loadVanityPaths(mapEntries, resourceResolver);
+        loadVanityPaths(mapEntries, resourceResolver, new ArrayList<>());
 
         assertEquals(2, getVanityCounter(mapEntries).longValue());
     }
@@ -1068,7 +1088,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                     }
                 });
 
-        loadVanityPaths(mapEntries, resourceResolver);
+        loadVanityPaths(mapEntries, resourceResolver, new ArrayList<>());
 
         assertEquals(2, getVanityCounter(mapEntries).longValue());
     }
