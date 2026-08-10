@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ValueMap;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,29 +83,43 @@ public class PagedQueryIterator implements Iterator<Resource> {
         page += 1;
     }
 
+    private static String getDiagInformationWhenNotString(ValueMap valueMap, String propertyName) {
+        Object value = valueMap.get(propertyName);
+        if (value == null || value instanceof String[] || value instanceof String) {
+            // all good
+            return "";
+        } else {
+            return " (type: '" + value.getClass() + "')";
+        }
+    }
+
     private Resource getNext() throws NoSuchElementException {
         Resource resource = it.next();
         count += 1;
-        final String[] values = resource.getValueMap().get(propertyName, defaultValue);
+
+        final ValueMap valueMap = resource.getValueMap();
+        final String[] values = valueMap.get(propertyName, defaultValue);
 
         if (values.length > 0) {
             String value = values[0];
             if (value.compareTo(lastKey) < 0) {
                 log.warn(
-                        "unexpected query result in page {}, property name '{}', got '{}', despite querying for > '{}'"
+                        "unexpected query result in page {}, property name '{}', got '{}'{}, despite querying for > '{}'"
                                 + " (the async index may not yet reflect the current property value)",
                         (page - 1),
                         propertyName,
                         value,
+                        getDiagInformationWhenNotString(valueMap, propertyName),
                         lastKey);
             }
             if (lastValue != null && value.compareTo(lastValue) < 0) {
                 log.warn(
-                        "unexpected query result in page {}, property name '{}', got '{}', last value was '{}'"
+                        "unexpected query result in page {}, property name '{}', got '{}'{}, last value was '{}'"
                                 + " (the async index may not yet reflect the current property value)",
                         (page - 1),
                         propertyName,
                         value,
+                        getDiagInformationWhenNotString(valueMap, propertyName),
                         lastValue);
             }
 
