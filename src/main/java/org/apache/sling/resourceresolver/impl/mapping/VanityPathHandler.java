@@ -44,6 +44,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +79,9 @@ public class VanityPathHandler {
     private final AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
+
+    // keep track of some dubious vanityPaths for diagnostics (thus size-limited)
+    private static final int MAX_REPORT_DUBIOUS_VANITY_PATHS = 50;
 
     private final MapConfigurationProvider factory;
     private byte[] vanityBloomFilter;
@@ -193,10 +197,12 @@ public class VanityPathHandler {
             try (ResourceResolver resolver =
                     factory.getServiceResourceResolver(factory.getServiceUserAuthenticationInfo("mapping"))) {
 
+                List<String> dubiousPaths = new ArrayList<>();
+
                 StopWatch sw = StopWatch.createStarted();
                 log.debug("vanity path initialization - start");
 
-                vanityTargets = loadVanityPaths(resolver);
+                vanityTargets = loadVanityPaths(resolver, dubiousPaths);
 
                 // process pending events
                 VanityPathHandler.this.drain.accept("draining vanity path event queue (during cache initialization)");
@@ -228,7 +234,7 @@ public class VanityPathHandler {
 
         boolean updateTheCache = isAllVanityPathEntriesCached()
                 || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true);
+        return null != loadVanityPath(resource, resolveMapsMap, vanityTargets, updateTheCache, true, new ArrayList<>());
     }
 
     private String getMapEntryRedirect(final MapEntry mapEntry) {
@@ -410,11 +416,11 @@ public class VanityPathHandler {
                             && (this.factory.isMaxCachedVanityPathEntriesStartup()
                                     || this.isAllVanityPathEntriesCached()
                                     || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries())) {
-                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true);
+                        loadVanityPath(resource, resolveMapsMap, vanityTargets, true, true, new ArrayList<>());
                         entryMap = resolveMapsMap;
                     } else {
                         final Map<String, List<String>> targetPaths = new HashMap<>();
-                        loadVanityPath(resource, entryMap, targetPaths, true, false);
+                        loadVanityPath(resource, entryMap, targetPaths, true, false, new ArrayList<>());
                     }
                 }
             }
@@ -461,11 +467,27 @@ public class VanityPathHandler {
         return true;
     }
 
+    private String diagnoseDubiousValidVanityPath(String resource, String path) {
+        String reason = "";
+        if (path == null) {
+            reason = "null path";
+        } else if (!path.startsWith("/")) {
+            reason = "not an absolute path";
+        } else if (path.contains("//")) {
+            reason = "empty path segment";
+        }
+
+        return reason.isEmpty() ? "" : String.format("Dubious vanity on '%s', value '%s': %s", resource, path, reason);
+    }
+
     /**
      * Load vanity paths - search for all nodes (except under /jcr:system)
      * having a sling:vanityPath property
+     * <p>
+     * Also collect diagnostics about vanity paths that appear to be broken.
      */
-    private Map<String, List<String>> loadVanityPaths(ResourceResolver resolver) {
+    private Map<String, List<String>> loadVanityPaths(
+            @NotNull ResourceResolver resolver, @NotNull List<String> dubiousVanityPaths) {
         final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
         final String baseQueryString =
                 "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]" + " WHERE "
@@ -496,7 +518,7 @@ public class VanityPathHandler {
                 countInScope += 1;
                 final boolean addToCache = isAllVanityPathEntriesCached()
                         || vanityCounter.longValue() < this.factory.getMaxCachedVanityPathEntries();
-                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true);
+                loadVanityPath(resource, resolveMapsMap, targetPaths, addToCache, true, dubiousVanityPaths);
             }
         }
 
@@ -521,6 +543,14 @@ public class VanityPathHandler {
             }
         }
 
+        // warn about dubious vanity paths
+
+        if (dubiousVanityPaths.size() >= MAX_REPORT_DUBIOUS_VANITY_PATHS) {
+            log.warn("There are {} dubious vanity paths; excerpt: {}", dubiousVanityPaths.size(), dubiousVanityPaths);
+        } else if (!dubiousVanityPaths.isEmpty()) {
+            log.warn("There are {} dubious vanity paths: {}", dubiousVanityPaths.size(), dubiousVanityPaths);
+        }
+
         this.vanityResourcesOnStartup.set(count);
 
         return targetPaths;
@@ -543,7 +573,8 @@ public class VanityPathHandler {
             final Map<String, List<MapEntry>> entryMap,
             final Map<String, List<String>> targetPaths,
             boolean addToCache,
-            boolean updateCounter) {
+            boolean updateCounter,
+            final List<String> dubiousVanityPaths) {
 
         if (!isValidVanityPath(resource.getPath())) {
             return null;
@@ -561,6 +592,13 @@ public class VanityPathHandler {
         }
 
         for (final String pVanityPath : pVanityPaths) {
+
+            // collect vanity path values that seem to be broken
+            final String diagnostics = diagnoseDubiousValidVanityPath(resource.getPath(), pVanityPath);
+            if (!diagnostics.isEmpty() && dubiousVanityPaths.size() > MAX_REPORT_DUBIOUS_VANITY_PATHS) {
+                dubiousVanityPaths.add(diagnostics);
+            }
+
             final String[] result = this.getVanityPathDefinition(resource.getPath(), pVanityPath);
             if (result != null) {
                 // redirect target is the node providing the sling:vanityPath
