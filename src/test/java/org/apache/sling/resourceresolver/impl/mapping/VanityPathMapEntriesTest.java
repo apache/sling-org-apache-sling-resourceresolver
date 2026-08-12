@@ -271,21 +271,21 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_syntax_variants() {
         // absolute path
-        internal_test_syntax_variants("/x", "/x");
+        assertPathResolvesTo("/x", "/x");
         // relative path
-        internal_test_syntax_variants("x", "/x");
+        assertPathResolvesTo("x", "/x");
         // multi-segment absolute path
-        internal_test_syntax_variants("/x/y", "/x/y");
+        assertPathResolvesTo("/x/y", "/x/y");
         // multi-segment relative path
-        internal_test_syntax_variants("x/y", "/x/y");
+        assertPathResolvesTo("x/y", "/x/y");
         // multi-segment absolute path starting with "//"
-        internal_test_syntax_variants("//x//y", "//x//y");
+        assertPathResolvesTo("//x//y", "//x//y");
         // multi-segment absolute path starting with "/.."
-        internal_test_syntax_variants("/../x", "/../x");
+        assertPathResolvesTo("/../x", "/../x");
         // blank path
-        internal_test_syntax_variants(" ", null);
+        assertPathResolvesTo(" ", null);
         // empty path
-        internal_test_syntax_variants("", null);
+        assertPathResolvesTo("", null);
     }
 
     private void assertPathResolvesTo(String vanityPath, String expectedPath) {
@@ -299,12 +299,12 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
 
         assertNotNull("vm should not be null", vanityMap);
-        if (expectation == null) {
+        if (expectedPath == null) {
             assertEquals("size of vm should be 0", 0, vanityMap.size());
         } else {
             assertEquals("size of vm should be 1", 1, vanityMap.size());
             assertNotNull("vp should be present in vm, got " + vanityMap, vanityMap.get(path));
-            assertEquals(expectation, vanityMap.get(path).get(0));
+            assertEquals(expectedPath, vanityMap.get(path).get(0));
         }
     }
 
