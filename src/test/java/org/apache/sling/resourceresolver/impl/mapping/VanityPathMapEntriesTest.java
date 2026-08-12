@@ -288,7 +288,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         internal_test_syntax_variants("", null);
     }
 
-    private void internal_test_syntax_variants(String vanityPath, String expectation) {
+    private void assertPathResolvesTo(String vanityPath, String expectedPath) {
 
         String path = "/foo/bar";
 
