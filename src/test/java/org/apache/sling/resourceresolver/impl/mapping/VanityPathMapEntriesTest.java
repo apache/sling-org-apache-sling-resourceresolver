@@ -267,6 +267,66 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
     }
 
+    // see https://issues.apache.org/jira/browse/SLING-13301
+    @Test
+    public void test_syntax_variants() {
+        // absolute path
+        internal_test_syntax_variants("/x", "/x");
+        // relative path
+        internal_test_syntax_variants("x", "/x");
+        // multi-segment absolute path
+        internal_test_syntax_variants("/x/y", "/x/y");
+        // multi-segment relative path
+        internal_test_syntax_variants("x/y", "/x/y");
+        // multi-segment absolute path starting with "//"
+        internal_test_syntax_variants("//x//y", "//x//y");
+        // multi-segment absolute path starting with "/.."
+        internal_test_syntax_variants("/../x", "/../x");
+        // blank path
+        internal_test_syntax_variants(" ", null);
+        // empty path
+        internal_test_syntax_variants("", null);
+    }
+
+    private void assertPathResolvesTo(String vanityPath, String expectedPath) {
+
+        String path = "/foo/bar";
+
+        prepareMapEntriesForSingleVanityPath(path, vanityPath);
+
+        initializeVanityPaths();
+
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+
+        assertNotNull("vm should not be null", vanityMap);
+        if (expectation == null) {
+            assertEquals("size of vm should be 0", 0, vanityMap.size());
+        } else {
+            assertEquals("size of vm should be 1", 1, vanityMap.size());
+            assertNotNull("vp should be present in vm, got " + vanityMap, vanityMap.get(path));
+            assertEquals(expectation, vanityMap.get(path).get(0));
+        }
+    }
+
+    private void prepareMapEntriesForSingleVanityPath(String node, String vanityPath) {
+
+        Resource parent = createMockedResource(ResourceUtil.getParent(node));
+
+        Resource vanity = createMockedResource(node);
+        when(vanity.getParent()).thenReturn(parent);
+        when(vanity.getValueMap()).thenReturn(buildValueMap(VanityPathHandler.PROP_VANITY_PATH, vanityPath));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    String query = invocation.getArguments()[0].toString();
+                    if (matchesPagedQuery(query)) {
+                        return List.of(vanity).iterator();
+                    } else {
+                        return Collections.emptyIterator();
+                    }
+                });
+    }
+
     // see SLING-12620
     @Test
     public void test_simple_vanity_path_support_with_null_parent() {
