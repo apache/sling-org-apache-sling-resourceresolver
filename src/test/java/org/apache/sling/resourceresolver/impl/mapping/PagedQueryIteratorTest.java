@@ -86,31 +86,71 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         assertEquals("", it.getWarning());
     }
 
-    @Test(expected = PagedQueryIterator.QueryImplementationException.class)
+    @Test
     public void testSimpleWrongOrder() {
+        // SLING-13284: out-of-order results (from a stale async index) should not abort iteration
         String[] expected = new String[] {"a", "b", "d", "c"};
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2")))
                 .thenReturn(expectedResources.iterator());
-        // incorrect sort order within a query page
-        Iterator<Resource> it =
+        PagedQueryIterator it =
                 new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 2000);
-        while (it.hasNext()) {
-            it.next();
-        }
+        checkResult(it, expected);
     }
 
-    @Test(expected = PagedQueryIterator.QueryImplementationException.class)
+    @Test
     public void testSimpleWrongResultAfterKey() {
+        // SLING-13284: out-of-order results across page boundaries should not abort iteration
         String[] expected = new String[] {"x", "x", "a", "a"};
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2"))
                 .thenReturn(expectedResources.iterator());
-        // incorrect return value based on previous key
-        Iterator<Resource> it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 1);
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 1);
+        int count = 0;
         while (it.hasNext()) {
             it.next();
+            count++;
         }
+        assertEquals(3, count);
+    }
+
+    @Test
+    public void testWrongResultBelowPageBoundary() {
+        // SLING-13284: a result on a new page has a value below the page boundary key.
+        // Page 1: ["b", "c"] with pageSize=1 — "c" triggers page break (lastKey="c").
+        // Page 2: returns "a" which is < lastKey "c" — must not abort.
+        Collection<Resource> page1 = toResourceList("b", "c");
+        Collection<Resource> page2 = toResourceList("a");
+        when(resourceResolver.findResources("boundary ''", "JCR-SQL2")).thenReturn(page1.iterator());
+        when(resourceResolver.findResources("boundary 'c'", "JCR-SQL2")).thenReturn(page2.iterator());
+
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "boundary '%s'", 1);
+        int count = 0;
+        while (it.hasNext()) {
+            it.next();
+            count++;
+        }
+        assertEquals(2, count);
+    }
+
+    @Test
+    public void testStaleAsyncIndexDoesNotAbortIteration() {
+        // SLING-13284: Reproduces the scenario where an async index delivers rows in an order
+        // that no longer matches the live property values (e.g. sling:alias was rewritten
+        // between the last index cycle and a restart). All rows must still be processed.
+        // The descending order simulates what happens when the index sorts by a stale
+        // first([sling:alias]) value that no longer matches the current values[0].
+        String[] staleOrder = new String[] {"ayacucho-fleeces", "ayacucho-bamboo", "ayacucho"};
+        Collection<Resource> resources = toResourceList(staleOrder);
+        when(resourceResolver.findResources("staleIndex", "JCR-SQL2")).thenReturn(resources.iterator());
+
+        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "staleIndex", 2000);
+        int count = 0;
+        while (it.hasNext()) {
+            it.next();
+            count++;
+        }
+        assertEquals("all rows must be processed even when order doesn't match", 3, count);
     }
 
     @Test
