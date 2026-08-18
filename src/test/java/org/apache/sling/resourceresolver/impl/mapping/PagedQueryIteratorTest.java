@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -31,12 +33,15 @@ import org.apache.sling.api.resource.QuerySyntaxException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
+import org.apache.sling.api.wrappers.impl.ObjectConverter;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -99,13 +104,49 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
     }
 
     @Test
+    public void testSimpleWrongType() {
+        try (TestLogger logger = TestLogger.create(PagedQueryIterator.class)
+                .contains("unexpected")
+                .start()) {
+
+            String[] expected = new String[] {"a", "b", "c"};
+            Collection<Resource> expectedResources = toResourceList(expected);
+
+            Date oneMore = new Date(0);
+            ValueMap properties = new ValueMapDecorator(Map.of(PROPNAME, new Date[] {oneMore}));
+            Resource r = mock(Resource.class);
+            when(r.getValueMap()).thenReturn(properties);
+
+            expectedResources.add(r);
+
+            when(resourceResolver.findResources(eq("testSimpleWrongType"), eq("JCR-SQL2")))
+                    .thenReturn(expectedResources.iterator());
+            PagedQueryIterator it =
+                    new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongType", 2000);
+
+            String[] expWithOneMore = Arrays.copyOf(expected, expected.length + 1);
+            // implementation detail: this assumes the way Sling converts Dates to Strings
+            expWithOneMore[expected.length] = ObjectConverter.convert(oneMore, String.class);
+
+            checkResult(it, expWithOneMore);
+
+            // implementation detail: assumes format of log message
+            List<String> logEntries = logger.stopAndGetLogs();
+            assertTrue(
+                    "Log should contain 'class [Ljava.util.Date;', but got: " + logEntries,
+                    logEntries.toString().contains("class [Ljava.util.Date;"));
+        }
+    }
+
+    @Test
     public void testSimpleWrongResultAfterKey() {
         // SLING-13284: out-of-order results across page boundaries should not abort iteration
         String[] expected = new String[] {"x", "x", "a", "a"};
         Collection<Resource> expectedResources = toResourceList(expected);
-        when(resourceResolver.findResources("testSimpleWrongOrder", "JCR-SQL2"))
+        when(resourceResolver.findResources("testSimpleWrongResultAfterKey", "JCR-SQL2"))
                 .thenReturn(expectedResources.iterator());
-        PagedQueryIterator it = new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 1);
+        PagedQueryIterator it =
+                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongResultAfterKey", 1);
         int count = 0;
         while (it.hasNext()) {
             it.next();
