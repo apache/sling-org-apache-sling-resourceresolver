@@ -55,6 +55,7 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.observation.ExternalResourceChangeListener;
 import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.observation.ResourceChangeListener;
+import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.BundleContext;
@@ -195,8 +196,19 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
             Resource resource = this.resolver != null ? resolver.getResource(ctx.path) : null;
             if (resource != null) {
-                boolean vanityPathAdded = ctx.forVanityPath && vph.doAddVanity(resource);
-                boolean aliasAdded = ctx.forAlias && ah.doAddAlias(resource);
+
+                boolean aliasAdded = false;
+                boolean vanityPathAdded = false;
+
+                if (ctx.forAlias) {
+                    if (resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                        ah.aliasEvents.incrementAndGet();
+                    }
+                    aliasAdded = ah.doAddAlias(resource);
+                }
+                if (ctx.forVanityPath) {
+                    vanityPathAdded = ctx.forAlias && ah.doAddAlias(resource);
+                }
                 return vanityPathAdded || aliasAdded;
             } else {
                 return false;
@@ -215,11 +227,12 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
 
             Resource resource = this.resolver != null ? resolver.getResource(ctx.path) : null;
 
-            boolean isValidVanityPath = vph.isValidVanityPath(ctx.path);
-
             if (resource != null) {
 
+                boolean aliasChanged = false;
                 boolean vanityPathChanged = false;
+
+                boolean isValidVanityPath = vph.isValidVanityPath(ctx.path);
 
                 if (ctx.forVanityPath && isValidVanityPath) {
                     // we remove the old vanity path first
@@ -234,7 +247,13 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                     vanityPathChanged |= vph.doAddVanity(contentRsrc != null ? contentRsrc : resource);
                 }
 
-                boolean aliasChanged = ctx.forAlias && ah.doUpdateAlias(resource);
+                if (ctx.forAlias) {
+                    if (resource.getValueMap().containsKey(ResourceResolverImpl.PROP_ALIAS)) {
+                        ah.aliasEvents.incrementAndGet();
+                    }
+                    aliasChanged = ah.doUpdateAlias(resource);
+                }
+
                 return vanityPathChanged || aliasChanged;
             }
         } finally {

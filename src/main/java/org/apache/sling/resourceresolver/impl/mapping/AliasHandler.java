@@ -87,6 +87,7 @@ class AliasHandler {
     @NotNull
     Map<String, Map<String, Collection<String>>> aliasMapsMap = UNITIALIZED_MAP;
 
+    final AtomicLong aliasEvents;
     final AtomicLong aliasResourcesOnStartup;
     final AtomicLong detectedConflictingAliases;
     final AtomicLong detectedInvalidAliases;
@@ -105,6 +106,7 @@ class AliasHandler {
         this.sendChangeEvent = sendChangeEvent;
         this.drain = drain;
 
+        this.aliasEvents = new AtomicLong();
         this.aliasResourcesOnStartup = new AtomicLong(0);
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
@@ -539,6 +541,7 @@ class AliasHandler {
         } else {
             // we read the aliases from the resource given in the method call parameters
             String[] aliasArray = resource.getValueMap().get(ResourceResolverImpl.PROP_ALIAS, String[].class);
+
             if (aliasArray == null) {
                 return false;
             } else {
