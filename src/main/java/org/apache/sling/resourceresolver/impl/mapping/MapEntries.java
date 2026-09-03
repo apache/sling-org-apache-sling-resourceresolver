@@ -160,6 +160,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             metrics.get().setNumberOfDetectedInvalidAliasesSupplier(ah.detectedInvalidAliases::get);
             metrics.get().setNumberOfResourcesWithAliasedChildrenSupplier(() -> (long) ah.aliasMapsMap.size());
             metrics.get().setNumberOfResourcesWithAliasesOnStartupSupplier(ah.aliasResourcesOnStartup::get);
+            metrics.get().setNumberOfAliasEventsSupplier(ah.aliasEvents::get);
 
             // vanity paths
             metrics.get().setNumberOfResourcesWithVanityPathsOnStartupSupplier(vph.vanityResourcesOnStartup::get);
@@ -167,6 +168,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
             metrics.get().setNumberOfVanityPathBloomNegativesSupplier(vph.vanityPathBloomNegatives::get);
             metrics.get().setNumberOfVanityPathLookupsSupplier(vph.vanityPathLookups::get);
             metrics.get().setNumberOfVanityPathsSupplier(vph.vanityCounter::get);
+            metrics.get().setNumberOfVanityPathEventsSupplier(vph.vanityEvents::get);
         }
     }
 

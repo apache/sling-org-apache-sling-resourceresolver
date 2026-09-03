@@ -77,6 +77,10 @@ public class ResourceResolverMetrics {
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathBloomFalsePositivesGauge;
     private Supplier<Long> numberOfVanityPathBloomFalsePositivesSupplier = ZERO_SUPPLIER;
 
+    // number of vanity path related events
+    private ServiceRegistration<Gauge<Long>> numberOfVanityPathEvents;
+    private Supplier<Long> numberOfVanityPathEventsSupplier = ZERO_SUPPLIER;
+
     // number of resources with aliased children
     private ServiceRegistration<Gauge<Long>> numberOfResourcesWithAliasedChildrenGauge;
     private Supplier<Long> numberOfResourcesWithAliasedChildrenSupplier = ZERO_SUPPLIER;
@@ -92,6 +96,10 @@ public class ResourceResolverMetrics {
     // total number of detected conflicting aliases on startup
     private ServiceRegistration<Gauge<Long>> numberOfDetectedConflictingAliasesGauge;
     private Supplier<Long> numberOfDetectedConflictingAliasesSupplier = ZERO_SUPPLIER;
+
+    // number of vanity path related events
+    private ServiceRegistration<Gauge<Long>> numberOfAliasEvents;
+    private Supplier<Long> numberOfAliasEventsSupplier = ZERO_SUPPLIER;
 
     private Counter unclosedResourceResolvers;
 
@@ -186,6 +194,14 @@ public class ResourceResolverMetrics {
     }
 
     /**
+     * Set the supplier for the number of vanity path related events
+     * @param supplier a supplier returning the number of vanity path related events
+     */
+    public void setNumberOfVanityPathEventsSupplier(Supplier<Long> supplier) {
+        numberOfVanityPathEventsSupplier = supplier;
+    }
+
+    /**
      * Set the number of aliases in the system
      * @param supplier a supplier returning the number of aliases
      */
@@ -215,6 +231,14 @@ public class ResourceResolverMetrics {
      */
     public void setNumberOfDetectedConflictingAliasesSupplier(Supplier<Long> supplier) {
         numberOfDetectedConflictingAliasesSupplier = supplier;
+    }
+
+    /**
+     * Set the supplier for the number of alias related events
+     * @param supplier a supplier returning the number of alias related events
+     */
+    public void setNumberOfAliasEventsSupplier(Supplier<Long> supplier) {
+        numberOfAliasEventsSupplier = supplier;
     }
 
     /**
