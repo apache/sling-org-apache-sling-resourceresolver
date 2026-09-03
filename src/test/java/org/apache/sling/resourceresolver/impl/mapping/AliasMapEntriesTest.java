@@ -708,18 +708,20 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 "observation events have no effect when no cache is used",
                 resourceResolverFactory.isOptimizeAliasResolutionEnabled());
 
+        int eventCount = 0;
+
         assertEquals(0, aliasMap.size());
 
         Resource parent = createMockedResource("/parent");
         Resource result = createMockedResource(parent, "child");
 
-        assertEquals(0, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
         updateResource(mapEntries, "/parent/child", new AtomicBoolean());
 
-        assertEquals(1, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
 
         Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -731,6 +733,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasUpdated"));
 
         updateResource(mapEntries, "/parent/child", new AtomicBoolean());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
         assertEquals(1, aliasMap.size());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
@@ -745,7 +748,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
 
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(3, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -758,7 +761,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContentUpdated"));
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(4, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -770,7 +773,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         // re-update alias
         updateResource(mapEntries, "/parent/child", new AtomicBoolean());
-        assertEquals(5, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -784,7 +787,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(secondResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
 
         updateResource(mapEntries, "/parent/child2", new AtomicBoolean());
-        assertEquals(6, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
         assertEquals(1, aliasMap.size());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
@@ -794,7 +797,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContentUpdated"));
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(7, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -808,7 +811,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContentUpdated"));
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(8, mapEntries.ah.aliasEvents.get());
+        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);

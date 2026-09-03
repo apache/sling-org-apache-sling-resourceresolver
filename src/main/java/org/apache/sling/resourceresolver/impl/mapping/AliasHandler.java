@@ -106,7 +106,7 @@ class AliasHandler {
         this.sendChangeEvent = sendChangeEvent;
         this.drain = drain;
 
-        this.aliasEvents = new AtomicLong();
+        this.aliasEvents = new AtomicLong(0);
         this.aliasResourcesOnStartup = new AtomicLong(0);
         this.detectedConflictingAliases = new AtomicLong(0);
         this.detectedInvalidAliases = new AtomicLong(0);
