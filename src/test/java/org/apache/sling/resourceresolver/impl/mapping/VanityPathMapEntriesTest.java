@@ -637,14 +637,19 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doAddVanity() throws Exception {
+        int eventCount = 0;
         List<MapEntry> entries = mapEntries.getResolveMaps();
         assertEquals(0, entries.size());
         assertEquals(0, getVanityTargets(mapEntries).size());
+        assertEquals(0, mapEntries.vph.vanityEvents.get());
 
         Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
+
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
 
         entries = mapEntries.getResolveMaps();
         assertEquals(2, entries.size());
@@ -656,6 +661,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
         addResource(mapEntries, "/badVanityPath", new AtomicBoolean());
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
 
         assertEquals(2, entries.size());
         assertEquals(1, getVanityTargets(mapEntries).size());
@@ -668,7 +674,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
 
         addResource(mapEntries, "/vanityPathOnJcrContent/jcr:content", new AtomicBoolean());
-
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
         entries = mapEntries.getResolveMaps();
         assertEquals(4, entries.size());
 
@@ -732,6 +738,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doUpdateVanity() throws Exception {
+        int eventCount = 0;
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
+
         Map<String, List<MapEntry>> resolveMapsMap = getResolveMapsMap(mapEntries);
         assertEquals(1, resolveMapsMap.size());
 
@@ -746,6 +755,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
 
         assertEquals(2, resolveMapsMap.size());
         assertEquals(1, vanityTargets.size());
@@ -760,6 +770,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPathUpdated"));
         updateResource.invoke(
                 mapEntries, new MapEntries.ChangeContext("/justVanityPath", false, true), new AtomicBoolean());
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
 
         assertEquals(2, resolveMapsMap.size());
         assertEquals(1, vanityTargets.size());
@@ -779,6 +790,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
 
         addResource(mapEntries, "/vanityPathOnJcrContent/jcr:content", new AtomicBoolean());
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
 
         assertEquals(3, resolveMapsMap.size());
         assertEquals(2, vanityTargets.size());
@@ -796,6 +808,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 mapEntries,
                 new MapEntries.ChangeContext("/vanityPathOnJcrContent/jcr:content", false, true),
                 new AtomicBoolean());
+        assertEquals(eventCount++, mapEntries.vph.vanityEvents.get());
 
         assertEquals(3, resolveMapsMap.size());
         assertEquals(2, vanityTargets.size());

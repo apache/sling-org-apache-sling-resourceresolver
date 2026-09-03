@@ -207,6 +207,9 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                     aliasAdded = ah.doAddAlias(resource);
                 }
                 if (ctx.forVanityPath) {
+                    if (resource.getValueMap().containsKey(VanityPathHandler.PROP_VANITY_PATH)) {
+                        vph.vanityEvents.incrementAndGet();
+                    }
                     vanityPathAdded = vph.doAddVanity(resource);
                 }
                 return vanityPathAdded || aliasAdded;
@@ -235,6 +238,10 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                 boolean isValidVanityPath = vph.isValidVanityPath(ctx.path);
 
                 if (ctx.forVanityPath && isValidVanityPath) {
+                    if (resource.getValueMap().containsKey(VanityPathHandler.PROP_VANITY_PATH)) {
+                        vph.vanityEvents.incrementAndGet();
+                    }
+
                     // we remove the old vanity path first
                     vanityPathChanged |= vph.doRemoveVanity(ctx.path);
 
