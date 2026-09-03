@@ -715,12 +715,10 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         Resource parent = createMockedResource("/parent");
         Resource result = createMockedResource(parent, "child");
 
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
-
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias"));
 
         updateResource(mapEntries, "/parent/child", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
 
         Map<String, Collection<String>> aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -732,7 +730,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasUpdated"));
 
         updateResource(mapEntries, "/parent/child", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
         assertEquals(1, aliasMap.size());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
@@ -747,7 +745,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContent"));
 
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -760,7 +758,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContentUpdated"));
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -772,7 +770,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         // re-update alias
         updateResource(mapEntries, "/parent/child", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -786,7 +784,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(secondResult.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "alias2"));
 
         updateResource(mapEntries, "/parent/child2", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
         assertEquals(1, aliasMap.size());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
@@ -796,7 +794,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContentUpdated"));
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
@@ -810,7 +808,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(jcrContentResult.getValueMap())
                 .thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasJcrContentUpdated"));
         updateResource(mapEntries, "/parent/child/jcr:content", new AtomicBoolean());
-        assertEquals(eventCount++, mapEntries.ah.aliasEvents.get());
+        assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
 
         aliasMapEntry = mapEntries.getAliasMap("/parent");
         assertNotNull(aliasMapEntry);
