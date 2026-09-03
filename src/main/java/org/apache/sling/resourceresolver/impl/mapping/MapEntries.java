@@ -207,7 +207,7 @@ public class MapEntries implements MapEntriesHandler, ResourceChangeListener, Ex
                     aliasAdded = ah.doAddAlias(resource);
                 }
                 if (ctx.forVanityPath) {
-                    vanityPathAdded = ctx.forAlias && ah.doAddAlias(resource);
+                    vanityPathAdded = vph.doAddVanity(resource);
                 }
                 return vanityPathAdded || aliasAdded;
             } else {
