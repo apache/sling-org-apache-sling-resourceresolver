@@ -77,6 +77,10 @@ public class ResourceResolverMetrics {
     private ServiceRegistration<Gauge<Long>> numberOfVanityPathBloomFalsePositivesGauge;
     private Supplier<Long> numberOfVanityPathBloomFalsePositivesSupplier = ZERO_SUPPLIER;
 
+    // number of vanity path related events
+    private ServiceRegistration<Gauge<Long>> numberOfVanityPathEventsGauge;
+    private Supplier<Long> numberOfVanityPathEventsSupplier = ZERO_SUPPLIER;
+
     // number of resources with aliased children
     private ServiceRegistration<Gauge<Long>> numberOfResourcesWithAliasedChildrenGauge;
     private Supplier<Long> numberOfResourcesWithAliasedChildrenSupplier = ZERO_SUPPLIER;
@@ -93,12 +97,21 @@ public class ResourceResolverMetrics {
     private ServiceRegistration<Gauge<Long>> numberOfDetectedConflictingAliasesGauge;
     private Supplier<Long> numberOfDetectedConflictingAliasesSupplier = ZERO_SUPPLIER;
 
+    // number of vanity path related events
+    private ServiceRegistration<Gauge<Long>> numberOfAliasEventsGauge;
+    private Supplier<Long> numberOfAliasEventsSupplier = ZERO_SUPPLIER;
+
     private Counter unclosedResourceResolvers;
 
     @Activate
     protected void activate(BundleContext bundleContext) {
+        // vanity paths
         numberOfVanityPathsGauge = registerGauge(
                 bundleContext, METRICS_PREFIX + ".numberOfVanityPaths", () -> numberOfVanityPathsSupplier);
+        numberOfVanityPathEventsGauge = registerGauge(
+                bundleContext,
+                METRICS_PREFIX + ".numberOfVanityPathRelatedEvents",
+                () -> numberOfVanityPathEventsSupplier);
         numberOfResourcesWithVanityPathsOnStartupGauge = registerGauge(
                 bundleContext,
                 METRICS_PREFIX + ".numberOfResourcesWithVanityPathsOnStartup",
@@ -113,6 +126,8 @@ public class ResourceResolverMetrics {
                 bundleContext,
                 METRICS_PREFIX + ".numberOfVanityPathBloomFalsePositives",
                 () -> numberOfVanityPathBloomFalsePositivesSupplier);
+
+        // aliases
         numberOfResourcesWithAliasedChildrenGauge = registerGauge(
                 bundleContext,
                 METRICS_PREFIX + ".numberOfResourcesWithAliasedChildren",
@@ -129,6 +144,10 @@ public class ResourceResolverMetrics {
                 bundleContext,
                 METRICS_PREFIX + ".numberOfDetectedConflictingAliases",
                 () -> numberOfDetectedConflictingAliasesSupplier);
+        numberOfAliasEventsGauge = registerGauge(
+                bundleContext, METRICS_PREFIX + ".numberOfAliasRelatedEvents", () -> numberOfAliasEventsSupplier);
+
+        // other
         unclosedResourceResolvers = metricsService.counter(METRICS_PREFIX + ".unclosedResourceResolvers");
     }
 
@@ -186,6 +205,14 @@ public class ResourceResolverMetrics {
     }
 
     /**
+     * Set the supplier for the number of vanity path related events
+     * @param supplier a supplier returning the number of vanity path related events
+     */
+    public void setNumberOfVanityPathEventsSupplier(Supplier<Long> supplier) {
+        numberOfVanityPathEventsSupplier = supplier;
+    }
+
+    /**
      * Set the number of aliases in the system
      * @param supplier a supplier returning the number of aliases
      */
@@ -215,6 +242,14 @@ public class ResourceResolverMetrics {
      */
     public void setNumberOfDetectedConflictingAliasesSupplier(Supplier<Long> supplier) {
         numberOfDetectedConflictingAliasesSupplier = supplier;
+    }
+
+    /**
+     * Set the supplier for the number of alias related events
+     * @param supplier a supplier returning the number of alias related events
+     */
+    public void setNumberOfAliasEventsSupplier(Supplier<Long> supplier) {
+        numberOfAliasEventsSupplier = supplier;
     }
 
     /**

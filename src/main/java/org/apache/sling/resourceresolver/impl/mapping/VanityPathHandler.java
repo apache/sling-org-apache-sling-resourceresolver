@@ -68,6 +68,7 @@ public class VanityPathHandler {
     private static final int VANITY_BLOOM_FILTER_MAX_ENTRIES = 10000000;
 
     final AtomicLong vanityCounter = new AtomicLong(0);
+    final AtomicLong vanityEvents = new AtomicLong(0);
     final AtomicLong vanityResourcesOnStartup = new AtomicLong(0);
     final AtomicLong vanityPathLookups = new AtomicLong(0);
     final AtomicLong vanityPathBloomNegatives = new AtomicLong(0);
