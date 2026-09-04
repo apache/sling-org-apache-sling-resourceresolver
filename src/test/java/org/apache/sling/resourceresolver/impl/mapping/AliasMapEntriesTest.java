@@ -729,6 +729,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         when(result.getValueMap()).thenReturn(buildValueMap(ResourceResolverImpl.PROP_ALIAS, "aliasUpdated"));
 
+        // simulate an observation event
         updateResource(mapEntries, "/parent/child", new AtomicBoolean());
         assertEquals(++eventCount, mapEntries.ah.aliasEvents.get());
         assertEquals(1, aliasMap.size());
