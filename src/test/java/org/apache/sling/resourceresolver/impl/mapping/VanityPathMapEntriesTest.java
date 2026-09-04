@@ -229,14 +229,6 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, ctx, bool);
     }
 
-    private static boolean updateResource(MapEntries mapEntries, String path, AtomicBoolean bool)
-            throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = MapEntries.class.getDeclaredMethod(
-                "updateResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
-        method.setAccessible(true);
-        return (Boolean) method.invoke(mapEntries, new MapEntries.ChangeContext(path, false, true), bool);
-    }
-
     private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver, List<String> dubious)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Method method =
