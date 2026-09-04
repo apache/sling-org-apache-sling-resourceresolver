@@ -98,9 +98,23 @@ public class PagedQueryIteratorTest extends AbstractMappingMapEntriesTest {
         Collection<Resource> expectedResources = toResourceList(expected);
         when(resourceResolver.findResources(eq("testSimpleWrongOrder"), eq("JCR-SQL2")))
                 .thenReturn(expectedResources.iterator());
-        PagedQueryIterator it =
-                new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 2000);
-        checkResult(it, expected);
+        try (TestLogger logger = TestLogger.create(PagedQueryIterator.class)
+                .contains("unexpected")
+                .start()) {
+            PagedQueryIterator it =
+                    new PagedQueryIterator("alias", PROPNAME, resourceResolver, "testSimpleWrongOrder", 2000);
+            checkResult(it, expected);
+
+            // implementation detail: assumes format of log message
+            List<String> logEntries = logger.stopAndGetLogs();
+            assertTrue(
+                    "Log should contain 'unexpected query result', but got: " + logEntries,
+                    logEntries.toString().contains("unexpected query result"));
+            String expectedMessage = String.format("at index %d in page %d", 4, 0);
+            assertTrue(
+                    "Log should contain '" + expectedMessage + "', but got: " + logEntries,
+                    logEntries.toString().contains(expectedMessage));
+        }
     }
 
     @Test
