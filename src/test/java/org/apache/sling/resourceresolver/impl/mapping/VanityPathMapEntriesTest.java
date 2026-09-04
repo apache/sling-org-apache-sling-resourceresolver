@@ -229,6 +229,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, ctx, bool);
     }
 
+    private static boolean updateResource(MapEntries mapEntries, String path, AtomicBoolean bool)
+            throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        Method method = MapEntries.class.getDeclaredMethod(
+                "updateResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
+        method.setAccessible(true);
+        return (Boolean) method.invoke(mapEntries, new MapEntries.ChangeContext(path, false, true), bool);
+    }
+
     private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver, List<String> dubious)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Method method =
@@ -268,23 +276,64 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
     }
 
+    // see https://issues.apache.org/jira/browse/SLING-13301
     @Test
-    public void test_simple_dubious_vanity_path() {
-        String vanityPath = "";
-        String containerName = "foo";
-        String childName = "child";
-        String oneMore = "one-more";
-        prepareMapEntriesForVanityPath(false, false, containerName, childName, oneMore, vanityPath);
+    public void test_syntax_variants() {
+        // absolute path
+        assertPathResolvesTo("/x", "/x");
+        // relative path
+        assertPathResolvesTo("x", "/x");
+        // multi-segment absolute path
+        assertPathResolvesTo("/x/y", "/x/y");
+        // multi-segment relative path
+        assertPathResolvesTo("x/y", "/x/y");
+        // multi-segment absolute path starting with "//"
+        assertPathResolvesTo("//x//y", "//x//y");
+        // multi-segment absolute path starting with "/.."
+        assertPathResolvesTo("/../x", "/../x");
+        // blank path
+        assertPathResolvesTo(" ", null);
+        // empty path
+        assertPathResolvesTo("", null);
+    }
+
+    private void assertPathResolvesTo(String vanityPath, String expectedPath) {
+
+        String path = "/foo/bar";
+
+        prepareMapEntriesForSingleVanityPath(path, vanityPath);
 
         initializeVanityPaths();
 
         Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
-        assertNotNull(vanityMap);
-        assertEquals(
-                "/" + vanityPath,
-                vanityMap.get("/" + containerName + "/" + childName).get(0));
-        assertEquals(2, vanityMap.size());
-        assertNotNull(vanityMap.get("/" + containerName + "/" + oneMore));
+
+        assertNotNull("vm should not be null", vanityMap);
+        if (expectedPath == null) {
+            assertEquals("size of vm should be 0", 0, vanityMap.size());
+        } else {
+            assertEquals("size of vm should be 1", 1, vanityMap.size());
+            assertNotNull("vp should be present in vm, got " + vanityMap, vanityMap.get(path));
+            assertEquals(expectedPath, vanityMap.get(path).get(0));
+        }
+    }
+
+    private void prepareMapEntriesForSingleVanityPath(String node, String vanityPath) {
+
+        Resource parent = createMockedResource(ResourceUtil.getParent(node));
+
+        Resource vanity = createMockedResource(node);
+        when(vanity.getParent()).thenReturn(parent);
+        when(vanity.getValueMap()).thenReturn(buildValueMap(VanityPathHandler.PROP_VANITY_PATH, vanityPath));
+
+        when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
+                .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
+                    String query = invocation.getArguments()[0].toString();
+                    if (matchesPagedQuery(query)) {
+                        return List.of(vanity).iterator();
+                    } else {
+                        return Collections.emptyIterator();
+                    }
+                });
     }
 
     // see SLING-12620
