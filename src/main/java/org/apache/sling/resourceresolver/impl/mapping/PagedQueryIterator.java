@@ -48,6 +48,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
     private String lastValue = null;
     private Iterator<Resource> it;
     private int count = 0;
+    private int indexInPage = 0;
     private int page = 0;
     private Resource next = null;
     private int largestPage = 0;
@@ -74,6 +75,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
 
     private void nextPage() {
         count = 0;
+        indexInPage = 0;
         String formattedQuery = String.format(query, QueryBuildHelper.escapeString(lastKey));
         log.debug("start {} query (page {}): {}", subject, page, formattedQuery);
         long queryStart = System.nanoTime();
@@ -96,6 +98,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
     private Resource getNext() throws NoSuchElementException {
         Resource resource = it.next();
         count += 1;
+        indexInPage += 1;
 
         final ValueMap valueMap = resource.getValueMap();
         final String[] values = valueMap.get(propertyName, defaultValue);
@@ -104,8 +107,9 @@ public class PagedQueryIterator implements Iterator<Resource> {
             String value = values[0];
             if (value.compareTo(lastKey) < 0) {
                 log.warn(
-                        "unexpected query result in page {}, property name '{}', got '{}'{}, despite querying for > '{}'"
+                        "unexpected query result at index {} in page {}, property name '{}', got '{}'{}, despite querying for > '{}'"
                                 + " (the async index may not yet reflect the current property value)",
+                        indexInPage,
                         (page - 1),
                         propertyName,
                         value,
@@ -114,8 +118,9 @@ public class PagedQueryIterator implements Iterator<Resource> {
             }
             if (lastValue != null && value.compareTo(lastValue) < 0) {
                 log.warn(
-                        "unexpected query result in page {}, property name '{}', got '{}'{}, last value was '{}'"
+                        "unexpected query result at index {} in page {}, property name '{}', got '{}'{}, last value was '{}'"
                                 + " (the async index may not yet reflect the current property value)",
+                        indexInPage,
                         (page - 1),
                         propertyName,
                         value,
