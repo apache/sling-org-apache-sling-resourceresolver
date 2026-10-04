@@ -96,8 +96,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     protected final Map<ResourceTypeInformation, Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
 
-    // Store the resourceSupertype mapping (supertype can be null)
-    protected final Map<String, Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
+    // Cache by resource type and declared supertype, including null results.
+    protected final Map<ResourceTypeInformation, Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
 
     private Map<String, Object> propertyMap;
 
@@ -1148,17 +1148,14 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public String getParentResourceType(final Resource resource) {
         checkClosed();
-        String resourceSuperType = null;
-        if (resource != null) {
-            if (parentResourceTypeMap.containsKey(resource.getPath())) {
-                resourceSuperType =
-                        parentResourceTypeMap.get(resource.getPath()).orElse(null);
-            } else {
-                resourceSuperType = getParentResourceTypeInternal(resource);
-                parentResourceTypeMap.put(resource.getPath(), Optional.ofNullable(resourceSuperType));
-            }
+        if (resource == null) {
+            return null;
         }
-        return resourceSuperType;
+        final ResourceTypeInformation key =
+                new ResourceTypeInformation(resource.getResourceType(), resource.getResourceSuperType(), null);
+        return parentResourceTypeMap
+                .computeIfAbsent(key, k -> Optional.ofNullable(getParentResourceTypeInternal(resource)))
+                .orElse(null);
     }
 
     String getParentResourceTypeInternal(final Resource resource) {
@@ -1293,7 +1290,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         return propertyMap;
     }
 
-    // Simple pojo acting as key for the resourceTypeLookupCache
+    // Simple pojo acting as key for the resource type caches
     public class ResourceTypeInformation {
 
         String s1;
