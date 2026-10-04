@@ -39,6 +39,7 @@ import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.api.resource.ResourceWrapper;
 import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.security.ResourceAccessSecurity;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
@@ -774,6 +775,35 @@ public class ResourceResolverImplTest {
         // Ensure that the next call will be served from the cache
         resolver.getParentResourceType(resolver.getResource("/types/1"));
         Mockito.verify(resolver, times(2)).getParentResourceTypeInternal(any(Resource.class));
+    }
+
+    /**
+     * @see <a href="https://issues.apache.org/jira/browse/SLING-13326">SLING-13326</a>
+     */
+    @Test
+    public void testGetParentResourceTypeWithOverriddenResourceType() {
+        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+
+        resolver.add(new SyntheticResourceWithSupertype(
+                resolver, "/foo/pages/special", "types/component", "foo/pages/base"));
+        resolver.add(new SyntheticResourceWithSupertype(
+                resolver, "/foo/pages/base", "types/component", "generic/pages/page"));
+        resolver.add(new SyntheticResource(resolver, "/generic/pages/page", "types/component"));
+        final Resource resource = resolver.add(new SyntheticResource(resolver, "/content/foo", "foo/pages/special"));
+        final Resource decorated = new ResourceWrapper(resource) {
+            @Override
+            public String getResourceType() {
+                return "foo/pages/base";
+            }
+        };
+
+        assertEquals(resource.getPath(), decorated.getPath());
+        assertEquals("foo/pages/base", resolver.getParentResourceType(resource));
+        assertEquals(
+                "The cached parent type must reflect the wrapper's overridden resource type",
+                "generic/pages/page",
+                resolver.getParentResourceType(decorated));
+        assertEquals("foo/pages/base", resolver.getParentResourceType(resource));
     }
 
     private PathBasedResourceResolverImpl getPathBasedResourceResolver() {
