@@ -63,7 +63,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -603,13 +603,13 @@ public class ResourceResolverImplTest {
 
         // 1st lookup needs to get through, 2nd will be taken from cache
         assertTrue(resolver.isResourceType(r1, "a:b"));
-        verify(resolver, times(1)).isResourceTypeInternal(eq(r1), eq("a:b"));
+        verify(resolver, times(1)).isResourceTypeInternal(r1, "a:b");
         assertTrue(resolver.isResourceType(r1, "a:b"));
-        verify(resolver, times(1)).isResourceTypeInternal(eq(r1), eq("a:b"));
+        verify(resolver, times(1)).isResourceTypeInternal(r1, "a:b");
 
         resolver.refresh();
         assertTrue(resolver.isResourceType(r1, "a:b"));
-        verify(resolver, times(2)).isResourceTypeInternal(eq(r1), eq("a:b"));
+        verify(resolver, times(2)).isResourceTypeInternal(r1, "a:b");
 
         // make sure that resources with the same resourceType but different resourceSuperType are
         // treated differently
@@ -738,18 +738,11 @@ public class ResourceResolverImplTest {
         // use the propertyMap
         resolver = getPathBasedResourceResolver();
         Object value1 = new String("value1");
-        Closeable value2 = spy(new Closeable() {
-            @Override
-            public void close() {
-                // do nothing
-            }
-        });
-        Closeable valueWithException = spy(new Closeable() {
-            @Override
-            public void close() {
-                throw new RuntimeException("RuntimeExceptions in close must be handled");
-            }
-        });
+        Closeable value2 = mock(Closeable.class);
+        Closeable valueWithException = mock(Closeable.class);
+        doThrow(new RuntimeException("RuntimeExceptions in close must be handled"))
+                .when(valueWithException)
+                .close();
         assertNotNull(resolver.getPropertyMap());
         resolver.getPropertyMap().put("key1", value1);
         resolver.getPropertyMap().put("key2", value2);
