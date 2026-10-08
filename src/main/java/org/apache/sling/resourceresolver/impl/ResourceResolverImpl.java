@@ -96,8 +96,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     protected final Map<ResourceTypeInformation, Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
 
-    // Cache by resource type and declared supertype, including null results.
-    protected final Map<ResourceTypeInformation, Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
+    // Cache parent type lookups by resource type, including null results.
+    protected final Map<String, Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
 
     private Map<String, Object> propertyMap;
 
@@ -1151,16 +1151,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         if (resource == null) {
             return null;
         }
-        final ResourceTypeInformation key =
-                new ResourceTypeInformation(resource.getResourceType(), resource.getResourceSuperType(), null);
-        return parentResourceTypeMap
-                .computeIfAbsent(key, k -> Optional.ofNullable(getParentResourceTypeInternal(resource)))
-                .orElse(null);
-    }
-
-    String getParentResourceTypeInternal(final Resource resource) {
-        String resourceSuperType;
-        resourceSuperType = resource.getResourceSuperType();
+        String resourceSuperType = resource.getResourceSuperType();
         if (resourceSuperType == null) {
             resourceSuperType = this.getParentResourceType(resource.getResourceType());
         }
@@ -1173,7 +1164,14 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public String getParentResourceType(final String resourceType) {
         checkClosed();
-        return this.control.getParentResourceType(this.factory, this, resourceType);
+        if (resourceType == null) {
+            return null;
+        }
+        return parentResourceTypeMap
+                .computeIfAbsent(
+                        resourceType,
+                        k -> Optional.ofNullable(this.control.getParentResourceType(this.factory, this, k)))
+                .orElse(null);
     }
 
     /**
@@ -1290,7 +1288,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         return propertyMap;
     }
 
-    // Simple pojo acting as key for the resource type caches
+    // Simple pojo acting as key for the resourceTypeLookupCache
     public class ResourceTypeInformation {
 
         String s1;
