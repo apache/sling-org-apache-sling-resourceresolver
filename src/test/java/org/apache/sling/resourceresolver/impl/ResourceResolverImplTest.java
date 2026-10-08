@@ -39,6 +39,7 @@ import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.api.resource.ResourceWrapper;
 import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.security.ResourceAccessSecurity;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderHandler;
@@ -51,7 +52,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.osgi.framework.Bundle;
 
 import static java.util.Arrays.asList;
@@ -63,10 +63,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ResourceResolverImplTest {
@@ -563,7 +564,7 @@ public class ResourceResolverImplTest {
             // correct
         }
         // same RP supporting and allowing orderBefore
-        when(ras.canOrderChildren(Mockito.any())).thenReturn(true);
+        when(ras.canOrderChildren(any())).thenReturn(true);
         assertTrue(resResolver.orderBefore(root, "test", "test2"));
     }
 
@@ -596,19 +597,19 @@ public class ResourceResolverImplTest {
 
     @Test
     public void testIsResourceTypeCached() throws Exception {
-        final PathBasedResourceResolverImpl resolver = Mockito.spy(getPathBasedResourceResolver());
+        final PathBasedResourceResolverImpl resolver = spy(getPathBasedResourceResolver());
         final Resource r1 = resolver.add(new SyntheticResource(resolver, "/a", "a:b"));
         final Resource r2 = resolver.add(new SyntheticResourceWithSupertype(resolver, "/b", "a:b", "c:d"));
 
         // 1st lookup needs to get through, 2nd will be taken from cache
         assertTrue(resolver.isResourceType(r1, "a:b"));
-        Mockito.verify(resolver, Mockito.times(1)).isResourceTypeInternal(eq(r1), eq("a:b"));
+        verify(resolver, times(1)).isResourceTypeInternal(r1, "a:b");
         assertTrue(resolver.isResourceType(r1, "a:b"));
-        Mockito.verify(resolver, Mockito.times(1)).isResourceTypeInternal(eq(r1), eq("a:b"));
+        verify(resolver, times(1)).isResourceTypeInternal(r1, "a:b");
 
         resolver.refresh();
         assertTrue(resolver.isResourceType(r1, "a:b"));
-        Mockito.verify(resolver, Mockito.times(2)).isResourceTypeInternal(eq(r1), eq("a:b"));
+        verify(resolver, times(2)).isResourceTypeInternal(r1, "a:b");
 
         // make sure that resources with the same resourceType but different resourceSuperType are
         // treated differently
@@ -737,18 +738,11 @@ public class ResourceResolverImplTest {
         // use the propertyMap
         resolver = getPathBasedResourceResolver();
         Object value1 = new String("value1");
-        Closeable value2 = Mockito.spy(new Closeable() {
-            @Override
-            public void close() {
-                // do nothing
-            }
-        });
-        Closeable valueWithException = Mockito.spy(new Closeable() {
-            @Override
-            public void close() {
-                throw new RuntimeException("RuntimeExceptions in close must be handled");
-            }
-        });
+        Closeable value2 = mock(Closeable.class);
+        Closeable valueWithException = mock(Closeable.class);
+        doThrow(new RuntimeException("RuntimeExceptions in close must be handled"))
+                .when(valueWithException)
+                .close();
         assertNotNull(resolver.getPropertyMap());
         resolver.getPropertyMap().put("key1", value1);
         resolver.getPropertyMap().put("key2", value2);
@@ -757,23 +751,134 @@ public class ResourceResolverImplTest {
         resolver.close();
         assertNotNull(resolver.getPropertyMap());
         assertTrue(resolver.getPropertyMap().isEmpty());
-        Mockito.verify(value2, Mockito.times(1)).close();
-        Mockito.verify(valueWithException, Mockito.times(1)).close();
+        verify(value2, times(1)).close();
+        verify(valueWithException, times(1)).close();
     }
 
     @Test
     public void testGetParentResourceType() {
-        final PathBasedResourceResolverImpl resolver = Mockito.spy(getPathBasedResourceResolver());
+        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
 
+        final Resource type = resolver.add(
+                spy(new SyntheticResourceWithSupertype(resolver, "/types/1", "/types/component", "/types/2")));
+        final Resource resource =
+                resolver.add(new SyntheticResourceWithSupertype(resolver, "/content/type1", "/types/1", null));
+        final Resource otherResource =
+                resolver.add(new SyntheticResourceWithSupertype(resolver, "/content/type2", "/types/1", null));
+
+        assertEquals("/types/2", resolver.getParentResourceType(type));
+        assertTrue(resolver.parentResourceTypeMap.isEmpty());
+        verify(type, times(1)).getResourceSuperType();
+        assertEquals("/types/2", resolver.getParentResourceType(resource));
+        assertEquals("/types/2", resolver.getParentResourceType(otherResource));
+        assertEquals("/types/2", resolver.getParentResourceType("/types/1"));
+        assertEquals("/types/2", resolver.getParentResourceType(resource));
+        verify(type, times(2)).getResourceSuperType();
+        assertEquals(1, resolver.parentResourceTypeMap.size());
+    }
+
+    /**
+     * @see <a href="https://issues.apache.org/jira/browse/SLING-13326">SLING-13326</a>
+     */
+    @Test
+    public void testGetParentResourceTypeWithOverriddenResourceType() {
+        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+
+        resolver.add(new SyntheticResourceWithSupertype(
+                resolver, "/foo/pages/special", "types/component", "foo/pages/base"));
+        resolver.add(new SyntheticResourceWithSupertype(
+                resolver, "/foo/pages/base", "types/component", "generic/pages/page"));
+        resolver.add(new SyntheticResource(resolver, "/generic/pages/page", "types/component"));
+        final Resource resource = resolver.add(new SyntheticResource(resolver, "/content/foo", "foo/pages/special"));
+        final Resource decorated = new ResourceWrapper(resource) {
+            @Override
+            public String getResourceType() {
+                return "foo/pages/base";
+            }
+        };
+
+        assertEquals(resource.getPath(), decorated.getPath());
+        assertEquals("foo/pages/base", resolver.getParentResourceType(resource));
+        assertEquals(
+                "The cached parent type must reflect the wrapper's overridden resource type",
+                "generic/pages/page",
+                resolver.getParentResourceType(decorated));
+        assertEquals("foo/pages/base", resolver.getParentResourceType(resource));
+    }
+
+    @Test
+    public void testGetParentResourceTypeWithOverriddenResourceSuperType() {
+        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
         resolver.add(new SyntheticResourceWithSupertype(resolver, "/types/1", "/types/component", "/types/2"));
-        resolver.add(new SyntheticResourceWithSupertype(resolver, "/content/type1", "/types/1", null));
+        final Resource resource = resolver.add(new SyntheticResource(resolver, "/content/type1", "/types/1"));
+        final Resource decorated = spy(new ResourceWrapper(resource));
+        when(decorated.getResourceSuperType()).thenReturn("/types/3", "/types/4", null);
 
-        assertEquals("/types/2", resolver.getParentResourceType(resolver.getResource("/types/1")));
-        assertEquals("/types/2", resolver.getParentResourceType(resolver.getResource("/content/type1")));
+        assertEquals("/types/2", resolver.getParentResourceType(resource));
+        assertEquals("/types/3", resolver.getParentResourceType(decorated));
+        assertEquals("/types/4", resolver.getParentResourceType(decorated));
+        assertEquals("/types/2", resolver.getParentResourceType(decorated));
+        assertEquals("/types/2", resolver.getParentResourceType(resource));
+        assertEquals(1, resolver.parentResourceTypeMap.size());
+    }
 
-        // Ensure that the next call will be served from the cache
-        resolver.getParentResourceType(resolver.getResource("/types/1"));
-        Mockito.verify(resolver, times(2)).getParentResourceTypeInternal(any(Resource.class));
+    @Test
+    public void testGetParentResourceTypeWithCachedNull() {
+        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+        resolver.add(new SyntheticResourceWithSupertype(resolver, "/types/1", "/types/component", "/types/2"));
+        final Resource type = resolver.add(spy(new SyntheticResource(resolver, "/types/unknown", "/types/component")));
+        final Resource resource = resolver.add(new SyntheticResource(resolver, "/content/type1", "/types/unknown"));
+        final Resource decorated = new ResourceWrapper(resource) {
+            @Override
+            public String getResourceType() {
+                return "/types/1";
+            }
+        };
+
+        assertNull(resolver.getParentResourceType((Resource) null));
+        assertNull(resolver.getParentResourceType((String) null));
+        assertNull(resolver.getParentResourceType(mock(Resource.class)));
+        assertTrue(resolver.parentResourceTypeMap.isEmpty());
+        assertNull(resolver.getParentResourceType(resource));
+        assertNull(resolver.getParentResourceType(resource));
+        assertNull(resolver.getParentResourceType("/types/unknown"));
+        verify(type, times(1)).getResourceSuperType();
+        assertEquals("/types/2", resolver.getParentResourceType(decorated));
+        assertNull(resolver.getParentResourceType(resource));
+        verify(type, times(1)).getResourceSuperType();
+    }
+
+    @Test
+    public void testGetParentResourceTypeCacheClearedOnRefresh() throws LoginException {
+        final PathBasedResourceResolverImpl typeResolver = getPathBasedResourceResolver();
+        final PathBasedResourceResolverImpl resolver =
+                new PathBasedResourceResolverImpl(asList(typeResolver), resourceProviderTracker, new String[] {""});
+        final Resource type = typeResolver.add(
+                spy(new SyntheticResourceWithSupertype(resolver, "/types/1", "/types/component", "/types/2")));
+        final Resource unknownType =
+                typeResolver.add(spy(new SyntheticResource(resolver, "/types/unknown", "/types/component")));
+        final Resource resource = resolver.add(new SyntheticResource(resolver, "/content/type1", "/types/1"));
+
+        assertEquals("/types/2", resolver.getParentResourceType(resource));
+        assertEquals("/types/2", resolver.getParentResourceType(resource));
+        assertNull(resolver.getParentResourceType("/types/unknown"));
+        verify(type, times(1)).getResourceSuperType();
+        verify(unknownType, times(1)).getResourceSuperType();
+
+        final Resource updatedType = typeResolver.add(
+                spy(new SyntheticResourceWithSupertype(resolver, "/types/1", "/types/component", "/types/3")));
+        final Resource updatedUnknownType = typeResolver.add(
+                spy(new SyntheticResourceWithSupertype(resolver, "/types/unknown", "/types/component", "/types/4")));
+        assertEquals("/types/2", resolver.getParentResourceType(resource));
+        assertNull(resolver.getParentResourceType("/types/unknown"));
+        verify(updatedType, times(0)).getResourceSuperType();
+        verify(updatedUnknownType, times(0)).getResourceSuperType();
+        resolver.refresh();
+        assertTrue(resolver.parentResourceTypeMap.isEmpty());
+        assertEquals("/types/3", resolver.getParentResourceType(resource));
+        assertEquals("/types/4", resolver.getParentResourceType("/types/unknown"));
+        verify(updatedType, times(1)).getResourceSuperType();
+        verify(updatedUnknownType, times(1)).getResourceSuperType();
     }
 
     private PathBasedResourceResolverImpl getPathBasedResourceResolver() {
