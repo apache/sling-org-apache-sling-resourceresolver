@@ -1169,7 +1169,8 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         }
         Optional<String> resourceSuperType = parentResourceTypeMap.get(resourceType);
         if (resourceSuperType == null) {
-            resourceSuperType = Optional.ofNullable(this.control.getParentResourceType(this.factory, this, resourceType))
+            resourceSuperType =
+                    Optional.ofNullable(this.control.getParentResourceType(this.factory, this, resourceType));
             // computeIfAbsent() might fail here, because type resolution can re-enter this cache
             // through providers or resource wrappers.
             // In case of a race, the worst case is that multiple threads compute the same super type.
