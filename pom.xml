@@ -46,6 +46,8 @@
         <sling.java.version>17</sling.java.version>
         <site.javadoc.exclude>**.internal.**</site.javadoc.exclude>
         <project.build.outputTimestamp>1786541492</project.build.outputTimestamp>
+        <!-- used by the tests that run against an actual (in-memory) Oak repository -->
+        <oak.version>2.6.0</oak.version>
     </properties>
 
     <dependencies>
@@ -184,6 +186,37 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>5.5.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jackrabbit</groupId>
+            <artifactId>oak-jcr</artifactId>
+            <version>${oak.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jackrabbit</groupId>
+            <artifactId>oak-lucene</artifactId>
+            <version>${oak.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- JCR resource provider, for the tests against an actual Oak repository -->
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.jcr.resource</artifactId>
+            <version>3.3.6</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.jcr.api</artifactId>
+            <version>2.4.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.commons.classloader</artifactId>
+            <version>1.4.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
