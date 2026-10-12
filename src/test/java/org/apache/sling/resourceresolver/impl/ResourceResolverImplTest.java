@@ -807,6 +807,28 @@ public class ResourceResolverImplTest {
     }
 
     @Test
+    public void testGetParentResourceTypeWithNestedLookup() {
+        final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
+        // These distinct type names collide, exercising nested updates to the same cache bin.
+        assertEquals("Aa".hashCode(), "BB".hashCode());
+        final Resource outerType = resolver.add(spy(new SyntheticResource(resolver, "/Aa", "types/component") {
+            @Override
+            public String getResourceSuperType() {
+                return resolver.getParentResourceType("BB");
+            }
+        }));
+        final Resource innerType = resolver.add(
+                spy(new SyntheticResourceWithSupertype(resolver, "/BB", "types/component", "types/parent")));
+
+        assertEquals("types/parent", resolver.getParentResourceType("Aa"));
+        assertEquals("types/parent", resolver.getParentResourceType("BB"));
+        assertEquals("types/parent", resolver.getParentResourceType("Aa"));
+        verify(outerType, times(1)).getResourceSuperType();
+        verify(innerType, times(1)).getResourceSuperType();
+        assertEquals(2, resolver.parentResourceTypeMap.size());
+    }
+
+    @Test
     public void testGetParentResourceTypeWithOverriddenResourceSuperType() {
         final PathBasedResourceResolverImpl resolver = getPathBasedResourceResolver();
         resolver.add(new SyntheticResourceWithSupertype(resolver, "/types/1", "/types/component", "/types/2"));
