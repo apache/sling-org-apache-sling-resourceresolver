@@ -97,7 +97,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     protected final Map<ResourceTypeInformation, Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
 
-    // Store the resourceSupertype mapping (supertype can be null)
+    // Cache parent type lookups by resource type, including null results.
     protected final Map<String, Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
 
     private Map<String, Object> propertyMap;
@@ -1105,22 +1105,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public String getParentResourceType(final Resource resource) {
         checkClosed();
-        String resourceSuperType = null;
-        if (resource != null) {
-            if (parentResourceTypeMap.containsKey(resource.getPath())) {
-                resourceSuperType =
-                        parentResourceTypeMap.get(resource.getPath()).orElse(null);
-            } else {
-                resourceSuperType = getParentResourceTypeInternal(resource);
-                parentResourceTypeMap.put(resource.getPath(), Optional.ofNullable(resourceSuperType));
-            }
+        if (resource == null) {
+            return null;
         }
-        return resourceSuperType;
-    }
-
-    String getParentResourceTypeInternal(final Resource resource) {
-        String resourceSuperType;
-        resourceSuperType = resource.getResourceSuperType();
+        String resourceSuperType = resource.getResourceSuperType();
         if (resourceSuperType == null) {
             resourceSuperType = this.getParentResourceType(resource.getResourceType());
         }
@@ -1133,7 +1121,19 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public String getParentResourceType(final String resourceType) {
         checkClosed();
-        return this.control.getParentResourceType(this.factory, this, resourceType);
+        if (resourceType == null) {
+            return null;
+        }
+        Optional<String> resourceSuperType = parentResourceTypeMap.get(resourceType);
+        if (resourceSuperType == null) {
+            resourceSuperType =
+                    Optional.ofNullable(this.control.getParentResourceType(this.factory, this, resourceType));
+            // computeIfAbsent() might fail here, because type resolution can re-enter this cache
+            // through providers or resource wrappers.
+            // In case of a race, the worst case is that multiple threads compute the same super type.
+            parentResourceTypeMap.putIfAbsent(resourceType, resourceSuperType);
+        }
+        return resourceSuperType.orElse(null);
     }
 
     /**
