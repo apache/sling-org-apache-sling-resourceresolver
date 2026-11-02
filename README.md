@@ -10,3 +10,19 @@ This bundle provides the Resource Resolver and Resource Resolver Factory.
 
 The `/etc/map` mapping configurations are documented on the Sling website's 
 [Mappings for Resource Resolution](https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html) page.
+
+## Structured inventory
+
+The optional Felix Inventory printer `sling-resourceresolver` supports JSON and
+exports resource search paths, active and failed providers, and the ordered
+`resolverMapEntries` and `mappingMapEntries` arrays. Each mapping includes its
+pattern, replacement array, `internal` flag and an HTTP `status` (`null` for
+internal mappings). Duplicate patterns and replacement order are preserved.
+Provider IDs are numbers, capabilities are booleans, and `bundleId` is `null`
+when the provider's service is no longer available.
+
+The JSON schema has `schemaVersion: 1`. The existing `jcrresolver` text inventory
+and Web Console remain unchanged. JSON inventory requires Felix Inventory and
+Gson 2.x (2.8 or later); these are optional for resource resolution.
+Inventory contains instance-wide configuration and belongs on authenticated
+operator diagnostic surfaces.

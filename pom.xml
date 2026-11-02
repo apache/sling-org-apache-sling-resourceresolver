@@ -132,6 +132,25 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.inventory</artifactId>
+            <version>1.0.6</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.14.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.utils</artifactId>
+            <version>1.11.8</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- For the Console Plugin of the ResourceResolverFactoryImpl -->
         <dependency>
             <groupId>javax.servlet</groupId>

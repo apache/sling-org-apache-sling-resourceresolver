@@ -29,6 +29,7 @@ import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.path.Path;
+import org.apache.sling.resourceresolver.impl.console.ResourceResolverInventoryPrinter;
 import org.apache.sling.resourceresolver.impl.console.ResourceResolverWebConsolePlugin;
 import org.apache.sling.resourceresolver.impl.helper.ResourceDecoratorTracker;
 import org.apache.sling.resourceresolver.impl.helper.ResourceResolverControl;
@@ -42,6 +43,7 @@ import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,8 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
 
     /** The web console plugin. */
     private ResourceResolverWebConsolePlugin plugin;
+
+    private ServiceRegistration<?> inventoryPrinter;
 
     /** The activator */
     private final ResourceResolverFactoryActivator activator;
@@ -320,6 +324,12 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
         } catch (final Exception e) {
             logger.error("activate: Cannot access repository, failed setting up Mapping Support", e);
         }
+        try {
+            inventoryPrinter =
+                    ResourceResolverInventoryPrinter.register(bundleContext, this, this.activator.getRuntimeService());
+        } catch (final LinkageError e) {
+            logger.debug("activate: optional resource resolver JSON inventory is unavailable.", e);
+        }
     }
 
     /**
@@ -330,6 +340,11 @@ public class CommonResourceResolverFactoryImpl implements MapConfigurationProvid
             return;
         }
         this.refQueueThread.interrupt();
+
+        if (inventoryPrinter != null) {
+            inventoryPrinter.unregister();
+            inventoryPrinter = null;
+        }
 
         if (plugin != null) {
             plugin.dispose();

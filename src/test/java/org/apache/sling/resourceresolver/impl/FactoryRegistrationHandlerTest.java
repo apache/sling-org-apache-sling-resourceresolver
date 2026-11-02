@@ -19,7 +19,9 @@
 package org.apache.sling.resourceresolver.impl;
 
 import org.apache.commons.collections4.bidimap.TreeBidiMap;
+import org.apache.felix.inventory.InventoryPrinter;
 import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.resourceresolver.impl.console.ResourceResolverInventoryPrinter;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderStorage;
 import org.apache.sling.resourceresolver.impl.providers.ResourceProviderTracker;
 import org.apache.sling.resourceresolver.util.events.RecordingListener;
@@ -31,6 +33,7 @@ import org.hamcrest.Matcher;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.defaultanswers.ReturnsSmartNulls;
@@ -42,7 +45,10 @@ import static org.apache.sling.resourceresolver.util.events.ServiceEventUtil.reg
 import static org.apache.sling.resourceresolver.util.events.ServiceEventUtil.unregistration;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
@@ -52,15 +58,21 @@ class FactoryRegistrationHandlerTest {
 
     private static final int DEFAULT_TEST_ITERATIONS = 20;
 
-    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REGISTRATION =
-            allOf(hasSize(4), hasItem(registration(ResourceResolverFactory.class)));
+    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REGISTRATION = allOf(
+            hasSize(5),
+            hasItem(registration(ResourceResolverFactory.class)),
+            hasItem(registration(InventoryPrinter.class)));
 
-    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_UNREGISTRATION =
-            allOf(hasSize(4), hasItem(unregistration(ResourceResolverFactory.class)));
+    private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_UNREGISTRATION = allOf(
+            hasSize(5),
+            hasItem(unregistration(ResourceResolverFactory.class)),
+            hasItem(unregistration(InventoryPrinter.class)));
 
     private static final @NotNull Matcher<Iterable<? extends ServiceEventDTO>> RRF_REREGISTRATION = allOf(
-            hasSize(8),
+            hasSize(10),
             hasItem(unregistration(ResourceResolverFactory.class)),
+            hasItem(unregistration(InventoryPrinter.class)),
+            hasItem(registration(InventoryPrinter.class)),
             hasItem(registration(ResourceResolverFactory.class)));
 
     OsgiContext osgi = new OsgiContext();
@@ -89,6 +101,24 @@ class FactoryRegistrationHandlerTest {
 
     private static <T> T mock(Class<T> classToMock) {
         return Mockito.mock(classToMock, new ReturnsSmartNulls());
+    }
+
+    @Test
+    void missingOptionalInventoryDependenciesDoNotDisableResourceResolution() {
+        try (org.mockito.MockedStatic<ResourceResolverInventoryPrinter> inventory =
+                Mockito.mockStatic(ResourceResolverInventoryPrinter.class)) {
+            inventory
+                    .when(() -> ResourceResolverInventoryPrinter.register(Mockito.any(), Mockito.any(), Mockito.any()))
+                    .thenThrow(new NoClassDefFoundError("optional inventory dependency"));
+            CommonResourceResolverFactoryImpl factory = new CommonResourceResolverFactoryImpl(activator);
+            try {
+                assertDoesNotThrow(() -> factory.activate(osgi.bundleContext()));
+                assertTrue(factory.isLive());
+                assertNull(osgi.getService(InventoryPrinter.class));
+            } finally {
+                factory.deactivate();
+            }
+        }
     }
 
     @RepeatedTest(DEFAULT_TEST_ITERATIONS)
