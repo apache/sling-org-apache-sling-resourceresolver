@@ -64,7 +64,7 @@ public final class ResourceResolverInventoryPrinter implements InventoryPrinter 
         this.runtime = runtime;
     }
 
-    public static ServiceRegistration<?> register(
+    public static ServiceRegistration<InventoryPrinter> register(
             BundleContext context, CommonResourceResolverFactoryImpl factory, RuntimeService runtime) {
         Hashtable<String, Object> properties = new Hashtable<>();
         properties.put(InventoryPrinter.NAME, "sling-resourceresolver");
