@@ -61,6 +61,7 @@ import static org.apache.sling.resourceresolver.util.MockTestUtil.createRequestF
 import static org.apache.sling.resourceresolver.util.MockTestUtil.createStringInterpolationProviderConfiguration;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setInaccessibleField;
 import static org.apache.sling.resourceresolver.util.MockTestUtil.setupStringInterpolationProvider;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -263,6 +264,34 @@ public class EtcMappingResourceResolverTest {
         HttpServletRequest request = createRequestFromUrl("http://www.example.com:80/");
         Resource resolvedResource = resourceResolver.resolve(request, "/");
         checkInternalResource(resolvedResource, "/example");
+    }
+
+    /**
+     * A match without trailing slash combined with an internal redirect to "/" leaves the request path
+     * (which starts with "/") after the redirect, so the mapped path starts with a double slash.
+     * Such a path must still resolve to the resource.
+     */
+    @Test
+    public void internal_redirect_to_root_resolves_resource_below_root() throws Exception {
+        buildResource(
+                "example",
+                http,
+                resourceResolver,
+                resourceProvider,
+                PROP_REG_EXP,
+                "www.example.com.80",
+                PROP_REDIRECT_INTERNAL,
+                "/");
+        refreshMapEntries("/etc/map", true);
+
+        Resource bin = buildResource("/bin", null, resourceResolver, resourceProvider);
+        buildResource("/bin/test", bin, resourceResolver, resourceProvider);
+
+        HttpServletRequest request = createRequestFromUrl("http://www.example.com:80/");
+
+        Resource resolvedResource = resourceResolver.resolve(request, "/bin/test.json");
+        checkInternalResource(resolvedResource, "/bin/test");
+        assertEquals(".json", resolvedResource.getResourceMetadata().getResolutionPathInfo());
     }
 
     @Test
