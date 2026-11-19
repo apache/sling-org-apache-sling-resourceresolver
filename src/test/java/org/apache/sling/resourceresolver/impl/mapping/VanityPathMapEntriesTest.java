@@ -336,6 +336,36 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 });
     }
 
+    @Test
+    public void test_simple_dubious_vanity_path() {
+        // a dubious vanity path
+        String vanityPath = "empty//path//segment";
+
+        String containerName = "foo";
+        String childName = "child";
+        String oneMore = "one-more";
+        prepareMapEntriesForVanityPath(false, false, containerName, childName, oneMore, vanityPath);
+
+        try (TestLogger logger = TestLogger.create(VanityPathHandler.class)
+                .contains("dubious vanity paths")
+                .start()) {
+            initializeVanityPaths();
+            List<String> logs = logger.stopAndGetLogs();
+            // 1 because both resources share the same broken vanity path
+            assertEquals(1, logs.size());
+            // dubious vanity path results in resource name in root with "-" stripped??
+            assertTrue(logs.get(0).contains("onemore"));
+        }
+
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+        assertNotNull(vanityMap);
+
+        List<String> paths = vanityMap.get("/" + containerName + "/" + oneMore);
+        assertEquals(1, paths.size());
+        // dubious vanity path results in resource name in root with "-" stripped??
+        assertEquals("/" + vanityPath + "/onemore", paths.get(0));
+    }
+
     // see SLING-12620
     @Test
     public void test_simple_vanity_path_support_with_null_parent() {

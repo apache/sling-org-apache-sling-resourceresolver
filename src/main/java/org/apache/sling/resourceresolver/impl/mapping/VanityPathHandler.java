@@ -478,7 +478,7 @@ public class VanityPathHandler {
             reason = "empty path segment";
         }
 
-        return reason.isEmpty() ? "" : String.format("Dubious vanity on '%s', value '%s': %s", resource, path, reason);
+        return reason.isEmpty() ? "" : String.format("'%s', value '%s': %s", resource, path, reason);
     }
 
     /**
@@ -596,7 +596,7 @@ public class VanityPathHandler {
 
             // collect vanity path values that seem to be broken
             final String diagnostics = diagnoseDubiousValidVanityPath(resource.getPath(), pVanityPath);
-            if (!diagnostics.isEmpty() && dubiousVanityPaths.size() > MAX_REPORT_DUBIOUS_VANITY_PATHS) {
+            if (!diagnostics.isEmpty() && dubiousVanityPaths.size() <= MAX_REPORT_DUBIOUS_VANITY_PATHS) {
                 dubiousVanityPaths.add(diagnostics);
             }
 
