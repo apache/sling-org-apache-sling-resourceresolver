@@ -468,7 +468,7 @@ public class VanityPathHandler {
         return true;
     }
 
-    private String diagnoseDubiousValidVanityPath(String resource, String path) {
+    private String diagnoseDubiousVanityPath(String resource, String path) {
         String reason = "";
         if (path == null) {
             reason = "null path";
@@ -595,7 +595,7 @@ public class VanityPathHandler {
         for (final String pVanityPath : pVanityPaths) {
 
             // collect vanity path values that seem to be broken
-            final String diagnostics = diagnoseDubiousValidVanityPath(resource.getPath(), pVanityPath);
+            final String diagnostics = diagnoseDubiousVanityPath(resource.getPath(), pVanityPath);
             if (!diagnostics.isEmpty() && dubiousVanityPaths.size() <= MAX_REPORT_DUBIOUS_VANITY_PATHS) {
                 dubiousVanityPaths.add(diagnostics);
             }
