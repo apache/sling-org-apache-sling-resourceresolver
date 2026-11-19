@@ -229,6 +229,14 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         method.invoke(mapEntries, ctx, bool);
     }
 
+    private static boolean updateResource(MapEntries mapEntries, String path, AtomicBoolean bool)
+            throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        Method method = MapEntries.class.getDeclaredMethod(
+                "updateResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
+        method.setAccessible(true);
+        return (Boolean) method.invoke(mapEntries, new MapEntries.ChangeContext(path, false, true), bool);
+    }
+
     private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver, List<String> dubious)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Method method =
@@ -468,6 +476,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_vanity_path_updates() {
+        int eventCount = 0;
+
         Resource parent = createMockedResource("/foo/parent");
         when(parent.getValueMap()).thenReturn(new ValueMapDecorator(Collections.emptyMap()));
 
@@ -488,6 +498,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         // add child
         mapEntries.onChange(List.of(new ResourceChange(ChangeType.ADDED, child.getPath(), false)));
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
 
         // two entries for the vanity path
         List<MapEntry> entries = mapEntries.getResolveMaps();
@@ -506,6 +517,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
         // update child - no change
         mapEntries.onChange(List.of(new ResourceChange(ChangeType.CHANGED, child.getPath(), false)));
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
         entries = mapEntries.getResolveMaps();
         assertEquals(2, entries.size());
         for (MapEntry entry : entries) {
@@ -548,6 +560,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 new ResourceChange(ChangeType.ADDED, parent.getPath(), false),
                 new ResourceChange(ChangeType.ADDED, child.getPath(), false),
                 new ResourceChange(ChangeType.ADDED, child2.getPath(), false)));
+        assertEquals(3, mapEntries.vph.vanityEvents.get());
 
         // 6 entries for the vanity path
         List<MapEntry> entries = mapEntries.getResolveMaps();
@@ -638,14 +651,17 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doAddVanity() throws Exception {
+        int eventCount = 0;
         List<MapEntry> entries = mapEntries.getResolveMaps();
         assertEquals(0, entries.size());
         assertEquals(0, getVanityTargets(mapEntries).size());
+        assertEquals(0, mapEntries.vph.vanityEvents.get());
 
         Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
 
         entries = mapEntries.getResolveMaps();
         assertEquals(2, entries.size());
@@ -657,6 +673,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(badVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/content/mypage/en-us-{132"));
 
         addResource(mapEntries, "/badVanityPath", new AtomicBoolean());
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
 
         assertEquals(2, entries.size());
         assertEquals(1, getVanityTargets(mapEntries).size());
@@ -669,7 +686,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
 
         addResource(mapEntries, "/vanityPathOnJcrContent/jcr:content", new AtomicBoolean());
-
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
         entries = mapEntries.getResolveMaps();
         assertEquals(4, entries.size());
 
@@ -733,20 +750,19 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_doUpdateVanity() throws Exception {
+        int eventCount = 0;
+
         Map<String, List<MapEntry>> resolveMapsMap = getResolveMapsMap(mapEntries);
         assertEquals(1, resolveMapsMap.size());
 
         Map<String, List<String>> vanityTargets = getVanityTargets(mapEntries);
         assertEquals(0, vanityTargets.size());
 
-        final Method updateResource = MapEntries.class.getDeclaredMethod(
-                "updateResource", MapEntries.ChangeContext.class, AtomicBoolean.class);
-        updateResource.setAccessible(true);
-
         Resource justVanityPath = createMockedResource("/justVanityPath");
         when(justVanityPath.getValueMap()).thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPath"));
 
         addResource(mapEntries, "/justVanityPath", new AtomicBoolean());
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
 
         assertEquals(2, resolveMapsMap.size());
         assertEquals(1, vanityTargets.size());
@@ -759,8 +775,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         // update vanity path
         when(justVanityPath.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/justVanityPathUpdated"));
-        updateResource.invoke(
-                mapEntries, new MapEntries.ChangeContext("/justVanityPath", false, true), new AtomicBoolean());
+        updateResource(mapEntries, "/justVanityPath", new AtomicBoolean());
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
 
         assertEquals(2, resolveMapsMap.size());
         assertEquals(1, vanityTargets.size());
@@ -780,6 +796,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContent"));
 
         addResource(mapEntries, "/vanityPathOnJcrContent/jcr:content", new AtomicBoolean());
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
 
         assertEquals(3, resolveMapsMap.size());
         assertEquals(2, vanityTargets.size());
@@ -793,10 +810,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         // update vanity path
         when(vanityPathOnJcrContent.getValueMap())
                 .thenReturn(buildValueMap("sling:vanityPath", "/target/vanityPathOnJcrContentUpdated"));
-        updateResource.invoke(
-                mapEntries,
-                new MapEntries.ChangeContext("/vanityPathOnJcrContent/jcr:content", false, true),
-                new AtomicBoolean());
+        updateResource(mapEntries, "/vanityPathOnJcrContent/jcr:content", new AtomicBoolean());
+        assertEquals(++eventCount, mapEntries.vph.vanityEvents.get());
 
         assertEquals(3, resolveMapsMap.size());
         assertEquals(2, vanityTargets.size());
