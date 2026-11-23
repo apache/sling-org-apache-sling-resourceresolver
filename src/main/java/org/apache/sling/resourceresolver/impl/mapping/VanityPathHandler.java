@@ -547,7 +547,7 @@ public class VanityPathHandler {
         // warn about dubious vanity paths
 
         if (dubiousVanityPaths.size() >= MAX_REPORT_DUBIOUS_VANITY_PATHS) {
-            log.warn("There are {} dubious vanity paths; excerpt: {}", dubiousVanityPaths.size(), dubiousVanityPaths);
+            log.warn("There are at least {} dubious vanity paths; excerpt: {}", MAX_REPORT_DUBIOUS_VANITY_PATHS, dubiousVanityPaths);
         } else if (!dubiousVanityPaths.isEmpty()) {
             log.warn("There are {} dubious vanity paths: {}", dubiousVanityPaths.size(), dubiousVanityPaths);
         }
@@ -596,7 +596,7 @@ public class VanityPathHandler {
 
             // collect vanity path values that seem to be broken
             final String diagnostics = diagnoseDubiousVanityPath(resource.getPath(), pVanityPath);
-            if (!diagnostics.isEmpty() && dubiousVanityPaths.size() <= MAX_REPORT_DUBIOUS_VANITY_PATHS) {
+            if (!diagnostics.isEmpty() && dubiousVanityPaths.size() < MAX_REPORT_DUBIOUS_VANITY_PATHS) {
                 dubiousVanityPaths.add(diagnostics);
             }
 
