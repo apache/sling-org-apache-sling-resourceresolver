@@ -547,7 +547,10 @@ public class VanityPathHandler {
         // warn about dubious vanity paths
 
         if (dubiousVanityPaths.size() >= MAX_REPORT_DUBIOUS_VANITY_PATHS) {
-            log.warn("There are at least {} dubious vanity paths; excerpt: {}", MAX_REPORT_DUBIOUS_VANITY_PATHS, dubiousVanityPaths);
+            log.warn(
+                    "There are at least {} dubious vanity paths; excerpt: {}",
+                    MAX_REPORT_DUBIOUS_VANITY_PATHS,
+                    dubiousVanityPaths);
         } else if (!dubiousVanityPaths.isEmpty()) {
             log.warn("There are {} dubious vanity paths: {}", dubiousVanityPaths.size(), dubiousVanityPaths);
         }
