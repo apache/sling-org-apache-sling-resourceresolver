@@ -70,7 +70,7 @@ class AliasHandler {
     static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoolver.aliasinit";
     static final int UNPAGED_QUERY = 0;
     static final int PAGED_QUERY = 1;
-    private int PAGING_BEHAVIOUR = getPagingBehaviour();
+    private final int PAGING_BEHAVIOUR = getPagingBehaviour();
 
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
@@ -162,7 +162,7 @@ class AliasHandler {
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 AliasInitializer ai = new AliasInitializer();
                 if (this.factory.isAliasCacheInitInBackground()) {
-                    this.log.debug("starting alias initialization in the background");
+                    log.debug("starting alias initialization in the background");
                     Thread aiinit = new Thread(ai, "AliasInitializer");
                     aiinit.start();
                 } else {
@@ -690,7 +690,7 @@ class AliasHandler {
     // TODO: update Javadoc when we add the 2md paging mode
     private static int getPagingBehaviour() {
         int defaultVal = PAGED_QUERY;
-        int finalValue = defaultVal;
+        int finalValue;
 
         String raw = System.getProperty(PAGING_BEHAVIOUR_PROPNAME);
 
