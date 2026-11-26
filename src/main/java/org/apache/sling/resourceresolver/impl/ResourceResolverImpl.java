@@ -436,7 +436,12 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
         Resource res = null;
         for (int i = 0; res == null && i < realPathList.length; i++) {
             final ParsedParameters parsedPath = new ParsedParameters(realPathList[i]);
-            final String realPath = parsedPath.getRawPath();
+            String realPath = parsedPath.getRawPath();
+
+            // an internal redirect to "/" results in a mapped path starting with "//"
+            while (realPath.startsWith("//")) {
+                realPath = realPath.substring(1);
+            }
 
             // first check whether the requested resource is a StarResource
             if (StarResource.appliesTo(realPath)) {
