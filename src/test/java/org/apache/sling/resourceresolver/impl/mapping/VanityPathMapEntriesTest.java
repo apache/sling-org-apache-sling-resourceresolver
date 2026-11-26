@@ -237,11 +237,12 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         return (Boolean) method.invoke(mapEntries, new MapEntries.ChangeContext(path, false, true), bool);
     }
 
-    private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver)
+    private static void loadVanityPaths(MapEntries mapEntries, ResourceResolver resourceResolver, List<String> dubious)
             throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Method method = VanityPathHandler.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class);
+        Method method =
+                VanityPathHandler.class.getDeclaredMethod("loadVanityPaths", ResourceResolver.class, List.class);
         method.setAccessible(true);
-        method.invoke(mapEntries.vph, resourceResolver);
+        method.invoke(mapEntries.vph, resourceResolver, dubious);
     }
 
     @Override
@@ -333,6 +334,36 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                         return Collections.emptyIterator();
                     }
                 });
+    }
+
+    @Test
+    public void test_simple_dubious_vanity_path() {
+        // a dubious vanity path
+        String vanityPath = "empty//path//segment";
+
+        String containerName = "foo";
+        String childName = "child";
+        String oneMore = "one-more";
+        prepareMapEntriesForVanityPath(false, false, containerName, childName, oneMore, vanityPath);
+
+        try (TestLogger logger = TestLogger.create(VanityPathHandler.class)
+                .contains("dubious vanity paths")
+                .start()) {
+            initializeVanityPaths();
+            List<String> logs = logger.stopAndGetLogs();
+            // 1 because both resources share the same broken vanity path
+            assertEquals(1, logs.size());
+            // dubious vanity path results in resource name in root with "-" stripped??
+            assertTrue(logs.get(0).contains("onemore"));
+        }
+
+        Map<String, List<String>> vanityMap = mapEntries.getVanityPathMappings();
+        assertNotNull(vanityMap);
+
+        List<String> paths = vanityMap.get("/" + containerName + "/" + oneMore);
+        assertEquals(1, paths.size());
+        // dubious vanity path results in resource name in root with "-" stripped??
+        assertEquals("/" + vanityPath + "/onemore", paths.get(0));
     }
 
     // see SLING-12620
@@ -1121,7 +1152,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                     }
                 });
 
-        loadVanityPaths(mapEntries, resourceResolver);
+        loadVanityPaths(mapEntries, resourceResolver, new ArrayList<>());
 
         assertEquals(2, getVanityCounter(mapEntries).longValue());
     }
@@ -1143,7 +1174,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                     }
                 });
 
-        loadVanityPaths(mapEntries, resourceResolver);
+        loadVanityPaths(mapEntries, resourceResolver, new ArrayList<>());
 
         assertEquals(2, getVanityCounter(mapEntries).longValue());
     }
