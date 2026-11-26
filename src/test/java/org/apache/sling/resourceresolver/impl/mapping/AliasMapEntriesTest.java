@@ -111,7 +111,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         // (optimized==false && backgroundInit == false) does not need to be tested
         return List.of(new Object[][] {
             {false, false, AliasHandler.PAGED_QUERY}, // no cache, not in background, paging irrelevant
-            {true, false, AliasHandler.PAGED_QUERY}, // cache, not in background, no paging
+            {true, false, AliasHandler.UNPAGED_QUERY}, // cache, not in background, no paging
             {true, false, AliasHandler.PAGED_QUERY}, // cache, not in background, paging
             {true, true, AliasHandler.PAGED_QUERY} // cache, in background, paging
         });
@@ -371,7 +371,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArgument(0);
                     assertFalse(
-                            "Should not get here when AliasHandler is configured not to page",
+                            "Should not get here when AliasHandler is configured not to page, query was: " + query,
                             matchesPagedQuery(query) && this.pagingMode == AliasHandler.UNPAGED_QUERY);
                     if (queryAlwaysThrows) {
                         throw new UnsupportedOperationException("test case configured to always throw: " + query);

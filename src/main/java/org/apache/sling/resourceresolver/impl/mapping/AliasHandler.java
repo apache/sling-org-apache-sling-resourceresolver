@@ -66,6 +66,12 @@ class AliasHandler {
 
     private static final Logger log = LoggerFactory.getLogger(AliasHandler.class);
 
+    // constants for paging behaviour as obtained from system property
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoolver.aliasinit";
+    static final int UNPAGED_QUERY = 0;
+    static final int PAGED_QUERY = 1;
+    private int PAGING_BEHAVIOUR = getPagingBehaviour();
+
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
 
@@ -75,41 +81,6 @@ class AliasHandler {
 
     // static value for the case when cache is not (yet) not initialized
     private static final Map<String, Map<String, Collection<String>>> UNITIALIZED_MAP = Collections.emptyMap();
-
-    // chatty but safe und useful for debugging
-    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoolver.aliasinit";
-    static final int UNPAGED_QUERY = 0;
-    static final int PAGED_QUERY = 1;
-    static final int PAGING_BEHAVIOUR;
-
-    static {
-        int defaultVal = PAGED_QUERY;
-        final String raw = System.getProperty(PAGING_BEHAVIOUR_PROPNAME);
-
-        if (raw != null && !raw.isBlank()) {
-            int parsed = defaultVal;
-            boolean valid = true;
-
-            try {
-                parsed = Integer.parseInt(raw.trim());
-            } catch (NumberFormatException e) {
-                valid = false;
-            }
-            if (parsed != UNPAGED_QUERY && parsed != PAGED_QUERY) {
-                valid = false;
-            }
-            if (!valid) {
-                log.error("Invalid value '{}' for {}, using default {}", raw, PAGING_BEHAVIOUR_PROPNAME, defaultVal);
-            }
-            if (valid && parsed != defaultVal) {
-                log.info("{} = {} (default: {})", PAGING_BEHAVIOUR_PROPNAME, PAGED_QUERY, defaultVal);
-            }
-
-            PAGING_BEHAVIOUR = parsed;
-        } else {
-            PAGING_BEHAVIOUR = defaultVal;
-        }
-    }
 
     /**
      * The key of the map is the parent path, while the value is a map with the
@@ -703,5 +674,49 @@ class AliasHandler {
             }
         }
         return invalid;
+    }
+
+    /**
+     * Resolves the query paging behavior from system property {@value #PAGING_BEHAVIOUR_PROPNAME}.
+     *
+     * <p>If the property is unset or blank, {@link #PAGED_QUERY} is returned. Otherwise the trimmed
+     * value is parsed as an integer and validated against {@link #UNPAGED_QUERY} and
+     * {@link #PAGED_QUERY}. When the value is unparseable or outside those constants, an error is
+     * logged and {@link #PAGED_QUERY} is returned; if a valid non-default value is configured, a
+     * debug message is logged.
+     *
+     * @return {@link #PAGED_QUERY} or {@link #UNPAGED_QUERY}
+     */
+    // TODO: update Javadoc when we add the 2md paging mode
+    private static int getPagingBehaviour() {
+        int defaultVal = PAGED_QUERY;
+        int finalValue = defaultVal;
+
+        String raw = System.getProperty(PAGING_BEHAVIOUR_PROPNAME);
+
+        if (raw != null && !raw.isBlank()) {
+            int parsed = defaultVal;
+            boolean valid = true;
+
+            try {
+                parsed = Integer.parseInt(raw.trim());
+            } catch (NumberFormatException e) {
+                valid = false;
+            }
+            if (parsed != UNPAGED_QUERY && parsed != PAGED_QUERY) {
+                valid = false;
+            }
+            if (!valid) {
+                log.error("Invalid value '{}' for {}, using default {}", raw, PAGING_BEHAVIOUR_PROPNAME, defaultVal);
+            }
+            if (valid && parsed != defaultVal) {
+                log.debug("{} = {} (default: {})", PAGING_BEHAVIOUR_PROPNAME, parsed, defaultVal);
+            }
+
+            finalValue = parsed;
+        } else {
+            finalValue = defaultVal;
+        }
+        return finalValue;
     }
 }
