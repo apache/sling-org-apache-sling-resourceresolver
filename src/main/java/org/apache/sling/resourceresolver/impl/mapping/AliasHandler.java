@@ -64,7 +64,7 @@ class AliasHandler {
 
     private final ReentrantLock initializing;
 
-    private final Logger log = LoggerFactory.getLogger(AliasHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(AliasHandler.class);
 
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
@@ -75,6 +75,41 @@ class AliasHandler {
 
     // static value for the case when cache is not (yet) not initialized
     private static final Map<String, Map<String, Collection<String>>> UNITIALIZED_MAP = Collections.emptyMap();
+
+    // chatty but safe und useful for debugging
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoolver.aliasinit";
+    static final int UNPAGED_QUERY = 0;
+    static final int PAGED_QUERY = 1;
+    static final int PAGING_BEHAVIOUR;
+
+    static {
+        int defaultVal = PAGED_QUERY;
+        final String raw = System.getProperty(PAGING_BEHAVIOUR_PROPNAME);
+
+        if (raw != null && !raw.isBlank()) {
+            int parsed = defaultVal;
+            boolean valid = true;
+
+            try {
+                parsed = Integer.parseInt(raw.trim());
+            } catch (NumberFormatException e) {
+                valid = false;
+            }
+            if (parsed != UNPAGED_QUERY && parsed != PAGED_QUERY) {
+                valid = false;
+            }
+            if (!valid) {
+                log.error("Invalid value '{}' for {}, using default {}", raw, PAGING_BEHAVIOUR_PROPNAME, defaultVal);
+            }
+            if (valid && parsed != defaultVal) {
+                log.info("{} = {} (default: {})", PAGING_BEHAVIOUR_PROPNAME, PAGED_QUERY, defaultVal);
+            }
+
+            PAGING_BEHAVIOUR = parsed;
+        } else {
+            PAGING_BEHAVIOUR = defaultVal;
+        }
+    }
 
     /**
      * The key of the map is the parent path, while the value is a map with the
@@ -140,13 +175,15 @@ class AliasHandler {
         }
 
         log.info(
-                "Initializing Aliases ({}={}, {}={}, {}={})",
+                "Initializing Aliases ({}={}, {}={}, {}={}, {}={})",
                 "alias_cache_in_background",
                 this.factory.isAliasCacheInitInBackground(),
                 "optimize_alias_resolution",
                 this.factory.isOptimizeAliasResolutionEnabled(),
                 "allowed_alias_locations",
-                this.factory.getAllowedAliasLocations());
+                this.factory.getAllowedAliasLocations(),
+                "paging_behaviour",
+                PAGING_BEHAVIOUR);
 
         try {
             aliasesProcessed.set(false);
@@ -226,16 +263,21 @@ class AliasHandler {
             String baseQueryString = generateAliasQuery();
 
             Iterator<Resource> it;
-            try {
-                String queryStringWithSort =
-                        baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
-                it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
-            } catch (QuerySyntaxException ex) {
-                log.debug("sort with first() not supported, falling back to base query", ex);
+            if (PAGING_BEHAVIOUR == UNPAGED_QUERY) {
+                log.debug("query behaviour is set to unpaged");
                 it = queryUnpaged(baseQueryString, resolver);
-            } catch (UnsupportedOperationException ex) {
-                log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-                it = queryUnpaged(baseQueryString, resolver);
+            } else {
+                try {
+                    String queryStringWithSort =
+                            baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
+                    it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
+                } catch (QuerySyntaxException ex) {
+                    log.debug("sort with first() not supported, falling back to base query", ex);
+                    it = queryUnpaged(baseQueryString, resolver);
+                } catch (UnsupportedOperationException ex) {
+                    log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+                    it = queryUnpaged(baseQueryString, resolver);
+                }
             }
 
             long count = 0;

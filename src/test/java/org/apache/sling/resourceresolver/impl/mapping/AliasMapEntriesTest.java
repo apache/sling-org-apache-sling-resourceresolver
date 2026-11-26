@@ -102,18 +102,26 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     private static final Runnable NOOP = () -> {};
 
     private final boolean isOptimizeAliasResolutionEnabled;
-
     private final boolean isAliasCacheInitInBackground;
+    private final int pagingMode;
 
-    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1}")
+    @Parameterized.Parameters(
+            name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1},pagingMode={2}")
     public static Collection<Object[]> data() {
         // (optimized==false && backgroundInit == false) does not need to be tested
-        return List.of(new Object[][] {{false, false}, {true, false}, {true, true}});
+        return List.of(new Object[][] {
+            {false, false, AliasHandler.PAGED_QUERY}, // no cache, not in background, paging irrelevant
+            {true, false, AliasHandler.PAGED_QUERY}, // cache, not in background, no paging
+            {true, false, AliasHandler.PAGED_QUERY}, // cache, not in background, paging
+            {true, true, AliasHandler.PAGED_QUERY} // cache, in background, paging
+        });
     }
 
-    public AliasMapEntriesTest(boolean isOptimizeAliasResolutionEnabled, boolean isAliasCacheInitInBackground) {
+    public AliasMapEntriesTest(
+            boolean isOptimizeAliasResolutionEnabled, boolean isAliasCacheInitInBackground, Integer pagingMode) {
         this.isOptimizeAliasResolutionEnabled = isOptimizeAliasResolutionEnabled;
         this.isAliasCacheInitInBackground = isAliasCacheInitInBackground;
+        this.pagingMode = pagingMode;
     }
 
     private AutoCloseable mockCloser;
@@ -122,6 +130,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     @SuppressWarnings({"unchecked"})
     @Before
     public void setup() throws Exception {
+        System.setProperty(AliasHandler.PAGING_BEHAVIOUR_PROPNAME, String.valueOf(this.pagingMode));
+
         this.mockCloser = MockitoAnnotations.openMocks(this);
 
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
@@ -162,6 +172,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void tearDown() throws Exception {
         mapEntries.dispose();
         mockCloser.close();
+        System.clearProperty(AliasHandler.PAGING_BEHAVIOUR_PROPNAME);
     }
 
     // wait for background thread to complete
@@ -359,6 +370,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArgument(0);
+                    assertFalse(
+                            "Should not get here when AliasHandler is configured not to page",
+                            matchesPagedQuery(query) && this.pagingMode == AliasHandler.UNPAGED_QUERY);
                     if (queryAlwaysThrows) {
                         throw new UnsupportedOperationException("test case configured to always throw: " + query);
                     } else {
