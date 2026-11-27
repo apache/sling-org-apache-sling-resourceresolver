@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ValueMap;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
     private String lastValue = null;
     private Iterator<Resource> it;
     private int count = 0;
+    private int indexInPage = 0;
     private int page = 0;
     private Resource next = null;
     private int largestPage = 0;
@@ -73,6 +75,7 @@ public class PagedQueryIterator implements Iterator<Resource> {
 
     private void nextPage() {
         count = 0;
+        indexInPage = 0;
         String formattedQuery = String.format(query, QueryBuildHelper.escapeString(lastKey));
         log.debug("start {} query (page {}): {}", subject, page, formattedQuery);
         long queryStart = System.nanoTime();
@@ -82,26 +85,47 @@ public class PagedQueryIterator implements Iterator<Resource> {
         page += 1;
     }
 
+    private static String getDiagInformationWhenNotString(ValueMap valueMap, String propertyName) {
+        Object value = valueMap.get(propertyName);
+        if (value == null || value instanceof String[] || value instanceof String) {
+            // all good
+            return "";
+        } else {
+            return " (type: '" + value.getClass() + "')";
+        }
+    }
+
     private Resource getNext() throws NoSuchElementException {
         Resource resource = it.next();
         count += 1;
-        final String[] values = resource.getValueMap().get(propertyName, defaultValue);
+        indexInPage += 1;
+
+        final ValueMap valueMap = resource.getValueMap();
+        final String[] values = valueMap.get(propertyName, defaultValue);
 
         if (values.length > 0) {
             String value = values[0];
             if (value.compareTo(lastKey) < 0) {
-                String message = String.format(
-                        "unexpected query result in page %d, property name '%s', got '%s', despite querying for > '%s'",
-                        (page - 1), propertyName, value, lastKey);
-                log.error(message);
-                throw new QueryImplementationException(message);
+                log.warn(
+                        "unexpected query result at index {} in page {}, property name '{}', got '{}'{}, despite querying for > '{}'"
+                                + " (the async index may not yet reflect the current property value)",
+                        indexInPage,
+                        (page - 1),
+                        propertyName,
+                        value,
+                        getDiagInformationWhenNotString(valueMap, propertyName),
+                        lastKey);
             }
             if (lastValue != null && value.compareTo(lastValue) < 0) {
-                String message = String.format(
-                        "unexpected query result in page %d, property name '%s', got '%s', last value was '%s'",
-                        (page - 1), propertyName, value, lastValue);
-                log.error(message);
-                throw new QueryImplementationException(message);
+                log.warn(
+                        "unexpected query result at index {} in page {}, property name '{}', got '{}'{}, last value was '{}'"
+                                + " (the async index may not yet reflect the current property value)",
+                        indexInPage,
+                        (page - 1),
+                        propertyName,
+                        value,
+                        getDiagInformationWhenNotString(valueMap, propertyName),
+                        lastValue);
             }
 
             // keep information about large key counts
@@ -176,15 +200,6 @@ public class PagedQueryIterator implements Iterator<Resource> {
                     subject, warnAt, largestKeyValue, largestKeyCount);
         } else {
             return "";
-        }
-    }
-
-    /**
-     * Thrown when the underlying repository misbehaves with respect to sorting on multivalued properties.
-     */
-    public static class QueryImplementationException extends RuntimeException {
-        public QueryImplementationException(String message) {
-            super(message);
         }
     }
 }

@@ -96,7 +96,7 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
 
     protected final Map<ResourceTypeInformation, Boolean> resourceTypeLookupCache = new ConcurrentHashMap<>();
 
-    // Store the resourceSupertype mapping (supertype can be null)
+    // Cache parent type lookups by resource type, including null results.
     protected final Map<String, Optional<String>> parentResourceTypeMap = new ConcurrentHashMap<>();
 
     private Map<String, Object> propertyMap;
@@ -331,6 +331,11 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             absPath = "/";
         } else if (!absPath.startsWith("/")) {
             absPath = "/" + absPath;
+        }
+
+        // replace multiple slashes with single slashes to support paths like e.g. //bin/browser.html
+        while (absPath.startsWith("//")) {
+            absPath = absPath.substring(1);
         }
 
         // check for special namespace prefix treatment
@@ -809,57 +814,55 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
      *         the {@link ResourcePathIterator} to resolve the resource.
      */
     public Resource resolveInternal(final String absPath, final Map<String, String> parameters) {
-        Resource resource = null;
         if (absPath != null && !absPath.isEmpty() && !absPath.startsWith("/")) {
             logger.debug("resolveInternal: absolute path expected {} ", absPath);
-            return resource; // resource is null at this point
+            return null;
         }
         String curPath = absPath;
         try {
             final ResourcePathIterator it = new ResourcePathIterator(absPath);
+            Resource resource = null;
             while (it.hasNext() && resource == null) {
                 curPath = it.next();
                 resource = getAbsoluteResourceInternal(null, curPath, parameters, true);
+            }
+            // SLING-627: set the part cut off from the uriPath as
+            // sling.resolutionPathInfo property such that
+            // uriPath = curPath + sling.resolutionPathInfo
+            if (resource != null) {
+
+                final String rpi = absPath.substring(curPath.length());
+                resource.getResourceMetadata().setResolutionPath(absPath.substring(0, curPath.length()));
+                resource.getResourceMetadata().setResolutionPathInfo(rpi);
+                resource.getResourceMetadata().setParameterMap(parameters);
+
+                logger.debug(
+                        "resolveInternal: Found resource {} with path info {} for {}",
+                        new Object[] {resource, rpi, absPath});
+                return resource;
             }
         } catch (final Exception ex) {
             throw new SlingException("Problem trying " + curPath + " for request path " + absPath, ex);
         }
 
-        // SLING-627: set the part cut off from the uriPath as
-        // sling.resolutionPathInfo property such that
-        // uriPath = curPath + sling.resolutionPathInfo
+        // no direct resource found, so we have to drill down into the
+        // resource tree to find a match
+        Resource resource = getAbsoluteResourceInternal(absPath, parameters, true);
         if (resource != null) {
-
-            final String rpi = absPath.substring(curPath.length());
-            resource.getResourceMetadata().setResolutionPath(absPath.substring(0, curPath.length()));
-            resource.getResourceMetadata().setResolutionPathInfo(rpi);
-            resource.getResourceMetadata().setParameterMap(parameters);
-
-            logger.debug(
-                    "resolveInternal: Found resource {} with path info {} for {}",
-                    new Object[] {resource, rpi, absPath});
-
-        } else {
-
-            String tokenizedPath = absPath;
-
-            // no direct resource found, so we have to drill down into the
-            // resource tree to find a match
-            resource = getAbsoluteResourceInternal(null, "/", parameters, true);
-
-            // no read access on / drilling further down
-            // SLING-5638
-            if (resource == null) {
-                resource = getAbsoluteResourceInternal(absPath, parameters, true);
-                if (resource != null) {
-                    tokenizedPath = tokenizedPath.substring(resource.getPath().length());
-                }
-            }
-
             final StringBuilder resolutionPath = new StringBuilder();
+            String tokenizedPath = Objects.equals(resource.getPath(), "/")
+                    ? absPath
+                    : absPath.substring(resource.getPath().length());
             final StringTokenizer tokener = new StringTokenizer(tokenizedPath, "/");
             final int delimCount = StringUtils.countMatches(tokenizedPath, '/');
             final int redundantDelimCount = delimCount - tokener.countTokens();
+
+            // we found an ancestor resource, so we need to prefix the resolutionPath with it
+            // unless it is the root path (that would result in a double slash prefix "//")
+            String resolutionPathPrefix = resource.getResourceMetadata().getResolutionPath();
+            if (!Objects.equals(resolutionPathPrefix, "/")) {
+                resolutionPath.append(resolutionPathPrefix);
+            }
 
             while (resource != null && tokener.hasMoreTokens()) {
                 final String childNameRaw = tokener.nextToken();
@@ -1000,20 +1003,20 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
             return null;
         }
 
-        absPath = absPath.substring(absPath.indexOf("/"));
-        Resource resource = getAbsoluteResourceInternal(null, absPath, parameters, isResolved);
-
-        absPath = absPath.substring(0, absPath.lastIndexOf("/"));
-
-        while (!absPath.equals("")) {
-            Resource r = getAbsoluteResourceInternal(null, absPath, parameters, true);
-
+        String candidatePath = absPath.substring(absPath.indexOf("/"));
+        while (candidatePath != null) {
+            // If this was a "getResource" call, i.e. isResolved = false,
+            // then the first iteration will return a Resource; in case the
+            // resource doesn't exist a SyntheticResource. I.e. for
+            // "getResource" calls this loop should always return in during
+            // the first iteration.
+            Resource r = getAbsoluteResourceInternal(null, candidatePath, parameters, isResolved);
             if (r != null) {
-                resource = r;
+                return r;
             }
-            absPath = absPath.substring(0, absPath.lastIndexOf("/"));
+            candidatePath = ResourceUtil.getParent(candidatePath);
         }
-        return resource;
+        return null;
     }
 
     /**
@@ -1145,22 +1148,10 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public String getParentResourceType(final Resource resource) {
         checkClosed();
-        String resourceSuperType = null;
-        if (resource != null) {
-            if (parentResourceTypeMap.containsKey(resource.getPath())) {
-                resourceSuperType =
-                        parentResourceTypeMap.get(resource.getPath()).orElse(null);
-            } else {
-                resourceSuperType = getParentResourceTypeInternal(resource);
-                parentResourceTypeMap.put(resource.getPath(), Optional.ofNullable(resourceSuperType));
-            }
+        if (resource == null) {
+            return null;
         }
-        return resourceSuperType;
-    }
-
-    String getParentResourceTypeInternal(final Resource resource) {
-        String resourceSuperType;
-        resourceSuperType = resource.getResourceSuperType();
+        String resourceSuperType = resource.getResourceSuperType();
         if (resourceSuperType == null) {
             resourceSuperType = this.getParentResourceType(resource.getResourceType());
         }
@@ -1173,7 +1164,19 @@ public class ResourceResolverImpl extends SlingAdaptable implements ResourceReso
     @Override
     public String getParentResourceType(final String resourceType) {
         checkClosed();
-        return this.control.getParentResourceType(this.factory, this, resourceType);
+        if (resourceType == null) {
+            return null;
+        }
+        Optional<String> resourceSuperType = parentResourceTypeMap.get(resourceType);
+        if (resourceSuperType == null) {
+            resourceSuperType =
+                    Optional.ofNullable(this.control.getParentResourceType(this.factory, this, resourceType));
+            // computeIfAbsent() might fail here, because type resolution can re-enter this cache
+            // through providers or resource wrappers.
+            // In case of a race, the worst case is that multiple threads compute the same super type.
+            parentResourceTypeMap.putIfAbsent(resourceType, resourceSuperType);
+        }
+        return resourceSuperType.orElse(null);
     }
 
     /**

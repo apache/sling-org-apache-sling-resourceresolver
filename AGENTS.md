@@ -100,3 +100,9 @@ pom.xml                                     # Maven build; parent: sling-bundle-
 - Spotless will fail the build if formatting is off — always run `mvn spotless:apply` after bulk edits.
 - OSGi baseline checks will fail if you change method signatures in non-internal packages without bumping the package version in `bnd.bnd` / `pom.xml`.
 - `ResourceResolverImpl` is not an OSGi component — it is instantiated per-request by the factory. Don't add `@Component` to it.
+# Security
+
+<!-- sling-security-default:start -->
+The threat model for this project is https://github.com/apache/sling/blob/master/docs/threat-model.md .
+<!-- sling-security-default:end -->
+

@@ -19,7 +19,6 @@
 package org.apache.sling.resourceresolver.impl.console;
 
 import javax.servlet.Servlet;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -106,106 +105,109 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
     }
 
     @Override
-    protected void doGet(final HttpServletRequest request, final HttpServletResponse response)
-            throws ServletException, IOException {
-        final String msg = request.getParameter(PAR_MSG);
-        final String test;
-        if (msg != null) {
-            test = request.getParameter(PAR_TEST);
-        } else {
-            test = null;
-        }
+    protected void doGet(final HttpServletRequest request, final HttpServletResponse response) {
+        try {
+            final String msg = request.getParameter(PAR_MSG);
+            final String test;
+            if (msg != null) {
+                test = request.getParameter(PAR_TEST);
+            } else {
+                test = null;
+            }
 
-        final PrintWriter pw = response.getWriter();
+            final PrintWriter pw = response.getWriter();
 
-        pw.println("<table class='content' cellpadding='0' cellspacing='0' width='100%'>");
+            pw.println("<table class='content' cellpadding='0' cellspacing='0' width='100%'>");
 
-        final MapEntriesHandler mapEntries = resolverFactory.getMapEntries();
+            final MapEntriesHandler mapEntries = resolverFactory.getMapEntries();
 
-        titleHtml(pw, "Configuration", null);
-        pw.println("<tr class='content'>");
-        pw.println("<td class='content'>Resource Search Path</td>");
-        pw.print("<td class='content' colspan='2'>");
-        pw.print(Arrays.asList(resolverFactory.getSearchPath()).toString());
-        pw.print("</td>");
-        pw.println("</tr>");
-        pw.println("<tr class='content'>");
-        pw.println("<td class='content'>Namespace Mangling</td>");
-        pw.print("<td class='content' colspan='2'>");
-        pw.print(resolverFactory.isMangleNamespacePrefixes() ? "Enabled" : "Disabled");
-        pw.print("</td>");
-        pw.println("</tr>");
-        pw.println("<tr class='content'>");
-        pw.println("<td class='content'>Mapping Location</td>");
-        pw.print("<td class='content' colspan='2'>");
-        pw.print(resolverFactory.getMapRoot());
-        pw.print("</td>");
-        pw.println("</tr>");
-
-        separatorHtml(pw);
-
-        titleHtml(
-                pw,
-                "Configuration Test",
-                "To test the configuration, enter an URL or a resource path into "
-                        + "the field and click 'Resolve' to resolve the URL or click 'Map' "
-                        + "to map the resource path. To simulate a map call that takes the "
-                        + "current request into account, provide a full URL whose "
-                        + "scheme/host/port prefix will then be used as the request "
-                        + "information. The path passed to map will always be the path part "
-                        + "of the URL. In case multiple mapping candidates are found, the "
-                        + "primary one, which would be returned by ResourceResolver.map, is "
-                        + "clearly marked, and the others listed for completeness.");
-
-        pw.println("<tr class='content'>");
-        pw.println("<td class='content'>Test</td>");
-        pw.print("<td class='content' colspan='2'>");
-        pw.print("<form method='post'>");
-        pw.print("<input type='text' name='" + ATTR_TEST + "' value='");
-        if (test != null) {
-            pw.print(ResponseUtil.escapeXml(test));
-        }
-        pw.println("' class='input' size='50'>");
-        pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT + "' value='Resolve' class='submit'>");
-        pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT + "' value='Map' class='submit'>");
-        pw.print("</form>");
-        pw.print("</td>");
-        pw.println("</tr>");
-
-        if (msg != null) {
+            titleHtml(pw, "Configuration", null);
             pw.println("<tr class='content'>");
-            pw.println("<td class='content'>&nbsp;</td>");
+            pw.println("<td class='content'>Resource Search Path</td>");
             pw.print("<td class='content' colspan='2'>");
-            pw.print(ResponseUtil.escapeXml(msg));
-            pw.println("</td>");
+            pw.print(Arrays.asList(resolverFactory.getSearchPath()).toString());
+            pw.print("</td>");
             pw.println("</tr>");
+            pw.println("<tr class='content'>");
+            pw.println("<td class='content'>Namespace Mangling</td>");
+            pw.print("<td class='content' colspan='2'>");
+            pw.print(resolverFactory.isMangleNamespacePrefixes() ? "Enabled" : "Disabled");
+            pw.print("</td>");
+            pw.println("</tr>");
+            pw.println("<tr class='content'>");
+            pw.println("<td class='content'>Mapping Location</td>");
+            pw.print("<td class='content' colspan='2'>");
+            pw.print(resolverFactory.getMapRoot());
+            pw.print("</td>");
+            pw.println("</tr>");
+
+            separatorHtml(pw);
+
+            titleHtml(
+                    pw,
+                    "Configuration Test",
+                    "To test the configuration, enter an URL or a resource path into "
+                            + "the field and click 'Resolve' to resolve the URL or click 'Map' "
+                            + "to map the resource path. To simulate a map call that takes the "
+                            + "current request into account, provide a full URL whose "
+                            + "scheme/host/port prefix will then be used as the request "
+                            + "information. The path passed to map will always be the path part "
+                            + "of the URL. In case multiple mapping candidates are found, the "
+                            + "primary one, which would be returned by ResourceResolver.map, is "
+                            + "clearly marked, and the others listed for completeness.");
+
+            pw.println("<tr class='content'>");
+            pw.println("<td class='content'>Test</td>");
+            pw.print("<td class='content' colspan='2'>");
+            pw.print("<form method='post'>");
+            pw.print("<input type='text' name='" + ATTR_TEST + "' value='");
+            if (test != null) {
+                pw.print(ResponseUtil.escapeXml(test));
+            }
+            pw.println("' class='input' size='50'>");
+            pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT + "' value='Resolve' class='submit'>");
+            pw.println("&nbsp;&nbsp;<input type='submit' name='" + ATTR_SUBMIT + "' value='Map' class='submit'>");
+            pw.print("</form>");
+            pw.print("</td>");
+            pw.println("</tr>");
+
+            if (msg != null) {
+                pw.println("<tr class='content'>");
+                pw.println("<td class='content'>&nbsp;</td>");
+                pw.print("<td class='content' colspan='2'>");
+                pw.print(ResponseUtil.escapeXml(msg));
+                pw.println("</td>");
+                pw.println("</tr>");
+            }
+
+            separatorHtml(pw);
+            dumpMapHtml(
+                    pw,
+                    "Resolver Map Entries",
+                    "Lists the entries used by the ResourceResolver.resolve methods to map URLs to Resources",
+                    mapEntries.getResolveMaps());
+
+            separatorHtml(pw);
+
+            dumpMapHtml(
+                    pw,
+                    "Mapping Map Entries",
+                    "Lists the entries used by the ResourceResolver.map methods to map Resource Paths to URLs",
+                    mapEntries.getMapMaps());
+
+            separatorHtml(pw);
+
+            dumpDTOsHtml(pw);
+
+            pw.println("</table>");
+        } catch (final IOException ioe) {
+            log("Unable to render resource resolver web console output", ioe);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
-
-        separatorHtml(pw);
-        dumpMapHtml(
-                pw,
-                "Resolver Map Entries",
-                "Lists the entries used by the ResourceResolver.resolve methods to map URLs to Resources",
-                mapEntries.getResolveMaps());
-
-        separatorHtml(pw);
-
-        dumpMapHtml(
-                pw,
-                "Mapping Map Entries",
-                "Lists the entries used by the ResourceResolver.map methods to map Resource Paths to URLs",
-                mapEntries.getMapMaps());
-
-        separatorHtml(pw);
-
-        dumpDTOsHtml(pw);
-
-        pw.println("</table>");
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) {
 
         final String test = request.getParameter(ATTR_TEST);
         String msg = null;
@@ -255,7 +257,12 @@ public class ResourceResolverWebConsolePlugin extends HttpServlet {
         } else {
             redirectTo = path + '?' + PAR_MSG + '=' + encodeParam(msg) + '&' + PAR_TEST + '=' + encodeParam(test);
         }
-        response.sendRedirect(redirectTo);
+        try {
+            response.sendRedirect(redirectTo);
+        } catch (final IOException ioe) {
+            log("Unable to redirect after resource resolver console test", ioe);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
     }
 
     private static String mappingsToString(Collection<String> allMappings) {
