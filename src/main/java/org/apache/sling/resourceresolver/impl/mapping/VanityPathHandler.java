@@ -82,7 +82,7 @@ public class VanityPathHandler {
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
 
     // constants for paging behaviour as obtained from system property
-    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoolver.vpinit";
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresolver.vpinit";
     private final int PAGING_BEHAVIOUR = QueryBuildHelper.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
 
     // keep track of some dubious vanityPaths for diagnostics (thus size-limited)
