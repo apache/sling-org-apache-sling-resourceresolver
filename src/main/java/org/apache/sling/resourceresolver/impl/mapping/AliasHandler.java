@@ -216,21 +216,11 @@ class AliasHandler {
             }
         }
 
-        /**
-         * Load aliases - Search for all nodes (except under /jcr:system) below
-         * configured alias locations having the sling:alias property
-         */
+        // Returns an iterator over resources with a sling:alias property,
+        // using paged sorting when enabled and falling back to an unpaged query.
         @NotNull
-        private Map<String, Map<String, Collection<String>>> loadAliases(
-                @NotNull ResourceResolver resolver,
-                @NotNull List<String> conflictingAliases,
-                @NotNull List<String> invalidAliases,
-                @NotNull StringBuilder diagnostics) {
-
-            Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
-
+        private Iterator<Resource> getQueryIterator(@NotNull ResourceResolver resolver) {
             String baseQueryString = generateAliasQuery();
-
             Iterator<Resource> it;
             if (PAGING_BEHAVIOUR == QueryBuildHelper.UNPAGED_QUERY) {
                 log.debug("query behaviour is set to unpaged");
@@ -248,6 +238,23 @@ class AliasHandler {
                     it = queryUnpaged(baseQueryString, resolver);
                 }
             }
+            return it;
+        }
+
+        /**
+         * Load aliases - Search for all nodes (except under /jcr:system) below
+         * configured alias locations having the sling:alias property
+         */
+        @NotNull
+        private Map<String, Map<String, Collection<String>>> loadAliases(
+                @NotNull ResourceResolver resolver,
+                @NotNull List<String> conflictingAliases,
+                @NotNull List<String> invalidAliases,
+                @NotNull StringBuilder diagnostics) {
+
+            Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
+
+            Iterator<Resource> it = getQueryIterator(resolver);
 
             long count = 0;
             while (it.hasNext()) {

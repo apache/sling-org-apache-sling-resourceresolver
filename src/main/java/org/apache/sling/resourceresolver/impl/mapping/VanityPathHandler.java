@@ -487,16 +487,11 @@ public class VanityPathHandler {
         return reason.isEmpty() ? "" : String.format("'%s', value '%s': %s", resource, path, reason);
     }
 
-    /**
-     * Load vanity paths - search for all nodes (except under /jcr:system)
-     * having a sling:vanityPath property
-     * <p>
-     * Also collect diagnostics about vanity paths that appear to be broken.
-     */
-    private Map<String, List<String>> loadVanityPaths(
-            @NotNull ResourceResolver resolver, @NotNull List<String> dubiousVanityPaths) {
-        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String baseQueryString =
+    // Returns an iterator over resources with a sling:vanityPath property,
+    // using paged sorting when enabled and falling back to an unpaged query.
+    @NotNull
+    private Iterator<Resource> getQueryIterator(@NotNull ResourceResolver resolver) {
+        String baseQueryString =
                 "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]" + " WHERE "
                         + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
@@ -506,7 +501,7 @@ public class VanityPathHandler {
             it = queryUnpaged(baseQueryString, resolver);
         } else {
             try {
-                final String queryStringWithSort =
+                String queryStringWithSort =
                         baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
                 it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
             } catch (QuerySyntaxException ex) {
@@ -517,6 +512,21 @@ public class VanityPathHandler {
                 it = queryUnpaged(baseQueryString, resolver);
             }
         }
+        return it;
+    }
+
+    /**
+     * Load vanity paths - search for all nodes (except under /jcr:system)
+     * having a sling:vanityPath property
+     * <p>
+     * Also collect diagnostics about vanity paths that appear to be broken.
+     */
+    private Map<String, List<String>> loadVanityPaths(
+            @NotNull ResourceResolver resolver, @NotNull List<String> dubiousVanityPaths) {
+
+        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
+
+        Iterator<Resource> it = getQueryIterator(resolver);
 
         long count = 0;
         long countInScope = 0;
