@@ -108,12 +108,13 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Parameterized.Parameters(
             name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1},pagingMode={2}")
     public static Collection<Object[]> data() {
+        boolean cache = true, background = true;
         // (optimized==false && backgroundInit == false) does not need to be tested
         return List.of(new Object[][] {
-            {false, false, QueryBuildHelper.PAGED_QUERY}, // no cache, not in background, paging irrelevant
-            {true, false, QueryBuildHelper.UNPAGED_QUERY}, // cache, not in background, no paging
-            {true, false, QueryBuildHelper.PAGED_QUERY}, // cache, not in background, paging
-            {true, true, QueryBuildHelper.PAGED_QUERY} // cache, in background, paging
+            {!cache, !background, QueryBuildHelper.PAGED_QUERY}, // no cache, not in background, paging irrelevant
+            {cache, !background, QueryBuildHelper.UNPAGED_QUERY}, // cache, not in background, no paging
+            {cache, !background, QueryBuildHelper.PAGED_QUERY}, // cache, not in background, paging
+            {cache, background, QueryBuildHelper.PAGED_QUERY} // cache, in background, paging
         });
     }
 

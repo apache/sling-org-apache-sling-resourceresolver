@@ -81,6 +81,10 @@ public class VanityPathHandler {
 
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
 
+    // constants for paging behaviour as obtained from system property
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoolver.vpinit";
+    private final int PAGING_BEHAVIOUR = QueryBuildHelper.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
+
     // keep track of some dubious vanityPaths for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DUBIOUS_VANITY_PATHS = 50;
 
@@ -146,7 +150,9 @@ public class VanityPathHandler {
                 "vanitypath_(allowlist/denylist)",
                 this.factory.getVanityPathConfig(),
                 "vanitypath_bloomfilter_maxBytes",
-                this.factory.getVanityBloomFilterMaxBytes());
+                this.factory.getVanityBloomFilterMaxBytes(),
+                "paging_behaviour",
+                PAGING_BEHAVIOUR);
 
         try {
             if (this.factory.isVanityPathEnabled()) {
@@ -495,16 +501,21 @@ public class VanityPathHandler {
                         + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
         Iterator<Resource> it;
-        try {
-            final String queryStringWithSort =
-                    baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
-        } catch (QuerySyntaxException ex) {
-            log.debug("sort with first() not supported, falling back to base query", ex);
+        if (PAGING_BEHAVIOUR == QueryBuildHelper.UNPAGED_QUERY) {
+            log.debug("query behaviour is set to unpaged");
             it = queryUnpaged(baseQueryString, resolver);
-        } catch (UnsupportedOperationException ex) {
-            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged(baseQueryString, resolver);
+        } else {
+            try {
+                final String queryStringWithSort =
+                        baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
+                it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
+            } catch (QuerySyntaxException ex) {
+                log.debug("sort with first() not supported, falling back to base query", ex);
+                it = queryUnpaged(baseQueryString, resolver);
+            } catch (UnsupportedOperationException ex) {
+                log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+                it = queryUnpaged(baseQueryString, resolver);
+            }
         }
 
         long count = 0;
