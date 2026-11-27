@@ -140,7 +140,7 @@ public class VanityPathHandler {
         }
 
         log.info(
-                "Initializing Vanity Paths ({}={}, {}={}, {}={}, {}={}, {}={})",
+                "Initializing Vanity Paths ({}={}, {}={}, {}={}, {}={}, {}={}, {}={})",
                 "enable_vanitypath",
                 this.factory.isVanityPathEnabled(),
                 "vanitypath_cache_in_background",
