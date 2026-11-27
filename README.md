@@ -6,7 +6,63 @@
 
 This module is part of the [Apache Sling](https://sling.apache.org) project.
 
-This bundle provides the Resource Resolver and Resource Resolver Factory.
+This bundle provides the Resource Resolver and Resource Resolver Factory. It aggregates
+`ResourceProvider` OSGi services into a unified resource tree and handles URL mapping,
+vanity paths, aliases, namespace mangling, and observation event routing.
 
-The `/etc/map` mapping configurations are documented on the Sling website's 
-[Mappings for Resource Resolution](https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html) page.
+## Requirements
+
+* Java 17+
+* Maven
+
+## Build and test
+
+```bash
+# compile
+mvn -q compile
+
+# run all tests
+mvn -q test
+
+# build bundle (without tests)
+mvn -q clean package -DskipTests
+
+# full verification (tests + checks)
+mvn verify
+
+# code format checks
+mvn spotless:check
+mvn spotless:apply
+
+# API baseline check
+mvn bnd-baseline:baseline
+```
+
+## Project layout
+
+```text
+src/main/java/org/apache/sling/resourceresolver/impl/
+  ResourceResolverFactoryActivator.java
+  ResourceResolverFactoryImpl.java
+  ResourceResolverImpl.java
+  mapping/
+  providers/
+  observation/
+  helper/
+  params/
+  legacy/
+  console/
+
+src/test/java/
+src/test/resources/
+```
+
+## Configuration and documentation
+
+The `/etc/map` mapping configuration is documented on the Sling website:
+[Mappings for Resource Resolution](https://sling.apache.org/documentation/the-sling-engine/mappings-for-resource-resolution.html).
+
+Additional background:
+
+* [Apache Sling Documentation](https://sling.apache.org/documentation.html)
+* [Apache Sling Contributing Guide](https://sling.apache.org/contributing.html)
