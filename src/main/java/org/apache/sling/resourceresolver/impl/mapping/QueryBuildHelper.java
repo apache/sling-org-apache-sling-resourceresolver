@@ -18,12 +18,20 @@
  */
 package org.apache.sling.resourceresolver.impl.mapping;
 
+import java.util.Locale;
+
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
- * Utilities related to construction of JCR-SQL2 queries
+ * Utilities related to configuration and construction of queries
  */
 public class QueryBuildHelper {
 
     private static final String JCR_SYSTEM_PATH = "/jcr:system";
+
+    private static Logger LOG = LoggerFactory.getLogger(QueryBuildHelper.class);
 
     private QueryBuildHelper() {
         // no instances for you
@@ -44,5 +52,42 @@ public class QueryBuildHelper {
      */
     public static String excludeSystemPath() {
         return String.format("NOT isdescendantnode('%s')", escapeString(JCR_SYSTEM_PATH));
+    }
+
+    public enum PagingBehavior {
+        UNPAGED,
+        PAGED;
+
+        /**
+         * Resolves the query paging behavior from a system property.
+         *
+         * <p>Reads the system property named by {@code propname} and resolves it via
+         * {@link #valueOf(String)} after trimming and uppercasing. If the property is
+         * null, blank, or does not match a known {@link PagingBehavior}, this method
+         * logs an error (when invalid) and falls back to {@link #PAGED}.
+         *
+         * @param propname the name of the system property to read; may be null or blank
+         * @return the resolved {@link PagingBehavior}, defaulting to {@link #PAGED}
+         */
+        // TODO: update when more paging methods are added
+        public static PagingBehavior getPagingBehaviour(@NotNull String propname) {
+            PagingBehavior defaultVal = PAGED;
+
+            String raw = System.getProperty(propname);
+            if (raw == null || raw.isBlank()) {
+                return defaultVal;
+            }
+
+            try {
+                PagingBehavior resolved = valueOf(raw.trim().toUpperCase(Locale.ROOT));
+                if (resolved != defaultVal) {
+                    LOG.debug("{} = {} (default: {})", propname, resolved, defaultVal);
+                }
+                return resolved;
+            } catch (IllegalArgumentException e) {
+                LOG.error("Invalid value '{}' for {}, using default {}", raw, propname, defaultVal);
+                return defaultVal;
+            }
+        }
     }
 }

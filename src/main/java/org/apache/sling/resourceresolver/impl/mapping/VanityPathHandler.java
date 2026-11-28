@@ -44,6 +44,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -80,6 +81,10 @@ public class VanityPathHandler {
     private final AtomicBoolean vanityPathsProcessed = new AtomicBoolean(false);
 
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
+
+    // constants for paging behaviour as obtained from system property
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresolver.vpinit";
+    private final PagingBehavior PAGING_BEHAVIOUR = PagingBehavior.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
 
     // keep track of some dubious vanityPaths for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DUBIOUS_VANITY_PATHS = 50;
@@ -136,7 +141,7 @@ public class VanityPathHandler {
         }
 
         log.info(
-                "Initializing Vanity Paths ({}={}, {}={}, {}={}, {}={}, {}={})",
+                "Initializing Vanity Paths ({}={}, {}={}, {}={}, {}={}, {}={}, {}={})",
                 "enable_vanitypath",
                 this.factory.isVanityPathEnabled(),
                 "vanitypath_cache_in_background",
@@ -146,7 +151,9 @@ public class VanityPathHandler {
                 "vanitypath_(allowlist/denylist)",
                 this.factory.getVanityPathConfig(),
                 "vanitypath_bloomfilter_maxBytes",
-                this.factory.getVanityBloomFilterMaxBytes());
+                this.factory.getVanityBloomFilterMaxBytes(),
+                "paging_behaviour",
+                PAGING_BEHAVIOUR);
 
         try {
             if (this.factory.isVanityPathEnabled()) {
@@ -481,6 +488,34 @@ public class VanityPathHandler {
         return reason.isEmpty() ? "" : String.format("'%s', value '%s': %s", resource, path, reason);
     }
 
+    // Returns an iterator over resources with a sling:vanityPath property,
+    // using paged sorting when enabled and falling back to an unpaged query.
+    @NotNull
+    private Iterator<Resource> getQueryIterator(@NotNull ResourceResolver resolver) {
+        String baseQueryString =
+                "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]" + " WHERE "
+                        + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
+
+        Iterator<Resource> it;
+        if (PAGING_BEHAVIOUR == PagingBehavior.UNPAGED) {
+            log.debug("query behaviour is set to unpaged");
+            it = queryUnpaged(baseQueryString, resolver);
+        } else {
+            try {
+                String queryStringWithSort =
+                        baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
+                it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
+            } catch (QuerySyntaxException ex) {
+                log.debug("sort with first() not supported, falling back to base query", ex);
+                it = queryUnpaged(baseQueryString, resolver);
+            } catch (UnsupportedOperationException ex) {
+                log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+                it = queryUnpaged(baseQueryString, resolver);
+            }
+        }
+        return it;
+    }
+
     /**
      * Load vanity paths - search for all nodes (except under /jcr:system)
      * having a sling:vanityPath property
@@ -489,23 +524,10 @@ public class VanityPathHandler {
      */
     private Map<String, List<String>> loadVanityPaths(
             @NotNull ResourceResolver resolver, @NotNull List<String> dubiousVanityPaths) {
-        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
-        final String baseQueryString =
-                "SELECT [sling:vanityPath], [sling:redirect], [sling:redirectStatus]" + " FROM [nt:base]" + " WHERE "
-                        + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
-        Iterator<Resource> it;
-        try {
-            final String queryStringWithSort =
-                    baseQueryString + " AND FIRST([sling:vanityPath]) >= '%s' ORDER BY FIRST([sling:vanityPath])";
-            it = new PagedQueryIterator("vanity path", PROP_VANITY_PATH, resolver, queryStringWithSort, 2000);
-        } catch (QuerySyntaxException ex) {
-            log.debug("sort with first() not supported, falling back to base query", ex);
-            it = queryUnpaged(baseQueryString, resolver);
-        } catch (UnsupportedOperationException ex) {
-            log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-            it = queryUnpaged(baseQueryString, resolver);
-        }
+        final Map<String, List<String>> targetPaths = new ConcurrentHashMap<>();
+
+        Iterator<Resource> it = getQueryIterator(resolver);
 
         long count = 0;
         long countInScope = 0;

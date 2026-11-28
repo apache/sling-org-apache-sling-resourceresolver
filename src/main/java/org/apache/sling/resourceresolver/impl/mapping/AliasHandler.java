@@ -42,6 +42,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -64,7 +65,11 @@ class AliasHandler {
 
     private final ReentrantLock initializing;
 
-    private final Logger log = LoggerFactory.getLogger(AliasHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(AliasHandler.class);
+
+    // constants for paging behaviour as obtained from system property
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresolver.aliasinit";
+    private final PagingBehavior PAGING_BEHAVIOUR = PagingBehavior.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
 
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
@@ -140,13 +145,15 @@ class AliasHandler {
         }
 
         log.info(
-                "Initializing Aliases ({}={}, {}={}, {}={})",
+                "Initializing Aliases ({}={}, {}={}, {}={}, {}={})",
                 "alias_cache_in_background",
                 this.factory.isAliasCacheInitInBackground(),
                 "optimize_alias_resolution",
                 this.factory.isOptimizeAliasResolutionEnabled(),
                 "allowed_alias_locations",
-                this.factory.getAllowedAliasLocations());
+                this.factory.getAllowedAliasLocations(),
+                "paging_behaviour",
+                PAGING_BEHAVIOUR);
 
         try {
             aliasesProcessed.set(false);
@@ -154,7 +161,7 @@ class AliasHandler {
             if (this.factory.isOptimizeAliasResolutionEnabled()) {
                 AliasInitializer ai = new AliasInitializer();
                 if (this.factory.isAliasCacheInitInBackground()) {
-                    this.log.debug("starting alias initialization in the background");
+                    log.debug("starting alias initialization in the background");
                     Thread aiinit = new Thread(ai, "AliasInitializer");
                     aiinit.start();
                 } else {
@@ -210,6 +217,31 @@ class AliasHandler {
             }
         }
 
+        // Returns an iterator over resources with a sling:alias property,
+        // using paged sorting when enabled and falling back to an unpaged query.
+        @NotNull
+        private Iterator<Resource> getQueryIterator(@NotNull ResourceResolver resolver) {
+            String baseQueryString = generateAliasQuery();
+            Iterator<Resource> it;
+            if (PAGING_BEHAVIOUR == PagingBehavior.UNPAGED) {
+                log.debug("query behaviour is set to unpaged");
+                it = queryUnpaged(baseQueryString, resolver);
+            } else {
+                try {
+                    String queryStringWithSort =
+                            baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
+                    it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
+                } catch (QuerySyntaxException ex) {
+                    log.debug("sort with first() not supported, falling back to base query", ex);
+                    it = queryUnpaged(baseQueryString, resolver);
+                } catch (UnsupportedOperationException ex) {
+                    log.debug("query failed as unsupported, retrying without paging/sorting", ex);
+                    it = queryUnpaged(baseQueryString, resolver);
+                }
+            }
+            return it;
+        }
+
         /**
          * Load aliases - Search for all nodes (except under /jcr:system) below
          * configured alias locations having the sling:alias property
@@ -223,20 +255,7 @@ class AliasHandler {
 
             Map<String, Map<String, Collection<String>>> map = new ConcurrentHashMap<>();
 
-            String baseQueryString = generateAliasQuery();
-
-            Iterator<Resource> it;
-            try {
-                String queryStringWithSort =
-                        baseQueryString + " AND FIRST([sling:alias]) >= '%s' ORDER BY FIRST([sling:alias])";
-                it = new PagedQueryIterator("alias", "sling:alias", resolver, queryStringWithSort, 2000);
-            } catch (QuerySyntaxException ex) {
-                log.debug("sort with first() not supported, falling back to base query", ex);
-                it = queryUnpaged(baseQueryString, resolver);
-            } catch (UnsupportedOperationException ex) {
-                log.debug("query failed as unsupported, retrying without paging/sorting", ex);
-                it = queryUnpaged(baseQueryString, resolver);
-            }
+            Iterator<Resource> it = getQueryIterator(resolver);
 
             long count = 0;
             while (it.hasNext()) {

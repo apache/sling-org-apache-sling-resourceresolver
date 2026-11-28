@@ -52,6 +52,7 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -107,20 +108,26 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private final boolean isMaxCachedVanityPathEntriesStartup;
     private final boolean isVanityPathCacheInitInBackground;
+    private final PagingBehavior pagingMode;
 
-    @Parameters(name = "isMaxCachedVanityPathEntriesStartup={0}, isVanityPathCacheInitInBackground={1}")
+    @Parameters(name = "isMaxCachedVanityPathEntriesStartup={0}, isVanityPathCacheInitInBackground={1}, pagingMode={2}")
     public static Collection<Object[]> data() {
+        boolean maxEntriesOnStartup = true, cacheInitInBackground = true;
         return List.of(new Object[][] {
-            {false, true},
-            {true, false},
-            {true, false}
+            {!maxEntriesOnStartup, cacheInitInBackground, PagingBehavior.PAGED},
+            {maxEntriesOnStartup, cacheInitInBackground, PagingBehavior.PAGED},
+            {maxEntriesOnStartup, !cacheInitInBackground, PagingBehavior.PAGED},
+            {maxEntriesOnStartup, !cacheInitInBackground, PagingBehavior.UNPAGED}
         });
     }
 
     public VanityPathMapEntriesTest(
-            boolean isMaxCachedVanityPathEntriesStartup, boolean isVanityPathCacheInitInBackground) {
+            boolean isMaxCachedVanityPathEntriesStartup,
+            boolean isVanityPathCacheInitInBackground,
+            PagingBehavior pagingMode) {
         this.isMaxCachedVanityPathEntriesStartup = isMaxCachedVanityPathEntriesStartup;
         this.isVanityPathCacheInitInBackground = isVanityPathCacheInitInBackground;
+        this.pagingMode = pagingMode;
     }
 
     private AutoCloseable mockCloser;
@@ -129,6 +136,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @SuppressWarnings({"unchecked"})
     @Before
     public void setup() throws Exception {
+        System.setProperty(VanityPathHandler.PAGING_BEHAVIOUR_PROPNAME, String.valueOf(this.pagingMode));
+
         this.mockCloser = MockitoAnnotations.openMocks(this);
 
         final List<VanityPathConfig> configs = new ArrayList<>();
@@ -250,6 +259,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void tearDown() throws Exception {
         mapEntries.dispose();
         mockCloser.close();
+        System.clearProperty(VanityPathHandler.PAGING_BEHAVIOUR_PROPNAME);
     }
 
     @Test
@@ -328,7 +338,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArguments()[0].toString();
-                    if (matchesPagedQuery(query)) {
+                    assertPagedUnpaged(query);
+                    if (matchesPagedQuery(query) || matchesUnpagedQuery(query)) {
                         return List.of(vanity).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -416,7 +427,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArguments()[0].toString();
-                    if (matchesPagedQuery(query)) {
+                    assertPagedUnpaged(query);
+                    if (matchesPagedQuery(query) || matchesUnpagedQuery(query)) {
                         return List.of(vanityPropHolder, oneMore).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -473,7 +485,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
                         return resources.stream()
                                 .filter(e -> getFirstVanityPath(e).compareTo(path) > 0)
                                 .iterator();
-                    } else if (query.equals(VPQ_SIMPLE)) {
+                    } else if (matchesUnpagedQuery(query)) {
                         return resources.iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -606,6 +618,9 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     @Test
     public void test_vanity_path_registration_include_exclude() {
+
+        Assume.assumeTrue(this.pagingMode != PagingBehavior.UNPAGED);
+
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
         final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
 
@@ -1145,7 +1160,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArguments()[0].toString();
-                    if (matchesPagedQuery(query)) {
+                    assertPagedUnpaged(query);
+                    if (matchesPagedQuery(query) || matchesUnpagedQuery(query)) {
                         return Collections.singleton(justVanityPath).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -1167,7 +1183,8 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArguments()[0].toString();
-                    if (matchesPagedQuery(query)) {
+                    assertPagedUnpaged(query);
+                    if (matchesPagedQuery(query) || matchesUnpagedQuery(query)) {
                         return Collections.singleton(justVanityPath).iterator();
                     } else {
                         return Collections.emptyIterator();
@@ -1297,6 +1314,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArguments()[0].toString();
+                    assertPagedUnpaged(query);
                     try {
                         lock.lock();
                         queries.add(query);
@@ -1458,7 +1476,17 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
         assertThrows("init should not be reported to be done", AssertionError.class, this::waitForBgInit);
     }
 
-    // utilities for testing vanity path queries
+    // utilities for testing vanity path
+
+    // check that the query matches the expectation wrt paging mode
+    private void assertPagedUnpaged(String query) {
+        assertFalse(
+                "Should not get here when VanityPathHandler is configured not to page, query was: " + query,
+                matchesPagedQuery(query) && this.pagingMode == PagingBehavior.UNPAGED);
+        assertFalse(
+                "Should not get here when VanityPathHandler is configured to page, query was: " + query,
+                matchesUnpagedQuery(query) && this.pagingMode == PagingBehavior.PAGED);
+    }
 
     // used for paged query of all
     private static final String VPQ_PAGED_START =
@@ -1513,6 +1541,10 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private boolean matchesPagedQuery(String query) {
         return VPQ_PAGED_PATTERN.matcher(query).matches();
+    }
+
+    private boolean matchesUnpagedQuery(String query) {
+        return VPQ_SIMPLE.equals(query);
     }
 
     private String extractStartPath(String query) {

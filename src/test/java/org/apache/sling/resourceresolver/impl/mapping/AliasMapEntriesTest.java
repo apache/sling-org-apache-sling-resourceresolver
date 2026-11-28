@@ -46,6 +46,7 @@ import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assume;
@@ -102,18 +103,27 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     private static final Runnable NOOP = () -> {};
 
     private final boolean isOptimizeAliasResolutionEnabled;
-
     private final boolean isAliasCacheInitInBackground;
+    private final PagingBehavior pagingMode;
 
-    @Parameterized.Parameters(name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1}")
+    @Parameterized.Parameters(
+            name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1},pagingMode={2}")
     public static Collection<Object[]> data() {
+        boolean cache = true, background = true;
         // (optimized==false && backgroundInit == false) does not need to be tested
-        return List.of(new Object[][] {{false, false}, {true, false}, {true, true}});
+        return List.of(new Object[][] {
+            {!cache, !background, PagingBehavior.UNPAGED}, // no cache, not in background, paging irrelevant
+            {cache, !background, PagingBehavior.UNPAGED}, // cache, not in background, no paging
+            {cache, !background, PagingBehavior.PAGED}, // cache, not in background, paging
+            {cache, background, PagingBehavior.PAGED} // cache, in background, paging
+        });
     }
 
-    public AliasMapEntriesTest(boolean isOptimizeAliasResolutionEnabled, boolean isAliasCacheInitInBackground) {
+    public AliasMapEntriesTest(
+            boolean isOptimizeAliasResolutionEnabled, boolean isAliasCacheInitInBackground, PagingBehavior pagingMode) {
         this.isOptimizeAliasResolutionEnabled = isOptimizeAliasResolutionEnabled;
         this.isAliasCacheInitInBackground = isAliasCacheInitInBackground;
+        this.pagingMode = pagingMode;
     }
 
     private AutoCloseable mockCloser;
@@ -122,6 +132,8 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     @SuppressWarnings({"unchecked"})
     @Before
     public void setup() throws Exception {
+        System.setProperty(AliasHandler.PAGING_BEHAVIOUR_PROPNAME, String.valueOf(this.pagingMode));
+
         this.mockCloser = MockitoAnnotations.openMocks(this);
 
         when(bundle.getSymbolicName()).thenReturn("TESTBUNDLE");
@@ -162,6 +174,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
     public void tearDown() throws Exception {
         mapEntries.dispose();
         mockCloser.close();
+        System.clearProperty(AliasHandler.PAGING_BEHAVIOUR_PROPNAME);
     }
 
     // wait for background thread to complete
@@ -359,6 +372,9 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         when(resourceResolver.findResources(anyString(), eq("JCR-SQL2")))
                 .thenAnswer((Answer<Iterator<Resource>>) invocation -> {
                     String query = invocation.getArgument(0);
+                    assertFalse(
+                            "Should not get here when AliasHandler is configured not to page, query was: " + query,
+                            matchesPagedQuery(query) && this.pagingMode == PagingBehavior.UNPAGED);
                     if (queryAlwaysThrows) {
                         throw new UnsupportedOperationException("test case configured to always throw: " + query);
                     } else {
