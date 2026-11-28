@@ -46,6 +46,7 @@ import org.apache.sling.api.resource.observation.ResourceChange;
 import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assume;
@@ -103,7 +104,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private final boolean isOptimizeAliasResolutionEnabled;
     private final boolean isAliasCacheInitInBackground;
-    private final int pagingMode;
+    private final PagingBehavior pagingMode;
 
     @Parameterized.Parameters(
             name = "isOptimizeAliasResolutionEnabled={0},isAliasCacheInitInBackground={1},pagingMode={2}")
@@ -111,15 +112,15 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
         boolean cache = true, background = true;
         // (optimized==false && backgroundInit == false) does not need to be tested
         return List.of(new Object[][] {
-            {!cache, !background, QueryBuildHelper.PAGED_QUERY}, // no cache, not in background, paging irrelevant
-            {cache, !background, QueryBuildHelper.UNPAGED_QUERY}, // cache, not in background, no paging
-            {cache, !background, QueryBuildHelper.PAGED_QUERY}, // cache, not in background, paging
-            {cache, background, QueryBuildHelper.PAGED_QUERY} // cache, in background, paging
+            {!cache, !background, PagingBehavior.UNPAGED}, // no cache, not in background, paging irrelevant
+            {cache, !background, PagingBehavior.UNPAGED}, // cache, not in background, no paging
+            {cache, !background, PagingBehavior.PAGED}, // cache, not in background, paging
+            {cache, background, PagingBehavior.PAGED} // cache, in background, paging
         });
     }
 
     public AliasMapEntriesTest(
-            boolean isOptimizeAliasResolutionEnabled, boolean isAliasCacheInitInBackground, Integer pagingMode) {
+            boolean isOptimizeAliasResolutionEnabled, boolean isAliasCacheInitInBackground, PagingBehavior pagingMode) {
         this.isOptimizeAliasResolutionEnabled = isOptimizeAliasResolutionEnabled;
         this.isAliasCacheInitInBackground = isAliasCacheInitInBackground;
         this.pagingMode = pagingMode;
@@ -373,7 +374,7 @@ public class AliasMapEntriesTest extends AbstractMappingMapEntriesTest {
                     String query = invocation.getArgument(0);
                     assertFalse(
                             "Should not get here when AliasHandler is configured not to page, query was: " + query,
-                            matchesPagedQuery(query) && this.pagingMode == QueryBuildHelper.UNPAGED_QUERY);
+                            matchesPagedQuery(query) && this.pagingMode == PagingBehavior.UNPAGED);
                     if (queryAlwaysThrows) {
                         throw new UnsupportedOperationException("test case configured to always throw: " + query);
                     } else {

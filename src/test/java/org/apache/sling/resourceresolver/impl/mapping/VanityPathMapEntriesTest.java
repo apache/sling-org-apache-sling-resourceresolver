@@ -52,6 +52,7 @@ import org.apache.sling.api.resource.path.Path;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.resourceresolver.impl.ResourceResolverMetrics;
 import org.apache.sling.resourceresolver.impl.mapping.MapConfigurationProvider.VanityPathConfig;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -107,23 +108,23 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
 
     private final boolean isMaxCachedVanityPathEntriesStartup;
     private final boolean isVanityPathCacheInitInBackground;
-    private final int pagingMode;
+    private final PagingBehavior pagingMode;
 
     @Parameters(name = "isMaxCachedVanityPathEntriesStartup={0}, isVanityPathCacheInitInBackground={1}, pagingMode={2}")
     public static Collection<Object[]> data() {
         boolean maxEntriesOnStartup = true, cacheInitInBackground = true;
         return List.of(new Object[][] {
-            {!maxEntriesOnStartup, cacheInitInBackground, QueryBuildHelper.PAGED_QUERY},
-            {maxEntriesOnStartup, cacheInitInBackground, QueryBuildHelper.PAGED_QUERY},
-            {maxEntriesOnStartup, !cacheInitInBackground, QueryBuildHelper.PAGED_QUERY},
-            {maxEntriesOnStartup, !cacheInitInBackground, QueryBuildHelper.UNPAGED_QUERY}
+            {!maxEntriesOnStartup, cacheInitInBackground, PagingBehavior.PAGED},
+            {maxEntriesOnStartup, cacheInitInBackground, PagingBehavior.PAGED},
+            {maxEntriesOnStartup, !cacheInitInBackground, PagingBehavior.PAGED},
+            {maxEntriesOnStartup, !cacheInitInBackground, PagingBehavior.UNPAGED}
         });
     }
 
     public VanityPathMapEntriesTest(
             boolean isMaxCachedVanityPathEntriesStartup,
             boolean isVanityPathCacheInitInBackground,
-            Integer pagingMode) {
+            QueryBuildHelper.PagingBehavior pagingMode) {
         this.isMaxCachedVanityPathEntriesStartup = isMaxCachedVanityPathEntriesStartup;
         this.isVanityPathCacheInitInBackground = isVanityPathCacheInitInBackground;
         this.pagingMode = pagingMode;
@@ -618,7 +619,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_vanity_path_registration_include_exclude() {
 
-        Assume.assumeTrue(this.pagingMode != QueryBuildHelper.UNPAGED_QUERY);
+        Assume.assumeTrue(this.pagingMode != QueryBuildHelper.PagingBehavior.UNPAGED);
 
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
         final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
@@ -1481,10 +1482,10 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     private void assertPagedUnpaged(String query) {
         assertFalse(
                 "Should not get here when VanityPathHandler is configured not to page, query was: " + query,
-                matchesPagedQuery(query) && this.pagingMode == QueryBuildHelper.UNPAGED_QUERY);
+                matchesPagedQuery(query) && this.pagingMode == PagingBehavior.UNPAGED);
         assertFalse(
                 "Should not get here when VanityPathHandler is configured to page, query was: " + query,
-                matchesUnpagedQuery(query) && this.pagingMode == QueryBuildHelper.PAGED_QUERY);
+                matchesUnpagedQuery(query) && this.pagingMode == PagingBehavior.PAGED);
     }
 
     // used for paged query of all

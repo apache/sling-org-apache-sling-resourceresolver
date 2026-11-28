@@ -67,7 +67,7 @@ class AliasHandler {
     private static final Logger log = LoggerFactory.getLogger(AliasHandler.class);
 
     // constants for paging behaviour as obtained from system property
-    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresolver.aliasinit";
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoslver.aliasinit";
     private final int PAGING_BEHAVIOUR = QueryBuildHelper.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
 
     // keep track of some defunct aliases for diagnostics (thus size-limited)
