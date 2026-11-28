@@ -44,6 +44,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.resource.path.Path;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -82,8 +83,8 @@ public class VanityPathHandler {
     private final Logger log = LoggerFactory.getLogger(VanityPathHandler.class);
 
     // constants for paging behaviour as obtained from system property
-    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoolver.vpinit";
-    private final QueryBuildHelper.PagingBehavior PAGING_BEHAVIOUR = QueryBuildHelper.PagingBehavior.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresolver.vpinit";
+    private final PagingBehavior PAGING_BEHAVIOUR = PagingBehavior.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
 
     // keep track of some dubious vanityPaths for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DUBIOUS_VANITY_PATHS = 50;
@@ -496,7 +497,7 @@ public class VanityPathHandler {
                         + QueryBuildHelper.excludeSystemPath() + " AND [sling:vanityPath] IS NOT NULL";
 
         Iterator<Resource> it;
-        if (PAGING_BEHAVIOUR == QueryBuildHelper.PagingBehavior.UNPAGED) {
+        if (PAGING_BEHAVIOUR == PagingBehavior.UNPAGED) {
             log.debug("query behaviour is set to unpaged");
             it = queryUnpaged(baseQueryString, resolver);
         } else {

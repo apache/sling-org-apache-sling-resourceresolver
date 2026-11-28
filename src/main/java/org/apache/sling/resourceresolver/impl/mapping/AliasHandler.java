@@ -42,6 +42,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.resourceresolver.impl.ResourceResolverImpl;
+import org.apache.sling.resourceresolver.impl.mapping.QueryBuildHelper.PagingBehavior;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -67,8 +68,8 @@ class AliasHandler {
     private static final Logger log = LoggerFactory.getLogger(AliasHandler.class);
 
     // constants for paging behaviour as obtained from system property
-    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresoslver.aliasinit";
-    private final int PAGING_BEHAVIOUR = QueryBuildHelper.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
+    static final String PAGING_BEHAVIOUR_PROPNAME = "sling.resourceresolver.aliasinit";
+    private final PagingBehavior PAGING_BEHAVIOUR = PagingBehavior.getPagingBehaviour(PAGING_BEHAVIOUR_PROPNAME);
 
     // keep track of some defunct aliases for diagnostics (thus size-limited)
     private static final int MAX_REPORT_DEFUNCT_ALIASES = 50;
@@ -222,7 +223,7 @@ class AliasHandler {
         private Iterator<Resource> getQueryIterator(@NotNull ResourceResolver resolver) {
             String baseQueryString = generateAliasQuery();
             Iterator<Resource> it;
-            if (PAGING_BEHAVIOUR == QueryBuildHelper.UNPAGED_QUERY) {
+            if (PAGING_BEHAVIOUR == PagingBehavior.UNPAGED) {
                 log.debug("query behaviour is set to unpaged");
                 it = queryUnpaged(baseQueryString, resolver);
             } else {

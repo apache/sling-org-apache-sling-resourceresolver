@@ -124,7 +124,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     public VanityPathMapEntriesTest(
             boolean isMaxCachedVanityPathEntriesStartup,
             boolean isVanityPathCacheInitInBackground,
-            QueryBuildHelper.PagingBehavior pagingMode) {
+            PagingBehavior pagingMode) {
         this.isMaxCachedVanityPathEntriesStartup = isMaxCachedVanityPathEntriesStartup;
         this.isVanityPathCacheInitInBackground = isVanityPathCacheInitInBackground;
         this.pagingMode = pagingMode;
@@ -619,7 +619,7 @@ public class VanityPathMapEntriesTest extends AbstractMappingMapEntriesTest {
     @Test
     public void test_vanity_path_registration_include_exclude() {
 
-        Assume.assumeTrue(this.pagingMode != QueryBuildHelper.PagingBehavior.UNPAGED);
+        Assume.assumeTrue(this.pagingMode != PagingBehavior.UNPAGED);
 
         final String[] validPaths = {"/libs/somewhere", "/libs/a/b", "/foo/a", "/baa/a"};
         final String[] invalidPaths = {"/libs/denied/a", "/libs/denied/b/c", "/nowhere"};
